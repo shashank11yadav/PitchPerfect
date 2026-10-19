@@ -79,6 +79,12 @@ describe("capReply", () => {
     expect(capReply("It is 2x*3 and *really* **good**.")).toBe("It is 2x*3 and really good.");
   });
 
+  it("strips list markers that precede bold text", () => {
+    expect(capReply("- **Bold** start\n1. **Bold** text\n* __Under__ line")).toBe(
+      "Bold start Bold text Under line",
+    );
+  });
+
   it("respects a custom limit", () => {
     expect(capReply("a b. c d e f.", 3)).toBe("a b.");
   });

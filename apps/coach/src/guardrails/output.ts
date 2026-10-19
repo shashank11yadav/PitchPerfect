@@ -6,7 +6,7 @@ import { ruleCheck } from "./guard-rules.js";
 const LINK = /\[([^\]]*)\]\([^)]*\)/g;
 const HEADING = /^[ \t]{0,3}#{1,6}[ \t]+/gm;
 // Only a marker followed by a letter: "- 20% off" and "2024. We grew" keep their numbers.
-const LIST_MARKER = /^[ \t]*(?:[-*•]|\d{1,2}[.)])(?:[ \t]+(?=\p{L})|[ \t]*$)/gmu;
+const LIST_MARKER = /^[ \t]*(?:[-*•]|\d{1,2}[.)])(?:[ \t]+(?=[\p{L}*_])|[ \t]*$)/gmu;
 // A lone asterisk between word characters ("2x*3") is not emphasis.
 const EMPHASIS = /\*{2,}|(?<!\w)\*|\*(?!\w)|__|`+/g;
 const SENTENCE_END = /[.!?]["')\]”’]*(?=\s|$)/g;

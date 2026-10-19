@@ -32,9 +32,12 @@ function normalize(text: string): string {
 const RAW_ATTACKS: readonly RegExp[] = [
   /<\|?\/?(?:im_start|im_end|system|endoftext)\|?>|\[\/?inst\]|<<\/?sys>>/i,
   /^\s*(?:new|updated|revised)\s+(?:system\s+)?instructions\s*:/i,
-  // Upper case only: "Dan" is a common first name.
-  /\b(?:you are|you're|be|as|act as|become)\s+(?:now\s+)?DAN\b/,
 ];
+
+// The lead-in is case-insensitive but the name must be upper case: "Dan" is a common first name.
+const DAN_LEAD_IN = /\b(?:you are|you're|you’re|be|as|act as|become)\s+(?:now\s+)?(dan)\b/gi;
+const isDan = (text: string) =>
+  Array.from(text.matchAll(DAN_LEAD_IN)).some((match) => match[1] === "DAN");
 
 const PROMPT_WORDS = "(?:prompts?|instructions|message|programming)";
 const REVEAL_VERBS =
@@ -54,6 +57,7 @@ const PROMPT_ATTACK: readonly RegExp[] = [
   ),
   /\b(?:ignore|disregard|forget) (?:(?:the|all|everything|anything) )*(?:above|preceding)\b/,
   /\b(?:ignore|disregard|forget) (?:everything|all|anything) (?:before|previously|you were told|you know)\b/,
+  /\b(?:ignore|disregard|override|bypass) all (?:the |of the )?(?:rules|guidelines)\b(?! of thumb)/,
   /\b(?:disable|turn off|bypass|override|circumvent|remove) your (?:\w+ )?(?:safety|guardrails?|filters?|restrictions|content policy|safeguards|rules)\b/,
   // Extracting the prompt.
   new RegExp(
@@ -62,7 +66,10 @@ const PROMPT_ATTACK: readonly RegExp[] = [
   new RegExp(
     `\\b(?:reveal|print|repeat|output|display|leak|recite|dump|show me|tell me|give me) your (?:${PROMPT_WORDS})\\b(?! (?:for|on|about|regarding|to)\\b)`,
   ),
-  new RegExp(`\\byour (?:system|initial|hidden|secret|developer) (?:${PROMPT_WORDS})\\b`),
+  // Rules and guidelines are only an extraction request after a strong verb, not "tell me your rules".
+  /\b(?:reveal|print|repeat|output|display|leak|recite|dump) your (?:rules|guidelines)\b(?! (?:for|on|about|regarding|to)\b)/,
+  new RegExp(`\\byour (?:system|developer) (?:${PROMPT_WORDS})\\b`),
+  /\byour (?:initial|hidden|secret|original) (?:prompts?|instructions|programming)\b/,
   /\brepeat (?:everything|all|the words|the text) (?:above|before)\b/,
   /\brepeat (?:the |your |all )?(?:instructions|prompt|text|words) above\b/,
   /\brepeat (?:the )?above (?:instructions|prompt|text|words|verbatim|word for word)\b/,
@@ -72,9 +79,10 @@ const PROMPT_ATTACK: readonly RegExp[] = [
   /\b(?:pretend|imagine|roleplay) (?:to be |as |like |that you are |you are |you re )(?:if )?(?:a |an |the )?(?:ai|assistant|chatbot|bot|hacker|dan|unrestricted|unfiltered|uncensored|evil|language model|gpt|jailbroken)\b/,
   /\b(?:act|behave) (?:as|like) (?:a |an |the )?(?:hacker|dan|unrestricted|unfiltered|uncensored|evil|jailbroken|gpt)\b/,
   /\bstop (?:being|playing|acting as) (?:the |a |an )?(?:buyer|persona|character|role|customer|prospect)\b/,
-  /\bbreak (?:the |your )?character\b/,
-  /\b(?:drop|leave|abandon) your (?:persona|character|role)\b/,
-  /\bdrop (?:the |your )?role (?:and |of )?(?:an? )?(?:ai|assistant|chatbot|bot)\b/,
+  /\b(?:break|drop|leave|abandon|forget) (?:the |your )?(?:character|persona)\b/,
+  /\b(?:drop|leave|abandon|forget) your role\b/,
+  // "The role" alone is ordinary talk about jobs, so it needs to be an order to the model.
+  /^(?:(?:please|ok|okay|now|just) )*drop the role\b|\bdrop the role (?:and|then) (?:act|talk|answer|respond|speak|be)\b|\bdrop the role (?:of )?(?:an? )?(?:ai|assistant|chatbot|bot)\b/,
   /\bdan mode\b|\bdo anything now\b/,
   /\b(?:enable|enter|activate|switch to|turn on|go into) developer mode\b|\b(?:you are|you re) (?:now )?in developer mode\b|\bdeveloper mode (?:enabled|activated)\b/,
   /\bjail ?break (?:yourself|this (?:ai|model|chatbot|bot)|mode|prompt)\b/,
@@ -83,7 +91,7 @@ const PROMPT_ATTACK: readonly RegExp[] = [
 const WEAPON_NOUN =
   "(?:bombs?(?! (?:proof|squad|shelter|shell))|explosives|explosive (?:devices?|materials?)|bioweapons?|chemical weapons?|nerve agents?|ghost guns?|untraceable guns?)";
 const HOW_TO =
-  "(?:how (?:do i|to|can i|would i|could i)|steps? (?:to|for)|instructions? (?:to|for|on)|recipe for|guide (?:to|for)|tutorial (?:on|for)|teach me (?:to|how to)|show me how to|tell me how to|help me)";
+  "(?:how (?:do i|to|can i|would i|could i)|(?:ways?|steps?) (?:to|for)|instructions? (?:to|for|on)|recipe for|guide (?:to|for)|tutorial (?:on|for)|teach me (?:to|how to)|show me how to|tell me how to|help me)";
 const SEX_TERM =
   "(?:sexual (?:content|material|images?|stor(?:y|ies)|roleplay|scenes?|acts?)|sex scenes?|sex acts?|porn\\w*|erotic\\w*)";
 const MINOR_TERM = "(?:child|children|minors?|underage|kids?|teens?|teenagers?)";
@@ -94,6 +102,10 @@ const HARMFUL: readonly RegExp[] = [
   new RegExp(`\\b${HOW_TO} (?:\\w+ ){0,4}?${WEAPON_NOUN}\\b`),
   new RegExp(
     `\\b(?:i want to|i need to|i m going to|let s|we should) (?:\\w+ )?(?:make|build|assemble|construct) (?:an? |some )?${WEAPON_NOUN}\\b`,
+  ),
+  // A bare order to make one.
+  new RegExp(
+    `^(?:(?:please|ok|okay|now|just|can you|could you|will you) )*(?:make|build|create|assemble|construct|synthesize|manufacture)(?: me)?(?: \\w+){0,2}? ${WEAPON_NOUN}\\b`,
   ),
   // Self-harm.
   /\b(?:kill myself|commit suicide|end my life|take my own life|hurt myself|harm myself)\b/,
@@ -120,6 +132,7 @@ const anyMatch = (patterns: readonly RegExp[], text: string) =>
 export function ruleCheck(text: string): RuleVerdict | null {
   const words = normalize(text);
   if (anyMatch(HARMFUL, words)) return "harmful";
-  if (anyMatch(RAW_ATTACKS, text) || anyMatch(PROMPT_ATTACK, words)) return "prompt_attack";
+  if (anyMatch(RAW_ATTACKS, text) || isDan(text) || anyMatch(PROMPT_ATTACK, words))
+    return "prompt_attack";
   return null;
 }
