@@ -152,19 +152,49 @@ describe("PATCH /api/employer/applications/:id", () => {
     status: string,
   ) => session.patch(`/api/employer/applications/${id}`).send({ status });
 
-  it("follows the employer transitions", async () => {
+  it("follows the employer transitions, scheduling interviews through the interview endpoint", async () => {
     const { session, apply } = await setup();
     const { application } = await apply();
 
     const shortlisted = await patch(session, application.id, "shortlisted");
-    const interview = await patch(session, application.id, "interview");
+    await session
+      .post(`/api/employer/applications/${application.id}/interview`)
+      .send({ startsAt: inFuture(), meetingUrl: "https://meet.example/a" })
+      .expect(200);
     const hired = await patch(session, application.id, "hired");
 
     expect(viewOf(shortlisted).status).toBe("shortlisted");
-    expect(viewOf(interview).status).toBe("interview");
     expect(viewOf(hired).status).toBe("hired");
     expect((await Application.findById(application._id))?.status).toBe("hired");
   });
+
+  it("refuses to set interview through PATCH, since it has no slot", async () => {
+    const { session, apply } = await setup();
+    const { application } = await apply("shortlisted");
+
+    const res = await patch(session, application.id, "interview");
+
+    expect(res.status).toBe(400);
+    expect(errorOf(res).code).toBe("validation_failed");
+    expect((await Application.findById(application._id))?.status).toBe("shortlisted");
+  });
+
+  it.each(["hired", "rejected"] as const)(
+    "drops the interview slot when moving to %s",
+    async (to) => {
+      const { session, apply } = await setup();
+      const { application } = await apply("shortlisted");
+      await session
+        .post(`/api/employer/applications/${application.id}/interview`)
+        .send({ startsAt: inFuture(), meetingUrl: "https://meet.example/a" })
+        .expect(200);
+
+      const res = await patch(session, application.id, to);
+
+      expect(viewOf(res)).toMatchObject({ status: to, interview: null });
+      expect((await Application.findById(application._id).lean())?.interview).toBeUndefined();
+    },
+  );
 
   it("rejects a transition the table forbids and leaves the status alone", async () => {
     const { session, apply } = await setup();
@@ -266,7 +296,8 @@ describe("POST /api/employer/applications/:id/interview", () => {
     const [message] = mailer.sent;
     expect(message?.to).toBe(student.email);
     expect(message?.subject).toContain("Field rep");
-    expect(message?.text).toContain("UTC");
+    expect(message?.text).toContain("20:00 UTC");
+    expect(message?.text).toContain("November 2, 2099");
     expect(message?.text).toContain("https://meet.example/room?x=1&y=2");
     expect(message?.html).toContain("x=1&amp;y=2");
     expect(message?.text).toContain("Applied Dynamics");
@@ -366,6 +397,22 @@ describe("GET /api/employer/applications/:id/resume", () => {
     expect(res.headers["cache-control"]).toBe("no-store");
   });
 
+  it("answers 404 not_found once the student has withdrawn", async () => {
+    const { session, job } = await setup();
+    const student = await studentSession(app);
+    await student.session.put("/api/me/resume").attach("file", tinyPdf(), "cv.pdf").expect(200);
+    const application = await createApplication({
+      jobId: job._id,
+      studentId: student.user._id,
+      status: "withdrawn",
+    });
+
+    const res = await session.agent.get(`/api/employer/applications/${application.id}/resume`);
+
+    expect(res.status).toBe(404);
+    expect(errorOf(res).code).toBe("not_found");
+  });
+
   it("answers 404 when the student has no résumé", async () => {
     const { session, apply } = await setup();
     const { application } = await apply();
@@ -413,6 +460,16 @@ describe("GET /api/employer/applications/:id/scorecard", () => {
       completedAt: "2026-05-01T12:00:00.000Z",
     });
     expect(JSON.stringify(res.body)).not.toMatch(/transcript|scenarioPrivate|hiddenObjections/);
+  });
+
+  it("answers 404 not_found for a withdrawn application, even with a stale share", async () => {
+    const { session, application } = await shared("completed");
+    await Application.updateOne({ _id: application._id }, { $set: { status: "withdrawn" } });
+
+    const res = await session.agent.get(`/api/employer/applications/${application.id}/scorecard`);
+
+    expect(res.status).toBe(404);
+    expect(errorOf(res).code).toBe("not_found");
   });
 
   it("answers 404 not_shared when nothing is shared", async () => {

@@ -292,6 +292,16 @@ describe("POST /api/employer/jobs/:id/status", () => {
     expect(jobOf(again)).toMatchObject({ status: "active", publishedAt: firstPublishedAt });
   });
 
+  it("treats a stored null publishedAt as never published", async () => {
+    const { session, company } = await employerSession(app);
+    const job = await createJob(company._id, { status: "draft" });
+    await Job.collection.updateOne({ _id: job._id }, { $set: { publishedAt: null } });
+
+    const res = await setStatus(session, job.id, "active");
+
+    expect(jobOf(res).publishedAt).toEqual(expect.any(String));
+  });
+
   it("is idempotent for the current status", async () => {
     const { session, company } = await employerSession(app);
     const job = await createJob(company._id);

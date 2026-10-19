@@ -324,6 +324,25 @@ describe("POST /api/applications/:id/withdraw", () => {
     expect(viewOf(res).status).toBe("withdrawn");
   });
 
+  it("drops the interview slot on withdrawal", async () => {
+    const { job } = await openJob();
+    const { session, user } = await studentSession();
+    const application = await createApplication({
+      jobId: job._id,
+      studentId: user._id,
+      status: "interview",
+      interview: {
+        startsAt: new Date(Date.now() + 86_400_000),
+        meetingUrl: "https://meet.example/x",
+      },
+    });
+
+    const res = await session.post(withdrawPath(application._id)).send();
+
+    expect(viewOf(res)).toMatchObject({ status: "withdrawn", interview: null });
+    expect((await Application.findById(application._id).lean())?.interview).toBeUndefined();
+  });
+
   it.each(["hired", "rejected", "withdrawn", "closed"] as const)(
     "refuses to withdraw from %s",
     async (status) => {

@@ -19,10 +19,11 @@ describe("ApplySchema", () => {
 
 describe("ApplicationStatusUpdateSchema", () => {
   it("accepts only statuses an employer can set", () => {
-    for (const status of ["shortlisted", "interview", "hired", "rejected"]) {
+    for (const status of ["shortlisted", "hired", "rejected"]) {
       expect(ApplicationStatusUpdateSchema.safeParse({ status }).success, status).toBe(true);
     }
-    for (const status of ["applied", "withdrawn", "closed", "bogus"]) {
+    // "interview" is set only through the interview endpoint, which carries the slot.
+    for (const status of ["applied", "interview", "withdrawn", "closed", "bogus"]) {
       expect(ApplicationStatusUpdateSchema.safeParse({ status }).success, status).toBe(false);
     }
   });

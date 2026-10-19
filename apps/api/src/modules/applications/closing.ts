@@ -95,10 +95,16 @@ export async function closeOpenApplications(
     .lean();
   if (open.length === 0) return;
   for (const application of open) transitionApplication(application, "closed", "system");
+  const targeted = anyOf(open.map((application) => application._id));
   await Application.updateMany(
     // Guarded on status, so an application decided in the meantime isn't closed over the decision.
-    { _id: anyOf(open.map((application) => application._id)), status: anyOf(OPEN_STATUSES) },
+    { _id: targeted, status: anyOf(OPEN_STATUSES) },
     { $set: { status: "closed", closedReason: reason }, $unset: { interview: 1 } },
   );
-  await notifyApplicants(mailer, log, company, jobs, open);
+  // Only the rows this run actually closed: anything decided in the meantime keeps its status.
+  const closed = await Application.find({ _id: targeted, status: "closed", closedReason: reason })
+    .select("jobId studentId")
+    .sort({ createdAt: 1 })
+    .lean();
+  await notifyApplicants(mailer, log, company, jobs, closed);
 }

@@ -134,7 +134,7 @@ export async function changeJobStatus(
       {
         $set: {
           status: to,
-          ...(to === "active" && job.publishedAt === undefined && { publishedAt: new Date() }),
+          ...(to === "active" && job.publishedAt == null && { publishedAt: new Date() }),
         },
       },
       { returnDocument: "after" },

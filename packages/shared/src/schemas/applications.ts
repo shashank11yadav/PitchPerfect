@@ -11,13 +11,11 @@ import { httpsUrl, objectId, pageQuery } from "./common.js";
 export const ApplySchema = z.strictObject({ sharedAttemptId: objectId().optional() });
 export type Apply = z.infer<typeof ApplySchema>;
 
-/** Statuses an employer can set through `PATCH /api/employer/applications/:id`. */
-export const EMPLOYER_SETTABLE_STATUSES = [
-  "shortlisted",
-  "interview",
-  "hired",
-  "rejected",
-] as const;
+/**
+ * Statuses an employer can set through `PATCH /api/employer/applications/:id`. `interview` is
+ * missing on purpose: only the interview endpoint sets it, because it comes with a slot.
+ */
+export const EMPLOYER_SETTABLE_STATUSES = ["shortlisted", "hired", "rejected"] as const;
 
 export const ApplicationStatusUpdateSchema = z.strictObject({
   status: z.enum(EMPLOYER_SETTABLE_STATUSES),

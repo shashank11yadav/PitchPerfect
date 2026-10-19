@@ -129,7 +129,7 @@ export async function withdrawApplication(
   // Guarded on the status we checked, so an employer's change in between isn't overwritten.
   const updated = await Application.findOneAndUpdate(
     { _id: applicationId, studentId, status: from },
-    { $set: { status: application.status }, $unset: { sharedAttemptId: "" } },
+    { $set: { status: application.status }, $unset: { sharedAttemptId: "", interview: "" } },
     { returnDocument: "after" },
   ).lean();
   if (!updated)

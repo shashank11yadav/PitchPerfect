@@ -73,11 +73,17 @@ export async function setApplicationStatus(
   transitionApplication(application, to, "employer");
   const updated = await Application.findOneAndUpdate(
     { _id: application._id, status: from },
-    { $set: { status: to } },
+    // Only the interview endpoint sets `interview`, so any status set here ends the slot.
+    { $set: { status: to }, $unset: { interview: 1 } },
     { returnDocument: "after" },
   ).lean();
   if (!updated) throw changedMeanwhile();
   return viewOf(updated);
+}
+
+/** A withdrawn application shares nothing: the student has pulled their résumé and scorecard back. */
+export function assertNotWithdrawn(application: ApplicationDoc): void {
+  if (application.status === "withdrawn") throw new NotFoundError();
 }
 
 /** A private bookmark: setting it again changes nothing, and the student's `updatedAt` stays put. */

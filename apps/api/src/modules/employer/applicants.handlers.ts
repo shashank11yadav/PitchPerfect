@@ -9,6 +9,7 @@ import { streamResume } from "../../services/files.js";
 import type { Mailer } from "../../services/mailer.js";
 import { resumeFileIdOf } from "../profile/service.js";
 import {
+  assertNotWithdrawn,
   listApplicants,
   scheduleInterview,
   setApplicationStatus,
@@ -64,11 +65,14 @@ export function applicantsHandlers(deps: { mailer: Mailer }) {
 
     resume: (async (_req, res) => {
       const { application } = await owned(res);
+      assertNotWithdrawn(application);
       await streamResume(await resumeFileIdOf(application.studentId.toString()), res);
     }) satisfies RequestHandler,
 
     scorecard: (async (_req, res) => {
-      res.json(await sharedScorecard((await owned(res)).application));
+      const { application } = await owned(res);
+      assertNotWithdrawn(application);
+      res.json(await sharedScorecard(application));
     }) satisfies RequestHandler,
   };
 }
