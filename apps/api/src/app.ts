@@ -15,6 +15,7 @@ import { requestId, requestIdOf } from "./middleware/request-id.js";
 import { sessionMiddleware } from "./middleware/session.js";
 import { applicationRoutes } from "./modules/applications/routes.js";
 import { authRoutes } from "./modules/auth/routes.js";
+import { employerRoutes } from "./modules/employer/routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
 import { jobRoutes } from "./modules/jobs/routes.js";
 import { lessonRoutes } from "./modules/lessons/routes.js";
@@ -99,6 +100,7 @@ export function createApp(
   api.use(lessonRoutes());
   api.use(jobRoutes());
   api.use(applicationRoutes());
+  api.use("/employer", employerRoutes({ mailer: deps.mailer }));
   api.use(healthRoutes(deps.coach));
   extraRoutes?.(api);
   app.use("/api", api);

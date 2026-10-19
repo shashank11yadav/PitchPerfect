@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApplicationStatusUpdateSchema, ApplySchema, InterviewSchema } from "./applications.js";
+import {
+  ApplicationStatusUpdateSchema,
+  ApplySchema,
+  EmployerApplicationListQuerySchema,
+  InterviewSchema,
+} from "./applications.js";
 
 describe("ApplySchema", () => {
   it("allows an optional shared attempt id", () => {
@@ -42,5 +47,20 @@ describe("InterviewSchema", () => {
     expect(
       InterviewSchema.safeParse({ ...ok, meetingUrl: "http://meet.example/abc" }).success,
     ).toBe(false);
+  });
+});
+
+describe("EmployerApplicationListQuerySchema", () => {
+  it("filters by status and saved, reading saved from a query string", () => {
+    expect(EmployerApplicationListQuerySchema.parse({})).toEqual({ page: 1, pageSize: 20 });
+    expect(
+      EmployerApplicationListQuerySchema.parse({ status: "interview", saved: "true" }),
+    ).toMatchObject({ status: "interview", saved: true });
+    expect(EmployerApplicationListQuerySchema.parse({ saved: "false" }).saved).toBe(false);
+  });
+
+  it("rejects unknown statuses and non-boolean saved values", () => {
+    expect(EmployerApplicationListQuerySchema.safeParse({ status: "nope" }).success).toBe(false);
+    expect(EmployerApplicationListQuerySchema.safeParse({ saved: "yes" }).success).toBe(false);
   });
 });

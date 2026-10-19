@@ -2,6 +2,9 @@ import type { Types } from "mongoose";
 import type {
   AttemptSummary,
   AttemptView,
+  EmployerApplicationView,
+  EmployerJob,
+  EmployerJobSummary,
   EmployerProfileView,
   JobPay,
   PublicCompany,
@@ -160,5 +163,61 @@ export function toAttemptSummary(attempt: Persisted<PracticeAttemptAttrs>): Atte
     overall: attempt.scorecard?.overall ?? null,
     startedAt: attempt.startedAt.toISOString(),
     endedAt: iso(attempt.endedAt),
+  };
+}
+
+export function toEmployerJobSummary(
+  job: Persisted<JobAttrs>,
+  applicantCount: number,
+): EmployerJobSummary {
+  return {
+    id: job._id.toString(),
+    slug: job.slug,
+    title: job.title,
+    location: job.location,
+    workplace: job.workplace,
+    employmentType: job.employmentType,
+    status: job.status,
+    publishedAt: iso(job.publishedAt),
+    createdAt: job.createdAt.toISOString(),
+    applicantCount,
+  };
+}
+
+export function toEmployerJob(job: Persisted<JobAttrs>, applicantCount: number): EmployerJob {
+  return {
+    ...toEmployerJobSummary(job, applicantCount),
+    descriptionHtml: job.descriptionHtml,
+    skills: [...job.skills],
+    pay: toJobPay(job.pay),
+  };
+}
+
+/** What an employer may know about an applicant. Copies named fields only: no email, no ids. */
+export function toEmployerApplicationView(
+  application: Persisted<ApplicationAttrs>,
+  user: Pick<UserAttrs, "name">,
+  profile: Pick<StudentProfileAttrs, "school" | "major" | "gradYear" | "resumeFileId">,
+): EmployerApplicationView {
+  return {
+    id: application._id.toString(),
+    status: application.status,
+    appliedAt: application.createdAt.toISOString(),
+    savedByEmployer: application.savedByEmployer,
+    student: {
+      firstName: user.name.first,
+      lastName: user.name.last,
+      school: profile.school,
+      major: profile.major,
+      gradYear: profile.gradYear,
+    },
+    hasResume: profile.resumeFileId != null,
+    hasSharedScorecard: application.sharedAttemptId != null,
+    interview: application.interview
+      ? {
+          startsAt: application.interview.startsAt.toISOString(),
+          meetingUrl: application.interview.meetingUrl,
+        }
+      : null,
   };
 }

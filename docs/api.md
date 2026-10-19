@@ -9,18 +9,18 @@ All request and response bodies are JSON unless noted. Schema names refer to exp
 - **CSRF:** every non-GET request must send header `x-csrf-token` (value from `GET /api/auth/csrf`, which also sets the paired cookie) **and** an `Origin` matching `APP_URL`. Missing/invalid → `403 csrf_failed`.
 - **Errors:** `{ "error": { "code": string, "message": string, "requestId": string, "fields"?: Record<string,string> } }`.
 
-| Status  | `code` values                                                             |
-| ------- | ------------------------------------------------------------------------- |
-| 400     | `validation_failed`, `invalid_id`, `invalid_token`, `invalid_transition`  |
-| 401     | `unauthenticated`, `invalid_credentials`                                  |
-| 403     | `forbidden`, `csrf_failed`, `email_not_verified`, `consent_required`      |
-| 404     | `not_found` (also used for resources the caller doesn't own)              |
-| 409     | `conflict`, `email_taken`, `already_applied`                              |
-| 413     | `file_too_large` (also JSON bodies over 100 kB)                           |
-| 415     | `unsupported_file`                                                        |
-| 429     | `rate_limited`, `quota_exceeded`, `budget_exhausted` (with `Retry-After`) |
-| 500     | `internal_error` (message is always "Something went wrong")               |
-| 502/503 | `upstream_error`, `practice_unavailable`                                  |
+| Status  | `code` values                                                              |
+| ------- | -------------------------------------------------------------------------- |
+| 400     | `validation_failed`, `invalid_id`, `invalid_token`, `invalid_transition`   |
+| 401     | `unauthenticated`, `invalid_credentials`                                   |
+| 403     | `forbidden`, `csrf_failed`, `email_not_verified`, `consent_required`       |
+| 404     | `not_found` (also used for resources the caller doesn't own), `not_shared` |
+| 409     | `conflict`, `email_taken`, `already_applied`                               |
+| 413     | `file_too_large` (also JSON bodies over 100 kB)                            |
+| 415     | `unsupported_file`                                                         |
+| 429     | `rate_limited`, `quota_exceeded`, `budget_exhausted` (with `Retry-After`)  |
+| 500     | `internal_error` (message is always "Something went wrong")                |
+| 502/503 | `upstream_error`, `practice_unavailable`                                   |
 
 - **Pagination:** list endpoints take `?page=1&pageSize=20` (max 50) and return `{ items, page, pageSize, total }`.
 
@@ -109,23 +109,32 @@ SSE events from `/turns` (each `data:` line is JSON):
 
 ## Employer (`/api/employer`, role Employer)
 
+Every route needs a signed-in employer. Every non-GET route also needs a verified email (`403 email_not_verified`) and counts against a limit of 60 writes/minute/user (`429 rate_limited`). Jobs and applications are looked up through the employer's own company, so another company's ids answer `404 not_found`, exactly like unknown ones.
+
+- **Company website change:** re-runs domain verification against the owner's (confirmed) email domain. It can promote `unverified` to `verified` or demote `verified` to `unverified`; `suspended` is never changed.
+- **Job status:** `draft → active | archived`, `active ↔ archived`; going back to `draft` is `400 invalid_transition`. The first publish sets `publishedAt`; it is kept on later reactivation. Archiving closes every `applied`/`shortlisted`/`interview` application (`closedReason: "job_archived"`, interview removed) and emails each affected student once. Reactivating does not reopen them.
+- **Job edit:** `PATCH` takes only content fields (`JobInputSchema` without `status`); change status through the status endpoint. The slug is created with the job and never changes.
+- **Interview:** allowed from `shortlisted` (moves to `interview`) and from `interview` (reschedule); `startsAt` must be in the future and is stored as UTC; the student is emailed.
+- **Applicant view:** application id, status, `savedByEmployer`, `appliedAt`, `interview`, and the student's first/last name, school, major, grad year, `hasResume`, `hasSharedScorecard`. Never email or any other contact or demographic data.
+- **`applicants` (dashboard)** counts open applications (`applied`/`shortlisted`/`interview`) across all of the company's jobs; `interviewsUpcoming` counts `interview` applications whose `startsAt` is in the future; `recentApplications` are the five newest, each with `jobId` and `jobTitle`.
+
 | Method     | Path                                       | Body                                                                                         | Success                                                                        | Notes                                                                                                                        |
 | ---------- | ------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | GET        | `/api/employer/company`                    | —                                                                                            | `{ company }`                                                                  |                                                                                                                              |
 | PATCH      | `/api/employer/company`                    | `CompanyUpdateSchema` `{ name?, website?, linkedinUrl?, pitch? (≤ 1000), logoUrl? (https) }` | `{ company }`                                                                  | changing `website` re-runs domain verification                                                                               |
 | GET        | `/api/employer/dashboard`                  | —                                                                                            | `{ activeJobs, drafts, applicants, interviewsUpcoming, recentApplications[] }` |                                                                                                                              |
 | GET        | `/api/employer/jobs`                       | `?status&page`                                                                               | page of `EmployerJobSummary` (with applicant counts)                           |                                                                                                                              |
-| POST       | `/api/employer/jobs`                       | `JobInputSchema`                                                                             | `201 { job }`                                                                  | `descriptionHtml` sanitized server-side; status `draft` or `active`                                                          |
+| POST       | `/api/employer/jobs`                       | `JobInputSchema`                                                                             | `201 { job }`                                                                  | `descriptionHtml` sanitized server-side (`400` if no text is left); status `draft` (default) or `active`                     |
 | GET        | `/api/employer/jobs/:id`                   | —                                                                                            | `{ job }`                                                                      | owner only                                                                                                                   |
-| PATCH      | `/api/employer/jobs/:id`                   | `JobInputSchema.partial()`                                                                   | `{ job }`                                                                      | owner only; `companyId`, `slug`, `applicants` not writable                                                                   |
+| PATCH      | `/api/employer/jobs/:id`                   | `JobUpdateSchema` (`JobInputSchema` without `status`, all optional)                          | `{ job }`                                                                      | owner only; `companyId`, `slug`, `status`, `applicants` not writable (`400`)                                                 |
 | POST       | `/api/employer/jobs/:id/status`            | `{ status: "draft" \| "active" \| "archived" }`                                              | `{ job }`                                                                      | archiving closes open applications (`closed`)                                                                                |
-| DELETE     | `/api/employer/jobs/:id`                   | —                                                                                            | `204`                                                                          | only drafts or jobs with zero applications; otherwise archive                                                                |
+| DELETE     | `/api/employer/jobs/:id`                   | —                                                                                            | `204`                                                                          | only a job with zero applications (a draft always is); otherwise `409 conflict`, archive instead                             |
 | GET        | `/api/employer/jobs/:id/applications`      | `?status&saved&page`                                                                         | page of `EmployerApplicationView`                                              | name, school, major, gradYear, status, has résumé, has shared scorecard                                                      |
 | PATCH      | `/api/employer/applications/:id`           | `{ status }`                                                                                 | `{ application }`                                                              | via `transitionApplication`; allowed: applied→shortlisted/rejected, shortlisted→interview/rejected, interview→hired/rejected |
 | PUT/DELETE | `/api/employer/applications/:id/save`      | —                                                                                            | `204`                                                                          | toggles `savedByEmployer`                                                                                                    |
 | POST       | `/api/employer/applications/:id/interview` | `{ startsAt (future ISO), meetingUrl (https) }`                                              | `{ application }`                                                              | sets status `interview`; emails student                                                                                      |
 | GET        | `/api/employer/applications/:id/resume`    | —                                                                                            | `application/pdf`                                                              | 404 if none                                                                                                                  |
-| GET        | `/api/employer/applications/:id/scorecard` | —                                                                                            | `{ scorecard, skill, completedAt }`                                            | 404 `not_shared` if unshared or deleted                                                                                      |
+| GET        | `/api/employer/applications/:id/scorecard` | —                                                                                            | `{ scorecard, skill, completedAt }`                                            | `404 not_shared` if nothing is shared, or the attempt is gone or not completed                                               |
 
 ## Internal: api → coach (not reachable from browsers)
 

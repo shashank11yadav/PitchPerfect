@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { JobInputSchema, JobListQuerySchema } from "./jobs.js";
+import {
+  EmployerJobListQuerySchema,
+  JobInputSchema,
+  JobListQuerySchema,
+  JobStatusUpdateSchema,
+  JobUpdateSchema,
+} from "./jobs.js";
 
 const job = () => ({
   title: "Sales development intern",
@@ -110,5 +116,50 @@ describe("JobListQuerySchema", () => {
     });
     expect(JobListQuerySchema.safeParse({ workplace: "moon" }).success).toBe(false);
     expect(JobListQuerySchema.safeParse({ sort: "x" }).success).toBe(false);
+  });
+});
+
+describe("JobUpdateSchema", () => {
+  it("accepts any subset of the content fields", () => {
+    expect(JobUpdateSchema.parse({})).toEqual({});
+    expect(JobUpdateSchema.safeParse({ title: "New title" }).success).toBe(true);
+    expect(JobUpdateSchema.safeParse({ pay: { type: "unpaid" } }).success).toBe(true);
+  });
+
+  it("refuses status, slug, companyId, and applicants", () => {
+    for (const extra of [
+      { status: "active" },
+      { slug: "x" },
+      { companyId: "x" },
+      { applicants: 1 },
+    ]) {
+      expect(JobUpdateSchema.safeParse(extra).success).toBe(false);
+    }
+  });
+
+  it("still validates the fields it does accept", () => {
+    expect(JobUpdateSchema.safeParse({ title: "" }).success).toBe(false);
+  });
+});
+
+describe("JobStatusUpdateSchema", () => {
+  it("takes exactly one known status", () => {
+    for (const status of ["draft", "active", "archived"]) {
+      expect(JobStatusUpdateSchema.safeParse({ status }).success).toBe(true);
+    }
+    expect(JobStatusUpdateSchema.safeParse({ status: "closed" }).success).toBe(false);
+    expect(JobStatusUpdateSchema.safeParse({}).success).toBe(false);
+    expect(JobStatusUpdateSchema.safeParse({ status: "active", slug: "x" }).success).toBe(false);
+  });
+});
+
+describe("EmployerJobListQuerySchema", () => {
+  it("paginates and filters by status", () => {
+    expect(EmployerJobListQuerySchema.parse({})).toEqual({ page: 1, pageSize: 20 });
+    expect(EmployerJobListQuerySchema.parse({ status: "draft", page: "2" })).toMatchObject({
+      status: "draft",
+      page: 2,
+    });
+    expect(EmployerJobListQuerySchema.safeParse({ status: "nope" }).success).toBe(false);
   });
 });

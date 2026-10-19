@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   CURRENCIES,
   EMPLOYMENT_TYPES,
+  JOB_STATUSES,
   PAY_FREQUENCIES,
   WORKPLACES,
   type EmploymentType,
@@ -44,6 +45,19 @@ export const JobInputSchema = z.strictObject({
   status: z.enum(["draft", "active"]).optional(),
 });
 export type JobInput = z.infer<typeof JobInputSchema>;
+
+/** Editing a job: any subset of the content fields. Status changes use `JobStatusUpdateSchema`. */
+export const JobUpdateSchema = JobInputSchema.omit({ status: true }).partial();
+export type JobUpdate = z.infer<typeof JobUpdateSchema>;
+
+export const JobStatusUpdateSchema = z.strictObject({ status: z.enum(JOB_STATUSES) });
+export type JobStatusUpdate = z.infer<typeof JobStatusUpdateSchema>;
+
+/** Employer's jobs list: optionally one status. */
+export const EmployerJobListQuerySchema = pageQuery.extend({
+  status: z.enum(JOB_STATUSES).optional(),
+});
+export type EmployerJobListQuery = z.infer<typeof EmployerJobListQuerySchema>;
 
 export const JobListQuerySchema = pageQuery.extend({
   q: z.string().trim().max(LIMITS.jobSearchMaxLength).optional(),

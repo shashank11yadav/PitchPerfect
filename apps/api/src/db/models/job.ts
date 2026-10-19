@@ -39,6 +39,9 @@ export interface JobAttrs {
   status: JobStatus;
   publishedAt?: Date;
   closesAt?: Date;
+  /** Set by mongoose timestamps. */
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const paySchema = new Schema<StoredPay>(

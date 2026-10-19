@@ -2,6 +2,7 @@ export type ErrorFields = Record<string, string>;
 
 export type ValidationCode = "validation_failed" | "invalid_token" | "invalid_transition";
 export type ForbiddenCode = "forbidden" | "csrf_failed" | "email_not_verified" | "consent_required";
+export type NotFoundCode = "not_found" | "not_shared";
 export type ConflictCode = "conflict" | "email_taken" | "already_applied";
 
 /** An error that is safe to show to clients: it maps directly to a status and a stable code. */
@@ -47,8 +48,8 @@ export class ForbiddenError extends AppError {
 }
 
 export class NotFoundError extends AppError {
-  constructor(message = "Not found") {
-    super("not_found", 404, message);
+  constructor(message = "Not found", code: NotFoundCode = "not_found") {
+    super(code, 404, message);
   }
 }
 

@@ -1,7 +1,9 @@
 import { z } from "zod";
 import type { CompanyVerification, EmploymentType, JobStatus, Workplace } from "../enums.js";
 import { LIMITS } from "../limits.js";
+import type { EmployerRecentApplication } from "./applications.js";
 import { httpsUrl, shortText } from "./common.js";
+import type { JobPay } from "./jobs.js";
 
 /** Company fields collected at employer signup; also editable later. */
 export const companyFields = {
@@ -41,4 +43,22 @@ export interface EmployerJobSummary {
   publishedAt: string | null;
   createdAt: string;
   applicantCount: number;
+}
+
+/** A job as its owner sees it: the summary plus everything editable. */
+export interface EmployerJob extends EmployerJobSummary {
+  /** Already sanitized by the api. */
+  descriptionHtml: string;
+  skills: string[];
+  pay: JobPay;
+}
+
+export interface EmployerDashboard {
+  activeJobs: number;
+  drafts: number;
+  /** Open applications (applied, shortlisted, interview) across all of the company's jobs. */
+  applicants: number;
+  interviewsUpcoming: number;
+  /** The five newest applications. */
+  recentApplications: EmployerRecentApplication[];
 }

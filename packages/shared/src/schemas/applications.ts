@@ -1,6 +1,12 @@
 import { z } from "zod";
-import type { ApplicationClosedReason, ApplicationStatus } from "../enums.js";
-import { httpsUrl, objectId } from "./common.js";
+import {
+  APPLICATION_STATUSES,
+  type ApplicationClosedReason,
+  type ApplicationStatus,
+} from "../enums.js";
+import type { Scorecard } from "../rubric.js";
+import type { SkillSlug } from "../skills.js";
+import { httpsUrl, objectId, pageQuery } from "./common.js";
 
 export const ApplySchema = z.strictObject({ sharedAttemptId: objectId().optional() });
 export type Apply = z.infer<typeof ApplySchema>;
@@ -56,4 +62,26 @@ export interface EmployerApplicationView {
   hasResume: boolean;
   hasSharedScorecard: boolean;
   interview: InterviewView | null;
+}
+
+/** An applicant list: optionally one status and/or only the ones the employer saved. */
+export const EmployerApplicationListQuerySchema = pageQuery.extend({
+  status: z.enum(APPLICATION_STATUSES).optional(),
+  saved: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
+});
+export type EmployerApplicationListQuery = z.infer<typeof EmployerApplicationListQuerySchema>;
+
+export interface EmployerRecentApplication extends EmployerApplicationView {
+  jobId: string;
+  jobTitle: string;
+}
+
+/** What an employer sees of a scorecard the student chose to share. */
+export interface SharedScorecardView {
+  scorecard: Scorecard;
+  skill: SkillSlug;
+  completedAt: string | null;
 }
