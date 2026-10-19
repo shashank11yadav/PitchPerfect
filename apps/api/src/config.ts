@@ -20,7 +20,10 @@ const optional = <T extends z.ZodType>(schema: T) =>
 const secret = z
   .string()
   .min(SECRET_MIN_LENGTH, `must be at least ${String(SECRET_MIN_LENGTH)} characters`);
-const count = (fallback: number) => z.coerce.number().int().min(0).default(fallback);
+/** Whole number at or above `min`; an empty string counts as unset and yields the default. */
+const integer = (fallback: number, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) =>
+  z.preprocess(emptyToUndefined, z.coerce.number().int().min(min).max(max).default(fallback));
+const port = (fallback: number) => integer(fallback, { max: 65535 });
 const flag = z.enum(["true", "false"]).transform((value) => value === "true");
 
 const PRODUCTION_SECRETS = [
@@ -33,11 +36,11 @@ const PRODUCTION_SECRETS = [
 const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-    PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+    PORT: port(4000),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
-    TRUST_PROXY: count(0),
+    TRUST_PROXY: integer(0, { min: 0 }),
     APP_URL: z.url().default("http://localhost:3000"),
     MONGODB_URI: z
       .string()
@@ -48,15 +51,15 @@ const envSchema = z
     COACH_SHARED_SECRET: secret,
     PROXY_SHARED_SECRET: optional(secret),
     SMTP_HOST: optional(z.string()),
-    SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+    SMTP_PORT: port(1025),
     SMTP_SECURE: flag.default(false),
     SMTP_USER: optional(z.string()),
     SMTP_PASS: optional(z.string()),
     MAIL_FROM: z.string().min(1).default("PitchPerfect <no-reply@pitchperfect.local>"),
-    PRACTICE_DAILY_LIMIT: count(LIMITS.dailyQuota),
-    PRACTICE_MONTHLY_LIMIT: count(LIMITS.monthlyQuota),
-    PRACTICE_DAILY_TOKEN_BUDGET: count(LIMITS.dailyTokenBudget),
-    PRACTICE_RETENTION_DAYS: count(LIMITS.attemptRetentionDays),
+    PRACTICE_DAILY_LIMIT: integer(LIMITS.dailyQuota),
+    PRACTICE_MONTHLY_LIMIT: integer(LIMITS.monthlyQuota),
+    PRACTICE_DAILY_TOKEN_BUDGET: integer(LIMITS.dailyTokenBudget),
+    PRACTICE_RETENTION_DAYS: integer(LIMITS.attemptRetentionDays),
     HIBP_ENABLED: flag.default(true),
     REDIS_URL: optional(z.string()),
     SEED_DEMO_PASSWORD: optional(z.string().min(LIMITS.passwordMinLength)),

@@ -33,6 +33,36 @@ describe("loadConfig", () => {
     expect(config.LOG_LEVEL).toBe("info");
   });
 
+  describe("numeric variables", () => {
+    const limits = [
+      ["PRACTICE_DAILY_LIMIT", 5],
+      ["PRACTICE_MONTHLY_LIMIT", 30],
+      ["PRACTICE_DAILY_TOKEN_BUDGET", 2_000_000],
+      ["PRACTICE_RETENTION_DAYS", 180],
+      ["PORT", 4000],
+      ["SMTP_PORT", 1025],
+    ] as const;
+
+    it.each(limits)("falls back to the default when %s is empty", (name, fallback) => {
+      expect(loadConfig(devEnv({ [name]: "" }))[name]).toBe(fallback);
+    });
+
+    it.each(limits)("rejects %s=0", (name) => {
+      expect(() => loadConfig(devEnv({ [name]: "0" }))).toThrow(ConfigError);
+      expect(() => loadConfig(devEnv({ [name]: "0" }))).toThrow(new RegExp(name));
+    });
+
+    it.each(limits)("rejects a non-numeric %s", (name) => {
+      expect(() => loadConfig(devEnv({ [name]: "abc" }))).toThrow(new RegExp(name));
+    });
+
+    it("allows TRUST_PROXY=0 and defaults it when empty", () => {
+      expect(loadConfig(devEnv({ TRUST_PROXY: "0" })).TRUST_PROXY).toBe(0);
+      expect(loadConfig(devEnv({ TRUST_PROXY: "" })).TRUST_PROXY).toBe(0);
+      expect(() => loadConfig(devEnv({ TRUST_PROXY: "-1" }))).toThrow(/TRUST_PROXY/);
+    });
+  });
+
   it("throws a ConfigError when MONGODB_URI is missing", () => {
     const env = devEnv();
     delete env.MONGODB_URI;

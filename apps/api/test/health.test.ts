@@ -2,8 +2,11 @@ import mongoose from "mongoose";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeTestApp } from "./helpers/app.js";
+import { useTestDb } from "./helpers/db.js";
 import { prodEnv } from "./helpers/env.js";
 import { FakeCoachClient } from "./helpers/fake-coach.js";
+
+useTestDb();
 
 afterEach(() => {
   vi.restoreAllMocks();

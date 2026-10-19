@@ -1,23 +1,25 @@
 import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { afterAll, afterEach, beforeAll, inject } from "vitest";
 import { connectDb, disconnectDb } from "../../src/db/connect.js";
 
-let server: MongoMemoryServer | undefined;
-
-/** Starts one in-memory MongoDB for this worker and connects mongoose to it. */
-export async function startMemoryMongo(): Promise<void> {
-  server = await MongoMemoryServer.create();
-  await connectDb(server.getUri("pitchperfect-test"));
-}
-
-export async function stopMemoryMongo(): Promise<void> {
-  await disconnectDb();
-  await server?.stop();
-  server = undefined;
+/** Each worker gets its own database on the shared in-memory server, so files can run in parallel. */
+function workerDbUri(): string {
+  const url = new URL(inject("mongoUri"));
+  url.pathname = `/pitchperfect-test-${process.env.VITEST_POOL_ID ?? "0"}`;
+  return url.toString();
 }
 
 /** Empties every collection but keeps indexes. */
-export async function clearDb(): Promise<void> {
+async function clearDb(): Promise<void> {
   const collections = await mongoose.connection.db?.collections();
   await Promise.all((collections ?? []).map((collection) => collection.deleteMany({})));
+}
+
+/** Call at the top of a test file that needs MongoDB: connects once, clears between tests. */
+export function useTestDb(): void {
+  beforeAll(async () => {
+    await connectDb(workerDbUri());
+  });
+  afterEach(clearDb);
+  afterAll(disconnectDb);
 }

@@ -13,21 +13,33 @@ describe("x-pp-proxy guard", () => {
 
   it("rejects requests without the header when a proxy secret is configured", async () => {
     const { app } = makeTestApp({ env: { PROXY_SHARED_SECRET: PROXY_SECRET } });
-    const res = await request(app).get("/api/health");
+    const res = await request(app).get("/api/nope");
 
     expect(res.status).toBe(403);
     expect(errorOf(res).code).toBe("forbidden");
   });
 
+  it("exempts GET /api/health so platform health checks work", async () => {
+    const { app } = makeTestApp({ env: { PROXY_SHARED_SECRET: PROXY_SECRET } });
+    const res = await request(app).get("/api/health");
+    expect(res.status).toBe(200);
+  });
+
+  it("does not exempt other methods on the health path", async () => {
+    const { app } = makeTestApp({ env: { PROXY_SHARED_SECRET: PROXY_SECRET } });
+    const res = await request(app).post("/api/health");
+    expect(res.status).toBe(403);
+  });
+
   it("rejects a wrong header value", async () => {
     const { app } = makeTestApp({ env: { PROXY_SHARED_SECRET: PROXY_SECRET } });
-    const res = await request(app).get("/api/health").set("x-pp-proxy", "q".repeat(40));
+    const res = await request(app).get("/api/nope").set("x-pp-proxy", "q".repeat(40));
     expect(res.status).toBe(403);
   });
 
   it("accepts the correct header value", async () => {
     const { app } = makeTestApp({ env: { PROXY_SHARED_SECRET: PROXY_SECRET } });
-    const res = await request(app).get("/api/health").set("x-pp-proxy", PROXY_SECRET);
-    expect(res.status).toBe(200);
+    const res = await request(app).get("/api/nope").set("x-pp-proxy", PROXY_SECRET);
+    expect(res.status).toBe(404);
   });
 });

@@ -16,7 +16,7 @@ All request and response bodies are JSON unless noted. Schema names refer to exp
 | 403     | `forbidden`, `csrf_failed`, `email_not_verified`, `consent_required`      |
 | 404     | `not_found` (also used for resources the caller doesn't own)              |
 | 409     | `conflict`, `email_taken`, `already_applied`                              |
-| 413     | `file_too_large`                                                          |
+| 413     | `file_too_large` (also JSON bodies over 100 kB)                           |
 | 415     | `unsupported_file`                                                        |
 | 429     | `rate_limited`, `quota_exceeded`, `budget_exhausted` (with `Retry-After`) |
 | 500     | `internal_error` (message is always "Something went wrong")               |
