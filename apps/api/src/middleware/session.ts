@@ -19,7 +19,8 @@ declare module "express-session" {
 export interface SessionIdentity {
   userId: string;
   role: Role;
-  sessionVersion: number;
+  /** Missing on users stored before the field existed; stored as 0. */
+  sessionVersion?: number;
 }
 
 const SESSION_COOKIE = "pp.sid";
@@ -169,7 +170,7 @@ export function regenerateSession(
       }
       req.session.userId = identity.userId;
       req.session.role = identity.role;
-      req.session.sessionVersion = identity.sessionVersion;
+      req.session.sessionVersion = identity.sessionVersion ?? 0;
       req.session.createdAt = createdAt;
       req.session.save((saveError: unknown) => {
         if (saveError) reject(asError(saveError));

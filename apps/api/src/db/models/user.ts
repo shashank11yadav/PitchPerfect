@@ -10,8 +10,11 @@ export interface UserAttrs {
   emailVerifiedAt?: Date;
   ageConfirmedAt?: Date;
   practiceConsentAt?: Date;
-  /** Bumped to end every session at once (password reset/change); sessions store their copy. */
-  sessionVersion: number;
+  /**
+   * Bumped to end every session at once (password reset/change); sessions store their copy.
+   * Missing on users stored before it existed, which counts as 0.
+   */
+  sessionVersion?: number;
 }
 
 const userSchema = new Schema<UserAttrs>(

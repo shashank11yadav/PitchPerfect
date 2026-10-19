@@ -1,3 +1,4 @@
+import argon2 from "argon2";
 import type { Router } from "express";
 import mongoose from "mongoose";
 import request from "supertest";
@@ -11,6 +12,7 @@ import {
 } from "../src/db/models/index.js";
 import { requireVerified } from "../src/middleware/auth.js";
 import { bumpSessionVersion } from "../src/modules/auth/service.js";
+import { hashPassword } from "../src/services/passwords.js";
 import { makeTestApp } from "./helpers/app.js";
 import { csrfAgent, TEST_ORIGIN, withCsrf, type CsrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
@@ -122,14 +124,15 @@ describe("POST /api/auth/signup", () => {
     expect(await AuthToken.countDocuments({ type: "verify_email" })).toBe(1);
   });
 
-  it("creates a verified company when the email domain matches the website", async () => {
+  it("creates the company unverified, even when the email domain matches the website", async () => {
     const res = await signup(employerSignup());
     expect(res.status).toBe(201);
 
     const user = await User.findOne().lean();
     const company = await Company.findOne().lean();
     const profile = await EmployerProfile.findOne().lean();
-    expect(company?.verification).toBe("verified");
+    // The address isn't confirmed yet, so the domain match proves nothing until verify-email.
+    expect(company?.verification).toBe("unverified");
     expect(company?.ownerId.toString()).toBe(user?._id.toString());
     expect(company?.slug).toMatch(/^acme-demo-co-[a-z0-9]{6}$/);
     expect(company?.website).toBe("https://www.acme-demo.com");
@@ -150,10 +153,7 @@ describe("POST /api/auth/signup", () => {
     const companies = await Company.find().lean();
     expect(companies).toHaveLength(2);
     expect(companies[0]?.slug).not.toBe(companies[1]?.slug);
-    expect(companies.map((company) => company.verification).sort()).toEqual([
-      "unverified",
-      "verified",
-    ]);
+    expect(companies.map((company) => company.verification)).toEqual(["unverified", "unverified"]);
   });
 
   it("answers an existing email with the same 201 and warns that address instead", async () => {
@@ -243,6 +243,20 @@ describe("POST /api/auth/signup", () => {
     expect(Number(res.get("retry-after"))).toBeGreaterThan(0);
   });
 
+  it("refuses a signed-in user with 403 forbidden and creates nothing", async () => {
+    const { email, password } = await createStudent();
+    const session = await signIn(request.agent(app), email, password);
+
+    const res = await session
+      .post("/api/auth/signup")
+      .send(studentSignup({ email: "second@example.test" }));
+
+    expect(res.status).toBe(403);
+    expect(errorOf(res).code).toBe("forbidden");
+    expect(await User.countDocuments()).toBe(1);
+    expect(mailer.sent).toHaveLength(0);
+  });
+
   it("requires a CSRF token", async () => {
     const res = await request(app)
       .post("/api/auth/signup")
@@ -270,6 +284,36 @@ describe("POST /api/auth/verify-email", () => {
     const reuse = await agent.post("/api/auth/verify-email").send({ token });
     expect(reuse.status).toBe(400);
     expect(errorOf(reuse).code).toBe("invalid_token");
+  });
+
+  async function verifyEmployer(overrides: Record<string, unknown> = {}) {
+    expect((await signup(employerSignup(overrides))).status).toBe(201);
+    const token = tokenFromLastEmail("/verify-email");
+    return (await csrfAgent(app)).post("/api/auth/verify-email").send({ token });
+  }
+
+  it("verifies the employer's company once the matching email is confirmed", async () => {
+    expect((await verifyEmployer()).status).toBe(200);
+    expect((await Company.findOne().lean())?.verification).toBe("verified");
+  });
+
+  it.each([
+    ["a free-mail address", { email: "jane.demo@gmail.com" }],
+    ["a different domain", { email: "jane@other-demo.com" }],
+  ])("keeps the company unverified for %s", async (_label, overrides) => {
+    expect((await verifyEmployer(overrides)).status).toBe(200);
+    expect((await Company.findOne().lean())?.verification).toBe("unverified");
+  });
+
+  it("never changes a suspended company", async () => {
+    expect((await signup(employerSignup())).status).toBe(201);
+    const token = tokenFromLastEmail("/verify-email");
+    await Company.updateOne({}, { $set: { verification: "suspended" } });
+
+    await (await csrfAgent(app)).post("/api/auth/verify-email").send({ token }).expect(200);
+
+    expect((await Company.findOne().lean())?.verification).toBe("suspended");
+    expect((await User.findOne().lean())?.emailVerifiedAt).toBeInstanceOf(Date);
   });
 
   it("rejects a token after 24 hours", async () => {
@@ -379,6 +423,50 @@ describe("POST /api/auth/signin", () => {
     expect(errorWithoutId(wrong)).toEqual(errorWithoutId(unknown));
     expect(Object.keys(wrong.headers).sort()).toEqual(Object.keys(unknown.headers).sort());
     expect(cookieHeader(wrong, "pp.sid")).toBeUndefined();
+  });
+
+  it("still runs an argon2 verification for an unknown email", async () => {
+    const verify = vi.spyOn(argon2, "verify");
+    try {
+      const res = await (
+        await csrfAgent(app)
+      )
+        .post("/api/auth/signin")
+        .send({ email: "nobody@example.test", password: NEW_PASSWORD });
+
+      expect(res.status).toBe(401);
+      expect(verify).toHaveBeenCalledTimes(1);
+      const [hash, password] = verify.mock.calls[0] ?? [];
+      expect(hash).toMatch(/^\$argon2id\$v=19\$m=19456,p=1,t=2\$/);
+      expect(password).toBe(NEW_PASSWORD);
+    } finally {
+      verify.mockRestore();
+    }
+  });
+
+  it("signs in a user stored before sessionVersion existed and keeps them signed in", async () => {
+    const email = "legacy@example.test";
+    const { insertedId } = await mongoose.connection.collection("users").insertOne({
+      email,
+      passwordHash: await hashPassword(TEST_PASSWORD),
+      role: "student",
+      name: { first: "Legacy", last: "Example" },
+      emailVerifiedAt: new Date(),
+    });
+    await StudentProfile.create({
+      userId: insertedId,
+      school: "Example State University",
+      major: "Marketing",
+      gradYear: new Date().getUTCFullYear() + 1,
+      targetRole: "Sales development rep",
+      industry: "Software",
+      state: "MA",
+    });
+
+    const session = await signIn(request.agent(app), email, TEST_PASSWORD);
+
+    await session.agent.get("/api/auth/me").expect(200);
+    await session.agent.get("/api/auth/me").expect(200);
   });
 
   it("issues a new session id on sign-in and the previous one stops working (no fixation)", async () => {
@@ -692,6 +780,24 @@ describe("POST /api/auth/reset-password", () => {
       .post("/api/auth/reset-password")
       .send({ token, password: NEW_PASSWORD });
     expect(errorOf(res).code).toBe("invalid_token");
+  });
+});
+
+describe("token route limits", () => {
+  it("give verify-email and reset-password separate 20-per-hour budgets per IP", async () => {
+    const agent = await csrfAgent(app);
+    const token = "x".repeat(43);
+    for (let i = 0; i < 20; i++) {
+      await agent.post("/api/auth/verify-email").send({ token }).expect(400);
+    }
+    const blocked = await agent.post("/api/auth/verify-email").send({ token });
+    expect(blocked.status).toBe(429);
+
+    const reset = await agent
+      .post("/api/auth/reset-password")
+      .send({ token, password: NEW_PASSWORD });
+    expect(reset.status).toBe(400);
+    expect(errorOf(reset).code).toBe("invalid_token");
   });
 });
 

@@ -14,17 +14,30 @@ export interface Mailer {
 
 type SmtpConfig = Pick<
   Config,
-  "SMTP_HOST" | "SMTP_PORT" | "SMTP_SECURE" | "SMTP_USER" | "SMTP_PASS" | "MAIL_FROM"
+  "SMTP_HOST" | "SMTP_PORT" | "SMTP_SECURE" | "SMTP_USER" | "SMTP_PASS" | "MAIL_FROM" | "isProd"
 >;
 
-/** Sends through SMTP (Mailpit in development). Every message is from `MAIL_FROM`. */
-export function createSmtpMailer(config: SmtpConfig): Mailer {
-  const transport = nodemailer.createTransport({
+/**
+ * Transport settings. Timeouts keep a stuck SMTP server from holding requests open; in production
+ * a plain connection must upgrade with STARTTLS or fail, so credentials and links never go out in
+ * clear text.
+ */
+export function smtpTransportOptions(config: SmtpConfig) {
+  return {
     host: config.SMTP_HOST ?? "localhost",
     port: config.SMTP_PORT,
     secure: config.SMTP_SECURE,
-    ...(config.SMTP_USER && { auth: { user: config.SMTP_USER, pass: config.SMTP_PASS ?? "" } }),
-  });
+    requireTLS: config.isProd && !config.SMTP_SECURE,
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
+    auth: config.SMTP_USER ? { user: config.SMTP_USER, pass: config.SMTP_PASS ?? "" } : undefined,
+  };
+}
+
+/** Sends through SMTP (Mailpit in development). Every message is from `MAIL_FROM`. */
+export function createSmtpMailer(config: SmtpConfig): Mailer {
+  const transport = nodemailer.createTransport(smtpTransportOptions(config));
   return {
     async send(message) {
       await transport.sendMail({ from: config.MAIL_FROM, ...message });

@@ -36,7 +36,7 @@ export async function loadUser(req: Request, res: Response): Promise<SessionUser
         .select("role emailVerifiedAt practiceConsentAt sessionVersion")
         .lean()
     : null;
-  const revoked = doc?.sessionVersion !== sessionVersionOf(req);
+  const revoked = (doc?.sessionVersion ?? 0) !== sessionVersionOf(req);
   if (!doc || revoked) {
     await destroySession(req, res);
     return null;
@@ -66,6 +66,12 @@ function guard(check: (user: SessionUser) => void): RequestHandler {
 }
 
 export const requireAuth: RequestHandler = guard(() => undefined);
+
+/** For signed-out-only routes such as signup: 403 when a (still valid) session exists. */
+export const requireSignedOut: RequestHandler = async (req, res, next) => {
+  if (await loadUser(req, res)) throw new ForbiddenError("forbidden", "You're already signed in");
+  next();
+};
 
 export const requireRole = (role: Role): RequestHandler =>
   guard((user) => {

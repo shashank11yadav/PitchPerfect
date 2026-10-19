@@ -91,13 +91,14 @@ async function warnExistingAccount(deps: AuthDeps, log: MailFailureLog, email: s
 
 const slugSuffix = () => randomInt(SLUG_SUFFIX_SPACE).toString(36).padStart(6, "0");
 
-/** The employer's company; verified when the email domain matches the website's. */
+/**
+ * The employer's company. Always starts unverified: the email isn't confirmed yet, so a domain
+ * match proves nothing until `verifyEmail` (anyone can type someone else's work address).
+ */
 async function createCompany(
   ownerId: Types.ObjectId,
-  email: string,
   { name, website, linkedinUrl }: CompanyInput,
 ) {
-  const verification = verificationForCompany(email.slice(email.lastIndexOf("@") + 1), website);
   const create = () =>
     Company.create({
       ownerId,
@@ -105,7 +106,7 @@ async function createCompany(
       slug: slugify(name, slugSuffix()),
       website,
       linkedinUrl,
-      verification,
+      verification: "unverified",
     });
   try {
     return await create();
@@ -116,13 +117,13 @@ async function createCompany(
   }
 }
 
-async function createRoleProfile(userId: Types.ObjectId, email: string, input: Signup) {
+async function createRoleProfile(userId: Types.ObjectId, input: Signup) {
   if (input.role === "student") {
     const { school, major, gradYear, targetRole, industry, state } = input;
     await StudentProfile.create({ userId, school, major, gradYear, targetRole, industry, state });
     return;
   }
-  const company = await createCompany(userId, email, input.company);
+  const company = await createCompany(userId, input.company);
   await EmployerProfile.create({ userId, jobTitle: input.jobTitle, companyId: company._id });
 }
 
@@ -168,7 +169,7 @@ export async function signUp(deps: AuthDeps, log: MailFailureLog, input: Signup)
   }
 
   try {
-    await createRoleProfile(user._id, user.email, input);
+    await createRoleProfile(user._id, input);
   } catch (error) {
     await removeAccount(user._id);
     throw error;
@@ -176,13 +177,31 @@ export async function signUp(deps: AuthDeps, log: MailFailureLog, input: Signup)
   await sendVerificationEmail(deps, log, { id: user.id, email: user.email });
 }
 
-/** Marks the token's user verified. The token works once. */
+/**
+ * Now that the employer has proved they own their address, verifies their company if the email
+ * shares a registrable domain with its website. Only `unverified` companies are promoted: a
+ * suspended company stays suspended, and nothing is ever downgraded here.
+ */
+async function verifyOwnedCompany(userId: string, email: string): Promise<void> {
+  const company = await Company.findOne({ ownerId: userId }).select("website verification").lean();
+  if (company?.verification !== "unverified") return;
+  const emailDomain = email.slice(email.lastIndexOf("@") + 1);
+  if (verificationForCompany(emailDomain, company.website) !== "verified") return;
+  await Company.updateOne(
+    { _id: company._id, verification: "unverified" },
+    { $set: { verification: "verified" } },
+  );
+}
+
+/** Marks the token's user verified (and, for employers, checks their company). Works once. */
 export async function verifyEmail(token: string): Promise<void> {
   const userId = await consumeToken(token, "verify_email");
   await User.updateOne(
     { _id: userId, emailVerifiedAt: null },
     { $set: { emailVerifiedAt: new Date() } },
   );
+  const user = await User.findById(userId).select("email role").lean();
+  if (user?.role === "employer") await verifyOwnedCompany(userId, user.email);
 }
 
 /** Sends a new link (retiring the old one) unless the user is already verified. */
@@ -216,7 +235,8 @@ export async function signIn({
     identity: {
       userId: user._id.toString(),
       role: user.role,
-      sessionVersion: user.sessionVersion,
+      // Users stored before the field existed have no value; they count as version 0.
+      sessionVersion: user.sessionVersion ?? 0,
     },
   };
 }
@@ -269,7 +289,7 @@ export async function bumpSessionVersion(userId: string): Promise<number> {
     { returnDocument: "after", projection: { sessionVersion: 1 } },
   ).lean();
   if (!user) throw new UnauthenticatedError();
-  return user.sessionVersion;
+  return user.sessionVersion ?? 0;
 }
 
 /**
@@ -287,7 +307,7 @@ export async function resetPassword(
   const passwordHash = await hashPassword(password);
 
   await consumeToken(token, "reset_password");
-  await User.updateOne({ _id: userId }, { $set: { passwordHash } });
-  await bumpSessionVersion(userId);
+  // One write: the new password and the revocation of every session land together.
+  await User.updateOne({ _id: userId }, { $set: { passwordHash }, $inc: { sessionVersion: 1 } });
   await AuthToken.deleteMany({ userId, type: "reset_password", usedAt: null });
 }

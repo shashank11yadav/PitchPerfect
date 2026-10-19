@@ -2,8 +2,8 @@ import { once } from "node:events";
 import { createServer, type AddressInfo, type Server, type Socket } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.js";
-import { createSmtpMailer, sendSafely } from "../src/services/mailer.js";
-import { devEnv } from "./helpers/env.js";
+import { createSmtpMailer, sendSafely, smtpTransportOptions } from "../src/services/mailer.js";
+import { devEnv, prodEnv } from "./helpers/env.js";
 import { FakeMailer } from "./helpers/fake-mailer.js";
 
 interface Received {
@@ -96,6 +96,32 @@ describe("createSmtpMailer", () => {
     await expect(
       createSmtpMailer(config).send({ to: "a@example.test", subject: "s", text: "t", html: "h" }),
     ).rejects.toThrow();
+  });
+});
+
+describe("smtpTransportOptions", () => {
+  it("bounds connection, greeting and socket time", () => {
+    expect(smtpTransportOptions(loadConfig(devEnv()))).toMatchObject({
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
+    });
+  });
+
+  it("requires STARTTLS in production when the connection isn't already TLS", () => {
+    expect(smtpTransportOptions(loadConfig(prodEnv())).requireTLS).toBe(true);
+    expect(smtpTransportOptions(loadConfig(prodEnv({ SMTP_SECURE: "true" }))).requireTLS).toBe(
+      false,
+    );
+    expect(smtpTransportOptions(loadConfig(devEnv())).requireTLS).toBe(false);
+  });
+
+  it("sends credentials only when a user is configured", () => {
+    expect(smtpTransportOptions(loadConfig(devEnv())).auth).toBeUndefined();
+    const withUser = smtpTransportOptions(
+      loadConfig(devEnv({ SMTP_USER: "mailer", SMTP_PASS: "placeholder-pass" })),
+    );
+    expect(withUser.auth).toEqual({ user: "mailer", pass: "placeholder-pass" });
   });
 });
 

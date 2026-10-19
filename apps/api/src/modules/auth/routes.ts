@@ -6,7 +6,7 @@ import {
   SignupSchema,
   VerifyEmailSchema,
 } from "@pitchperfect/shared";
-import { requireAuth } from "../../middleware/auth.js";
+import { requireAuth, requireSignedOut } from "../../middleware/auth.js";
 import type { Csrf } from "../../middleware/csrf.js";
 import { byIp, rateLimit } from "../../middleware/rate-limit.js";
 import { sessionUserId } from "../../middleware/session.js";
@@ -46,15 +46,22 @@ export function authRoutes({ csrf, ...deps }: AuthRouteDeps): Router {
     key: byUser,
   });
   const forgotLimit = rateLimit("forgot-password", { windowMs: HOUR_MS, limit: 3, key: emailKey });
-  // Tokens are 256-bit, so this only caps load from public, unauthenticated routes.
-  const tokenLimit = rateLimit("auth-token", { windowMs: HOUR_MS, limit: 20, key: byIp });
+  // Tokens are 256-bit, so these only cap load from public, unauthenticated routes.
+  const verifyLimit = rateLimit("verify-email", { windowMs: HOUR_MS, limit: 20, key: byIp });
+  const resetLimit = rateLimit("reset-password", { windowMs: HOUR_MS, limit: 20, key: byIp });
 
   const router = Router();
   router.get("/auth/csrf", handle.csrfToken);
-  router.post("/auth/signup", signupLimit, validate({ body: SignupSchema }), handle.signup);
+  router.post(
+    "/auth/signup",
+    requireSignedOut,
+    signupLimit,
+    validate({ body: SignupSchema }),
+    handle.signup,
+  );
   router.post(
     "/auth/verify-email",
-    tokenLimit,
+    verifyLimit,
     validate({ body: VerifyEmailSchema }),
     handle.verify,
   );
@@ -70,7 +77,7 @@ export function authRoutes({ csrf, ...deps }: AuthRouteDeps): Router {
   );
   router.post(
     "/auth/reset-password",
-    tokenLimit,
+    resetLimit,
     validate({ body: ResetPasswordSchema }),
     handle.reset,
   );
