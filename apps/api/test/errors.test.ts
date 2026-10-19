@@ -21,6 +21,7 @@ import {
 import { User } from "../src/db/models/index.js";
 import { getInput, validate } from "../src/middleware/validate.js";
 import { makeTestApp } from "./helpers/app.js";
+import { csrfAgent } from "./helpers/csrf.js";
 import { errorOf } from "./helpers/error-body.js";
 
 const thrown: (() => Error)[] = [
@@ -213,21 +214,25 @@ describe("validate()", () => {
   });
 
   it("rejects unknown keys when the schema is strict", async () => {
-    const res = await request(app).post("/api/__test/echo").send({ name: "Ada", admin: true });
+    const res = await (
+      await csrfAgent(app)
+    )
+      .post("/api/__test/echo")
+      .send({ name: "Ada", admin: true });
 
     expect(res.status).toBe(400);
     expect(errorOf(res).fields).toHaveProperty("admin");
   });
 
   it("returns the parsed body on success", async () => {
-    const res = await request(app).post("/api/__test/echo").send({ name: "Ada" });
+    const res = await (await csrfAgent(app)).post("/api/__test/echo").send({ name: "Ada" });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ name: "Ada" });
   });
 
   it("treats a missing body as empty input", async () => {
-    const res = await request(app).post("/api/__test/echo");
+    const res = await (await csrfAgent(app)).post("/api/__test/echo");
 
     expect(res.status).toBe(400);
     expect(errorOf(res).fields).toHaveProperty("name");

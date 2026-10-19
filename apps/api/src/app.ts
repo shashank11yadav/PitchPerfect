@@ -1,13 +1,19 @@
+import cookieParser from "cookie-parser";
 import express from "express";
 import helmet from "helmet";
+import mongoose from "mongoose";
 import { pinoHttp } from "pino-http";
 import { LIMITS } from "@pitchperfect/shared";
 import type { Config } from "./config.js";
 import { createLogger } from "./logger.js";
+import { createCsrf } from "./middleware/csrf.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { notFound } from "./middleware/not-found.js";
+import { originCheck } from "./middleware/origin-check.js";
 import { proxyGuard } from "./middleware/proxy-guard.js";
 import { requestId, requestIdOf } from "./middleware/request-id.js";
+import { sessionMiddleware } from "./middleware/session.js";
+import { csrfRoutes } from "./modules/auth/csrf.routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
 import type { CoachClient } from "./services/coach-client.js";
 import type { Mailer } from "./services/mailer.js";
@@ -75,7 +81,16 @@ export function createApp(
   if (config.PROXY_SHARED_SECRET) app.use(proxyGuard(config.PROXY_SHARED_SECRET));
   app.use(express.json({ limit: LIMITS.jsonBodyMaxBytes }));
 
+  // After body parsing, before any route: cookies, then the session, then the CSRF checks that
+  // depend on it (the origin check first because it is cheap).
+  const csrf = createCsrf(config);
+  app.use(cookieParser());
+  app.use(sessionMiddleware(config, () => mongoose.connection.getClient()));
+  app.use(originCheck(config));
+  app.use(csrf.csrfProtection);
+
   const api = express.Router();
+  api.use(csrfRoutes(csrf));
   api.use(healthRoutes(deps.coach));
   extraRoutes?.(api);
   app.use("/api", api);
