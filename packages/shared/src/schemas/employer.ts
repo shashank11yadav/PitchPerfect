@@ -1,8 +1,7 @@
 import { z } from "zod";
-import type { CompanyVerification } from "../enums.js";
+import type { CompanyVerification, EmploymentType, JobStatus, Workplace } from "../enums.js";
 import { LIMITS } from "../limits.js";
 import { httpsUrl, shortText } from "./common.js";
-import type { EmploymentType, JobStatus, Workplace } from "../enums.js";
 
 /** Company fields collected at employer signup; also editable later. */
 export const companyFields = {

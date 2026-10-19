@@ -18,6 +18,33 @@ describe("redactPii", () => {
     expect(redactPii("card 4111111111111111")).toBe("card [number]");
   });
 
+  it("redacts cards wrapped in punctuation or with irregular spacing", () => {
+    expect(redactPii("(4111 1111 1111 1111)")).toBe("([number])");
+    expect(redactPii("card +4111 1111 1111 1111")).toBe("card +[number]");
+    expect(redactPii("4111  1111  1111  1111")).toBe("[number]");
+    expect(redactPii("4111- 1111 -1111- 1111")).toBe("[number]");
+  });
+
+  it("does not treat dates, times, or year ranges as phone numbers", () => {
+    for (const text of [
+      "2026-10-19",
+      "2026-10-19 14:30",
+      "at 2026-10-19 09:00:00 UTC",
+      "2026-10-19T09:00:00Z",
+      "2026-10-19T09:00:00.123+02:00",
+      "10/19/2026",
+      "meet at 14:30 or 9:05",
+      "FY 2024-2026 2027 2028",
+      "2024-2026",
+    ]) {
+      expect(redactPii(text), text).toBe(text);
+    }
+  });
+
+  it("still redacts a phone number next to a date", () => {
+    expect(redactPii("on 2026-10-19 call 617 555 0100")).toBe("on 2026-10-19 call [phone]");
+  });
+
   it("leaves long digit runs that fail the Luhn check alone", () => {
     expect(redactPii("order 4111 1111 1111 1112")).toBe("order 4111 1111 1111 1112");
     expect(redactPii("id 12345678901234567890")).toBe("id 12345678901234567890");
