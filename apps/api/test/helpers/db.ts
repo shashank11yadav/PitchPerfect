@@ -19,6 +19,8 @@ async function clearDb(): Promise<void> {
 export function useTestDb(): void {
   beforeAll(async () => {
     await connectDb(workerDbUri());
+    // Index builds start on connect; wait so unique and text indexes are in place for every test.
+    await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
   });
   afterEach(clearDb);
   afterAll(disconnectDb);

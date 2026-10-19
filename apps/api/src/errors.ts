@@ -1,6 +1,6 @@
 export type ErrorFields = Record<string, string>;
 
-export type ValidationCode = "validation_failed" | "invalid_token";
+export type ValidationCode = "validation_failed" | "invalid_token" | "invalid_transition";
 export type ForbiddenCode = "forbidden" | "csrf_failed" | "email_not_verified" | "consent_required";
 export type ConflictCode = "conflict" | "email_taken" | "already_applied";
 

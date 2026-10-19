@@ -1,6 +1,10 @@
 import type { RequestHandler, Response } from "express";
-import type { z } from "zod";
+import { objectId } from "@pitchperfect/shared";
+import { z } from "zod";
 import { ValidationError, type ErrorFields } from "../errors.js";
+
+/** `:id` route parameter that must be a 24-character hex ObjectId. */
+export const IdParamSchema = z.strictObject({ id: objectId() });
 
 interface Schemas {
   params?: z.ZodType;

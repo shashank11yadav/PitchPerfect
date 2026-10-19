@@ -134,8 +134,8 @@ describe("DELETE /api/me as a student", () => {
 describe("DELETE /api/me as an employer", () => {
   async function employerWithApplicants() {
     const account = await createEmployer({ companyName: "Acme Demo Co" });
-    const jobA = await createJob(account.company._id, "Account executive");
-    const jobB = await createJob(account.company._id, "Sales intern");
+    const jobA = await createJob(account.company._id, { title: "Account executive" });
+    const jobB = await createJob(account.company._id, { title: "Sales intern" });
     const snapshotOf = (job: { title: string }) => ({
       jobSnapshot: { title: job.title, companyName: "Acme Demo Co" },
     });

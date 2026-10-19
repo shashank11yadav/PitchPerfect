@@ -9,7 +9,9 @@ import {
   User,
 } from "../../src/db/models/index.js";
 import type { ApplicationAttrs } from "../../src/db/models/application.js";
+import type { JobAttrs } from "../../src/db/models/job.js";
 import { slugify } from "../../src/db/slug.js";
+import { sanitizeJobHtml } from "../../src/services/html-sanitizer.js";
 import { hashPassword } from "../../src/services/passwords.js";
 import { withCsrf, type CsrfAgent, type TestAgent } from "./csrf.js";
 
@@ -81,8 +83,12 @@ export async function createEmployer(options: EmployerOptions = {}) {
   return { ...account, company, profile };
 }
 
-/** An active job posted by `company`. */
-export function createJob(companyId: mongoose.Types.ObjectId, title = "Sales development rep") {
+/** A job posted by `company`: active and published now unless `opts` say otherwise. */
+export function createJob(
+  companyId: mongoose.Types.ObjectId,
+  opts: Partial<Omit<JobAttrs, "companyId">> = {},
+) {
+  const title = opts.title ?? "Sales development rep";
   return Job.create({
     companyId,
     slug: slugify(title, uniqueId().slice(-6)),
@@ -90,10 +96,11 @@ export function createJob(companyId: mongoose.Types.ObjectId, title = "Sales dev
     location: "Boston, MA",
     workplace: "remote",
     employmentType: "full_time",
-    descriptionHtml: "<p>Fictional role for tests.</p>",
+    descriptionHtml: sanitizeJobHtml("<p>Fictional role for tests.</p>"),
     pay: { type: "unpaid" },
     status: "active",
     publishedAt: new Date(),
+    ...opts,
   });
 }
 

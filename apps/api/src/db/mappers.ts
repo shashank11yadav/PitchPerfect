@@ -6,9 +6,12 @@ import type {
   JobPay,
   PublicCompany,
   PublicJob,
+  PublicJobSummary,
   PublicUser,
+  StudentApplicationView,
   StudentProfileView,
 } from "@pitchperfect/shared";
+import type { ApplicationAttrs } from "./models/application.js";
 import type { CompanyAttrs } from "./models/company.js";
 import type { EmployerProfileAttrs } from "./models/employer-profile.js";
 import type { JobAttrs, StoredPay } from "./models/job.js";
@@ -76,7 +79,10 @@ function toJobPay(pay: StoredPay): JobPay {
     : { type: "range", min: pay.min ?? 0, max: pay.max ?? 0, ...terms };
 }
 
-export function toPublicJob(job: Persisted<JobAttrs>, company: Persisted<CompanyAttrs>): PublicJob {
+export function toPublicJobSummary(
+  job: Persisted<JobAttrs>,
+  company: Persisted<CompanyAttrs>,
+): PublicJobSummary {
   const { name, slug, logoUrl, verification } = toPublicCompany(company);
   return {
     id: job._id.toString(),
@@ -88,8 +94,38 @@ export function toPublicJob(job: Persisted<JobAttrs>, company: Persisted<Company
     pay: toJobPay(job.pay),
     skills: [...job.skills],
     publishedAt: iso(job.publishedAt),
-    descriptionHtml: job.descriptionHtml,
     company: { name, slug, logoUrl, verification },
+  };
+}
+
+export function toPublicJob(job: Persisted<JobAttrs>, company: Persisted<CompanyAttrs>): PublicJob {
+  return { ...toPublicJobSummary(job, company), descriptionHtml: job.descriptionHtml };
+}
+
+/** An application with the job fields recorded when it was made; `jobSlug` only while the job is listed. */
+export function toStudentApplicationView(
+  application: Persisted<ApplicationAttrs>,
+  jobSlug: string | null,
+): StudentApplicationView {
+  return {
+    id: application._id.toString(),
+    status: application.status,
+    closedReason: application.closedReason,
+    appliedAt: application.createdAt.toISOString(),
+    updatedAt: application.updatedAt.toISOString(),
+    job: {
+      id: application.jobId.toString(),
+      slug: jobSlug,
+      title: application.jobSnapshot.title,
+      companyName: application.jobSnapshot.companyName,
+    },
+    interview: application.interview
+      ? {
+          startsAt: application.interview.startsAt.toISOString(),
+          meetingUrl: application.interview.meetingUrl,
+        }
+      : null,
+    hasSharedScorecard: application.sharedAttemptId != null,
   };
 }
 

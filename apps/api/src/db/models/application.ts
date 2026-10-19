@@ -23,6 +23,9 @@ export interface ApplicationAttrs {
   savedByEmployer: boolean;
   sharedAttemptId?: Types.ObjectId;
   interview?: { startsAt: Date; meetingUrl: string };
+  /** Set by mongoose timestamps. */
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const interviewSchema = new Schema<NonNullable<ApplicationAttrs["interview"]>>(

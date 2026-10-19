@@ -11,7 +11,7 @@ All request and response bodies are JSON unless noted. Schema names refer to exp
 
 | Status  | `code` values                                                             |
 | ------- | ------------------------------------------------------------------------- |
-| 400     | `validation_failed`, `invalid_id`, `invalid_token`                        |
+| 400     | `validation_failed`, `invalid_id`, `invalid_token`, `invalid_transition`  |
 | 401     | `unauthenticated`, `invalid_credentials`                                  |
 | 403     | `forbidden`, `csrf_failed`, `email_not_verified`, `consent_required`      |
 | 404     | `not_found` (also used for resources the caller doesn't own)              |
@@ -75,17 +75,17 @@ Password policy: 12–128 characters, not in the breached-password check, not eq
 
 ## Jobs (public + student actions)
 
-| Method | Path                              | Auth              | Body / query                                   | Success                                      | Notes                                                                                                         |
-| ------ | --------------------------------- | ----------------- | ---------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/jobs`                       | none              | `?q&workplace&employmentType&page&pageSize`    | page of `PublicJobSummary`                   | active jobs of non-suspended companies only                                                                   |
-| GET    | `/api/jobs/:slug`                 | none              | —                                              | `{ job: PublicJob, company: PublicCompany }` | 404 if not active or company suspended                                                                        |
-| PUT    | `/api/jobs/:id/save`              | Student           | —                                              | `204`                                        | idempotent                                                                                                    |
-| DELETE | `/api/jobs/:id/save`              | Student           | —                                              | `204`                                        | idempotent                                                                                                    |
-| GET    | `/api/me/saved-jobs`              | Student           | page                                           | page of `PublicJobSummary`                   |                                                                                                               |
-| POST   | `/api/jobs/:id/apply`             | Student, Verified | `{ sharedAttemptId? }`                         | `201 { application }`                        | job must be active; attempt must be the student's own completed attempt; `409 already_applied`; atomic upsert |
-| GET    | `/api/me/applications`            | Student           | page                                           | page of `StudentApplicationView`             | includes job title, company, status, interview                                                                |
-| POST   | `/api/applications/:id/withdraw`  | Student           | —                                              | `{ application }`                            | only from `applied`/`shortlisted`/`interview`; clears `sharedAttemptId`                                       |
-| PUT    | `/api/applications/:id/scorecard` | Student (owner)   | `ShareScorecardSchema` `{ attemptId \| null }` | `{ application }`                            | attempt must be the student's own `completed` attempt; `null` unshares; not allowed on `withdrawn`/`closed`   |
+| Method | Path                              | Auth              | Body / query                                   | Success                                      | Notes                                                                                                                                  |
+| ------ | --------------------------------- | ----------------- | ---------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/jobs`                       | none              | `?q&workplace&employmentType&page&pageSize`    | page of `PublicJobSummary`                   | active jobs of non-suspended companies only                                                                                            |
+| GET    | `/api/jobs/:slug`                 | none              | —                                              | `{ job: PublicJob, company: PublicCompany }` | 404 if not active or company suspended                                                                                                 |
+| PUT    | `/api/jobs/:id/save`              | Student           | —                                              | `204`                                        | idempotent                                                                                                                             |
+| DELETE | `/api/jobs/:id/save`              | Student           | —                                              | `204`                                        | idempotent                                                                                                                             |
+| GET    | `/api/me/saved-jobs`              | Student           | page                                           | page of `PublicJobSummary`                   |                                                                                                                                        |
+| POST   | `/api/jobs/:id/apply`             | Student, Verified | `{ sharedAttemptId? }`                         | `201 { application }`                        | job must be active; attempt must be the student's own completed attempt; `409 already_applied` (also after withdrawing); atomic upsert |
+| GET    | `/api/me/applications`            | Student           | page                                           | page of `StudentApplicationView`             | job title/company as recorded at apply time (`job.slug` null once not listed), status, `closedReason`, interview, `hasSharedScorecard` |
+| POST   | `/api/applications/:id/withdraw`  | Student           | —                                              | `{ application }`                            | only from `applied`/`shortlisted`/`interview` (else `400 invalid_transition`); clears `sharedAttemptId`                                |
+| PUT    | `/api/applications/:id/scorecard` | Student (owner)   | `ShareScorecardSchema` `{ attemptId \| null }` | `{ application }`                            | attempt must be the student's own `completed` attempt; `null` unshares; not allowed on `withdrawn`/`closed`                            |
 
 ## Practice
 
