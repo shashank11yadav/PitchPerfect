@@ -1,5 +1,12 @@
 import mongoose from "mongoose";
-import { Company, EmployerProfile, StudentProfile, User } from "../../src/db/models/index.js";
+import {
+  Company,
+  EmployerProfile,
+  Job,
+  PracticeAttempt,
+  StudentProfile,
+  User,
+} from "../../src/db/models/index.js";
 import { slugify } from "../../src/db/slug.js";
 import { hashPassword } from "../../src/services/passwords.js";
 import { withCsrf, type CsrfAgent, type TestAgent } from "./csrf.js";
@@ -70,6 +77,42 @@ export async function createEmployer(options: EmployerOptions = {}) {
     companyId: company._id,
   });
   return { ...account, company, profile };
+}
+
+/** An active job posted by `company`. */
+export function createJob(companyId: mongoose.Types.ObjectId, title = "Sales development rep") {
+  return Job.create({
+    companyId,
+    slug: slugify(title, uniqueId().slice(-6)),
+    title,
+    location: "Boston, MA",
+    workplace: "remote",
+    employmentType: "full_time",
+    descriptionHtml: "<p>Fictional role for tests.</p>",
+    pay: { type: "unpaid" },
+    status: "active",
+    publishedAt: new Date(),
+  });
+}
+
+/** A finished practice attempt for `studentId`. */
+export function createAttempt(studentId: mongoose.Types.ObjectId) {
+  return PracticeAttempt.create({
+    studentId,
+    skill: "pitching",
+    status: "completed",
+    scenarioPublic: {
+      personaName: "Dana",
+      personaTitle: "Buyer",
+      companyType: "SaaS",
+      personality: "Busy",
+      openingLine: "Hi, who is this?",
+    },
+    scenarioPrivate: { hiddenObjections: ["price", "timing"], winConditions: ["books a call"] },
+    provider: "fake",
+    model: "fake-1",
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  });
 }
 
 /** Signs `agent` in through the real route; returns the agent with a CSRF token for the new session. */

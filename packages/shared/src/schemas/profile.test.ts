@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { EmployerProfileUpdateSchema, StudentProfileUpdateSchema } from "./profile.js";
+import {
+  EmployerProfileUpdateSchema,
+  LessonProgressSchema,
+  PracticeConsentSchema,
+  SkillParamSchema,
+  StudentProfileUpdateSchema,
+} from "./profile.js";
 
 describe("profile update schemas", () => {
   it("accept partial updates and trim values", () => {
@@ -27,5 +33,30 @@ describe("profile update schemas", () => {
     expect(StudentProfileUpdateSchema.safeParse({ major: "m".repeat(120) }).success).toBe(true);
     expect(StudentProfileUpdateSchema.safeParse({ major: "m".repeat(121) }).success).toBe(false);
     expect(StudentProfileUpdateSchema.safeParse({ major: "  " }).success).toBe(false);
+  });
+});
+
+describe("practice consent schema", () => {
+  it("accepts only accepted: true", () => {
+    expect(PracticeConsentSchema.safeParse({ accepted: true }).success).toBe(true);
+    expect(PracticeConsentSchema.safeParse({ accepted: false }).success).toBe(false);
+    expect(PracticeConsentSchema.safeParse({}).success).toBe(false);
+    expect(PracticeConsentSchema.safeParse({ accepted: true, extra: 1 }).success).toBe(false);
+  });
+});
+
+describe("lesson schemas", () => {
+  it("require a boolean completed flag and nothing else", () => {
+    expect(LessonProgressSchema.safeParse({ completed: false }).success).toBe(true);
+    expect(LessonProgressSchema.safeParse({ completed: "yes" }).success).toBe(false);
+    expect(LessonProgressSchema.safeParse({ completed: true, skill: "pitching" }).success).toBe(
+      false,
+    );
+  });
+
+  it("only accept known skill slugs as the route parameter", () => {
+    expect(SkillParamSchema.safeParse({ skill: "pitching" }).success).toBe(true);
+    expect(SkillParamSchema.safeParse({ skill: "juggling" }).success).toBe(false);
+    expect(SkillParamSchema.safeParse({ skill: "pitching", extra: 1 }).success).toBe(false);
   });
 });

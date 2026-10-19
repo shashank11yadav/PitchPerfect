@@ -1,0 +1,221 @@
+import mongoose from "mongoose";
+import request from "supertest";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  Application,
+  AuthToken,
+  Company,
+  EmployerProfile,
+  Job,
+  PracticeAttempt,
+  SavedJob,
+  StudentProfile,
+  User,
+} from "../src/db/models/index.js";
+import { createToken } from "../src/services/tokens.js";
+import { makeTestApp } from "./helpers/app.js";
+import { csrfAgent } from "./helpers/csrf.js";
+import { useTestDb } from "./helpers/db.js";
+import { errorOf } from "./helpers/error-body.js";
+import {
+  createAttempt,
+  createEmployer,
+  createJob,
+  createStudent,
+  signIn,
+} from "./helpers/factories.js";
+import { tinyPdf } from "./helpers/pdf.js";
+
+useTestDb();
+
+const { app, mailer } = makeTestApp();
+
+afterEach(() => {
+  mailer.sent.length = 0;
+});
+
+const files = () => mongoose.connection.collection("resumes.files");
+const chunks = () => mongoose.connection.collection("resumes.chunks");
+const HOUR_MS = 60 * 60 * 1000;
+
+describe("DELETE /api/me as a student", () => {
+  async function studentWithEverything() {
+    const account = await createStudent();
+    const { company } = await createEmployer({ email: "boss@example.test" });
+    const job = await createJob(company._id);
+    const session = await signIn(request.agent(app), account.email, account.password);
+    await session.put("/api/me/resume").attach("file", tinyPdf(), "cv.pdf").expect(200);
+    const attempt = await createAttempt(account.user._id);
+    await createAttempt(account.user._id);
+    await Application.create({
+      jobId: job._id,
+      studentId: account.user._id,
+      sharedAttemptId: attempt._id,
+    });
+    await SavedJob.create({ studentId: account.user._id, jobId: job._id });
+    await createToken(account.user.id, "verify_email", HOUR_MS);
+    await createToken(account.user.id, "reset_password", HOUR_MS);
+    return { ...account, session, job };
+  }
+
+  it("removes every related document and the résumé file", async () => {
+    const { user, password, session } = await studentWithEverything();
+
+    const res = await session.delete("/api/me").send({ currentPassword: password });
+
+    expect(res.status).toBe(204);
+    expect(await User.countDocuments({ _id: user._id })).toBe(0);
+    expect(await StudentProfile.countDocuments({ userId: user._id })).toBe(0);
+    expect(await PracticeAttempt.countDocuments({ studentId: user._id })).toBe(0);
+    expect(await Application.countDocuments({ studentId: user._id })).toBe(0);
+    expect(await SavedJob.countDocuments({ studentId: user._id })).toBe(0);
+    expect(await AuthToken.countDocuments({ userId: user._id })).toBe(0);
+    expect(await files().countDocuments()).toBe(0);
+    expect(await chunks().countDocuments()).toBe(0);
+  });
+
+  it("leaves other people's data alone", async () => {
+    const { password, session, job } = await studentWithEverything();
+    const other = await createStudent();
+    await Application.create({ jobId: job._id, studentId: other.user._id });
+    await createAttempt(other.user._id);
+
+    await session.delete("/api/me").send({ currentPassword: password }).expect(204);
+
+    expect(await Application.countDocuments({ studentId: other.user._id })).toBe(1);
+    expect(await PracticeAttempt.countDocuments({ studentId: other.user._id })).toBe(1);
+    expect(await Job.countDocuments({ _id: job._id })).toBe(1);
+    expect(await User.countDocuments({ _id: other.user._id })).toBe(1);
+  });
+
+  it("signs out everywhere and clears the cookie", async () => {
+    const { email, password, session } = await studentWithEverything();
+    const second = await signIn(request.agent(app), email, password);
+
+    const res = await session.delete("/api/me").send({ currentPassword: password });
+
+    expect(res.headers["set-cookie"]).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^pp\.sid=;/)]),
+    );
+    await session.agent.get("/api/auth/me").expect(401);
+    await second.agent.get("/api/auth/me").expect(401);
+    expect(await mongoose.connection.collection("sessions").countDocuments()).toBe(0);
+  });
+
+  it("needs the correct current password and deletes nothing otherwise", async () => {
+    const { user, session } = await studentWithEverything();
+
+    expect((await session.delete("/api/me").send({})).status).toBe(400);
+    const wrong = await session.delete("/api/me").send({ currentPassword: "not-my-password-1" });
+
+    expect(wrong.status).toBe(401);
+    expect(errorOf(wrong).code).toBe("invalid_credentials");
+    expect(await User.countDocuments({ _id: user._id })).toBe(1);
+    expect(await files().countDocuments()).toBe(1);
+    expect(await PracticeAttempt.countDocuments({ studentId: user._id })).toBe(2);
+  });
+
+  it("requires a session and counts attempts per user", async () => {
+    expect(
+      (await (await csrfAgent(app)).delete("/api/me").send({ currentPassword: "x" })).status,
+    ).toBe(401);
+
+    const { session } = await studentWithEverything();
+    for (let i = 0; i < 5; i += 1) {
+      await session.delete("/api/me").send({ currentPassword: "not-my-password-1" }).expect(401);
+    }
+    expect(
+      (await session.delete("/api/me").send({ currentPassword: "not-my-password-1" })).status,
+    ).toBe(429);
+  });
+});
+
+describe("DELETE /api/me as an employer", () => {
+  async function employerWithApplicants() {
+    const account = await createEmployer({ companyName: "Acme Demo Co" });
+    const jobA = await createJob(account.company._id, "Account executive");
+    const jobB = await createJob(account.company._id, "Sales intern");
+    const alice = await createStudent({ email: "alice@example.test" });
+    const bob = await createStudent({ email: "bob@example.test" });
+    const carol = await createStudent({ email: "carol@example.test" });
+    const open = await Application.create({
+      jobId: jobA._id,
+      studentId: alice.user._id,
+      status: "interview",
+      interview: {
+        startsAt: new Date(Date.now() + 86_400_000),
+        meetingUrl: "https://meet.example.test/x",
+      },
+    });
+    const applied = await Application.create({ jobId: jobB._id, studentId: bob.user._id });
+    const rejected = await Application.create({
+      jobId: jobA._id,
+      studentId: carol.user._id,
+      status: "rejected",
+    });
+    await SavedJob.create({ studentId: alice.user._id, jobId: jobA._id });
+    const session = await signIn(request.agent(app), account.email, account.password);
+    return { ...account, session, jobA, jobB, alice, bob, carol, open, applied, rejected };
+  }
+
+  it("removes the company, jobs, profile, and user", async () => {
+    const { user, company, session, password } = await employerWithApplicants();
+    await createToken(user.id, "reset_password", HOUR_MS);
+
+    const res = await session.delete("/api/me").send({ currentPassword: password });
+
+    expect(res.status).toBe(204);
+    expect(await User.countDocuments({ _id: user._id })).toBe(0);
+    expect(await EmployerProfile.countDocuments({ userId: user._id })).toBe(0);
+    expect(await Company.countDocuments({ _id: company._id })).toBe(0);
+    expect(await Job.countDocuments({ companyId: company._id })).toBe(0);
+    expect(await AuthToken.countDocuments({ userId: user._id })).toBe(0);
+    expect(await SavedJob.countDocuments()).toBe(0);
+    await session.agent.get("/api/auth/me").expect(401);
+  });
+
+  it("closes open applications, drops interviews, and emails each applicant once", async () => {
+    const { session, password, open, applied, rejected, alice, bob, carol } =
+      await employerWithApplicants();
+
+    await session.delete("/api/me").send({ currentPassword: password }).expect(204);
+
+    const after = async (id: mongoose.Types.ObjectId) => Application.findById(id).lean();
+    expect((await after(open._id))?.status).toBe("closed");
+    expect((await after(open._id))?.interview).toBeUndefined();
+    expect((await after(applied._id))?.status).toBe("closed");
+    expect((await after(rejected._id))?.status).toBe("rejected");
+
+    const recipients = mailer.sent.map((message) => message.to).sort();
+    expect(recipients).toEqual([alice.email, bob.email].sort());
+    expect(recipients).not.toContain(carol.email);
+    const toAlice = mailer.sent.find((message) => message.to === alice.email);
+    expect(toAlice?.subject).toContain("Account executive");
+    expect(toAlice?.text).toContain("Acme Demo Co");
+  });
+
+  it("still deletes when an email can't be sent", async () => {
+    const { session, password, user } = await employerWithApplicants();
+    mailer.failing = true;
+    try {
+      await session.delete("/api/me").send({ currentPassword: password }).expect(204);
+    } finally {
+      mailer.failing = false;
+    }
+    expect(await User.countDocuments({ _id: user._id })).toBe(0);
+  });
+
+  it("does not touch other employers' companies or jobs", async () => {
+    const { session, password } = await employerWithApplicants();
+    const other = await createEmployer({ companyName: "Other Demo Co" });
+    const otherJob = await createJob(other.company._id);
+    const student = await createStudent();
+    await Application.create({ jobId: otherJob._id, studentId: student.user._id });
+
+    await session.delete("/api/me").send({ currentPassword: password }).expect(204);
+
+    expect(await Company.countDocuments({ _id: other.company._id })).toBe(1);
+    expect(await Job.countDocuments({ _id: otherJob._id })).toBe(1);
+    expect((await Application.findOne({ jobId: otherJob._id }))?.status).toBe("applied");
+  });
+});

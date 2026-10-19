@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applicationsClosed,
+  emailChanged,
   interviewScheduled,
   resetPassword,
   signupAttemptExistingAccount,
@@ -56,6 +57,15 @@ describe("email templates", () => {
     expect(email.text).toContain("15:30 UTC");
     expect(email.text).toContain("April 7, 2026");
     expect(email.subject).not.toMatch(/[\r\n]/);
+  });
+
+  it("emailChanged tells the old address about the change and carries no link", () => {
+    const email = emailChanged();
+
+    expect(email.subject).toMatch(/email.*changed/i);
+    expect(email.text).toMatch(/didn't make this change/i);
+    expect(email.text).not.toMatch(/https?:\/\//);
+    expect(email.html).not.toContain("href=");
   });
 
   it("applicationsClosed names the job and company", () => {

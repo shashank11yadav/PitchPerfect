@@ -54,7 +54,7 @@ function appLink(config: Config, path: string, token?: string): string {
   return url.toString();
 }
 
-function isDuplicateKey(error: unknown, field: string): boolean {
+export function isDuplicateKey(error: unknown, field: string): boolean {
   const { code, keyPattern } = (error ?? {}) as { code?: unknown; keyPattern?: unknown };
   return (
     code === DUPLICATE_KEY_CODE &&
@@ -64,13 +64,18 @@ function isDuplicateKey(error: unknown, field: string): boolean {
   );
 }
 
-/** 400 with a `password` field error unless the password passes the policy. */
-async function assertPasswordAllowed(config: Config, password: string, email: string) {
+/** 400 with an error on `field` (the request's password field) unless the password passes the policy. */
+export async function assertPasswordAllowed(
+  config: Config,
+  password: string,
+  email: string,
+  field = "password",
+) {
   const result = await checkPassword(password, { email }, { hibpEnabled: config.HIBP_ENABLED });
-  if (!result.ok) throw new ValidationError({ password: PASSWORD_PROBLEM_MESSAGES[result.reason] });
+  if (!result.ok) throw new ValidationError({ [field]: PASSWORD_PROBLEM_MESSAGES[result.reason] });
 }
 
-async function sendVerificationEmail(
+export async function sendVerificationEmail(
   deps: AuthDeps,
   log: MailFailureLog,
   user: { id: string; email: string },

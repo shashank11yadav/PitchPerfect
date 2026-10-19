@@ -122,6 +122,18 @@ export function signupAttemptExistingAccount(signinLink: string, resetLink: stri
   });
 }
 
+/** Sent to the previous address after an email change, so a takeover can't go unnoticed. */
+export function emailChanged(): EmailContent {
+  return render(`Your ${BRAND} email was changed`, {
+    heading: "Your email address was changed",
+    paragraphs: [
+      `The email address on your ${BRAND} account was just changed, so this address no longer receives account email.`,
+      "If you made this change, you don't need to do anything.",
+      "If you didn't make this change, someone else may have your password. Contact the PitchPerfect team right away.",
+    ],
+  });
+}
+
 const UTC_DATE_TIME = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   weekday: "long",

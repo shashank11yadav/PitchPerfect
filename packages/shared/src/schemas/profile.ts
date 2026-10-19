@@ -2,6 +2,7 @@ import { z } from "zod";
 import { US_STATE_CODES, type UsStateCode } from "../enums.js";
 import { LIMITS } from "../limits.js";
 import type { SkillSlug } from "../skills.js";
+import { skillSlug } from "./coach.js";
 import { nameField, shortText } from "./common.js";
 
 /** Allowed graduation years relative to the current (UTC) year. */
@@ -54,6 +55,17 @@ export const EmployerProfileUpdateSchema = z
   .partial();
 export type EmployerProfileUpdate = z.infer<typeof EmployerProfileUpdateSchema>;
 
+/** `POST /api/me/practice-consent`: the student accepted the practice notice. */
+export const PracticeConsentSchema = z.strictObject({ accepted: z.literal(true) });
+export type PracticeConsent = z.infer<typeof PracticeConsentSchema>;
+
+/** `PUT /api/me/lessons/:skill`: mark a lesson done or not done. */
+export const LessonProgressSchema = z.strictObject({ completed: z.boolean() });
+export type LessonProgress = z.infer<typeof LessonProgressSchema>;
+
+/** `:skill` route parameter. */
+export const SkillParamSchema = z.strictObject({ skill: skillSlug() });
+
 /** Returned by `GET /api/auth/me` for students. The résumé file id is never exposed. */
 export interface StudentProfileView {
   school: string;
@@ -70,4 +82,10 @@ export interface StudentProfileView {
 export interface EmployerProfileView {
   jobTitle: string;
   companyId: string;
+}
+
+/** Returned after a résumé upload. The file itself is only served to its owner. */
+export interface ResumeInfo {
+  uploadedAt: string;
+  sizeBytes: number;
 }

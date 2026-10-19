@@ -8,8 +8,7 @@ import {
 } from "@pitchperfect/shared";
 import { requireAuth, requireSignedOut } from "../../middleware/auth.js";
 import type { Csrf } from "../../middleware/csrf.js";
-import { byIp, rateLimit } from "../../middleware/rate-limit.js";
-import { sessionUserId } from "../../middleware/session.js";
+import { byIp, byUser, rateLimit } from "../../middleware/rate-limit.js";
 import { validate } from "../../middleware/validate.js";
 import { authHandlers } from "./handlers.js";
 import type { AuthDeps } from "./service.js";
@@ -28,7 +27,6 @@ function emailKey(req: Request): string {
 }
 
 const byIpAndEmail = (req: Request) => `${byIp(req)}|${emailKey(req)}`;
-const byUser = (req: Request) => sessionUserId(req) ?? byIp(req);
 
 export interface AuthRouteDeps extends AuthDeps {
   csrf: Pick<Csrf, "issueCsrfToken">;

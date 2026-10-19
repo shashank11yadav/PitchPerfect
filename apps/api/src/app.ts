@@ -15,6 +15,8 @@ import { requestId, requestIdOf } from "./middleware/request-id.js";
 import { sessionMiddleware } from "./middleware/session.js";
 import { authRoutes } from "./modules/auth/routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
+import { lessonRoutes } from "./modules/lessons/routes.js";
+import { profileRoutes } from "./modules/profile/routes.js";
 import type { CoachClient } from "./services/coach-client.js";
 import type { Mailer } from "./services/mailer.js";
 
@@ -91,6 +93,8 @@ export function createApp(
 
   const api = express.Router();
   api.use(authRoutes({ config, mailer: deps.mailer, csrf }));
+  api.use(profileRoutes({ config, mailer: deps.mailer }));
+  api.use(lessonRoutes());
   api.use(healthRoutes(deps.coach));
   extraRoutes?.(api);
   app.use("/api", api);

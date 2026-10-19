@@ -15,10 +15,15 @@ export async function fetchCsrfToken(agent: TestAgent): Promise<string> {
 /** Fetches a CSRF token for an existing agent; `post` sends it with the correct Origin. */
 export async function withCsrf(agent: TestAgent) {
   const token = await fetchCsrfToken(agent);
+  const withHeaders = (req: request.Test) =>
+    req.set("Origin", TEST_ORIGIN).set("x-csrf-token", token);
   return {
     agent,
     token,
-    post: (path: string) => agent.post(path).set("Origin", TEST_ORIGIN).set("x-csrf-token", token),
+    post: (path: string) => withHeaders(agent.post(path)),
+    patch: (path: string) => withHeaders(agent.patch(path)),
+    put: (path: string) => withHeaders(agent.put(path)),
+    delete: (path: string) => withHeaders(agent.delete(path)),
   };
 }
 

@@ -46,7 +46,6 @@ desktop.ini
 *.docx
 *.doc
 *.pdf
-!apps/api/test/fixtures/*.pdf
 
 # Python leftovers (none expected)
 __pycache__/
