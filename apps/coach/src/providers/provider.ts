@@ -26,13 +26,33 @@ export interface StructuredInput<T> {
   schemaName: string;
 }
 
+/** Collects token usage for one caller; providers add once per underlying API call. */
+export interface UsageMeter {
+  add(usage: Usage): void;
+}
+
 export interface LlmProvider {
   readonly name: "openai" | "anthropic" | "fake";
   /** Yields text deltas. */
-  chatStream(input: ChatStreamInput, signal: AbortSignal): AsyncIterable<string>;
-  structured<T>(input: StructuredInput<T>, signal: AbortSignal): Promise<T>;
-  moderate?(text: string, signal: AbortSignal): Promise<{ flagged: boolean }>;
-  lastUsage(): Usage;
+  chatStream(
+    input: ChatStreamInput,
+    signal: AbortSignal,
+    meter?: UsageMeter,
+  ): AsyncIterable<string>;
+  structured<T>(input: StructuredInput<T>, signal: AbortSignal, meter?: UsageMeter): Promise<T>;
+  moderate?(text: string, signal: AbortSignal, meter?: UsageMeter): Promise<{ flagged: boolean }>;
+}
+
+/** A meter that sums every call added to it. */
+export function createUsageMeter(): UsageMeter & { total(): Usage } {
+  const sum: Usage = { inputTokens: 0, outputTokens: 0 };
+  return {
+    add(usage) {
+      sum.inputTokens += usage.inputTokens;
+      sum.outputTokens += usage.outputTokens;
+    },
+    total: () => ({ ...sum }),
+  };
 }
 
 /**
@@ -56,8 +76,6 @@ export function taskOf(system: string): ProviderTask | undefined {
 
 /** Persona replies end with this tag naming the stage reached; the turn route strips it. */
 export const stageTag = (stage: Stage) => `[[stage:${stage}]]`;
-
-export const ZERO_USAGE: Usage = Object.freeze({ inputTokens: 0, outputTokens: 0 });
 
 type ProviderErrorCode =
   | "invalid_structured_output"
@@ -116,4 +134,11 @@ export function parseStructured<T>(output: unknown, schema: ZodType<T>): T {
     });
   }
   return result.data;
+}
+
+/** The error for a call cut short by its signal: a timeout (retryable) or a caller abort. */
+export function abortedBy(signal: AbortSignal, cause?: unknown): ProviderError {
+  const reason: unknown = signal.reason;
+  const timedOut = reason instanceof Error && reason.name === "TimeoutError";
+  return new ProviderError(timedOut ? "timeout" : "aborted", { cause: cause ?? reason });
 }

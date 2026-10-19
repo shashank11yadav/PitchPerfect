@@ -8,7 +8,8 @@ import {
   parseStructured,
   ProviderError,
   type StructuredInput,
-  ZERO_USAGE,
+  abortedBy,
+  type UsageMeter,
 } from "./provider.js";
 import { SdkProvider } from "./sdk-provider.js";
 
@@ -40,8 +41,11 @@ export class AnthropicProvider extends SdkProvider implements LlmProvider {
     return { model: this.modelFor(system), max_tokens: maxTokens, system, messages };
   }
 
-  async *chatStream(input: ChatStreamInput, signal: AbortSignal): AsyncIterable<string> {
-    this.recordUsage(ZERO_USAGE);
+  async *chatStream(
+    input: ChatStreamInput,
+    signal: AbortSignal,
+    meter?: UsageMeter,
+  ): AsyncIterable<string> {
     try {
       const stream = this.#client.messages.stream(
         this.#request(input),
@@ -52,26 +56,33 @@ export class AnthropicProvider extends SdkProvider implements LlmProvider {
           yield event.delta.text;
         }
       }
-      this.recordUsage(toUsage((await stream.finalMessage()).usage));
+      // An abort can end the event stream quietly; never treat that as a finished reply.
+      if (signal.aborted) throw abortedBy(signal);
+      meter?.add(toUsage((await stream.finalMessage()).usage));
     } catch (error) {
       throw this.toProviderError(error, signal);
     }
   }
 
-  async structured<T>(input: StructuredInput<T>, signal: AbortSignal): Promise<T> {
-    this.recordUsage(ZERO_USAGE);
+  async structured<T>(
+    input: StructuredInput<T>,
+    signal: AbortSignal,
+    meter?: UsageMeter,
+  ): Promise<T> {
     const name = input.schemaName;
+    // Conversion errors are programming errors, raised before any call (as in the OpenAI adapter).
+    const inputSchema = { type: "object" as const, ...toJsonSchema(input.schema) };
     let toolInput: unknown;
     try {
       const message = await this.#client.messages.create(
         {
           ...this.#request(input),
-          tools: [{ name, input_schema: { type: "object", ...toJsonSchema(input.schema) } }],
+          tools: [{ name, input_schema: inputSchema }],
           tool_choice: { type: "tool", name },
         },
         this.requestOptions(signal),
       );
-      this.recordUsage(toUsage(message.usage));
+      meter?.add(toUsage(message.usage));
       const block = message.content.find((item) => item.type === "tool_use" && item.name === name);
       toolInput = block?.type === "tool_use" ? block.input : undefined;
     } catch (error) {

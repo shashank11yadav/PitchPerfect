@@ -7,11 +7,13 @@ import type { LlmProvider } from "./provider.js";
 export { FakeProvider } from "./fake.js";
 export {
   type ChatMessage,
+  createUsageMeter,
   type LlmProvider,
   ProviderError,
   stageTag,
   TASK_TAGS,
   taskOf,
+  type UsageMeter,
 } from "./provider.js";
 
 /** The provider named by `COACH_PROVIDER`; throws if its key or models are missing. */

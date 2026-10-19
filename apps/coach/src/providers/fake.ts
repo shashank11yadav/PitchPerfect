@@ -7,9 +7,9 @@ import {
   type ProviderTask,
   type StructuredInput,
   type Usage,
-  ZERO_USAGE,
+  type UsageMeter,
+  abortedBy,
   parseStructured,
-  ProviderError,
   stageTag,
   taskOf,
 } from "./provider.js";
@@ -123,6 +123,11 @@ function studentTurns(messages: readonly ChatMessage[]): string[] {
 
 const estimateTokens = (text: string) => Math.ceil(text.length / 4);
 
+function usageOf(input: { system: string; messages: ChatMessage[] }, output: string): Usage {
+  const prompt = input.system + input.messages.map((m) => m.content).join("");
+  return { inputTokens: estimateTokens(prompt), outputTokens: estimateTokens(output) };
+}
+
 /**
  * Deterministic stand-in for a real model: powers local dev without keys, tests, and e2e.
  * The task comes from the tag at the start of the system prompt.
@@ -131,43 +136,45 @@ export class FakeProvider implements LlmProvider {
   readonly name = "fake";
   readonly #seed: number;
   readonly #overrides: FakeProviderOptions["overrides"];
-  #usage: Usage = ZERO_USAGE;
 
   constructor({ seed = DEFAULT_SEED, overrides }: FakeProviderOptions = {}) {
     this.#seed = seed;
     this.#overrides = overrides;
   }
 
-  lastUsage(): Usage {
-    return this.#usage;
-  }
-
-  async *chatStream(input: ChatStreamInput, signal: AbortSignal): AsyncIterable<string> {
+  async *chatStream(
+    input: ChatStreamInput,
+    signal: AbortSignal,
+    meter?: UsageMeter,
+  ): AsyncIterable<string> {
     const reply = this.#output(this.#task(input.system, ["turn"]), input);
     const text = typeof reply === "string" ? reply : JSON.stringify(reply);
-    this.#record(input, text);
     const words = text.split(/(?<=\s)/);
     const size = Math.ceil(words.length / STREAM_CHUNKS);
     for (let start = 0; start < words.length; start += size) {
       await Promise.resolve();
-      if (signal.aborted) throw new ProviderError("aborted");
+      if (signal.aborted) throw abortedBy(signal);
       yield words.slice(start, start + size).join("");
     }
+    // Same contract as the real adapters: an abort after the last chunk is still an abort.
+    if (signal.aborted) throw abortedBy(signal);
+    meter?.add(usageOf(input, text));
   }
 
-  structured<T>(input: StructuredInput<T>, signal: AbortSignal): Promise<T> {
-    if (signal.aborted) return Promise.reject(new ProviderError("aborted"));
+  structured<T>(input: StructuredInput<T>, signal: AbortSignal, meter?: UsageMeter): Promise<T> {
+    if (signal.aborted) return Promise.reject(abortedBy(signal));
     try {
       const output = this.#output(this.#task(input.system, ["plan", "score", "guard"]), input);
-      this.#record(input, typeof output === "string" ? output : JSON.stringify(output));
+      meter?.add(usageOf(input, typeof output === "string" ? output : JSON.stringify(output)));
       return Promise.resolve(parseStructured(output, input.schema));
     } catch (error) {
       return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }
   }
 
+  /** Like the OpenAI endpoint, moderation reports no token usage. */
   moderate(text: string, signal: AbortSignal): Promise<{ flagged: boolean }> {
-    if (signal.aborted) return Promise.reject(new ProviderError("aborted"));
+    if (signal.aborted) return Promise.reject(abortedBy(signal));
     const override = this.#overrides?.moderate;
     const result = override?.({ system: "", messages: [{ role: "user", content: text }] });
     return Promise.resolve({
@@ -183,11 +190,6 @@ export class FakeProvider implements LlmProvider {
       );
     }
     return task;
-  }
-
-  #record(input: { system: string; messages: ChatMessage[] }, output: string): void {
-    const prompt = input.system + input.messages.map((m) => m.content).join("");
-    this.#usage = { inputTokens: estimateTokens(prompt), outputTokens: estimateTokens(output) };
   }
 
   #output(task: ProviderTask, input: { system: string; messages: ChatMessage[] }): string | object {

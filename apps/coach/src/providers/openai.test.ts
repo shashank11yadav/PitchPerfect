@@ -4,7 +4,7 @@ import { z } from "zod";
 import { devEnv } from "../../test/helpers/env.js";
 import { loadCoachConfig } from "../config.js";
 import { OpenAiProvider } from "./openai.js";
-import { ProviderError, TASK_TAGS } from "./index.js";
+import { createUsageMeter, ProviderError, TASK_TAGS, type UsageMeter } from "./index.js";
 
 const config = loadCoachConfig(
   devEnv({
@@ -47,11 +47,19 @@ const completion = (content: string | null, refusal: string | null = null) => ({
   usage: { prompt_tokens: 30, completion_tokens: 7, total_tokens: 37 },
 });
 
-const guard = (provider: OpenAiProvider, system = `${TASK_TAGS.guard} classify`) =>
+const guard = (
+  provider: OpenAiProvider,
+  system = `${TASK_TAGS.guard} classify`,
+  meter?: UsageMeter,
+  maxTokens = 50,
+) =>
   provider.structured(
-    { system, messages, maxTokens: 50, schema: GuardSchema, schemaName: "guard" },
+    { system, messages, maxTokens, schema: GuardSchema, schemaName: "guard" },
     new AbortController().signal,
+    meter,
   );
+
+const turnInput = { system: TASK_TAGS.turn, messages, maxTokens: 200, temperature: 0.7 };
 
 describe("OpenAiProvider", () => {
   it("is named openai and exposes moderation", () => {
@@ -72,15 +80,17 @@ describe("OpenAiProvider", () => {
       );
       const provider = new OpenAiProvider({ config, client });
       const controller = new AbortController();
+      const meter = createUsageMeter();
       const text = await collect(
         provider.chatStream(
           { system: `${TASK_TAGS.turn} rules`, messages, maxTokens: 200, temperature: 0.7 },
           controller.signal,
+          meter,
         ),
       );
 
       expect(text).toBe("Hello, there.");
-      expect(provider.lastUsage()).toEqual({ inputTokens: 21, outputTokens: 4 });
+      expect(meter.total()).toEqual({ inputTokens: 21, outputTokens: 4 });
       expect(chatCreate).toHaveBeenCalledWith(
         {
           model: "test-model",
@@ -111,6 +121,61 @@ describe("OpenAiProvider", () => {
       );
       await expect(result).rejects.toMatchObject({ code: "upstream_unavailable", retryable: true });
     });
+
+    it("rejects as aborted when an aborted stream ends without an error", async () => {
+      const controller = new AbortController();
+      const { client } = fakeClient(() =>
+        (async function* () {
+          await Promise.resolve();
+          yield { choices: [{ delta: { content: "Hel" } }] };
+          // The SDK's SSE reader swallows the transport abort and just stops.
+          controller.abort();
+        })(),
+      );
+      const result = collect(
+        new OpenAiProvider({ config, client }).chatStream(turnInput, controller.signal),
+      );
+      await expect(result).rejects.toMatchObject({ code: "aborted", retryable: false });
+    });
+
+    it("maps a timed-out signal to a retryable timeout", async () => {
+      const controller = new AbortController();
+      const { client } = fakeClient(() => {
+        controller.abort(new DOMException("The operation timed out.", "TimeoutError"));
+        throw new APIUserAbortError();
+      });
+      const result = collect(
+        new OpenAiProvider({ config, client }).chatStream(turnInput, controller.signal),
+      );
+      await expect(result).rejects.toMatchObject({ code: "timeout", retryable: true });
+    });
+  });
+
+  describe("usage metering", () => {
+    it("meters each call into its own meter when calls run concurrently", async () => {
+      const { client } = fakeClient((body) => ({
+        ...completion('{"category":"ok"}'),
+        usage: { prompt_tokens: body.max_completion_tokens, completion_tokens: 1 },
+      }));
+      const provider = new OpenAiProvider({ config, client });
+      const [first, second] = [createUsageMeter(), createUsageMeter()];
+      await Promise.all([
+        guard(provider, undefined, first, 50),
+        guard(provider, undefined, second, 60),
+      ]);
+      expect(first.total()).toEqual({ inputTokens: 50, outputTokens: 1 });
+      expect(second.total()).toEqual({ inputTokens: 60, outputTokens: 1 });
+    });
+
+    it("meters a call whose output then fails validation, once", async () => {
+      const { client } = fakeClient(() => completion('{"category":"maybe"}'));
+      const meter = { add: vi.fn() };
+      await expect(guard(new OpenAiProvider({ config, client }), undefined, meter)).rejects.toThrow(
+        ProviderError,
+      );
+      expect(meter.add).toHaveBeenCalledTimes(1);
+      expect(meter.add).toHaveBeenCalledWith({ inputTokens: 30, outputTokens: 7 });
+    });
   });
 
   describe("structured", () => {
@@ -118,8 +183,9 @@ describe("OpenAiProvider", () => {
       const { client, chatCreate } = fakeClient(() => completion('{"category":"ok"}'));
       const provider = new OpenAiProvider({ config, client });
 
-      expect(await guard(provider)).toEqual({ category: "ok" });
-      expect(provider.lastUsage()).toEqual({ inputTokens: 30, outputTokens: 7 });
+      const meter = createUsageMeter();
+      expect(await guard(provider, undefined, meter)).toEqual({ category: "ok" });
+      expect(meter.total()).toEqual({ inputTokens: 30, outputTokens: 7 });
       const [body, options] = chatCreate.mock.calls[0] ?? [];
       expect(body).toMatchObject({
         model: "test-model",
@@ -141,6 +207,18 @@ describe("OpenAiProvider", () => {
       expect(body).not.toHaveProperty("stream");
       expect(options).toMatchObject({ timeout: 12345 });
       expect(options?.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("fails a schema that cannot be converted before calling the API", async () => {
+      const { client, chatCreate } = fakeClient(() => completion("{}"));
+      const result = new OpenAiProvider({ config, client }).structured(
+        { system: TASK_TAGS.plan, messages, maxTokens: 50, schema: z.bigint(), schemaName: "n" },
+        new AbortController().signal,
+      );
+      const error: unknown = await result.catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(Error);
+      expect(error).not.toBeInstanceOf(ProviderError);
+      expect(chatCreate).not.toHaveBeenCalled();
     });
 
     it("uses the scoring model for scoring calls", async () => {

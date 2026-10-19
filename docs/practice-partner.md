@@ -93,11 +93,16 @@ Rules for every prompt:
 ## Provider adapter (`apps/coach/src/providers/`)
 
 ```ts
+interface UsageMeter {
+  add(usage: { inputTokens: number; outputTokens: number }): void;
+}
+
 interface LlmProvider {
   readonly name: "openai" | "anthropic" | "fake";
   chatStream(
     input: { system: string; messages: ChatMessage[]; maxTokens: number; temperature: number },
     signal: AbortSignal,
+    meter?: UsageMeter,
   ): AsyncIterable<string>; // yields text deltas
   structured<T>(
     input: {
@@ -108,11 +113,14 @@ interface LlmProvider {
       schemaName: string;
     },
     signal: AbortSignal,
+    meter?: UsageMeter,
   ): Promise<T>;
-  moderate?(text: string, signal: AbortSignal): Promise<{ flagged: boolean }>;
-  lastUsage(): { inputTokens: number; outputTokens: number };
+  moderate?(text: string, signal: AbortSignal, meter?: UsageMeter): Promise<{ flagged: boolean }>;
 }
 ```
+
+- **Usage is metered per call, never stored on the provider**, because one provider instance serves many sessions at once. The caller passes its own `UsageMeter` (`createUsageMeter()` returns one with a `total()`), and the provider calls `meter.add(...)` once per underlying API call, including calls whose output then fails validation. Endpoints that report no usage (moderation) add nothing.
+- A call cut short by its `signal` always rejects with `ProviderError`: `timeout` (retryable) when the signal's reason is a `TimeoutError`, otherwise `aborted`. A stream that ends quietly after an abort is treated the same way, never as a finished reply.
 
 - `index.ts` picks the provider from `COACH_PROVIDER` at startup and throws a clear error if its key or model env vars are missing.
 - `openai.ts` uses the official `openai` SDK (Chat Completions or Responses API with streaming; JSON schema structured output via `zod-to-json-schema` or the SDK's zod helper).

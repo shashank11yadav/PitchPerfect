@@ -1,5 +1,5 @@
 import type { CoachConfig } from "../config.js";
-import { ProviderError, taskOf, type Usage, ZERO_USAGE } from "./provider.js";
+import { abortedBy, ProviderError, taskOf } from "./provider.js";
 
 type ErrorClass<T = Error> = abstract new (...args: never[]) => T;
 
@@ -21,7 +21,6 @@ export abstract class SdkProvider {
   readonly #scoringModel: string;
   readonly #timeoutMs: number;
   readonly #errors: SdkErrorClasses;
-  #usage: Usage = ZERO_USAGE;
 
   protected constructor(config: CoachConfig, provider: SdkProviderName, errors: SdkErrorClasses) {
     const required = (
@@ -38,14 +37,6 @@ export abstract class SdkProvider {
     this.#errors = errors;
   }
 
-  lastUsage(): Usage {
-    return this.#usage;
-  }
-
-  protected recordUsage(usage: Usage): void {
-    this.#usage = usage;
-  }
-
   /** Scoring uses `COACH_SCORING_MODEL`; plans, turns, and guard checks use `COACH_MODEL`. */
   protected modelFor(system: string): string {
     return taskOf(system) === "score" ? this.#scoringModel : this.#model;
@@ -59,9 +50,9 @@ export abstract class SdkProvider {
   protected toProviderError(error: unknown, signal: AbortSignal): ProviderError {
     const sdk = this.#errors;
     if (error instanceof ProviderError) return error;
-    if (signal.aborted || error instanceof sdk.APIUserAbortError) {
+    if (signal.aborted) return abortedBy(signal, error);
+    if (error instanceof sdk.APIUserAbortError)
       return new ProviderError("aborted", { cause: error });
-    }
     if (error instanceof sdk.APIConnectionTimeoutError) {
       return new ProviderError("timeout", { cause: error });
     }

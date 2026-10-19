@@ -1,7 +1,15 @@
 import { ScenarioPrivateSchema, ScenarioPublicSchema, ScorecardSchema } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { type ChatMessage, FakeProvider, ProviderError, stageTag, TASK_TAGS } from "./index.js";
+import {
+  type ChatMessage,
+  createUsageMeter,
+  FakeProvider,
+  ProviderError,
+  stageTag,
+  TASK_TAGS,
+  type UsageMeter,
+} from "./index.js";
 
 const PlanSchema = z.strictObject({
   scenarioPublic: ScenarioPublicSchema,
@@ -29,7 +37,12 @@ function conversation(studentTurns: readonly string[]): ChatMessage[] {
   return messages;
 }
 
-function turn(provider: FakeProvider, studentTurns: readonly string[]) {
+function turn(
+  provider: FakeProvider,
+  studentTurns: readonly string[],
+  abortSignal = signal(),
+  meter?: UsageMeter,
+) {
   return provider.chatStream(
     {
       system: `${TASK_TAGS.turn} You are a buyer.`,
@@ -37,8 +50,23 @@ function turn(provider: FakeProvider, studentTurns: readonly string[]) {
       maxTokens: 200,
       temperature: 0.7,
     },
-    signal(),
+    abortSignal,
+    meter,
   );
+}
+
+/** Reads a stream, aborting the controller once `abortAt` chunks have arrived. */
+async function readThenAbort(
+  stream: AsyncIterable<string>,
+  controller: AbortController,
+  abortAt: number,
+  reason?: unknown,
+) {
+  const received: string[] = [];
+  for await (const chunk of stream) {
+    received.push(chunk);
+    if (received.length === abortAt) controller.abort(reason);
+  }
 }
 
 const plan = (provider: FakeProvider) =>
@@ -146,12 +174,51 @@ describe("FakeProvider", () => {
       }
     });
 
-    it("records usage for the most recent call", async () => {
+    it("meters usage into the call's meter", async () => {
+      const meter = createUsageMeter();
+      await collect(turn(new FakeProvider(), ["Hello there."], signal(), meter));
+      expect(meter.total().inputTokens).toBeGreaterThan(0);
+      expect(meter.total().outputTokens).toBeGreaterThan(0);
+    });
+
+    it("meters concurrent calls into their own meters", async () => {
       const provider = new FakeProvider();
-      await collect(turn(provider, ["Hello there."]));
-      const usage = provider.lastUsage();
-      expect(usage.inputTokens).toBeGreaterThan(0);
-      expect(usage.outputTokens).toBeGreaterThan(0);
+      const [short, long] = [createUsageMeter(), createUsageMeter()];
+      await Promise.all([
+        collect(turn(provider, ["Hi."], signal(), short)),
+        collect(turn(provider, ["Hi.", "A much longer second turn ".repeat(20)], signal(), long)),
+      ]);
+      expect(long.total().inputTokens).toBeGreaterThan(short.total().inputTokens);
+      const alone = createUsageMeter();
+      await collect(turn(provider, ["Hi."], signal(), alone));
+      expect(short.total()).toEqual(alone.total());
+    });
+
+    it("rejects as aborted when aborted mid-stream", async () => {
+      const controller = new AbortController();
+      const stream = turn(new FakeProvider(), ["Hi."], controller.signal);
+      await expect(readThenAbort(stream, controller, 1)).rejects.toMatchObject({
+        code: "aborted",
+      });
+    });
+
+    it("rejects as aborted when aborted after the last chunk", async () => {
+      const chunks = await collect(turn(new FakeProvider(), ["Hi."]));
+      const controller = new AbortController();
+      const stream = turn(new FakeProvider(), ["Hi."], controller.signal);
+      await expect(readThenAbort(stream, controller, chunks.length)).rejects.toMatchObject({
+        code: "aborted",
+      });
+    });
+
+    it("maps a timed-out signal to a retryable timeout", async () => {
+      const controller = new AbortController();
+      const stream = turn(new FakeProvider(), ["Hi."], controller.signal);
+      const reason = new DOMException("The operation timed out.", "TimeoutError");
+      await expect(readThenAbort(stream, controller, 1, reason)).rejects.toMatchObject({
+        code: "timeout",
+        retryable: true,
+      });
     });
 
     it("stops with an aborted error when the signal is aborted", async () => {

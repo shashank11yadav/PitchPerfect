@@ -4,7 +4,7 @@ import { z } from "zod";
 import { devEnv } from "../../test/helpers/env.js";
 import { loadCoachConfig } from "../config.js";
 import { AnthropicProvider } from "./anthropic.js";
-import { ProviderError, TASK_TAGS } from "./index.js";
+import { createUsageMeter, ProviderError, TASK_TAGS, type UsageMeter } from "./index.js";
 
 const config = loadCoachConfig(
   devEnv({
@@ -30,11 +30,17 @@ function fakeClient({ stream, create }: { stream?: Handler; create?: Handler }) 
 }
 
 /** Mimics `MessageStream`: async-iterable events plus `finalMessage()`. */
-function messageStream(events: unknown[], final: unknown, failAfter?: Error) {
+function messageStream(
+  events: unknown[],
+  final: unknown,
+  failAfter?: Error,
+  afterEvents?: () => void,
+) {
   return {
     async *[Symbol.asyncIterator]() {
       await Promise.resolve();
       for (const event of events) yield event;
+      afterEvents?.();
       if (failAfter) throw failAfter;
     },
     finalMessage: () => Promise.resolve(final),
@@ -60,11 +66,19 @@ const toolMessage = (input: unknown) => ({
   usage,
 });
 
-const guard = (provider: AnthropicProvider, system = `${TASK_TAGS.guard} classify`) =>
+const guard = (
+  provider: AnthropicProvider,
+  system = `${TASK_TAGS.guard} classify`,
+  meter?: UsageMeter,
+  maxTokens = 50,
+) =>
   provider.structured(
-    { system, messages, maxTokens: 50, schema: GuardSchema, schemaName: "guard" },
+    { system, messages, maxTokens, schema: GuardSchema, schemaName: "guard" },
     new AbortController().signal,
+    meter,
   );
+
+const turnInput = { system: TASK_TAGS.turn, messages, maxTokens: 200, temperature: 0.7 };
 
 describe("AnthropicProvider", () => {
   it("is named anthropic and has no moderation endpoint", () => {
@@ -91,15 +105,17 @@ describe("AnthropicProvider", () => {
       });
       const provider = new AnthropicProvider({ config, client });
       const controller = new AbortController();
+      const meter = createUsageMeter();
       const text = await collect(
         provider.chatStream(
           { system: `${TASK_TAGS.turn} rules`, messages, maxTokens: 200, temperature: 0.7 },
           controller.signal,
+          meter,
         ),
       );
 
       expect(text).toBe("Thanks for calling.");
-      expect(provider.lastUsage()).toEqual({ inputTokens: 42, outputTokens: 9 });
+      expect(meter.total()).toEqual({ inputTokens: 42, outputTokens: 9 });
       expect(streamFn).toHaveBeenCalledWith(
         {
           model: "test-model",
@@ -128,6 +144,63 @@ describe("AnthropicProvider", () => {
       );
       await expect(result).rejects.toMatchObject({ code: "upstream_unavailable", retryable: true });
     });
+
+    it("rejects as aborted when an aborted stream ends without an error", async () => {
+      const controller = new AbortController();
+      const { client } = fakeClient({
+        stream: () =>
+          messageStream([textDelta("Hel")], { content: [], usage }, undefined, () => {
+            controller.abort();
+          }),
+      });
+      const result = collect(
+        new AnthropicProvider({ config, client }).chatStream(turnInput, controller.signal),
+      );
+      await expect(result).rejects.toMatchObject({ code: "aborted", retryable: false });
+    });
+
+    it("maps a timed-out signal to a retryable timeout", async () => {
+      const controller = new AbortController();
+      const { client } = fakeClient({
+        stream: () =>
+          messageStream([textDelta("Hel")], { content: [], usage }, undefined, () => {
+            controller.abort(new DOMException("The operation timed out.", "TimeoutError"));
+          }),
+      });
+      const result = collect(
+        new AnthropicProvider({ config, client }).chatStream(turnInput, controller.signal),
+      );
+      await expect(result).rejects.toMatchObject({ code: "timeout", retryable: true });
+    });
+  });
+
+  describe("usage metering", () => {
+    it("meters each call into its own meter when calls run concurrently", async () => {
+      const { client } = fakeClient({
+        create: (body) => ({
+          ...toolMessage({ category: "ok" }),
+          usage: { input_tokens: body.max_tokens, output_tokens: 1 },
+        }),
+      });
+      const provider = new AnthropicProvider({ config, client });
+      const [first, second] = [createUsageMeter(), createUsageMeter()];
+      await Promise.all([
+        guard(provider, undefined, first, 50),
+        guard(provider, undefined, second, 60),
+      ]);
+      expect(first.total()).toEqual({ inputTokens: 50, outputTokens: 1 });
+      expect(second.total()).toEqual({ inputTokens: 60, outputTokens: 1 });
+    });
+
+    it("meters a call whose output then fails validation, once", async () => {
+      const { client } = fakeClient({ create: () => toolMessage({ category: 3 }) });
+      const meter = { add: vi.fn() };
+      await expect(
+        guard(new AnthropicProvider({ config, client }), undefined, meter),
+      ).rejects.toThrow(ProviderError);
+      expect(meter.add).toHaveBeenCalledTimes(1);
+      expect(meter.add).toHaveBeenCalledWith({ inputTokens: 42, outputTokens: 9 });
+    });
   });
 
   describe("structured", () => {
@@ -135,8 +208,9 @@ describe("AnthropicProvider", () => {
       const { client, createFn } = fakeClient({ create: () => toolMessage({ category: "ok" }) });
       const provider = new AnthropicProvider({ config, client });
 
-      expect(await guard(provider)).toEqual({ category: "ok" });
-      expect(provider.lastUsage()).toEqual({ inputTokens: 42, outputTokens: 9 });
+      const meter = createUsageMeter();
+      expect(await guard(provider, undefined, meter)).toEqual({ category: "ok" });
+      expect(meter.total()).toEqual({ inputTokens: 42, outputTokens: 9 });
       const [body, options] = createFn.mock.calls[0] ?? [];
       expect(body).toEqual({
         model: "test-model",
@@ -158,6 +232,18 @@ describe("AnthropicProvider", () => {
       });
       expect(options).toMatchObject({ timeout: 12345 });
       expect(options?.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("fails a schema that cannot be converted before calling the API", async () => {
+      const { client, createFn } = fakeClient({ create: () => toolMessage({}) });
+      const result = new AnthropicProvider({ config, client }).structured(
+        { system: TASK_TAGS.plan, messages, maxTokens: 50, schema: z.bigint(), schemaName: "n" },
+        new AbortController().signal,
+      );
+      const error: unknown = await result.catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(Error);
+      expect(error).not.toBeInstanceOf(ProviderError);
+      expect(createFn).not.toHaveBeenCalled();
     });
 
     it("uses the scoring model for scoring calls", async () => {

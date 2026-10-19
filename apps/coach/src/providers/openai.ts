@@ -9,7 +9,8 @@ import {
   parseStructured,
   ProviderError,
   type StructuredInput,
-  ZERO_USAGE,
+  abortedBy,
+  type UsageMeter,
 } from "./provider.js";
 import { SdkProvider } from "./sdk-provider.js";
 
@@ -35,8 +36,11 @@ export class OpenAiProvider extends SdkProvider implements LlmProvider {
     return [developer, ...messages] satisfies ChatCompletionMessageParam[];
   }
 
-  async *chatStream(input: ChatStreamInput, signal: AbortSignal): AsyncIterable<string> {
-    this.recordUsage(ZERO_USAGE);
+  async *chatStream(
+    input: ChatStreamInput,
+    signal: AbortSignal,
+    meter?: UsageMeter,
+  ): AsyncIterable<string> {
     try {
       const stream = await this.#client.chat.completions.create(
         {
@@ -52,15 +56,20 @@ export class OpenAiProvider extends SdkProvider implements LlmProvider {
       for await (const chunk of stream) {
         const delta = chunk.choices[0]?.delta.content;
         if (delta) yield delta;
-        if (chunk.usage) this.recordUsage(toUsage(chunk.usage));
+        if (chunk.usage) meter?.add(toUsage(chunk.usage));
       }
     } catch (error) {
       throw this.toProviderError(error, signal);
     }
+    // The SDK's SSE reader ends quietly on a transport abort, so a short stream is checked here.
+    if (signal.aborted) throw abortedBy(signal);
   }
 
-  async structured<T>(input: StructuredInput<T>, signal: AbortSignal): Promise<T> {
-    this.recordUsage(ZERO_USAGE);
+  async structured<T>(
+    input: StructuredInput<T>,
+    signal: AbortSignal,
+    meter?: UsageMeter,
+  ): Promise<T> {
     const { schema, strict } = toStrictJsonSchema(input.schema);
     let content: string | null | undefined;
     try {
@@ -76,7 +85,7 @@ export class OpenAiProvider extends SdkProvider implements LlmProvider {
         },
         this.requestOptions(signal),
       );
-      if (completion.usage) this.recordUsage(toUsage(completion.usage));
+      if (completion.usage) meter?.add(toUsage(completion.usage));
       content = completion.choices[0]?.message.content;
     } catch (error) {
       throw this.toProviderError(error, signal);
@@ -88,6 +97,7 @@ export class OpenAiProvider extends SdkProvider implements LlmProvider {
     return parseStructured(content, input.schema);
   }
 
+  /** The moderation endpoint reports no token usage, so nothing is metered. */
   async moderate(text: string, signal: AbortSignal): Promise<{ flagged: boolean }> {
     try {
       // No model is named: the endpoint's default moderation model is used.
