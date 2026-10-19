@@ -52,7 +52,7 @@ SEED_DEMO_PASSWORD='pick-a-12-plus-char-password' npm run seed -- --demo   # com
 npm run dev            # web, api, and coach with hot reload
 ```
 
-The demo student (`student@pitchperfect.example`) and employer (`employer@pitchperfect.example`) both sign in with the `SEED_DEMO_PASSWORD` you set; it needs 12 or more characters and is never printed. You can put it in `apps/api/.env` instead of the command line. Without `--demo` the seed loads only the fictional companies, jobs, and their employers.
+The demo student (`student@pitchperfect.example`) and employer (`employer@pitchperfect.example`) both sign in with the `SEED_DEMO_PASSWORD` you set; it needs 12 or more characters and is never printed. You can put it in `apps/api/.env` instead of the command line. With `--demo` the employer account also gets its own company (Pitchwell Demo Hiring Co) with two open jobs, and the student has one application to it. Without `--demo` the seed loads only the six fictional companies, their jobs, and their employers.
 
 Open http://localhost:3000. Verification and password-reset emails land in Mailpit at http://localhost:8025.
 

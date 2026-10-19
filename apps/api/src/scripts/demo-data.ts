@@ -6,6 +6,7 @@ import {
   type Scorecard,
   type SkillSlug,
 } from "@pitchperfect/shared";
+import { description, hourly, salary, type SeedCompany, type SeedJob } from "./seed-data.js";
 
 /** Demo accounts, created only by `seed --demo`. Fictional people on a reserved domain. */
 
@@ -26,8 +27,58 @@ export const DEMO_STUDENT = {
 
 export const DEMO_EMPLOYER_NAME = { first: "Morgan", last: "Ellis" } as const;
 
-/** The demo student applies to this job (an index into `SEED_JOBS`) and shares the first attempt. */
-export const DEMO_APPLICATION_JOB = 0;
+/** The demo employer's own company, so signing in as them shows real applicants. */
+export const DEMO_COMPANY: SeedCompany = {
+  name: "Pitchwell Demo Hiring Co",
+  host: "pitchwell-demo.example",
+  pitch: "A made-up company for trying out PitchPerfect as an employer.",
+  verification: "verified",
+  employer: { ...DEMO_EMPLOYER_NAME, jobTitle: "Head of talent" },
+};
+
+/** Its two open roles. `company` is 0, the only company in this list. */
+export const DEMO_JOBS: readonly SeedJob[] = [
+  {
+    company: 0,
+    title: "Sales development representative",
+    location: "Remote, US",
+    workplace: "remote",
+    employmentType: "full_time",
+    descriptionHtml: description(
+      "Open conversations with operations teams and book demos for the sales lead.",
+      [
+        "Write short, personal outreach to new prospects",
+        "Run first calls and note what each buyer cares about",
+        "Hand warm leads to the sales lead with clear notes",
+      ],
+      "A friendly, made-up role for exploring how employers review applicants.",
+    ),
+    skills: ["Cold outreach", "Discovery questions", "Follow-up"],
+    pay: salary(50_000, 58_000, true),
+    status: "active",
+  },
+  {
+    company: 0,
+    title: "Sales operations intern",
+    location: "Remote, US",
+    workplace: "remote",
+    employmentType: "internship",
+    descriptionHtml: description(
+      "Help the team keep its lead lists and weekly reports in good shape.",
+      [
+        "Clean up lead records and remove duplicates",
+        "Build a simple weekly pipeline report",
+        "Suggest one small process fix each month",
+      ],
+      "A made-up internship for exploring how employers post and manage jobs.",
+    ),
+    skills: ["Spreadsheets", "Attention to detail", "Reporting"],
+    pay: hourly(17, 20),
+    status: "active",
+  },
+];
+
+/** The demo student applies to the first of `DEMO_JOBS` and shares the first attempt. */
 
 type Score = 1 | 2 | 3 | 4 | 5;
 type Dimension = readonly [
@@ -41,7 +92,7 @@ export interface DemoAttempt {
   /** Fixed, so re-running the seed finds the attempt instead of adding another. */
   id: string;
   skill: SkillSlug;
-  /** Index into `SEED_JOBS` when the session was practiced for a job. */
+  /** Index into `DEMO_JOBS` when the session was practiced for a job. */
   job?: number;
   daysAgo: number;
   scenarioPublic: {
@@ -65,7 +116,7 @@ export const DEMO_ATTEMPTS: readonly DemoAttempt[] = [
   {
     id: "5eed0000000000000000a001",
     skill: "pitching",
-    job: DEMO_APPLICATION_JOB,
+    job: 0,
     daysAgo: 4,
     scenarioPublic: {
       personaName: "Marcus Bell",

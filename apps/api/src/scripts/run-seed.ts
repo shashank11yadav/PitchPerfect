@@ -15,7 +15,8 @@ import { sanitizeJobHtml } from "../services/html-sanitizer.js";
 import { checkPassword, PASSWORD_PROBLEM_MESSAGES } from "../services/password-policy.js";
 import { hashPassword } from "../services/passwords.js";
 import {
-  DEMO_APPLICATION_JOB,
+  DEMO_COMPANY,
+  DEMO_JOBS,
   DEMO_ATTEMPTS,
   DEMO_EMPLOYER_EMAIL,
   DEMO_EMPLOYER_NAME,
@@ -23,7 +24,7 @@ import {
   DEMO_STUDENT_EMAIL,
   scorecardFor,
 } from "./demo-data.js";
-import { SEED_COMPANIES, SEED_JOBS } from "./seed-data.js";
+import { SEED_COMPANIES, SEED_JOBS, type SeedCompany, type SeedJob } from "./seed-data.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TURN_GAP_MS = 45_000;
@@ -78,7 +79,7 @@ async function ensure(
   return made._id;
 }
 
-/** Deterministic, so a re-run finds the same document: `northwind-analytics-demo01`. */
+/** Deterministic, so a re-run finds the same document: `zentrova-analytics-demo01`. */
 const seedSlug = (name: string, position: number) =>
   slugify(name, `demo${String(position).padStart(2, "0")}`);
 
@@ -97,23 +98,6 @@ async function assertDemoPassword(password: string | undefined): Promise<string>
     );
   }
   return password;
-}
-
-/** Fails before any write if the demo employer cannot take over the first company. */
-async function assertDemoEmployerCanOwnFirstCompany(): Promise<void> {
-  const [first] = SEED_COMPANIES;
-  if (!first) return;
-  const company = await Company.findOne({ slug: seedSlug(first.name, 1) })
-    .select("ownerId")
-    .lean();
-  if (!company) return;
-  const owner = await User.findById(company.ownerId).select("email").lean();
-  if (owner?.email !== DEMO_EMPLOYER_EMAIL) {
-    throw new SeedError(
-      `${first.name} is already owned by another account, so the demo employer cannot own it. ` +
-        "Seed with --demo from the start, or reset the database.",
-    );
-  }
 }
 
 interface Context {
@@ -145,38 +129,29 @@ function ensureUser(ctx: Context, spec: UserSpec): Promise<Types.ObjectId> {
   );
 }
 
-async function seedCompanies(ctx: Context): Promise<Types.ObjectId[]> {
-  const ids: Types.ObjectId[] = [];
-  for (const [index, seed] of SEED_COMPANIES.entries()) {
-    const slug = seedSlug(seed.name, index + 1);
-    const demoOwned = ctx.demoPassword !== undefined && index === 0;
-    const id = await ensure(
-      ctx.result.companies,
-      Company.findOne({ slug }).select("_id").lean(),
-      async () =>
-        Company.create({
-          ownerId: await ensureUser(
-            ctx,
-            demoOwned
-              ? {
-                  email: DEMO_EMPLOYER_EMAIL,
-                  role: "employer",
-                  name: DEMO_EMPLOYER_NAME,
-                  password: ctx.demoPassword,
-                }
-              : { email: `hiring@${seed.host}`, role: "employer", name: seed.employer },
-          ),
-          name: seed.name,
-          slug,
-          website: `https://${seed.host}`,
-          pitch: seed.pitch,
-          verification: seed.verification,
-        }),
-    );
-    ids.push(id);
-    await ensureEmployerProfile(id, seed.employer.jobTitle);
-  }
-  return ids;
+/** The company at `position` (1-based, for its slug), created with `owner` if it is missing. */
+async function seedCompany(
+  ctx: Context,
+  seed: SeedCompany,
+  position: number,
+  owner: UserSpec,
+): Promise<Types.ObjectId> {
+  const slug = seedSlug(seed.name, position);
+  const id = await ensure(
+    ctx.result.companies,
+    Company.findOne({ slug }).select("_id").lean(),
+    async () =>
+      Company.create({
+        ownerId: await ensureUser(ctx, owner),
+        name: seed.name,
+        slug,
+        website: `https://${seed.host}`,
+        pitch: seed.pitch,
+        verification: seed.verification,
+      }),
+  );
+  await ensureEmployerProfile(id, seed.employer.jobTitle);
+  return id;
 }
 
 /** Every company's owner needs a profile; also repairs a run that stopped half way. */
@@ -186,12 +161,18 @@ async function ensureEmployerProfile(companyId: Types.ObjectId, jobTitle: string
   if (company) await EmployerProfile.create({ userId: company.ownerId, jobTitle, companyId });
 }
 
-async function seedJobs(ctx: Context, companyIds: Types.ObjectId[]): Promise<Types.ObjectId[]> {
+/** Jobs get slug positions counting on from `firstPosition`; `company` indexes into `companyIds`. */
+async function seedJobs(
+  ctx: Context,
+  jobs: readonly SeedJob[],
+  companyIds: readonly Types.ObjectId[],
+  firstPosition: number,
+): Promise<Types.ObjectId[]> {
   const ids: Types.ObjectId[] = [];
-  for (const [index, seed] of SEED_JOBS.entries()) {
+  for (const [index, seed] of jobs.entries()) {
     const companyId = companyIds[seed.company];
     if (!companyId) throw new Error(`Seed job "${seed.title}" names a company that does not exist`);
-    const slug = seedSlug(seed.title, index + 1);
+    const slug = seedSlug(seed.title, firstPosition + index);
     ids.push(
       await ensure(ctx.result.jobs, Job.findOne({ slug }).select("_id").lean(), () =>
         Job.create({
@@ -215,7 +196,8 @@ async function seedJobs(ctx: Context, companyIds: Types.ObjectId[]): Promise<Typ
   return ids;
 }
 
-async function seedDemoStudent(ctx: Context, jobIds: Types.ObjectId[]): Promise<void> {
+/** The demo student, their two practice attempts, and an application to the demo company's first job. */
+async function seedDemoStudent(ctx: Context, jobIds: readonly Types.ObjectId[]): Promise<void> {
   const studentId = await ensureUser(ctx, {
     email: DEMO_STUDENT_EMAIL,
     role: "student",
@@ -265,10 +247,9 @@ async function seedDemoStudent(ctx: Context, jobIds: Types.ObjectId[]): Promise<
     );
   }
 
-  const jobId = jobIds[DEMO_APPLICATION_JOB];
-  const seedJob = SEED_JOBS[DEMO_APPLICATION_JOB];
-  const seedCompany = seedJob && SEED_COMPANIES[seedJob.company];
-  if (!jobId || !seedJob || !seedCompany) throw new Error("The demo application names no job");
+  const jobId = jobIds[0];
+  const seedJob = DEMO_JOBS[0];
+  if (!jobId || !seedJob) throw new Error("The demo application names no job");
   await ensure(
     ctx.result.applications,
     Application.findOne({ jobId, studentId }).select("_id").lean(),
@@ -276,20 +257,31 @@ async function seedDemoStudent(ctx: Context, jobIds: Types.ObjectId[]): Promise<
       Application.create({
         jobId,
         studentId,
-        jobSnapshot: { title: seedJob.title, companyName: seedCompany.name },
+        jobSnapshot: { title: seedJob.title, companyName: DEMO_COMPANY.name },
         sharedAttemptId: attemptIds[0],
       }),
   );
 }
 
+/** The demo employer's own company and jobs, then the demo student. */
+async function seedDemo(ctx: Context): Promise<void> {
+  const companyId = await seedCompany(ctx, DEMO_COMPANY, SEED_COMPANIES.length + 1, {
+    email: DEMO_EMPLOYER_EMAIL,
+    role: "employer",
+    name: DEMO_EMPLOYER_NAME,
+    password: ctx.demoPassword,
+  });
+  const jobIds = await seedJobs(ctx, DEMO_JOBS, [companyId], SEED_JOBS.length + 1);
+  await seedDemoStudent(ctx, jobIds);
+}
+
 /**
- * Loads fictional companies, employers and jobs, plus (with `demo`) a demo student and employer.
+ * Loads fictional companies, employers and jobs, plus (with `demo`) a demo employer with their own company, and a demo student.
  * Safe to repeat: documents are found by email, slug or fixed id, and anything that exists is left
  * exactly as it is, including passwords. Runs on the open Mongoose connection.
  */
 export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   const demoPassword = options.demo ? await assertDemoPassword(options.password) : undefined;
-  if (options.demo) await assertDemoEmployerCanOwnFirstCompany();
 
   const tally = (): Tally => ({ created: 0, existing: 0 });
   const ctx: Context = {
@@ -305,8 +297,17 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
     },
   };
 
-  const companyIds = await seedCompanies(ctx);
-  const jobIds = await seedJobs(ctx, companyIds);
-  if (options.demo) await seedDemoStudent(ctx, jobIds);
+  const companyIds: Types.ObjectId[] = [];
+  for (const [index, seed] of SEED_COMPANIES.entries()) {
+    companyIds.push(
+      await seedCompany(ctx, seed, index + 1, {
+        email: `hiring@${seed.host}`,
+        role: "employer",
+        name: seed.employer,
+      }),
+    );
+  }
+  await seedJobs(ctx, SEED_JOBS, companyIds, 1);
+  if (options.demo) await seedDemo(ctx);
   return ctx.result;
 }

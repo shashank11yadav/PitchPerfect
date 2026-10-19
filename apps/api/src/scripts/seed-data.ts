@@ -16,44 +16,44 @@ export interface SeedCompany {
 
 export const SEED_COMPANIES: readonly SeedCompany[] = [
   {
-    name: "Northwind Analytics",
-    host: "northwind-analytics.example",
+    name: "Zentrova Analytics",
+    host: "zentrova-analytics.example",
     pitch:
       "We build dashboards that turn scattered operations data into one clear picture for mid-sized teams.",
     verification: "verified",
-    employer: { first: "Morgan", last: "Ellis", jobTitle: "Head of talent" },
+    employer: { first: "Devon", last: "Marsh", jobTitle: "Head of talent" },
   },
   {
-    name: "Bluebird Health Cloud",
-    host: "bluebird-health-cloud.example",
+    name: "Halvane Health Cloud",
+    host: "halvane-health-cloud.example",
     pitch: "Scheduling and billing software that helps small clinics spend less time on paperwork.",
     verification: "verified",
     employer: { first: "Avery", last: "Lindqvist", jobTitle: "Recruiting lead" },
   },
   {
-    name: "Cedar & Pine Realty Tech",
-    host: "cedar-pine-realty.example",
+    name: "Cedarloom Realty Tech",
+    host: "cedarloom-realty.example",
     pitch: "Listing, lead-routing, and showing tools for independent real estate brokerages.",
     verification: "verified",
     employer: { first: "Jules", last: "Okonkwo", jobTitle: "Sales manager" },
   },
   {
-    name: "Orbit Payments",
-    host: "orbit-payments.example",
+    name: "Orvexa Payments",
+    host: "orvexa-payments.example",
     pitch: "Simple card and invoice payments for freelancers and very small shops.",
     verification: "unverified",
     employer: { first: "Sasha", last: "Brandt", jobTitle: "Founder" },
   },
   {
-    name: "Lumen Learning Systems",
-    host: "lumen-learning.example",
+    name: "Lumivale Learning Systems",
+    host: "lumivale-learning.example",
     pitch: "A learning platform that helps training teams build and track short courses.",
     verification: "verified",
     employer: { first: "Quinn", last: "Abara", jobTitle: "People operations manager" },
   },
   {
-    name: "Harborline Logistics Software",
-    host: "harborline-logistics.example",
+    name: "Quarrow Logistics Software",
+    host: "quarrow-logistics.example",
     pitch: "Route planning and proof-of-delivery software for regional freight carriers.",
     verification: "verified",
     employer: { first: "Rowan", last: "Castellano", jobTitle: "Director of sales" },
@@ -75,12 +75,12 @@ export interface SeedJob {
 }
 
 /** Intro, a bulleted list of duties, and a closing line, as simple allowed HTML. */
-function description(intro: string, duties: readonly string[], closing: string): string {
+export function description(intro: string, duties: readonly string[], closing: string): string {
   const items = duties.map((duty) => `<li>${duty}</li>`).join("");
   return `<p>${intro}</p><p><strong>What you will do</strong></p><ul>${items}</ul><p>${closing}</p>`;
 }
 
-const hourly = (min: number, max: number): JobPay => ({
+export const hourly = (min: number, max: number): JobPay => ({
   type: "range",
   min,
   max,
@@ -89,7 +89,7 @@ const hourly = (min: number, max: number): JobPay => ({
   commission: false,
 });
 
-const salary = (min: number, max: number, commission: boolean): JobPay => ({
+export const salary = (min: number, max: number, commission: boolean): JobPay => ({
   type: "range",
   min,
   max,

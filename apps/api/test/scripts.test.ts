@@ -48,34 +48,34 @@ describe("runSeed", () => {
     const second = await runSeed({ demo: true, password: DEMO_PASSWORD });
 
     expect(await countAll()).toEqual(afterFirst);
-    expect(first.companies).toEqual({ created: 6, existing: 0 });
-    expect(first.jobs).toEqual({ created: 14, existing: 0 });
-    expect(second.companies).toEqual({ created: 0, existing: 6 });
-    expect(second.jobs).toEqual({ created: 0, existing: 14 });
-    expect(first.users.created).toBe(7);
+    expect(first.companies).toEqual({ created: 7, existing: 0 });
+    expect(first.jobs).toEqual({ created: 16, existing: 0 });
+    expect(second.companies).toEqual({ created: 0, existing: 7 });
+    expect(second.jobs).toEqual({ created: 0, existing: 16 });
+    expect(first.users.created).toBe(8);
     expect(second.users.created).toBe(0);
     expect(second.attempts).toEqual({ created: 0, existing: 2 });
     expect(second.applications).toEqual({ created: 0, existing: 1 });
   });
 
-  it("creates six fictional companies, one per employer, one of them unverified", async () => {
+  it("creates seven fictional companies (six plus the demo one), one per employer, one of them unverified", async () => {
     await runSeed({ demo: true, password: DEMO_PASSWORD });
 
     const companies = await Company.find().lean();
-    expect(companies).toHaveLength(6);
+    expect(companies).toHaveLength(7);
     expect(companies.filter((c) => c.verification === "unverified")).toHaveLength(1);
-    expect(companies.filter((c) => c.verification === "verified")).toHaveLength(5);
+    expect(companies.filter((c) => c.verification === "verified")).toHaveLength(6);
     for (const company of companies) {
       expect(new URL(company.website).hostname).toMatch(/\.example$/);
       expect(company.slug).toMatch(/-demo\d{2}$/);
       expect(await EmployerProfile.countDocuments({ companyId: company._id })).toBe(1);
     }
     const employers = await User.find({ role: "employer" }).lean();
-    expect(employers).toHaveLength(6);
+    expect(employers).toHaveLength(7);
     expect(employers.every((u) => u.emailVerifiedAt instanceof Date)).toBe(true);
   });
 
-  it("creates 14 valid jobs with sanitized descriptions and deterministic slugs", async () => {
+  it("creates 16 valid jobs with sanitized descriptions and deterministic slugs", async () => {
     await runSeed({ demo: true, password: DEMO_PASSWORD });
     const slugs = (await Job.find().lean()).map((job) => job.slug).sort();
     await Job.deleteMany({});
@@ -86,10 +86,10 @@ describe("runSeed", () => {
 
     const jobs = await Job.find().lean();
     expect(jobs.map((job) => job.slug).sort()).toEqual(slugs);
-    expect(jobs).toHaveLength(14);
+    expect(jobs).toHaveLength(16);
     expect(jobs.filter((job) => job.status === "draft")).toHaveLength(1);
     expect(jobs.filter((job) => job.status === "archived")).toHaveLength(1);
-    expect(jobs.filter((job) => job.status === "active")).toHaveLength(12);
+    expect(jobs.filter((job) => job.status === "active")).toHaveLength(14);
     expect(new Set(jobs.map((job) => job.workplace)).size).toBeGreaterThan(1);
     expect(new Set(jobs.map((job) => job.employmentType)).size).toBeGreaterThan(1);
     for (const job of jobs) {
@@ -134,11 +134,16 @@ describe("runSeed", () => {
     expect(student?.ageConfirmedAt).toBeInstanceOf(Date);
     expect(student?.practiceConsentAt).toBeInstanceOf(Date);
     expect(await StudentProfile.countDocuments({ userId: student?._id })).toBe(1);
-    // The demo employer owns the first company and sees the demo student's application.
+    // The demo employer owns its own verified company and sees the demo student's application.
     const profile = await EmployerProfile.findOne({ userId: employer?._id }).lean();
+    const company = await Company.findById(profile?.companyId).lean();
+    expect(company?.verification).toBe("verified");
+    expect(company?.website).toBe("https://pitchwell-demo.example");
+    expect(company?.ownerId.toString()).toBe(employer?._id.toString());
+    expect(await Job.countDocuments({ companyId: company?._id, status: "active" })).toBe(2);
     const application = await Application.findOne().lean();
     const job = await Job.findById(application?.jobId).lean();
-    expect(job?.companyId.toString()).toBe(profile?.companyId.toString());
+    expect(job?.companyId.toString()).toBe(company?._id.toString());
   });
 
   it("gives other employers a password nobody knows", async () => {
@@ -147,7 +152,7 @@ describe("runSeed", () => {
     const others = (await User.find({ role: "employer" }).select("+passwordHash").lean()).filter(
       (user) => user.email !== DEMO_EMPLOYER,
     );
-    expect(others).toHaveLength(5);
+    expect(others).toHaveLength(6);
     for (const user of others) {
       expect(user.email).toMatch(/^hiring@/);
       expect(await verifyPassword(user.passwordHash, DEMO_PASSWORD)).toBe(false);
@@ -219,9 +224,9 @@ describe("runSeed", () => {
 
     const result = await runSeed({ demo: true, password: DEMO_PASSWORD });
 
-    expect(result.jobs).toEqual({ created: 1, existing: 13 });
+    expect(result.jobs).toEqual({ created: 1, existing: 15 });
     expect(result.applications).toEqual({ created: 1, existing: 0 });
-    expect(await Job.countDocuments()).toBe(14);
+    expect(await Job.countDocuments()).toBe(16);
   });
 
   it("seeds companies, jobs and employers without demo accounts when demo is off", async () => {
@@ -229,6 +234,7 @@ describe("runSeed", () => {
 
     expect(result.companies.created).toBe(6);
     expect(result.jobs.created).toBe(14);
+    expect(await Company.countDocuments()).toBe(6);
     expect(result.attempts.created).toBe(0);
     expect(await User.countDocuments({ role: "student" })).toBe(0);
     expect(await User.findOne({ email: DEMO_EMPLOYER })).toBeNull();
@@ -257,14 +263,28 @@ describe("runSeed", () => {
     expect((error as Error).message).not.toContain(weak);
   });
 
-  it("refuses to add demo accounts when another employer already owns the first company", async () => {
+  it("adds only the demo parts when --demo follows a plain seed", async () => {
     await runSeed({ demo: false });
     const before = await countAll();
 
-    await expect(runSeed({ demo: true, password: DEMO_PASSWORD })).rejects.toThrow(
-      /already owned/i,
-    );
-    expect(await countAll()).toEqual(before);
+    const result = await runSeed({ demo: true, password: DEMO_PASSWORD });
+
+    expect(result.companies).toEqual({ created: 1, existing: 6 });
+    expect(result.jobs).toEqual({ created: 2, existing: 14 });
+    expect(result.attempts.created).toBe(2);
+    expect(result.applications.created).toBe(1);
+    expect(await countAll()).toEqual({
+      users: before.users + 2,
+      companies: before.companies + 1,
+      employerProfiles: before.employerProfiles + 1,
+      studentProfiles: before.studentProfiles + 1,
+      jobs: before.jobs + 2,
+      attempts: 2,
+      applications: 1,
+    });
+    const first = await Company.findOne({ slug: /-demo01$/ }).lean();
+    const owner = await User.findById(first?.ownerId).lean();
+    expect(owner?.email).toMatch(/^hiring@/);
   });
 
   it("re-seeding without demo after a demo seed adds nothing", async () => {
@@ -275,6 +295,7 @@ describe("runSeed", () => {
 
     expect(await countAll()).toEqual(before);
     expect(result.users.created).toBe(0);
+    expect(result.companies.created).toBe(0);
   });
 });
 
