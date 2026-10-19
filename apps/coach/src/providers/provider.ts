@@ -84,7 +84,8 @@ type ProviderErrorCode =
   | "timeout"
   | "aborted"
   | "request_rejected"
-  | "upstream_error";
+  | "upstream_error"
+  | "practice_unavailable";
 
 const RETRYABLE: ReadonlySet<ProviderErrorCode> = new Set([
   "rate_limited",
