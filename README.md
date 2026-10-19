@@ -48,9 +48,11 @@ cp apps/api/.env.example apps/api/.env
 cp apps/coach/.env.example apps/coach/.env
 cp apps/web/.env.example apps/web/.env.local
 npm run dev:infra      # MongoDB + Mailpit (local email inbox) in Docker
-npm run seed           # demo companies, jobs, and two demo accounts
+SEED_DEMO_PASSWORD='pick-a-12-plus-char-password' npm run seed -- --demo   # companies, jobs, two demo accounts
 npm run dev            # web, api, and coach with hot reload
 ```
+
+The demo student (`student@pitchperfect.example`) and employer (`employer@pitchperfect.example`) both sign in with the `SEED_DEMO_PASSWORD` you set; it needs 12 or more characters and is never printed. You can put it in `apps/api/.env` instead of the command line. Without `--demo` the seed loads only the fictional companies, jobs, and their employers.
 
 Open http://localhost:3000. Verification and password-reset emails land in Mailpit at http://localhost:8025.
 
@@ -60,19 +62,20 @@ Run the whole stack in containers instead: `docker compose --profile full up --b
 
 ## Scripts
 
-| Command                           | What it does                                                       |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `npm run dev`                     | Run web, api, and coach in watch mode                              |
-| `npm run dev:infra`               | Start MongoDB and Mailpit containers                               |
-| `npm run seed`                    | Load demo data (idempotent)                                        |
-| `npm run build`                   | Build every workspace                                              |
-| `npm run lint` / `npm run format` | ESLint / Prettier                                                  |
-| `npm run typecheck`               | TypeScript project-wide check                                      |
-| `npm test`                        | Unit and integration tests for all workspaces                      |
-| `npm run e2e`                     | Playwright end-to-end tests (fake practice provider)               |
-| `npm run check:dead`              | knip (unused files, exports, deps) and jscpd (duplication)         |
-| `npm run eval -w apps/coach`      | Run practice partner evals against a real provider (needs a key)   |
-| `npm run admin -- <command>`      | Admin CLI: `approve-company`, `suspend-company`, `list-unverified` |
+| Command                           | What it does                                                                                       |
+| --------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `npm run dev`                     | Run web, api, and coach in watch mode                                                              |
+| `npm run dev:infra`               | Start MongoDB and Mailpit containers                                                               |
+| `npm run seed -- --demo`          | Load demo data and accounts (idempotent; needs `SEED_DEMO_PASSWORD`)                               |
+| `npm run purge`                   | Delete expired attempts and tokens, abandon stale sessions                                         |
+| `npm run build`                   | Build every workspace                                                                              |
+| `npm run lint` / `npm run format` | ESLint / Prettier                                                                                  |
+| `npm run typecheck`               | TypeScript project-wide check                                                                      |
+| `npm test`                        | Unit and integration tests for all workspaces                                                      |
+| `npm run e2e`                     | Playwright end-to-end tests (fake practice provider)                                               |
+| `npm run check:dead`              | knip (unused files, exports, deps) and jscpd (duplication)                                         |
+| `npm run eval -w apps/coach`      | Run practice partner evals against a real provider (needs a key)                                   |
+| `npm run admin -- <command>`      | Admin CLI: `migrate`, `list-unverified`, `approve-company`, `suspend-company`, `unsuspend-company` |
 
 ## Documentation
 

@@ -1,0 +1,368 @@
+import type { EmploymentType, JobPay, JobStatus, Workplace } from "@pitchperfect/shared";
+
+/**
+ * Fictional demo content. Every company lives on a reserved `.example` domain, so no address
+ * here can ever reach a real inbox or website.
+ */
+
+export interface SeedCompany {
+  name: string;
+  /** Hostname without scheme; the website and the employer's email domain both come from it. */
+  host: string;
+  pitch: string;
+  verification: "verified" | "unverified";
+  employer: { first: string; last: string; jobTitle: string };
+}
+
+export const SEED_COMPANIES: readonly SeedCompany[] = [
+  {
+    name: "Northwind Analytics",
+    host: "northwind-analytics.example",
+    pitch:
+      "We build dashboards that turn scattered operations data into one clear picture for mid-sized teams.",
+    verification: "verified",
+    employer: { first: "Morgan", last: "Ellis", jobTitle: "Head of talent" },
+  },
+  {
+    name: "Bluebird Health Cloud",
+    host: "bluebird-health-cloud.example",
+    pitch: "Scheduling and billing software that helps small clinics spend less time on paperwork.",
+    verification: "verified",
+    employer: { first: "Avery", last: "Lindqvist", jobTitle: "Recruiting lead" },
+  },
+  {
+    name: "Cedar & Pine Realty Tech",
+    host: "cedar-pine-realty.example",
+    pitch: "Listing, lead-routing, and showing tools for independent real estate brokerages.",
+    verification: "verified",
+    employer: { first: "Jules", last: "Okonkwo", jobTitle: "Sales manager" },
+  },
+  {
+    name: "Orbit Payments",
+    host: "orbit-payments.example",
+    pitch: "Simple card and invoice payments for freelancers and very small shops.",
+    verification: "unverified",
+    employer: { first: "Sasha", last: "Brandt", jobTitle: "Founder" },
+  },
+  {
+    name: "Lumen Learning Systems",
+    host: "lumen-learning.example",
+    pitch: "A learning platform that helps training teams build and track short courses.",
+    verification: "verified",
+    employer: { first: "Quinn", last: "Abara", jobTitle: "People operations manager" },
+  },
+  {
+    name: "Harborline Logistics Software",
+    host: "harborline-logistics.example",
+    pitch: "Route planning and proof-of-delivery software for regional freight carriers.",
+    verification: "verified",
+    employer: { first: "Rowan", last: "Castellano", jobTitle: "Director of sales" },
+  },
+];
+
+export interface SeedJob {
+  /** Index into `SEED_COMPANIES`. */
+  company: number;
+  title: string;
+  location: string;
+  workplace: Workplace;
+  employmentType: EmploymentType;
+  /** Simple HTML (p, ul, li, strong); the seeder runs it through the job sanitizer. */
+  descriptionHtml: string;
+  skills: string[];
+  pay: JobPay;
+  status: JobStatus;
+}
+
+/** Intro, a bulleted list of duties, and a closing line, as simple allowed HTML. */
+function description(intro: string, duties: readonly string[], closing: string): string {
+  const items = duties.map((duty) => `<li>${duty}</li>`).join("");
+  return `<p>${intro}</p><p><strong>What you will do</strong></p><ul>${items}</ul><p>${closing}</p>`;
+}
+
+const hourly = (min: number, max: number): JobPay => ({
+  type: "range",
+  min,
+  max,
+  currency: "USD",
+  frequency: "hourly",
+  commission: false,
+});
+
+const salary = (min: number, max: number, commission: boolean): JobPay => ({
+  type: "range",
+  min,
+  max,
+  currency: "USD",
+  frequency: "annually",
+  commission,
+});
+
+export const SEED_JOBS: readonly SeedJob[] = [
+  {
+    company: 0,
+    title: "Sales development representative",
+    location: "Boston, MA",
+    workplace: "hybrid",
+    employmentType: "full_time",
+    descriptionHtml: description(
+      "Start conversations with operations leaders who lose hours each week to manual reporting.",
+      [
+        "Research accounts and write short, personal outreach",
+        "Run first calls and book demos for our account executives",
+        "Keep every conversation logged so the team can follow up",
+      ],
+      "No experience needed beyond curiosity and a willingness to practice. We coach you weekly.",
+    ),
+    skills: ["Cold outreach", "Discovery questions", "CRM basics"],
+    pay: salary(52_000, 60_000, true),
+    status: "active",
+  },
+  {
+    company: 0,
+    title: "Account executive intern",
+    location: "Boston, MA",
+    workplace: "hybrid",
+    employmentType: "internship",
+    descriptionHtml: description(
+      "Shadow our account executives for a semester and run your own small pipeline.",
+      [
+        "Join discovery and demo calls and write the follow-up notes",
+        "Prepare short account briefs before big meetings",
+        "Pitch one real prospect by the end of the term",
+      ],
+      "A good fit for juniors and seniors who want to see a full sales cycle up close.",
+    ),
+    skills: ["Pitching", "Note taking", "Account research"],
+    pay: hourly(18, 22),
+    status: "active",
+  },
+  {
+    company: 1,
+    title: "Business development representative",
+    location: "Austin, TX",
+    workplace: "remote",
+    employmentType: "full_time",
+    descriptionHtml: description(
+      "Help small clinics discover how much time their front desk could get back.",
+      [
+        "Reach out to clinic owners and practice managers",
+        "Qualify interest and set up product walkthroughs",
+        "Share what you learn so we can sharpen our messaging",
+      ],
+      "You will work with a friendly team that celebrates every booked meeting.",
+    ),
+    skills: ["Outbound calling", "Listening", "Objection handling"],
+    pay: salary(50_000, 58_000, true),
+    status: "active",
+  },
+  {
+    company: 1,
+    title: "Customer success associate",
+    location: "Austin, TX",
+    workplace: "remote",
+    employmentType: "full_time",
+    descriptionHtml: description(
+      "Be the first friendly voice new clinics hear after they sign up.",
+      [
+        "Guide new customers through setup and training",
+        "Check in on usage and spot customers who need help",
+        "Pass product ideas and problems to the product team",
+      ],
+      "Great for someone who likes teaching and solving problems one customer at a time.",
+    ),
+    skills: ["Onboarding", "Empathy", "Clear writing"],
+    pay: salary(48_000, 56_000, false),
+    status: "active",
+  },
+  {
+    company: 1,
+    title: "Sales operations intern",
+    location: "Austin, TX",
+    workplace: "remote",
+    employmentType: "internship",
+    descriptionHtml: description(
+      "Keep our sales data tidy and help the team see what is working.",
+      [
+        "Clean up lead lists and fix duplicate records",
+        "Build simple weekly reports in a spreadsheet",
+        "Suggest small changes that save the team time",
+      ],
+      "Drafted for next term; applications open soon.",
+    ),
+    skills: ["Spreadsheets", "Attention to detail", "Reporting"],
+    pay: hourly(17, 20),
+    status: "draft",
+  },
+  {
+    company: 2,
+    title: "Sales development representative",
+    location: "Denver, CO",
+    workplace: "onsite",
+    employmentType: "full_time",
+    descriptionHtml: description(
+      "Introduce independent brokerages to tools that route leads to the right agent.",
+      [
+        "Call broker owners and office managers",
+        "Explain our lead routing in plain language",
+        "Hand warm leads to the senior sales team",
+      ],
+      "You will sit with the sales team in our Denver office and learn from the people next to you.",
+    ),
+    skills: ["Outbound calling", "Rapport building", "Resilience"],
+    pay: salary(48_000, 55_000, true),
+    status: "active",
+  },
+  {
+    company: 2,
+    title: "Account executive intern",
+    location: "Denver, CO",
+    workplace: "hybrid",
+    employmentType: "internship",
+    descriptionHtml: description(
+      "Learn how a brokerage software deal moves from first call to signed order.",
+      [
+        "Sit in on demos and take clear notes",
+        "Draft follow-up emails for your manager to review",
+        "Present one short pitch to the team at the end of the term",
+      ],
+      "Open to students in any major who like talking to people.",
+    ),
+    skills: ["Pitching", "Follow-up", "Presenting"],
+    pay: hourly(18, 21),
+    status: "active",
+  },
+  {
+    company: 3,
+    title: "Business development representative",
+    location: "Remote, US",
+    workplace: "remote",
+    employmentType: "full_time",
+    descriptionHtml: description(
+      "Tell freelancers and shop owners how they can get paid faster.",
+      [
+        "Reach out to small business owners by phone and email",
+        "Answer basic questions about fees and setup",
+        "Book calls for our founder to close",
+      ],
+      "We are a very small team, so you will have a say in how we sell.",
+    ),
+    skills: ["Outbound calling", "Plain language", "Self-direction"],
+    pay: salary(44_000, 52_000, true),
+    status: "active",
+  },
+  {
+    company: 3,
+    title: "Customer success intern",
+    location: "Remote, US",
+    workplace: "remote",
+    employmentType: "internship",
+    descriptionHtml: description(
+      "Help early customers get their first payment working.",
+      [
+        "Answer customer questions in chat and email",
+        "Write short help articles from the questions you see",
+        "Tell the team what confuses people",
+      ],
+      "A flexible, part-of-the-week commitment with a stipend.",
+    ),
+    skills: ["Support writing", "Patience", "Curiosity"],
+    pay: { type: "exact", amount: 1_200, currency: "USD", frequency: "monthly", commission: false },
+    status: "active",
+  },
+  {
+    company: 4,
+    title: "Sales operations analyst",
+    location: "Chicago, IL",
+    workplace: "hybrid",
+    employmentType: "full_time",
+    descriptionHtml: description(
+      "Make our sales team faster by keeping the data and the process in order.",
+      [
+        "Maintain territories, quotas, and lead assignment rules",
+        "Build reports the sales managers use every Monday",
+        "Find and fix gaps between marketing and sales handoffs",
+      ],
+      "You like spreadsheets, and you like helping people see what the numbers mean.",
+    ),
+    skills: ["Spreadsheets", "Reporting", "Process design"],
+    pay: salary(58_000, 68_000, false),
+    status: "active",
+  },
+  {
+    company: 4,
+    title: "Sales development representative",
+    location: "Remote, US",
+    workplace: "remote",
+    employmentType: "part_time",
+    descriptionHtml: description(
+      "Reach training managers who need a simpler way to build short courses.",
+      [
+        "Send personal outreach to learning and development leads",
+        "Hold short discovery calls",
+        "Book demos with our account executives",
+      ],
+      "Around twenty hours a week, with hours you can shape around classes.",
+    ),
+    skills: ["Cold outreach", "Time management", "Discovery questions"],
+    pay: { type: "exact", amount: 22, currency: "USD", frequency: "hourly", commission: true },
+    status: "active",
+  },
+  {
+    company: 4,
+    title: "Customer success manager",
+    location: "Chicago, IL",
+    workplace: "hybrid",
+    employmentType: "full_time",
+    descriptionHtml: description(
+      "Look after a group of training teams and help them get real results.",
+      [
+        "Run onboarding and quarterly reviews",
+        "Spot risks early and plan a fix with the customer",
+        "Work with sales on renewals",
+      ],
+      "This role has been filled and is no longer open.",
+    ),
+    skills: ["Account management", "Renewals", "Presenting"],
+    pay: salary(65_000, 75_000, false),
+    status: "archived",
+  },
+  {
+    company: 5,
+    title: "Business development representative",
+    location: "Baltimore, MD",
+    workplace: "onsite",
+    employmentType: "full_time",
+    descriptionHtml: description(
+      "Open doors at regional freight carriers that still plan routes by hand.",
+      [
+        "Call dispatch managers and fleet owners",
+        "Listen for the problems that cost them time on the road",
+        "Book site visits with our senior sales team",
+      ],
+      "You will join a team that values straight talk and follow-through.",
+    ),
+    skills: ["Outbound calling", "Listening", "Persistence"],
+    pay: salary(50_000, 60_000, true),
+    status: "active",
+  },
+  {
+    company: 5,
+    title: "Inside sales representative",
+    location: "Baltimore, MD",
+    workplace: "hybrid",
+    employmentType: "contract",
+    descriptionHtml: description(
+      "Help us follow up with carriers who tried our route planner and went quiet.",
+      [
+        "Call trial users and ask what got in the way",
+        "Offer a short guided setup session",
+        "Report patterns so we can fix the product",
+      ],
+      "A six-month contract with a clear path to full-time for strong performers.",
+    ),
+    skills: ["Follow-up", "Discovery questions", "Resilience"],
+    pay: hourly(24, 28),
+    status: "active",
+  },
+];

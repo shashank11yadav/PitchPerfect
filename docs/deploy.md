@@ -22,13 +22,13 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
 4. **Deploy api:**
    - Set every variable from `apps/api/.env.example`, with `NODE_ENV=production`, `APP_URL=https://<web domain>` and `COACH_URL=<private coach URL>`.
    - Run `npm run admin -w apps/api -- migrate` (builds indexes) once.
-   - Run `npm run seed -w apps/api -- --demo` only for a demo environment.
+   - Run `npm run seed -w apps/api -- --demo` only for a demo environment, with `SEED_DEMO_PASSWORD` (12 or more characters) set in that shell. The password is never printed, and re-running the seed never changes an existing account's password.
 5. **Deploy web:** set `API_ORIGIN`, `SITE_URL`, and `PROXY_SHARED_SECRET` if used.
 6. **Verify:**
    - Run `npx playwright test --config e2e/playwright.smoke.config.ts` with `BASE_URL` set to the deployed URL. It runs a read-only smoke test of the public pages, `/api/health`, and the headers.
    - Run Lighthouse on `/`, `/jobs` and one job page.
    - Run the [security checklist](security.md#pre-release-security-checklist).
-7. **Schedule the purge job:** run `npm run purge -w apps/api` daily. It removes expired tokens and attempts as a backstop for the TTL indexes.
+7. **Schedule the purge job:** run `npm run purge -w apps/api` daily. It removes expired tokens and attempts as a backstop for the TTL indexes, and marks sessions that were left `active` long past the 20-minute limit as abandoned.
 
 ## Environment variables
 

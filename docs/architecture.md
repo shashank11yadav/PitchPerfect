@@ -43,7 +43,7 @@ apps/
         employer/           company, jobs CRUD, applicant pipeline, interviews, dashboard
         practice/           sessions, turns (SSE proxy), end/score, attempts, quota
       services/             mailer, password-policy, html-sanitizer, coach-client, files (GridFS)
-      scripts/              seed.ts, admin.ts, purge-expired.ts
+      scripts/              CLI entries (seed, admin, purge-expired), their run-*.ts logic, seed and demo data
     test/                   integration tests (supertest + mongodb-memory-server)
   coach/
     src/

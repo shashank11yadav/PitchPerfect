@@ -9,7 +9,10 @@
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
     "build": "tsc -p tsconfig.build.json && node -e \"require('node:fs').cpSync('src/services/data', 'dist/services/data', { recursive: true })\"",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "seed": "tsx --env-file-if-exists=.env src/scripts/seed.ts",
+    "admin": "tsx --env-file-if-exists=.env src/scripts/admin.ts",
+    "purge": "tsx --env-file-if-exists=.env src/scripts/purge-expired.ts"
   },
   "dependencies": {
     "@pitchperfect/shared": "0.0.0",
