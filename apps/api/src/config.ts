@@ -1,29 +1,17 @@
 import { LIMITS } from "@pitchperfect/shared";
+import {
+  ConfigError,
+  DEV_ONLY_PREFIX,
+  integer,
+  optional,
+  parseConfig,
+  port,
+  secret,
+} from "@pitchperfect/shared/env";
 import { z } from "zod";
 
-/** Raised when the environment is invalid. Messages name variables, never their values. */
-export class ConfigError extends Error {
-  constructor(readonly problems: string[]) {
-    super(`Invalid configuration:\n${problems.map((problem) => `  - ${problem}`).join("\n")}`);
-    this.name = "ConfigError";
-  }
-}
+export { ConfigError };
 
-const DEV_ONLY_PREFIX = "dev-only-";
-const SECRET_MIN_LENGTH = 32;
-
-/** Environment variables arrive as strings; an empty string means "not set". */
-const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
-const optional = <T extends z.ZodType>(schema: T) =>
-  z.preprocess(emptyToUndefined, schema.optional());
-
-const secret = z
-  .string()
-  .min(SECRET_MIN_LENGTH, `must be at least ${String(SECRET_MIN_LENGTH)} characters`);
-/** Whole number at or above `min`; an empty string counts as unset and yields the default. */
-const integer = (fallback: number, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) =>
-  z.preprocess(emptyToUndefined, z.coerce.number().int().min(min).max(max).default(fallback));
-const port = (fallback: number) => integer(fallback, { max: 65535 });
 const flag = z.enum(["true", "false"]).transform((value) => value === "true");
 
 const PRODUCTION_SECRETS = [
@@ -100,11 +88,5 @@ const envSchema = z
 export type Config = z.output<typeof envSchema>;
 
 export function loadConfig(env: NodeJS.ProcessEnv): Config {
-  const result = envSchema.safeParse(env);
-  if (!result.success) {
-    throw new ConfigError(
-      result.error.issues.map((issue) => `${issue.path.join(".") || "env"}: ${issue.message}`),
-    );
-  }
-  return result.data;
+  return parseConfig(envSchema, env);
 }

@@ -3,8 +3,16 @@ import { defineConfig } from "vitest/config";
 
 const apiGlobalSetup = fileURLToPath(new URL("./apps/api/test/setup.ts", import.meta.url));
 
+// The subpath entries must come before the package root, which would otherwise match them first.
 const alias = {
+  "@pitchperfect/shared/env": fileURLToPath(
+    new URL("./packages/shared/src/env.ts", import.meta.url),
+  ),
+  "@pitchperfect/shared/hmac": fileURLToPath(
+    new URL("./packages/shared/src/hmac.ts", import.meta.url),
+  ),
   "@pitchperfect/shared": fileURLToPath(new URL("./packages/shared/src/index.ts", import.meta.url)),
+  "@pitchperfect/coach/app": fileURLToPath(new URL("./apps/coach/src/app.ts", import.meta.url)),
 };
 
 export default defineConfig({

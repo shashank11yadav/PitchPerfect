@@ -10,6 +10,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./env": {
+      "types": "./dist/env.d.ts",
+      "default": "./dist/env.js"
+    },
+    "./hmac": {
+      "types": "./dist/hmac.d.ts",
+      "default": "./dist/hmac.js"
     }
   },
   "scripts": {

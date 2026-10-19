@@ -1,5 +1,6 @@
+import { loadConfigOrExit } from "@pitchperfect/shared/env";
 import { createApp } from "./app.js";
-import { ConfigError, loadConfig } from "./config.js";
+import { loadConfig } from "./config.js";
 import { connectDb, disconnectDb } from "./db/connect.js";
 import { createLogger } from "./logger.js";
 import { createHttpCoachClient } from "./services/coach-client.js";
@@ -7,18 +8,7 @@ import { createSmtpMailer } from "./services/mailer.js";
 
 const SHUTDOWN_GRACE_MS = 10_000;
 
-function loadConfigOrExit() {
-  try {
-    return loadConfig(process.env);
-  } catch (error) {
-    // The logger needs a valid config, so configuration problems go straight to stderr.
-    const message = error instanceof ConfigError ? error.message : "Could not read configuration";
-    process.stderr.write(`${message}\n`);
-    return process.exit(1);
-  }
-}
-
-const config = loadConfigOrExit();
+const config = loadConfigOrExit(() => loadConfig(process.env));
 const logger = createLogger(config.LOG_LEVEL);
 
 try {

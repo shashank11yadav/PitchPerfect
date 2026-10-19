@@ -10,9 +10,6 @@
     "apps/api": {
       "entry": ["src/scripts/*.ts", "test/**/*.test.ts"]
     },
-    "apps/coach": {
-      "entry": ["src/server.ts", "evals/run.ts"],
-      "ignore": ["src/index.ts"]
-    }
+    "apps/coach": {}
   }
 }
