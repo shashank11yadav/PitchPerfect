@@ -5,14 +5,15 @@ import { requireSignedRequests } from "./auth/guard.js";
 import type { CoachConfig } from "./config.js";
 import { registerErrorHandling } from "./errors.js";
 import { createLogger } from "./logger.js";
+import type { LlmProvider } from "./providers/index.js";
 import { healthRoutes } from "./routes/health.js";
 
 const BODY_LIMIT_BYTES = 262_144;
 
 export interface CoachAppOptions {
   config: CoachConfig;
-  /** The LLM provider; the real interface arrives with the practice routes. */
-  provider?: unknown;
+  /** The LLM provider the practice routes call; `server.ts` passes `createProvider(config)`. */
+  provider?: LlmProvider;
   /** Where log lines go; defaults to stdout. Tests pass a capture stream. */
   logStream?: DestinationStream;
 }

@@ -1,9 +1,10 @@
 import { loadConfigOrExit } from "@pitchperfect/shared/env";
 import { buildCoachApp } from "./app.js";
 import { loadCoachConfig } from "./config.js";
+import { createProvider } from "./providers/index.js";
 
 const config = loadConfigOrExit(() => loadCoachConfig(process.env));
-const app = buildCoachApp({ config });
+const app = buildCoachApp({ config, provider: createProvider(config) });
 
 function shutdown(signal: string): void {
   app.log.info({ signal }, "shutting down");
