@@ -50,8 +50,25 @@ describe("GET /api/jobs", () => {
 
     const res = await request(app).get("/api/jobs");
 
-    expect(pageOf(res).items[0]).not.toHaveProperty("descriptionHtml");
-    expect(JSON.stringify(res.body)).not.toContain("passwordHash");
+    const [item] = pageOf(res).items;
+    expect(Object.keys(item ?? {}).sort()).toEqual([
+      "company",
+      "employmentType",
+      "id",
+      "location",
+      "pay",
+      "publishedAt",
+      "skills",
+      "slug",
+      "title",
+      "workplace",
+    ]);
+    expect(Object.keys(item?.company ?? {}).sort()).toEqual([
+      "logoUrl",
+      "name",
+      "slug",
+      "verification",
+    ]);
   });
 
   it("orders by publish date, newest first", async () => {

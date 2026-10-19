@@ -3,6 +3,8 @@ import sanitizeHtml from "sanitize-html";
 const LINK_REL = "noopener noreferrer nofollow";
 
 /** The allowlist from docs/security.md ("Stored XSS"). Everything else is dropped. */
+const SAFE_HREF = /^(?:https:|mailto:)/i;
+
 const JOB_HTML: sanitizeHtml.IOptions = {
   allowedTags: ["p", "br", "strong", "em", "u", "ul", "ol", "li", "h3", "h4", "a", "blockquote"],
   allowedAttributes: { a: ["href", "rel", "target"] },
@@ -10,21 +12,22 @@ const JOB_HTML: sanitizeHtml.IOptions = {
   allowProtocolRelative: false,
   transformTags: {
     // Runs before the attribute and scheme filters, so only `href` can survive from the input.
-    a: (tagName, attribs) => ({
-      tagName,
-      attribs: {
-        ...(attribs.href === undefined ? {} : { href: attribs.href }),
-        rel: LINK_REL,
-        target: "_blank",
-      },
-    }),
+    // `allowedSchemes` ignores relative and schemeless URLs, so the check is repeated here.
+    a: (tagName, attribs): sanitizeHtml.Tag => {
+      const { href } = attribs;
+      if (href === undefined || !SAFE_HREF.test(href.trim())) {
+        // "span" is not an allowed tag, so the anchor goes and its text stays.
+        return { tagName: "span", attribs: {} };
+      }
+      return { tagName, attribs: { href, rel: LINK_REL, target: "_blank" } };
+    },
   },
 };
 
 const TEXT_ONLY: sanitizeHtml.IOptions = { allowedTags: [], allowedAttributes: {} };
 
-/** Tags that end a line of text; replaced by a space so neighbouring words don't run together. */
-const BLOCK_BOUNDARY = /<\/?(?:p|br|li|ul|ol|h[1-6]|blockquote|div)\b[^>]*>/gi;
+/** Tags that end a line of text; replaced by a space so neighbouring words don't run together. The attribute run is bounded to keep matching linear. */
+const BLOCK_BOUNDARY = /<\/?(?:p|br|li|ul|ol|h[1-6]|blockquote|div)\b[^>]{0,200}>/gi;
 
 /** Sanitizes employer-written job description HTML. Safe to store and to render. */
 export function sanitizeJobHtml(html: string): string {

@@ -10,15 +10,20 @@ describe("sanitizeJobHtml", () => {
     expect(clean).toBe("<p>Hi</p>");
   });
 
-  it("drops javascript:, data:, and http: links but keeps the text", () => {
+  it("unwraps links that aren't https or mailto (schemes, relative paths, fragments) but keeps the text", () => {
     for (const href of [
       "javascript:alert(1)",
       "data:text/html,x",
       "http://plain.example",
       "//x.example",
+      "/path",
+      "evil.test",
+      "#x",
+      "  javascript:alert(1)",
+      "",
     ]) {
       const clean = sanitizeJobHtml(`<a href="${href}">link</a>`);
-      expect(clean).not.toContain("href");
+      expect(clean).toBe("link");
       expect(clean).toContain("link");
     }
   });
@@ -59,6 +64,12 @@ describe("htmlToPlainText", () => {
 
   it("separates block elements and drops script content", () => {
     expect(htmlToPlainText("<h3>Title</h3><p>a<br>b</p><script>evil()</script>")).toBe("Title a b");
+  });
+
+  it("stays fast on input with many unterminated tags", () => {
+    const started = performance.now();
+    htmlToPlainText("<p".repeat(50_000));
+    expect(performance.now() - started).toBeLessThan(200);
   });
 
   it("decodes entities once", () => {
