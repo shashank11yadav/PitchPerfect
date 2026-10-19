@@ -30,6 +30,10 @@ export const APPLICATION_STATUSES = [
 ] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
+/** Why an application was closed by the system rather than by a person. */
+export const APPLICATION_CLOSED_REASONS = ["employer_left", "job_archived"] as const;
+export type ApplicationClosedReason = (typeof APPLICATION_CLOSED_REASONS)[number];
+
 export const ATTEMPT_STATUSES = ["active", "completed", "abandoned", "ended_by_guard"] as const;
 export type AttemptStatus = (typeof ATTEMPT_STATUSES)[number];
 

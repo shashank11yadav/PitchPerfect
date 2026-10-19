@@ -45,6 +45,8 @@ const companyInput = (ownerId = oid(), slug = "acme-labs") => ({
   verification: "verified" as const,
 });
 
+const jobSnapshot = { title: "SDR", companyName: "Acme Labs" };
+
 const jobInput = (companyId = oid(), slug = "sdr-a1b2c3") => ({
   companyId,
   slug,
@@ -115,10 +117,14 @@ describe("indexes", () => {
     await Application.syncIndexes();
     const jobId = oid();
     const studentId = oid();
-    await Application.create({ jobId, studentId });
+    await Application.create({ jobId, studentId, jobSnapshot });
 
-    await expect(Application.create({ jobId, studentId })).rejects.toMatchObject({ code: 11000 });
-    await expect(Application.create({ jobId, studentId: oid() })).resolves.toBeDefined();
+    await expect(Application.create({ jobId, studentId, jobSnapshot })).rejects.toMatchObject({
+      code: 11000,
+    });
+    await expect(
+      Application.create({ jobId, studentId: oid(), jobSnapshot }),
+    ).resolves.toBeDefined();
   });
 
   it("enforces one saved job per student and job", async () => {
@@ -214,13 +220,19 @@ describe("schema defaults and validation", () => {
       industry: "SaaS",
       state: "MA" as const,
     });
-    const application = await Application.create({ jobId: oid(), studentId: oid() });
+    const application = await Application.create({
+      jobId: oid(),
+      studentId: oid(),
+      jobSnapshot,
+    });
     const attempt = await PracticeAttempt.create(attemptInput());
 
     expect(profile.lessonsCompleted).toEqual([]);
     expect(application.status).toBe("applied");
     expect(application.savedByEmployer).toBe(false);
     expect(application.interview).toBeUndefined();
+    expect(application.closedReason).toBeNull();
+    expect(application.toJSON().jobSnapshot).toEqual(jobSnapshot);
     expect(application.toJSON()).toHaveProperty("createdAt", expect.any(Date));
     expect(attempt.status).toBe("active");
     expect(attempt.guardFlags).toBe(0);
@@ -229,12 +241,26 @@ describe("schema defaults and validation", () => {
     expect(attempt.tokens).toEqual({ input: 0, output: 0 });
   });
 
+  it("requires a job snapshot on new applications", async () => {
+    await expect(Application.create({ jobId: oid(), studentId: oid() })).rejects.toThrow(
+      mongoose.Error.ValidationError,
+    );
+  });
+
   it("rejects values outside the shared enums", async () => {
     await expect(User.create({ ...userInput(), role: "admin" as never })).rejects.toThrow(
       mongoose.Error.ValidationError,
     );
     await expect(
-      Application.create({ jobId: oid(), studentId: oid(), status: "x" as never }),
+      Application.create({ jobId: oid(), studentId: oid(), jobSnapshot, status: "x" as never }),
+    ).rejects.toThrow(mongoose.Error.ValidationError);
+    await expect(
+      Application.create({
+        jobId: oid(),
+        studentId: oid(),
+        jobSnapshot,
+        closedReason: "bored" as never,
+      }),
     ).rejects.toThrow(mongoose.Error.ValidationError);
   });
 

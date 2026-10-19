@@ -14,6 +14,7 @@ useTestDb();
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -264,6 +265,19 @@ describe("POST /api/me/change-email", () => {
     await (await csrfAgent(app)).post("/api/auth/verify-email").send({ token: link }).expect(200);
 
     expect((await Company.findById(company._id))?.verification).toBe("verified");
+  });
+
+  it("changes nothing when the company can't be updated", async () => {
+    const { email, password, user, company } = await createEmployer();
+    const session = await signIn(request.agent(app), email, password);
+    vi.spyOn(Company, "updateOne").mockRejectedValueOnce(new Error("db down"));
+
+    const res = await change(session, { currentPassword: password, newEmail });
+
+    expect(res.status).toBe(500);
+    expect((await User.findById(user._id))?.email).toBe(email);
+    expect((await Company.findById(company._id))?.verification).toBe("verified");
+    expect(mailer.sent).toHaveLength(0);
   });
 
   it("requires a session and counts attempts per user", async () => {

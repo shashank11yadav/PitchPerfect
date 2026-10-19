@@ -165,11 +165,21 @@ export function interviewScheduled(details: {
   });
 }
 
-export function applicationsClosed(details: { jobTitle: string; company: string }): EmailContent {
-  return render(`Applications closed: ${details.jobTitle}`, {
-    heading: "This job is no longer taking applications",
+const LIST = new Intl.ListFormat("en", { style: "long", type: "conjunction" });
+
+/** One message for all of a student's applications that closed together. */
+export function applicationsClosed(details: {
+  jobTitles: string[];
+  company: string;
+}): EmailContent {
+  const titles = LIST.format(details.jobTitles);
+  const plural = details.jobTitles.length > 1;
+  return render(`Applications closed: ${titles}`, {
+    heading: plural
+      ? "These jobs are no longer taking applications"
+      : "This job is no longer taking applications",
     paragraphs: [
-      `${details.company} closed applications for ${details.jobTitle}. Thanks for applying.`,
+      `${details.company} closed applications for ${titles}. Thanks for applying.`,
       `There are more roles on ${BRAND} whenever you're ready.`,
     ],
   });

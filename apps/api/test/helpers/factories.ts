@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import {
+  Application,
   Company,
   EmployerProfile,
   Job,
@@ -7,6 +8,7 @@ import {
   StudentProfile,
   User,
 } from "../../src/db/models/index.js";
+import type { ApplicationAttrs } from "../../src/db/models/application.js";
 import { slugify } from "../../src/db/slug.js";
 import { hashPassword } from "../../src/services/passwords.js";
 import { withCsrf, type CsrfAgent, type TestAgent } from "./csrf.js";
@@ -92,6 +94,19 @@ export function createJob(companyId: mongoose.Types.ObjectId, title = "Sales dev
     pay: { type: "unpaid" },
     status: "active",
     publishedAt: new Date(),
+  });
+}
+
+/** An application with the job snapshot every new application carries. */
+export function createApplication(
+  input: {
+    jobId: mongoose.Types.ObjectId;
+    studentId: mongoose.Types.ObjectId;
+  } & Partial<ApplicationAttrs>,
+) {
+  return Application.create({
+    jobSnapshot: { title: "Sales development rep", companyName: "Acme Demo Co" },
+    ...input,
   });
 }
 

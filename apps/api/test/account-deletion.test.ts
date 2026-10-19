@@ -18,6 +18,7 @@ import { csrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
 import { errorOf } from "./helpers/error-body.js";
 import {
+  createApplication,
   createAttempt,
   createEmployer,
   createJob,
@@ -47,7 +48,7 @@ describe("DELETE /api/me as a student", () => {
     await session.put("/api/me/resume").attach("file", tinyPdf(), "cv.pdf").expect(200);
     const attempt = await createAttempt(account.user._id);
     await createAttempt(account.user._id);
-    await Application.create({
+    await createApplication({
       jobId: job._id,
       studentId: account.user._id,
       sharedAttemptId: attempt._id,
@@ -77,7 +78,7 @@ describe("DELETE /api/me as a student", () => {
   it("leaves other people's data alone", async () => {
     const { password, session, job } = await studentWithEverything();
     const other = await createStudent();
-    await Application.create({ jobId: job._id, studentId: other.user._id });
+    await createApplication({ jobId: job._id, studentId: other.user._id });
     await createAttempt(other.user._id);
 
     await session.delete("/api/me").send({ currentPassword: password }).expect(204);
@@ -135,11 +136,15 @@ describe("DELETE /api/me as an employer", () => {
     const account = await createEmployer({ companyName: "Acme Demo Co" });
     const jobA = await createJob(account.company._id, "Account executive");
     const jobB = await createJob(account.company._id, "Sales intern");
+    const snapshotOf = (job: { title: string }) => ({
+      jobSnapshot: { title: job.title, companyName: "Acme Demo Co" },
+    });
     const alice = await createStudent({ email: "alice@example.test" });
     const bob = await createStudent({ email: "bob@example.test" });
     const carol = await createStudent({ email: "carol@example.test" });
-    const open = await Application.create({
+    const open = await createApplication({
       jobId: jobA._id,
+      ...snapshotOf(jobA),
       studentId: alice.user._id,
       status: "interview",
       interview: {
@@ -147,15 +152,49 @@ describe("DELETE /api/me as an employer", () => {
         meetingUrl: "https://meet.example.test/x",
       },
     });
-    const applied = await Application.create({ jobId: jobB._id, studentId: bob.user._id });
-    const rejected = await Application.create({
+    const applied = await createApplication({
+      jobId: jobB._id,
+      ...snapshotOf(jobB),
+      studentId: bob.user._id,
+    });
+    // Alice also has an open application to the second job.
+    const second = await createApplication({
+      jobId: jobB._id,
+      ...snapshotOf(jobB),
+      studentId: alice.user._id,
+    });
+    // Written before snapshots existed: no `jobSnapshot`.
+    const dave = await createStudent({ email: "dave@example.test" });
+    const legacyId = new mongoose.Types.ObjectId();
+    await Application.collection.insertOne({
+      _id: legacyId,
+      jobId: jobB._id,
+      studentId: dave.user._id,
+      status: "hired",
+      savedByEmployer: false,
+    });
+    const rejected = await createApplication({
       jobId: jobA._id,
+      ...snapshotOf(jobA),
       studentId: carol.user._id,
       status: "rejected",
     });
     await SavedJob.create({ studentId: alice.user._id, jobId: jobA._id });
     const session = await signIn(request.agent(app), account.email, account.password);
-    return { ...account, session, jobA, jobB, alice, bob, carol, open, applied, rejected };
+    return {
+      ...account,
+      session,
+      jobA,
+      jobB,
+      alice,
+      bob,
+      carol,
+      open,
+      applied,
+      second,
+      rejected,
+      legacyId,
+    };
   }
 
   it("removes the company, jobs, profile, and user", async () => {
@@ -174,24 +213,58 @@ describe("DELETE /api/me as an employer", () => {
     await session.agent.get("/api/auth/me").expect(401);
   });
 
-  it("closes open applications, drops interviews, and emails each applicant once", async () => {
-    const { session, password, open, applied, rejected, alice, bob, carol } =
+  it("closes open applications, drops interviews, and keeps closed ones displayable", async () => {
+    const { session, password, open, applied, second, rejected, legacyId } =
       await employerWithApplicants();
 
     await session.delete("/api/me").send({ currentPassword: password }).expect(204);
 
     const after = async (id: mongoose.Types.ObjectId) => Application.findById(id).lean();
-    expect((await after(open._id))?.status).toBe("closed");
+    for (const application of [open, applied, second]) {
+      expect((await after(application._id))?.status).toBe("closed");
+      expect((await after(application._id))?.closedReason).toBe("employer_left");
+    }
     expect((await after(open._id))?.interview).toBeUndefined();
-    expect((await after(applied._id))?.status).toBe("closed");
     expect((await after(rejected._id))?.status).toBe("rejected");
+    expect((await after(rejected._id))?.closedReason).toBeNull();
+    expect((await after(legacyId))?.status).toBe("hired");
+    expect((await after(legacyId))?.closedReason ?? null).toBeNull();
+  });
+
+  it("leaves every application of the company with a job snapshot", async () => {
+    const { session, password, jobA, jobB } = await employerWithApplicants();
+
+    await session.delete("/api/me").send({ currentPassword: password }).expect(204);
+
+    const applications = await Application.find().lean();
+    expect(applications).toHaveLength(5);
+    const titleOf = new Map([
+      [jobA._id.toString(), "Account executive"],
+      [jobB._id.toString(), "Sales intern"],
+    ]);
+    for (const application of applications) {
+      expect(application.jobSnapshot).toEqual({
+        title: titleOf.get(application.jobId.toString()),
+        companyName: "Acme Demo Co",
+      });
+    }
+  });
+
+  it("emails each affected student once, naming every job that closed", async () => {
+    const { session, password, alice, bob, carol } = await employerWithApplicants();
+
+    await session.delete("/api/me").send({ currentPassword: password }).expect(204);
 
     const recipients = mailer.sent.map((message) => message.to).sort();
     expect(recipients).toEqual([alice.email, bob.email].sort());
     expect(recipients).not.toContain(carol.email);
     const toAlice = mailer.sent.find((message) => message.to === alice.email);
     expect(toAlice?.subject).toContain("Account executive");
+    expect(toAlice?.subject).toContain("Sales intern");
     expect(toAlice?.text).toContain("Acme Demo Co");
+    const toBob = mailer.sent.find((message) => message.to === bob.email);
+    expect(toBob?.text).toContain("Sales intern");
+    expect(toBob?.text).not.toContain("Account executive");
   });
 
   it("still deletes when an email can't be sent", async () => {
@@ -210,7 +283,7 @@ describe("DELETE /api/me as an employer", () => {
     const other = await createEmployer({ companyName: "Other Demo Co" });
     const otherJob = await createJob(other.company._id);
     const student = await createStudent();
-    await Application.create({ jobId: otherJob._id, studentId: student.user._id });
+    await createApplication({ jobId: otherJob._id, studentId: student.user._id });
 
     await session.delete("/api/me").send({ currentPassword: password }).expect(204);
 

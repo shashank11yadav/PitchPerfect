@@ -69,15 +69,44 @@ describe("email templates", () => {
   });
 
   it("applicationsClosed names the job and company", () => {
-    const email = applicationsClosed({ jobTitle: "Account executive", company: "Acme Demo Co" });
+    const email = applicationsClosed({ jobTitles: ["Account executive"], company: "Acme Demo Co" });
 
     expect(email.subject).toContain("Account executive");
     expect(email.text).toContain("Acme Demo Co");
     expect(email.html).toContain("Acme Demo Co");
   });
 
+  it("applicationsClosed lists every job in one message", () => {
+    const email = applicationsClosed({
+      jobTitles: ["Account executive", "Sales intern", "Support lead"],
+      company: "Acme Demo Co",
+    });
+
+    for (const title of ["Account executive", "Sales intern", "Support lead"]) {
+      expect(email.subject).toContain(title);
+      expect(email.text).toContain(title);
+      expect(email.html).toContain(title);
+    }
+    expect(email.text).toContain("Account executive, Sales intern, and Support lead");
+  });
+
+  it("applicationsClosed escapes every title in html", () => {
+    const email = applicationsClosed({
+      jobTitles: ["Rep <script>alert(1)</script>", "Intern & <b>co</b>"],
+      company: "Acme",
+    });
+
+    expect(email.html).not.toContain("<script>");
+    expect(email.html).not.toContain("<b>co</b>");
+    expect(email.html).toContain("Rep &lt;script&gt;");
+    expect(email.html).toContain("Intern &amp; &lt;b&gt;");
+  });
+
   it("keeps line breaks out of subjects built from user text", () => {
-    const email = applicationsClosed({ jobTitle: "Rep\r\nBcc: x@example.test", company: "Acme" });
+    const email = applicationsClosed({
+      jobTitles: ["Rep\r\nBcc: x@example.test", "Other"],
+      company: "Acme",
+    });
     expect(email.subject).not.toMatch(/[\r\n]/);
   });
 

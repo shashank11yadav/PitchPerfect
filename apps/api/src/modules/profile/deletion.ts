@@ -31,42 +31,85 @@ async function deleteStudentData(userId: string): Promise<void> {
   await StudentProfile.deleteOne({ userId });
 }
 
-/** Marks open applications to the jobs `closed` and tells each applicant. */
+interface DeletedJob {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+}
+
+/**
+ * Gives every application to these jobs (any status) the job title and company name, so it can
+ * still be shown once the job is gone. Applications made after snapshots existed already have one.
+ */
+async function snapshotJobs(company: { name: string }, jobs: DeletedJob[]): Promise<void> {
+  if (jobs.length === 0) return;
+  await Application.bulkWrite(
+    jobs.map((job) => ({
+      updateMany: {
+        filter: { jobId: job._id, jobSnapshot: null },
+        update: { $set: { jobSnapshot: { title: job.title, companyName: company.name } } },
+      },
+    })),
+  );
+}
+
+/** One email per student, naming every one of their jobs that closed (in the order they applied). */
+async function notifyApplicants(
+  mailer: Mailer,
+  log: MailFailureLog,
+  company: { name: string },
+  jobs: DeletedJob[],
+  closed: { jobId: mongoose.Types.ObjectId; studentId: mongoose.Types.ObjectId }[],
+): Promise<void> {
+  const students = await User.find({
+    _id: anyOf(closed.map((application) => application.studentId)),
+  })
+    .select("email")
+    .lean();
+  const emailOf = new Map(students.map((student) => [student._id.toString(), student.email]));
+  const titleOf = new Map(jobs.map((job) => [job._id.toString(), job.title]));
+  const titlesByStudent = new Map<string, string[]>();
+  for (const { jobId, studentId } of closed) {
+    const title = titleOf.get(jobId.toString());
+    if (title === undefined) continue;
+    titlesByStudent.set(studentId.toString(), [
+      ...(titlesByStudent.get(studentId.toString()) ?? []),
+      title,
+    ]);
+  }
+  await Promise.all(
+    [...titlesByStudent].flatMap(([studentId, jobTitles]) => {
+      const to = emailOf.get(studentId);
+      if (to === undefined) return [];
+      const content = emails.applicationsClosed({ jobTitles, company: company.name });
+      return [sendSafely(mailer, { to, ...content }, log, "applications_closed")];
+    }),
+  );
+}
+
+/**
+ * Closes open applications to the jobs (reason `employer_left`), drops interviews, and tells each
+ * affected student once. Snapshots are written first, so nothing is left without a title.
+ */
 async function closeApplications(
   mailer: Mailer,
   log: MailFailureLog,
   company: { name: string },
-  jobs: { _id: mongoose.Types.ObjectId; title: string }[],
+  jobs: DeletedJob[],
 ): Promise<void> {
   const jobIds = jobs.map((job) => job._id);
-  const open = await Application.find({
-    jobId: anyOf(jobIds),
-    status: anyOf(OPEN_STATUSES),
-  })
+  await snapshotJobs(company, jobs);
+  const open = await Application.find({ jobId: anyOf(jobIds), status: anyOf(OPEN_STATUSES) })
     .select("jobId studentId")
+    .sort({ createdAt: 1 })
     .lean();
   // The jobs are going away, and so are their interview slots.
   await Application.updateMany({ jobId: anyOf(jobIds) }, { $unset: { interview: 1 } });
   if (open.length === 0) return;
   await Application.updateMany(
     { _id: anyOf(open.map((application) => application._id)) },
-    { $set: { status: "closed" } },
+    { $set: { status: "closed", closedReason: "employer_left" } },
   );
-
-  const students = await User.find({ _id: anyOf(open.map((application) => application.studentId)) })
-    .select("email")
-    .lean();
-  const emailOf = new Map(students.map((student) => [student._id.toString(), student.email]));
-  const titleOf = new Map(jobs.map((job) => [job._id.toString(), job.title]));
-  await Promise.all(
-    open.flatMap((application) => {
-      const to = emailOf.get(application.studentId.toString());
-      const jobTitle = titleOf.get(application.jobId.toString());
-      if (to === undefined || jobTitle === undefined) return [];
-      const content = emails.applicationsClosed({ jobTitle, company: company.name });
-      return [sendSafely(mailer, { to, ...content }, log, "applications_closed")];
-    }),
-  );
+  await notifyApplicants(mailer, log, company, jobs, open);
 }
 
 async function deleteEmployerData(mailer: Mailer, log: MailFailureLog, userId: string) {

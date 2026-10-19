@@ -48,14 +48,9 @@ export async function streamResume(fileId: Types.ObjectId, res: Response): Promi
   await pipeline(bucket().openDownloadStream(fileId), res);
 }
 
-/**
- * Removes the file and its chunks. A file that is already gone is fine: the driver reports that
- * as a `MongoRuntimeError` after it has cleaned up any orphaned chunks.
- */
+/** Removes the file and its chunks. A file that is already gone is fine; any other failure is not. */
 export async function deleteResume(fileId: Types.ObjectId): Promise<void> {
-  try {
-    await bucket().delete(fileId);
-  } catch (error) {
-    if (!(error instanceof mongoose.mongo.MongoRuntimeError)) throw error;
-  }
+  const files = bucket();
+  if (!(await files.find({ _id: fileId }).hasNext())) return;
+  await files.delete(fileId);
 }

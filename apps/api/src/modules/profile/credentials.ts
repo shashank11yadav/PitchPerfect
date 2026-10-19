@@ -76,17 +76,19 @@ export async function changeEmail(
   const taken = () => new ConflictError("email_taken", "That email is already in use");
   if (await User.exists({ email: newEmail })) throw taken();
 
-  try {
-    await User.updateOne({ _id: userId }, { $set: { email: newEmail, emailVerifiedAt: null } });
-  } catch (error) {
-    // Lost a race with someone taking the address between the check and the write.
-    throw isDuplicateKey(error, "email") ? taken() : error;
-  }
+  // The company is downgraded first, so a failure can never leave a verified company under an
+  // unconfirmed address. The worst case is an unverified company, which the admin CLI can fix.
   if (user.role === "employer") {
     await Company.updateOne(
       { ownerId: userId, verification: "verified" },
       { $set: { verification: "unverified" } },
     );
+  }
+  try {
+    await User.updateOne({ _id: userId }, { $set: { email: newEmail, emailVerifiedAt: null } });
+  } catch (error) {
+    // Lost a race with someone taking the address between the check and the write.
+    throw isDuplicateKey(error, "email") ? taken() : error;
   }
   await dropResetTokens(userId);
 
