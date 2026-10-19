@@ -27,6 +27,12 @@ function isBodyParserError(error: unknown): error is { type: string; status: num
 function toAppError(error: unknown): AppError {
   if (error instanceof AppError) return error;
   if (error instanceof ZodError) return new ValidationError(fieldErrors(error.issues));
+  if (error instanceof mongoose.Error.ValidationError) {
+    const fields = Object.fromEntries(
+      Object.entries(error.errors).map(([path, problem]) => [path, problem.message]),
+    );
+    return new ValidationError(fields);
+  }
   if (error instanceof mongoose.Error.CastError) {
     return new AppError("invalid_id", 400, "That identifier isn't valid");
   }

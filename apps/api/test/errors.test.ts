@@ -18,6 +18,7 @@ import {
   UpstreamError,
   ValidationError,
 } from "../src/errors.js";
+import { User } from "../src/db/models/index.js";
 import { getInput, validate } from "../src/middleware/validate.js";
 import { makeTestApp } from "./helpers/app.js";
 import { errorOf } from "./helpers/error-body.js";
@@ -55,6 +56,9 @@ function extraRoutes(router: Router): void {
   });
   router.get("/__test/cast", () => {
     throw new mongoose.Error.CastError("ObjectId", "abc", "_id");
+  });
+  router.get("/__test/mongoose-validation", async () => {
+    await new User({ email: "not-an-email-but-no-role", role: "admin" }).validate();
   });
   router.get("/__test/duplicate", () => {
     throw Object.assign(new Error("E11000 duplicate key collection: pitchperfect.users"), {
@@ -132,6 +136,17 @@ describe("error handling", () => {
 
     expect(res.status).toBe(400);
     expect(errorOf(res).code).toBe("invalid_id");
+  });
+
+  it("maps a Mongoose ValidationError to 400 validation_failed with per-path fields", async () => {
+    const res = await request(app).get("/api/__test/mongoose-validation");
+
+    expect(res.status).toBe(400);
+    expect(errorOf(res).code).toBe("validation_failed");
+    expect(Object.keys(errorOf(res).fields ?? {})).toEqual(
+      expect.arrayContaining(["role", "passwordHash", "name.first"]),
+    );
+    expect(JSON.stringify(res.body)).not.toContain("ValidatorError");
   });
 
   it("maps a duplicate key error to 409 conflict without leaking details", async () => {

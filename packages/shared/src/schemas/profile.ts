@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { US_STATE_CODES } from "../enums.js";
+import { US_STATE_CODES, type UsStateCode } from "../enums.js";
 import { LIMITS } from "../limits.js";
+import type { SkillSlug } from "../skills.js";
 import { nameField, shortText } from "./common.js";
 
 /** Allowed graduation years relative to the current (UTC) year. */
@@ -52,3 +53,21 @@ export const EmployerProfileUpdateSchema = z
   .strictObject({ ...nameFields, ...employerFields })
   .partial();
 export type EmployerProfileUpdate = z.infer<typeof EmployerProfileUpdateSchema>;
+
+/** Returned by `GET /api/auth/me` for students. The résumé file id is never exposed. */
+export interface StudentProfileView {
+  school: string;
+  major: string;
+  gradYear: number;
+  targetRole: string;
+  industry: string;
+  state: UsStateCode;
+  hasResume: boolean;
+  lessonsCompleted: SkillSlug[];
+}
+
+/** Returned by `GET /api/auth/me` for employers. */
+export interface EmployerProfileView {
+  jobTitle: string;
+  companyId: string;
+}

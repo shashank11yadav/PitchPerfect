@@ -42,6 +42,9 @@ export type CompanyVerification = (typeof COMPANY_VERIFICATION)[number];
 export const TRANSCRIPT_ROLES = ["student", "partner"] as const;
 export type TranscriptRole = (typeof TRANSCRIPT_ROLES)[number];
 
+export const AUTH_TOKEN_TYPES = ["verify_email", "reset_password"] as const;
+export type AuthTokenType = (typeof AUTH_TOKEN_TYPES)[number];
+
 export const LLM_PROVIDERS = ["openai", "anthropic", "fake"] as const;
 export type LlmProvider = (typeof LLM_PROVIDERS)[number];
 
