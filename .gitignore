@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Builds and caches
+.next/
+dist/
+build/
+out/
+coverage/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+playwright-report/
+test-results/
+blob-report/
+
+# Environment and secrets (only .env.example files are committed)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local-only notes and working files
+.private/
+
+# Practice partner eval outputs (may contain model text)
+apps/coach/evals/results/
+.lighthouseci/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.vs/
+
+# Personal documents never belong in this repo
+*.docx
+*.doc
+*.pdf
+!apps/api/test/fixtures/*.pdf
+
+# Python leftovers (none expected)
+__pycache__/
+*.pyc
+.venv/
+
+# Source maps from preprocessors
+*.css.map

@@ -1,0 +1,13 @@
+title = "PitchPerfect gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Local-development placeholders that are rejected in production by config.ts"
+regexes = [
+  '''dev-only-[a-z0-9-]+''',
+]
+paths = [
+  '''(^|/)\.env\.example$''',
+]

@@ -1,0 +1,135 @@
+# Architecture
+
+## Services
+
+| Service | Path | Runtime | Port | Exposed publicly | Owns |
+|---|---|---|---|---|---|
+| web | `apps/web` | Next.js (App Router), React, Tailwind CSS | 3000 | Yes | Pages, UI, SEO, proxying `/api/*` |
+| api | `apps/api` | Express 5, Mongoose, MongoDB | 4000 | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas |
+| coach | `apps/coach` | Fastify | 4100 | **Never** | Personas, conversation turns, scoring, guardrails, LLM calls |
+| shared | `packages/shared` | TypeScript library | n/a | n/a | zod schemas, types, constants |
+| mongo | Docker `mongo:8` | | 27017 | No | Data |
+| mailpit | Docker `axllent/mailpit` | | 1025 SMTP, 8025 UI | Dev only | Catches outgoing email locally |
+
+### Why three services
+
+- **web** renders public pages on the server for SEO and serves the app UI. The browser only ever talks to the web origin; Next.js rewrites `/api/:path*` to `${API_ORIGIN}/api/:path*`, so the session cookie is always first-party and production needs no cross-site CORS.
+- **api** is the only component with database access and the only component that decides *who may do what*. Every authorization check lives here.
+- **coach** is the independent practice partner. It holds the LLM keys and nothing else: no database, no user accounts, no cookies. It trusts only HMAC-signed requests from api, so it can be deployed, scaled, rate-limited, and swapped independently, and a compromise of web cannot reach the LLM keys.
+
+## Monorepo layout
+
+```
+apps/
+  web/
+    app/                    Next.js routes (see "Routes" below)
+    components/             shared UI components (one implementation each)
+    content/lessons/        8 MDX lessons, one per skill slug
+    lib/                    api client, auth helpers, speech helpers, seo helpers
+    public/                 logo, favicons, og image
+  api/
+    src/
+      app.ts                express app factory (no listen), used by tests
+      server.ts             connects DB, starts listening
+      config.ts             env parsing with zod (fails fast)
+      db/                   mongoose connection + models/
+      middleware/           session, csrf, origin-check, rate-limit, auth guards, error handler, validate
+      modules/
+        auth/               signup, verify, signin, signout, forgot/reset, me
+        profile/            profile, email/password change, résumé, account deletion, consent
+        lessons/            lesson progress
+        jobs/               public listing, job detail, save/unsave
+        applications/       apply, withdraw, student list
+        employer/           company, jobs CRUD, applicant pipeline, interviews, dashboard
+        practice/           sessions, turns (SSE proxy), end/score, attempts, quota
+      services/             mailer, password-policy, html-sanitizer, coach-client, files (GridFS)
+      scripts/              seed.ts, admin.ts, purge-expired.ts
+    test/                   integration tests (supertest + mongodb-memory-server)
+  coach/
+    src/
+      app.ts, server.ts, config.ts
+      auth/hmac.ts          request signature verification
+      providers/            provider.ts (interface), openai.ts, anthropic.ts, fake.ts, index.ts (selection)
+      prompts/              persona-plan.ts, persona-turn.ts, scorer.ts, guard.ts
+      guardrails/           input.ts, pii.ts, output.ts, canary.ts
+      routes/               plan.ts, turn.ts, score.ts, health.ts
+    evals/                  scripted transcripts + runner
+    test/
+packages/
+  shared/
+    src/
+      skills.ts             the 8 skills (slug, title, summary, weighted rubric dimension)
+      rubric.ts             rubric dimensions and scorecard schema
+      schemas/              request/response zod schemas per api module + coach contract
+      enums.ts              roles, job status, application status, etc.
+      index.ts
+e2e/                        Playwright tests
+docs/
+docker-compose.yml
+```
+
+## Data model (MongoDB via Mongoose)
+
+All collections have `createdAt`/`updatedAt` timestamps. IDs are ObjectIds. Never expose `passwordHash`, token hashes, or `scenarioPrivate` in responses.
+
+| Collection | Key fields | Indexes |
+|---|---|---|
+| `users` | `email` (lowercased), `passwordHash` (argon2id), `role` (`student`\|`employer`), `name.first`, `name.last`, `emailVerifiedAt?`, `ageConfirmedAt?` (students), `practiceConsentAt?` (students) | unique `email` |
+| `studentprofiles` | `userId`, `school`, `major`, `gradYear`, `targetRole`, `industry`, `state`, `resumeFileId?`, `lessonsCompleted: SkillSlug[]` | unique `userId` |
+| `employerprofiles` | `userId`, `jobTitle`, `companyId` | unique `userId`, `companyId` |
+| `companies` | `ownerId`, `name`, `slug`, `website`, `linkedinUrl?`, `pitch`, `logoUrl?`, `verification` (`verified`\|`unverified`\|`suspended`) | unique `slug`, unique `ownerId` |
+| `jobs` | `companyId`, `slug`, `title`, `location`, `workplace` (`onsite`\|`hybrid`\|`remote`), `employmentType` (`internship`\|`full_time`\|`part_time`\|`contract`), `descriptionHtml` (sanitized), `skills: string[]`, `pay` {`type` `range`\|`exact`\|`unpaid`, `min?`, `max?`, `amount?`, `currency` `USD`\|`EUR`\|`CAD`, `frequency` `hourly`\|`weekly`\|`monthly`\|`annually`, `commission` bool}, `status` (`draft`\|`active`\|`archived`), `publishedAt?`, `closesAt?` | unique `slug`; `{companyId, status}`; `{status, publishedAt}`; text index on `title`,`skills` |
+| `applications` | `jobId`, `studentId`, `status` (`applied`\|`shortlisted`\|`interview`\|`hired`\|`rejected`\|`withdrawn`\|`closed`), `savedByEmployer` bool, `sharedAttemptId?`, `interview?` {`startsAt`, `meetingUrl`} | unique `{jobId, studentId}`; `{studentId}`; `{jobId, status}` |
+| `savedjobs` | `studentId`, `jobId` | unique `{studentId, jobId}` |
+| `practiceattempts` | `studentId`, `skill`, `jobId?`, `status` (`active`\|`completed`\|`abandoned`\|`ended_by_guard`), `scenarioPublic` {`personaName`, `personaTitle`, `companyType`, `personality`, `openingLine`}, `scenarioPrivate` {`hiddenObjections[]`, `winConditions[]`}, `transcript[]` {`role` `student`\|`partner`, `text`, `at`, `flagged` bool}, `guardFlags` int, `scorecard?`, `provider`, `model`, `tokens` {`input`, `output`}, `startedAt`, `endedAt?`, `expiresAt` | `{studentId, startedAt:-1}`; TTL on `expiresAt` |
+| `authtokens` | `userId`, `type` (`verify_email`\|`reset_password`), `tokenHash` (sha256), `expiresAt`, `usedAt?` | unique `tokenHash`; TTL on `expiresAt` |
+| `usagedays` | `day` (YYYY-MM-DD UTC), `inputTokens`, `outputTokens`, `sessions` | unique `day` |
+| `sessions` | managed by `connect-mongo` | TTL managed by store |
+| `ratelimits` | managed by the rate-limit store | TTL |
+| GridFS `resumes` | PDF bytes, metadata `{ownerId}` | |
+
+### Ownership rules (enforced in api, tested in api integration tests)
+
+- A student can read/change only their own profile, saved jobs, applications, attempts, and résumé.
+- An employer can read/change only their own company, jobs where `job.companyId === myCompanyId`, and applications whose job belongs to their company.
+- An employer can read a student's résumé or shared scorecard **only through an application to one of their jobs**, never by student ID directly.
+- Unverified companies' jobs are visible on `/jobs` with a badge but are excluded from the sitemap and structured data; suspended companies' jobs are hidden everywhere.
+
+## Key request flows
+
+### Sign up → verify → sign in
+1. `POST /api/auth/signup` validates with `SignupSchema` (shared), checks password policy, creates `users` + role profile (+ `companies` for employers, verified if email domain matches website domain), sends a verification email with a single-use token (stored hashed, 24 h expiry).
+2. `POST /api/auth/verify-email {token}` marks `emailVerifiedAt`.
+3. `POST /api/auth/signin` verifies argon2id hash, regenerates the session ID, stores `{userId, role}` in the session. The cookie is `pp.sid`, `httpOnly`, `Secure` (prod), `SameSite=Lax`, rolling 7 days, absolute 30 days.
+
+### Practice session
+```
+web practice room            api                                 coach                 provider
+  │ POST /practice/sessions ─► auth+verified+consent+quota ─► POST /v1/plan (HMAC) ─► structured()
+  │ ◄── {attemptId, scenarioPublic}    stores scenario (private part never leaves api)
+  │ POST /practice/sessions/:id/turns {text}
+  │                          ─► validate, redact PII, append ─► POST /v1/turn (HMAC, SSE) ─► chat(stream)
+  │ ◄══ SSE: delta…delta, done{stage}  ◄═══════════ relays stream, appends partner reply
+  │ POST /practice/sessions/:id/end ─► POST /v1/score (HMAC) ─► structured(Scorecard)
+  │ ◄── {scorecard}           saves scorecard, tokens, usage day
+```
+Browser speech recognition produces the text; the browser's `speechSynthesis` speaks the partner's reply. No audio is sent to PitchPerfect servers.
+
+### Employer applicant pipeline
+`GET /api/employer/jobs/:id/applications` → `PATCH /api/employer/applications/:id {status}` → `POST /api/employer/applications/:id/interview {startsAt, meetingUrl}` (student gets an email). Every step checks the job belongs to the employer's company.
+
+## Routes (web)
+
+| Path | Rendering | Access |
+|---|---|---|
+| `/`, `/students`, `/employers`, `/how-it-works`, `/about`, `/privacy`, `/terms` | Static | Public |
+| `/jobs`, `/jobs/[slug]` | Server-rendered (revalidate 60 s) | Public |
+| `/signin`, `/signup`, `/signup/student`, `/signup/employer`, `/verify-email`, `/forgot-password`, `/reset-password` | Static shell + client forms | Signed-out |
+| `/app` (dashboard), `/app/learn`, `/app/learn/[skill]`, `/app/practice`, `/app/practice/[skill]`, `/app/practice/attempt/[id]`, `/app/history`, `/app/jobs`, `/app/applications`, `/app/settings` | Client app, `noindex` | Student |
+| `/employer` (dashboard), `/employer/company`, `/employer/jobs`, `/employer/jobs/new`, `/employer/jobs/[id]`, `/employer/jobs/[id]/applicants`, `/employer/settings` | Client app, `noindex` | Employer |
+
+Route protection: Next.js middleware checks for the session cookie and redirects to `/signin?next=…`; the page then calls `GET /api/auth/me` and redirects on 401/403 (wrong role → own dashboard). The API is the real gate; the client guard is only UX.
+
+## Configuration
+
+Every app parses its environment with zod in `config.ts` at startup and exits with a readable error if anything is missing or malformed. Variables are documented in each app's `.env.example`.
