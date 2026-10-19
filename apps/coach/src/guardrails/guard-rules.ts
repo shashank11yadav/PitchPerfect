@@ -28,55 +28,82 @@ function normalize(text: string): string {
     .trim();
 }
 
-// Chat-template control tokens are matched on the raw text, before punctuation is dropped.
-const CONTROL_TOKENS = /<\|?\/?(?:im_start|im_end|system|endoftext)\|?>|\[\/?inst\]|<<\/?sys>>/i;
+// These are matched on the raw text: they rely on punctuation or capitals that normalize() drops.
+const RAW_ATTACKS: readonly RegExp[] = [
+  /<\|?\/?(?:im_start|im_end|system|endoftext)\|?>|\[\/?inst\]|<<\/?sys>>/i,
+  /^\s*(?:new|updated|revised)\s+(?:system\s+)?instructions\s*:/i,
+  // Upper case only: "Dan" is a common first name.
+  /\b(?:you are|you're|be|as|act as|become)\s+(?:now\s+)?DAN\b/,
+];
 
-const INSTRUCTION_WORDS = "(?:instructions|rules|prompts?|guidelines|programming|directions)";
+const PROMPT_WORDS = "(?:prompts?|instructions|message|programming)";
 const REVEAL_VERBS =
   "(?:reveal|show|print|repeat|display|output|leak|recite|dump|share|tell|give|send|paste|copy|write|say|read)";
+const DROP_VERBS = "(?:ignore|disregard|forget|override|bypass)";
 
 const PROMPT_ATTACK: readonly RegExp[] = [
   // Dropping the rules.
   new RegExp(
-    `\\b(?:ignore|disregard|forget|override|bypass)\\b (?:\\w+ ){0,3}?(?:previous|prior|above|earlier|preceding|original|system|your|all) (?:\\w+ )?${INSTRUCTION_WORDS}\\b`,
+    `\\b${DROP_VERBS}\\b (?:\\w+ ){0,3}?(?:previous|prior|above|earlier|preceding|original|system|your|all|these|those|any|my) (?:\\w+ )?(?:instructions|prompts?|programming|directions)\\b`,
   ),
-  /\b(?:ignore|disregard|forget) (?:everything|all) (?:above|before|previously|you were told|you know)\b/,
+  new RegExp(
+    `\\b${DROP_VERBS}\\b (?:\\w+ ){0,3}?(?:previous|prior|above|your|system) (?:rules|guidelines)\\b(?! of thumb)`,
+  ),
+  new RegExp(
+    `\\b(?:ignore|disregard|forget)\\b (?:\\w+ ){0,2}?(?:instructions|prompts?|directions) (?:above|before|given)\\b`,
+  ),
+  /\b(?:ignore|disregard|forget) (?:(?:the|all|everything|anything) )*(?:above|preceding)\b/,
+  /\b(?:ignore|disregard|forget) (?:everything|all|anything) (?:before|previously|you were told|you know)\b/,
   /\b(?:disable|turn off|bypass|override|circumvent|remove) your (?:\w+ )?(?:safety|guardrails?|filters?|restrictions|content policy|safeguards|rules)\b/,
   // Extracting the prompt.
   new RegExp(
-    `\\b${REVEAL_VERBS}\\b (?:\\w+ ){0,5}?(?:system|initial|hidden|original|secret|developer|internal) ${INSTRUCTION_WORDS}\\b`,
+    `\\b${REVEAL_VERBS}\\b (?:\\w+ ){0,5}?(?:system|initial|hidden|secret|developer) ${PROMPT_WORDS}\\b`,
   ),
   new RegExp(
-    `\\b(?:reveal|print|repeat|output|display|leak|recite|dump|show me|tell me|give me) your ${INSTRUCTION_WORDS}\\b`,
+    `\\b(?:reveal|print|repeat|output|display|leak|recite|dump|show me|tell me|give me) your (?:${PROMPT_WORDS})\\b(?! (?:for|on|about|regarding|to)\\b)`,
   ),
-  new RegExp(
-    `\\byour (?:system|initial|hidden|secret|original|developer) (?:${INSTRUCTION_WORDS}|message)\\b`,
-  ),
+  new RegExp(`\\byour (?:system|initial|hidden|secret|developer) (?:${PROMPT_WORDS})\\b`),
   /\brepeat (?:everything|all|the words|the text) (?:above|before)\b/,
+  /\brepeat (?:the |your |all )?(?:instructions|prompt|text|words) above\b/,
+  /\brepeat (?:the )?above (?:instructions|prompt|text|words|verbatim|word for word)\b/,
   /\bcanary (?:token|string|word|value|code)\b/,
   // Swapping the role.
-  /\byou are now (?:a |an )?(?:dan|no longer|unrestricted|unfiltered|uncensored|jailbroken|evil|ai|assistant|chatbot|bot|hacker|language model)\b/,
-  /\b(?:pretend|imagine|roleplay) (?:to be |as |like |that you are |you are |you re )(?:if )?(?:a |an |the )?(?:ai|assistant|chatbot|bot|hacker|dan|unrestricted|unfiltered|uncensored|evil|language model|gpt|admin|jailbroken)\b/,
-  /\b(?:act|behave) (?:as|like) (?:a |an |the )?(?:hacker|dan|unrestricted|unfiltered|uncensored|evil|jailbroken|gpt|admin)\b/,
+  /\byou (?:are|re) now (?:a |an )?(?:dan|no longer|unrestricted|unfiltered|uncensored|jailbroken|evil|ai|assistant|chatbot|bot|hacker|language model)\b/,
+  /\b(?:pretend|imagine|roleplay) (?:to be |as |like |that you are |you are |you re )(?:if )?(?:a |an |the )?(?:ai|assistant|chatbot|bot|hacker|dan|unrestricted|unfiltered|uncensored|evil|language model|gpt|jailbroken)\b/,
+  /\b(?:act|behave) (?:as|like) (?:a |an |the )?(?:hacker|dan|unrestricted|unfiltered|uncensored|evil|jailbroken|gpt)\b/,
   /\bstop (?:being|playing|acting as) (?:the |a |an )?(?:buyer|persona|character|role|customer|prospect)\b/,
-  /\b(?:break|drop) (?:the |your )?(?:character|persona|role)\b/,
-  /\b(?:you are|you re|be|as|become|called|named) dan\b|\bdan mode\b|\bdo anything now\b/,
-  /\bdeveloper mode\b/,
-  /\bjail ?break(?:s|ed|ing)?\b/,
+  /\bbreak (?:the |your )?character\b/,
+  /\b(?:drop|leave|abandon) your (?:persona|character|role)\b/,
+  /\bdrop (?:the |your )?role (?:and |of )?(?:an? )?(?:ai|assistant|chatbot|bot)\b/,
+  /\bdan mode\b|\bdo anything now\b/,
+  /\b(?:enable|enter|activate|switch to|turn on|go into) developer mode\b|\b(?:you are|you re) (?:now )?in developer mode\b|\bdeveloper mode (?:enabled|activated)\b/,
+  /\bjail ?break (?:yourself|this (?:ai|model|chatbot|bot)|mode|prompt)\b/,
 ];
 
+const WEAPON_NOUN =
+  "(?:bombs?(?! (?:proof|squad|shelter|shell))|explosives|explosive (?:devices?|materials?)|bioweapons?|chemical weapons?|nerve agents?|ghost guns?|untraceable guns?)";
+const HOW_TO =
+  "(?:how (?:do i|to|can i|would i|could i)|steps? (?:to|for)|instructions? (?:to|for|on)|recipe for|guide (?:to|for)|tutorial (?:on|for)|teach me (?:to|how to)|show me how to|tell me how to|help me)";
+const SEX_TERM =
+  "(?:sexual (?:content|material|images?|stor(?:y|ies)|roleplay|scenes?|acts?)|sex scenes?|sex acts?|porn\\w*|erotic\\w*)";
+const MINOR_TERM = "(?:child|children|minors?|underage|kids?|teens?|teenagers?)";
+const WRITE_VERBS = "(?:write|describe|generate|create|draw|show|give me|tell|make|send)";
+
 const HARMFUL: readonly RegExp[] = [
-  // Weapons and explosives.
-  /\b(?:make|build|create|assemble|construct|synthesize|manufacture) (?:\w+ ){0,3}?(?:bombs?|explosives?|bioweapons?|chemical weapons?|nerve agents?|ghost guns?)\b/,
+  // Weapons and explosives, only as a request for instructions.
+  new RegExp(`\\b${HOW_TO} (?:\\w+ ){0,4}?${WEAPON_NOUN}\\b`),
+  new RegExp(
+    `\\b(?:i want to|i need to|i m going to|let s|we should) (?:\\w+ )?(?:make|build|assemble|construct) (?:an? |some )?${WEAPON_NOUN}\\b`,
+  ),
   // Self-harm.
   /\b(?:kill myself|commit suicide|end my life|take my own life|hurt myself|harm myself)\b/,
   // Violence against people.
   /\bhow (?:do i|to|can i|would i) (?:\w+ ){0,2}?(?:kill|murder|poison|strangle) (?:a |an |the )?(?:person|someone|somebody|people|him|her|them|my (?:wife|husband|boss|neighbou?r|teacher|mother|father|friend))\b/,
   // Hard drugs.
   /\bhow (?:do i|to|can i) (?:\w+ ){0,2}?(?:make|cook|synthesize|manufacture|produce) (?:\w+ ){0,2}?(?:meth|methamphetamine|cocaine|heroin|fentanyl)\b/,
-  // Sexual content involving minors.
-  /\bsexual (?:content|material|images?|stor(?:y|ies)|roleplay|acts?) (?:\w+ ){0,4}?(?:child|children|minors?|underage|kids?|teens?|teenagers?)\b/,
-  /\b(?:child|children|minors?|underage|kids?|teens?) (?:\w+ ){0,3}?(?:porn\w*|nude|naked|erotic)\b/,
+  // Sexual content involving minors: a request, a sexual term, and a minor.
+  new RegExp(`\\b${WRITE_VERBS}\\b (?:\\w+ ){0,4}?${SEX_TERM} (?:\\w+ ){0,5}?${MINOR_TERM}\\b`),
+  new RegExp(`\\b${WRITE_VERBS}\\b (?:\\w+ ){0,6}?${MINOR_TERM} (?:\\w+ ){0,5}?${SEX_TERM}`),
   /\bchild porn\w*|\bcsam\b/,
   // Hate.
   /\b(?:kill|exterminate|gas|lynch|wipe out) (?:(?:all|the|every) )*(?:jews|muslims|christians|blacks|whites|gays|immigrants|asians|mexicans|arabs|women)\b/,
@@ -93,6 +120,6 @@ const anyMatch = (patterns: readonly RegExp[], text: string) =>
 export function ruleCheck(text: string): RuleVerdict | null {
   const words = normalize(text);
   if (anyMatch(HARMFUL, words)) return "harmful";
-  if (CONTROL_TOKENS.test(text) || anyMatch(PROMPT_ATTACK, words)) return "prompt_attack";
+  if (anyMatch(RAW_ATTACKS, text) || anyMatch(PROMPT_ATTACK, words)) return "prompt_attack";
   return null;
 }

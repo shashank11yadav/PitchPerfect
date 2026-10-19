@@ -4,9 +4,11 @@ import { containsCanary } from "./canary.js";
 import { ruleCheck } from "./guard-rules.js";
 
 const LINK = /\[([^\]]*)\]\([^)]*\)/g;
-const HEADING = /^[ \t]{0,3}#{1,6}[ \t]*/gm;
-const LIST_MARKER = /^[ \t]*(?:[-*•]|\d+[.)])[ \t]+/gm;
-const EMPHASIS = /\*+|__|`+/g;
+const HEADING = /^[ \t]{0,3}#{1,6}[ \t]+/gm;
+// Only a marker followed by a letter: "- 20% off" and "2024. We grew" keep their numbers.
+const LIST_MARKER = /^[ \t]*(?:[-*•]|\d{1,2}[.)])(?:[ \t]+(?=\p{L})|[ \t]*$)/gmu;
+// A lone asterisk between word characters ("2x*3") is not emphasis.
+const EMPHASIS = /\*{2,}|(?<!\w)\*|\*(?!\w)|__|`+/g;
 const SENTENCE_END = /[.!?]["')\]”’]*(?=\s|$)/g;
 
 function stripMarkdown(text: string): string {
@@ -21,7 +23,7 @@ function stripMarkdown(text: string): string {
 
 /**
  * Strips markdown and list markers, then keeps at most `maxWords` words, cut after the last
- * sentence end. With no sentence end in range it cuts at the limit and adds an ellipsis.
+ * sentence end. With no sentence end past half the limit it cuts at the limit and adds an ellipsis.
  */
 export function capReply(text: string, maxWords: number = LIMITS.replyMaxWords): string {
   const clean = stripMarkdown(text);
@@ -31,7 +33,8 @@ export function capReply(text: string, maxWords: number = LIMITS.replyMaxWords):
   const head = words.slice(0, maxWords).join(" ");
   let cut = -1;
   for (const match of head.matchAll(SENTENCE_END)) cut = match.index + match[0].length;
-  if (cut > 0) return head.slice(0, cut);
+  // A sentence end in the first half of the budget would throw away most of the reply.
+  if (cut > 0 && head.slice(0, cut).split(" ").length >= maxWords / 2) return head.slice(0, cut);
   return `${head.replace(/[\s,;:–-]+$/, "")}…`;
 }
 

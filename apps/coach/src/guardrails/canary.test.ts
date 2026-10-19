@@ -21,6 +21,13 @@ describe("canary", () => {
     expect(containsCanary(`code ${id}`)).toBe(true);
   });
 
+  it("detects the id split by whitespace or zero-width characters", () => {
+    const id = CANARY.slice("pp-canary-".length);
+    expect(containsCanary(id.replaceAll("-", " - "))).toBe(true);
+    expect(containsCanary(id.split("").join("\u200b"))).toBe(true);
+    expect(containsCanary(id.replaceAll("-", "\n"))).toBe(true);
+  });
+
   it("does not flag ordinary text", () => {
     expect(containsCanary("We can talk about pricing on Thursday.")).toBe(false);
     expect(containsCanary("pp-canary- is not it")).toBe(false);

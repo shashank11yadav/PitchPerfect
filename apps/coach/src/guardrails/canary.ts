@@ -7,9 +7,10 @@ const ID = randomUUID();
 export const CANARY = `${PREFIX}${ID}`;
 
 const ID_COMPACT = ID.replaceAll("-", "");
+// Whitespace, hyphens and invisible characters a model could slip into the id to dodge a match.
+const SEPARATORS = new RegExp("[\\s\\-\\u200b-\\u200f\\u2060\\ufeff\\u00ad]+", "g");
 
-/** True when text holds the canary, or just its id (models sometimes drop the prefix or hyphens). */
+/** True when text holds the canary or just its id, ignoring case, prefix, hyphens and spacing. */
 export function containsCanary(text: string): boolean {
-  const lower = text.toLowerCase();
-  return lower.includes(ID) || lower.replaceAll("-", "").includes(ID_COMPACT);
+  return text.toLowerCase().replace(SEPARATORS, "").includes(ID_COMPACT);
 }

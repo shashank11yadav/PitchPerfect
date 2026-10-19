@@ -47,6 +47,38 @@ describe("capReply", () => {
     expect(capReply("one.\n\n  two!\t three?")).toBe("one. two! three?");
   });
 
+  it("falls back to an ellipsis when the last sentence end is early in the budget", () => {
+    const rest = Array.from({ length: 90 }, (_, i) => `w${String(i)}`).join(" ");
+    const capped = capReply(`Sure. ${rest}`);
+    expect(capped.endsWith("…")).toBe(true);
+    expect(wordsOf(capped).length).toBe(80);
+  });
+
+  it("does not treat an abbreviation as a usable sentence end", () => {
+    const rest = Array.from({ length: 90 }, (_, i) => `w${String(i)}`).join(" ");
+    const capped = capReply(`We met Dr. Smith ${rest}`);
+    expect(capped.endsWith("…")).toBe(true);
+    expect(capped).toContain("Smith");
+  });
+
+  it("keeps a sentence end that uses at least half of the budget", () => {
+    expect(capReply(`${sentence(40)} ${sentence(60)}`)).toBe(sentence(40));
+  });
+
+  it("keeps hash numbers, years and numeric bullets", () => {
+    expect(capReply("#1 priority is 2024.")).toBe("#1 priority is 2024.");
+    expect(capReply("Saving:\n- 20% off\n2024. We grew")).toBe("Saving: - 20% off 2024. We grew");
+    expect(capReply("2024. We grew")).toBe("2024. We grew");
+  });
+
+  it("strips heading hashes followed by a space and list markers before letters", () => {
+    expect(capReply("## Plan\n- Start\n12. End")).toBe("Plan Start End");
+  });
+
+  it("keeps an asterisk between word characters but strips emphasis", () => {
+    expect(capReply("It is 2x*3 and *really* **good**.")).toBe("It is 2x*3 and really good.");
+  });
+
   it("respects a custom limit", () => {
     expect(capReply("a b. c d e f.", 3)).toBe("a b.");
   });
