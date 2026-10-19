@@ -5,21 +5,29 @@ import { requireSignedRequests } from "./auth/guard.js";
 import type { CoachConfig } from "./config.js";
 import { registerErrorHandling } from "./errors.js";
 import { createLogger } from "./logger.js";
-import type { LlmProvider } from "./providers/index.js";
+import { createProvider, type LlmProvider } from "./providers/index.js";
 import { healthRoutes } from "./routes/health.js";
+import { planRoute } from "./routes/plan.js";
+import { scoreRoute } from "./routes/score.js";
+import { createPracticeDeps } from "./routes/support.js";
+import { turnRoute } from "./routes/turn.js";
 
 const BODY_LIMIT_BYTES = 262_144;
 
 export interface CoachAppOptions {
   config: CoachConfig;
-  /** The LLM provider the practice routes call; `server.ts` passes `createProvider(config)`. */
+  /** The LLM provider the practice routes call; defaults to `createProvider(config)`. */
   provider?: LlmProvider;
   /** Where log lines go; defaults to stdout. Tests pass a capture stream. */
   logStream?: DestinationStream;
 }
 
 /** Builds the coach service. Only `GET /healthz` is public; every other route needs an HMAC signature. */
-export function buildCoachApp({ config, logStream }: CoachAppOptions): FastifyInstance {
+export function buildCoachApp({
+  config,
+  provider = createProvider(config),
+  logStream,
+}: CoachAppOptions): FastifyInstance {
   const logger: FastifyBaseLogger = createLogger(config.LOG_LEVEL, logStream);
   const app = Fastify({
     loggerInstance: logger,
@@ -46,5 +54,9 @@ export function buildCoachApp({ config, logStream }: CoachAppOptions): FastifyIn
   });
 
   healthRoutes(app, config);
+  const deps = createPracticeDeps(config, provider);
+  planRoute(app, deps);
+  turnRoute(app, deps);
+  scoreRoute(app, deps);
   return app;
 }

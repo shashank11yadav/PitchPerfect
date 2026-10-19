@@ -129,10 +129,10 @@ describe("request authentication", () => {
       headers: { "content-type": "application/json", ...sign("/v1/plan", body) },
       payload: body,
     });
-    expect(res.statusCode).toBe(404);
+    expect(res.statusCode).toBe(200);
   });
 
-  it("lets a signed request through to routing", async () => {
+  it("lets a signed request through to the route", async () => {
     const headers = sign("/v1/plan", body);
     const res = await build().inject({
       method: "POST",
@@ -140,9 +140,8 @@ describe("request authentication", () => {
       headers: { "content-type": "application/json", ...headers },
       payload: body,
     });
-    // No plan route exists yet; reaching a 404 proves authentication passed.
-    expect(res.statusCode).toBe(404);
-    expect(res.json()).toMatchObject({ error: { code: "not_found" } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toHaveProperty("scenarioPublic");
   });
 
   it("hands signed JSON bodies to handlers parsed, and rejects malformed JSON with 400", async () => {

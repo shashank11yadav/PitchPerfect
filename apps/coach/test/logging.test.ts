@@ -55,7 +55,7 @@ describe("request logging", () => {
     const entry = lines
       .map((line) => JSON.parse(line) as Record<string, unknown>)
       .find((record) => record.msg === "request completed");
-    expect(entry).toMatchObject({ method: "POST", route: "/v1/plan", statusCode: 404 });
+    expect(entry).toMatchObject({ method: "POST", route: "/v1/plan", statusCode: 400 });
     expect(entry?.reqId).toEqual(expect.any(String));
     expect(entry?.durationMs).toEqual(expect.any(Number));
     expect(output).not.toContain("transcript-value");
