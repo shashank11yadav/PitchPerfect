@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreBinaries": ["gitleaks"],
+  "ignoreDependencies": ["@axe-core/playwright"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.mjs"]
+    },
+    "packages/shared": {},
+    "apps/api": {
+      "entry": ["src/server.ts", "src/scripts/*.ts"],
+      "ignore": ["src/index.ts"]
+    },
+    "apps/coach": {
+      "entry": ["src/server.ts", "evals/run.ts"],
+      "ignore": ["src/index.ts"]
+    }
+  }
+}

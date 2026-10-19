@@ -89,12 +89,14 @@ No code, configuration, data, third-party content, video links, real company lis
 ### 6.4 Product areas
 
 **Public site (SEO; static or server-rendered):**
+
 - `/` home: hero, how it works (Learn → Practice → Get hired), for students, for employers, sample scorecard, FAQ, CTA.
 - `/students`, `/employers`, `/how-it-works`, `/about`, `/privacy`, `/terms`.
 - `/jobs`: public job listings (active jobs only), with each job at `/jobs/[slug]` rendered server-side with `JobPosting` structured data. Apply requires sign-in.
 - **SEO baseline:** per-page `<title>`/description, canonical URLs from `SITE_URL`, Open Graph/Twitter cards, `sitemap.xml`, `robots.txt`, JSON-LD (`Organization`, `WebSite`, `JobPosting`, `FAQPage`), semantic headings, image `alt`. Lighthouse ≥ 90 for Performance, Accessibility, Best Practices and SEO on the public pages.
 
 **Student app (`/app`):**
+
 - **Onboarding:** target role, industry, state.
 - **Learn:** 8 short written lessons, one per practice skill: Introducing yourself, Pitching, Objection handling, Probing & discovery, Referrals/networking, Next steps, Asking for the business, Interpersonal skills. They are original text (≈300–500 words each, with a framework, an example and common mistakes) written as MDX in the repo. They replace the YouTube training room. Progress is stored server-side.
 - **Practice:** a grid of the same 8 skills. Each opens the practice room (§6.5). Students can also "Practice for this job" from any job page, which passes the job's title, description and skills as context.
@@ -103,6 +105,7 @@ No code, configuration, data, third-party content, video links, real company lis
 - **Profile & settings:** edit profile, change email/password (current password **required**), résumé, delete account.
 
 **Employer app (`/employer`):**
+
 - **Company profile:** name, website, LinkedIn, pitch, logo URL (validated HTTPS).
 - **Jobs:** create, edit, draft, publish, archive, delete. The description editor produces sanitized HTML (allowlist via DOMPurify on the server at write time and on render).
 - **Candidates per job:** the applicant list, with status pipeline applied → shortlisted → interview → hired/rejected and a save-for-later toggle. Employers schedule interviews with a date/time and a meeting link (HTTPS validated). Employers see a candidate's résumé and any scorecard the candidate chose to share.
@@ -114,6 +117,7 @@ No code, configuration, data, third-party content, video links, real company lis
 **Shape:** `apps/coach` is its own process with its own package.json, Dockerfile, env and tests. It is **never exposed publicly**. Only `apps/api` calls it, over HTTP, using an HMAC-signed request (shared secret `COACH_SHARED_SECRET`, timestamp + body hash, 60 s replay window). The coach has no database access: the api owns persistence and passes in whatever context the coach needs.
 
 **Flow:**
+
 1. **Start:** the student picks a skill (and optionally a job). The api checks auth, email verification and quota, then calls `coach POST /sessions/plan` with skill + job context + student target role. The coach returns a **scenario**: buyer persona (name, title, company type, personality, 2–3 hidden objections, what would convince them) and an opening line. The scenario is stored by the api; the hidden fields are never sent to the browser.
 2. **Turns:** the browser captures speech, transcribes it in-browser, shows the transcript for the student to edit, and sends it to `api POST /practice/:id/turns`. The api appends it and calls `coach POST /turns` with the scenario + transcript so far. The coach returns the persona's reply (≤ 80 words) plus a stage marker (opening, discovery, pitch, objection, close). Replies stream to the browser (SSE via the api) and are spoken with `speechSynthesis`.
 3. **End:** the student ends the session, or it auto-ends at the turn or time cap. The api calls `coach POST /score`, which returns a **scorecard** validated against a zod schema:
@@ -127,6 +131,7 @@ No code, configuration, data, third-party content, video links, real company lis
 **Provider adapter:** `LlmProvider` interface with `chat(messages, opts)` (streaming) and `structured(messages, zodSchema)`, implemented for OpenAI and Anthropic. It is selected by env at startup and fails fast with a clear error if the selected provider's key is missing. No provider names appear in prompts or UI.
 
 **Guardrails (coach + api):**
+
 - **Input:** ≤ 1,000 characters per turn, ≤ 20 student turns per session, session lifetime ≤ 20 min. Control characters are stripped. Student text is always passed inside a delimited data block, never concatenated into instructions.
 - **Off-topic and jailbreak handling:** the system prompt pins the persona to the sales scenario. A cheap pre-check (rules + a small classification call) flags attempts to extract instructions, change role, or request harmful/sexual/violent/illegal content. Flagged turns get an in-character redirect, and 3 flags end the session with a neutral notice.
 - **Output:** replies are checked for system-prompt leakage (canary token in the prompt; if it appears in output, the reply is dropped and regenerated once), length-capped, and run through the provider's moderation endpoint where available, otherwise through the rule filter.
@@ -136,6 +141,7 @@ No code, configuration, data, third-party content, video links, real company lis
 - **Evaluation:** `apps/coach/evals/` contains ~30 scripted pitch transcripts (good, mediocre, off-topic, jailbreak attempts) with expected score bands and guardrail outcomes. `npm run eval` runs them against a real provider (manual, needs a key). Unit tests run against a fake provider in CI.
 
 **Voice UX:**
+
 - Push-to-talk button with a visible level meter and live interim transcript. The final transcript is editable before sending.
 - A voice picker (from the browser's available voices) and a mute toggle.
 - Captions are always on: the persona's reply is shown as text as well as spoken.

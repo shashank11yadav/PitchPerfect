@@ -8,12 +8,12 @@ PitchPerfect is a training and hiring platform for tech-sales roles. Students le
 
 ## What's inside
 
-| Area | What it does |
-|---|---|
-| **Learn** | Eight short lessons, one per core skill: introducing yourself, pitching, objection handling, probing and discovery, referrals and networking, next steps, asking for the business, interpersonal skills. |
-| **Practice** | Pick a skill (or a real job posting), pitch by voice or text to an AI buyer persona with hidden objections, then get a 7-dimension scorecard with strengths, improvements, and a rewritten stronger line. |
-| **Jobs** | Public job board. Students save, apply, optionally share a scorecard, and track status. |
-| **Employers** | Company profile, job posting with a safe rich-text editor, applicant pipeline (shortlist, interview, hire, reject), interview scheduling, dashboard. |
+| Area          | What it does                                                                                                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Learn**     | Eight short lessons, one per core skill: introducing yourself, pitching, objection handling, probing and discovery, referrals and networking, next steps, asking for the business, interpersonal skills.  |
+| **Practice**  | Pick a skill (or a real job posting), pitch by voice or text to an AI buyer persona with hidden objections, then get a 7-dimension scorecard with strengths, improvements, and a rewritten stronger line. |
+| **Jobs**      | Public job board. Students save, apply, optionally share a scorecard, and track status.                                                                                                                   |
+| **Employers** | Company profile, job posting with a safe rich-text editor, applicant pipeline (shortlist, interview, hire, reject), interview scheduling, dashboard.                                                      |
 
 ## Architecture at a glance
 
@@ -60,34 +60,34 @@ Run the whole stack in containers instead: `docker compose --profile full up --b
 
 ## Scripts
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Run web, api, and coach in watch mode |
-| `npm run dev:infra` | Start MongoDB and Mailpit containers |
-| `npm run seed` | Load demo data (idempotent) |
-| `npm run build` | Build every workspace |
-| `npm run lint` / `npm run format` | ESLint / Prettier |
-| `npm run typecheck` | TypeScript project-wide check |
-| `npm test` | Unit and integration tests for all workspaces |
-| `npm run e2e` | Playwright end-to-end tests (fake practice provider) |
-| `npm run check:dead` | knip (unused files, exports, deps) and jscpd (duplication) |
-| `npm run eval -w apps/coach` | Run practice partner evals against a real provider (needs a key) |
-| `npm run admin -- <command>` | Admin CLI: `approve-company`, `suspend-company`, `list-unverified` |
+| Command                           | What it does                                                       |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `npm run dev`                     | Run web, api, and coach in watch mode                              |
+| `npm run dev:infra`               | Start MongoDB and Mailpit containers                               |
+| `npm run seed`                    | Load demo data (idempotent)                                        |
+| `npm run build`                   | Build every workspace                                              |
+| `npm run lint` / `npm run format` | ESLint / Prettier                                                  |
+| `npm run typecheck`               | TypeScript project-wide check                                      |
+| `npm test`                        | Unit and integration tests for all workspaces                      |
+| `npm run e2e`                     | Playwright end-to-end tests (fake practice provider)               |
+| `npm run check:dead`              | knip (unused files, exports, deps) and jscpd (duplication)         |
+| `npm run eval -w apps/coach`      | Run practice partner evals against a real provider (needs a key)   |
+| `npm run admin -- <command>`      | Admin CLI: `approve-company`, `suspend-company`, `list-unverified` |
 
 ## Documentation
 
-| Doc | Read it when you're... |
-|---|---|
-| [docs/architecture.md](docs/architecture.md) | Getting oriented: services, data model, request flows |
-| [docs/conventions.md](docs/conventions.md) | Writing any code: structure, naming, validation, errors, tests |
-| [docs/api.md](docs/api.md) | Adding or calling an endpoint |
-| [docs/practice-partner.md](docs/practice-partner.md) | Working on personas, scoring, guardrails, or providers |
-| [docs/design-system.md](docs/design-system.md) | Building UI: brand tokens, components, accessibility, SEO |
-| [docs/security.md](docs/security.md) | Touching auth, data, uploads, or anything user-facing |
-| [docs/deploy.md](docs/deploy.md) | Deploying |
-| [docs/limits.md](docs/limits.md) | Wondering what's intentionally out of scope |
-| [docs/design/2026-10-19-rebuild-design.md](docs/design/2026-10-19-rebuild-design.md) | Understanding why the product is shaped this way |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Opening a pull request |
+| Doc                                                                                  | Read it when you're...                                         |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| [docs/architecture.md](docs/architecture.md)                                         | Getting oriented: services, data model, request flows          |
+| [docs/conventions.md](docs/conventions.md)                                           | Writing any code: structure, naming, validation, errors, tests |
+| [docs/api.md](docs/api.md)                                                           | Adding or calling an endpoint                                  |
+| [docs/practice-partner.md](docs/practice-partner.md)                                 | Working on personas, scoring, guardrails, or providers         |
+| [docs/design-system.md](docs/design-system.md)                                       | Building UI: brand tokens, components, accessibility, SEO      |
+| [docs/security.md](docs/security.md)                                                 | Touching auth, data, uploads, or anything user-facing          |
+| [docs/deploy.md](docs/deploy.md)                                                     | Deploying                                                      |
+| [docs/limits.md](docs/limits.md)                                                     | Wondering what's intentionally out of scope                    |
+| [docs/design/2026-10-19-rebuild-design.md](docs/design/2026-10-19-rebuild-design.md) | Understanding why the product is shaped this way               |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                                                   | Opening a pull request                                         |
 
 ## Security
 

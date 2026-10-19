@@ -1,0 +1,21 @@
+{
+  "path": ["apps", "packages"],
+  "threshold": 3,
+  "minLines": 8,
+  "gitignore": true,
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/test/**",
+    "**/*.md",
+    "**/*.mdx",
+    "**/dist/**",
+    "**/.next/**",
+    "**/coverage/**",
+    "**/*.d.ts",
+    "**/next-env.d.ts",
+    "**/package-lock.json",
+    ".private/**"
+  ],
+  "reporters": ["console"]
+}

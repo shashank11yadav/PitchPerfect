@@ -14,24 +14,24 @@ PitchPerfect is clean, airy, and confident: a light canvas, one strong blue, dee
 
 Defined once as CSS variables in `apps/web/app/globals.css` and mapped into Tailwind (`@theme`).
 
-| Token | Value | Use |
-|---|---|---|
-| `--pp-blue` | `#3f56d2` | primary buttons, links, focus ring, highlights |
-| `--pp-blue-600` | `#3447b8` | primary hover |
-| `--pp-blue-50` | `#eef1fc` | selected/soft backgrounds |
-| `--pp-navy` | `#2d3c90` | headings on light, hero/footer backgrounds |
-| `--pp-navy-900` | `#1d275e` | hero gradient end, dark text on soft blue |
-| `--pp-ink` | `#212529` | body text |
-| `--pp-muted` | `#6c757d` | secondary text (≥ 4.5:1 on white; use `--pp-ink` on `--pp-surface-2`) |
-| `--pp-surface` | `#ffffff` | cards |
-| `--pp-surface-2` | `#f8f9fa` | page background |
-| `--pp-border` | `#e9ecef` | borders, dividers |
-| `--pp-success` | `#1f8a5b` | success, high scores (≥ 80) |
-| `--pp-warning` | `#b7791f` | mid scores (50–79), unverified badge |
-| `--pp-danger` | `#c53030` | errors, low scores (< 50), destructive actions |
-| radius | `12px` (controls), `16px` (cards), `999px` (pills) | |
-| shadow | `0 1px 2px rgb(16 24 40 / .06), 0 4px 12px rgb(16 24 40 / .06)` | cards; stronger on hover |
-| spacing | 4-px scale; sections `py-20` desktop / `py-12` mobile; content max width `1200px` | |
+| Token            | Value                                                                             | Use                                                                   |
+| ---------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `--pp-blue`      | `#3f56d2`                                                                         | primary buttons, links, focus ring, highlights                        |
+| `--pp-blue-600`  | `#3447b8`                                                                         | primary hover                                                         |
+| `--pp-blue-50`   | `#eef1fc`                                                                         | selected/soft backgrounds                                             |
+| `--pp-navy`      | `#2d3c90`                                                                         | headings on light, hero/footer backgrounds                            |
+| `--pp-navy-900`  | `#1d275e`                                                                         | hero gradient end, dark text on soft blue                             |
+| `--pp-ink`       | `#212529`                                                                         | body text                                                             |
+| `--pp-muted`     | `#6c757d`                                                                         | secondary text (≥ 4.5:1 on white; use `--pp-ink` on `--pp-surface-2`) |
+| `--pp-surface`   | `#ffffff`                                                                         | cards                                                                 |
+| `--pp-surface-2` | `#f8f9fa`                                                                         | page background                                                       |
+| `--pp-border`    | `#e9ecef`                                                                         | borders, dividers                                                     |
+| `--pp-success`   | `#1f8a5b`                                                                         | success, high scores (≥ 80)                                           |
+| `--pp-warning`   | `#b7791f`                                                                         | mid scores (50–79), unverified badge                                  |
+| `--pp-danger`    | `#c53030`                                                                         | errors, low scores (< 50), destructive actions                        |
+| radius           | `12px` (controls), `16px` (cards), `999px` (pills)                                |                                                                       |
+| shadow           | `0 1px 2px rgb(16 24 40 / .06), 0 4px 12px rgb(16 24 40 / .06)`                   | cards; stronger on hover                                              |
+| spacing          | 4-px scale; sections `py-20` desktop / `py-12` mobile; content max width `1200px` |                                                                       |
 
 Dark mode: not in v1 (documented in limits.md). Do not add partial dark styles.
 

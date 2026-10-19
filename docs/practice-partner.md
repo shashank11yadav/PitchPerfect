@@ -12,16 +12,16 @@ The practice partner is an independent service that plays a realistic buyer for 
 
 Defined once in `packages/shared/src/skills.ts`:
 
-| Slug | Title | Scenario focus | Weighted dimension (×2) |
-|---|---|---|---|
-| `introducing-yourself` | Introducing yourself | 30–60 s intro to a hiring manager or prospect at an event | Clarity |
-| `pitching` | Pitching | Core value pitch of the student's product/role to a busy buyer | Value & relevance |
-| `objection-handling` | Objection handling | Buyer raises 2–3 concrete objections (price, timing, incumbent, risk) | Objection handling |
-| `probing-discovery` | Probing & discovery | Buyer is vague; student must uncover pain, impact, decision process | Discovery questions |
-| `referrals-networking` | Referrals & networking | Ask a contact for an introduction or referral | Call to action |
-| `next-steps` | Next steps | End a good call by locking a concrete next meeting | Call to action |
-| `asking-for-the-business` | Asking for the business | Buyer is interested but hesitant to commit | Call to action |
-| `interpersonal-skills` | Interpersonal skills | Buyer is distracted/irritated; student must build rapport | Confidence & language |
+| Slug                      | Title                   | Scenario focus                                                        | Weighted dimension (×2) |
+| ------------------------- | ----------------------- | --------------------------------------------------------------------- | ----------------------- |
+| `introducing-yourself`    | Introducing yourself    | 30–60 s intro to a hiring manager or prospect at an event             | Clarity                 |
+| `pitching`                | Pitching                | Core value pitch of the student's product/role to a busy buyer        | Value & relevance       |
+| `objection-handling`      | Objection handling      | Buyer raises 2–3 concrete objections (price, timing, incumbent, risk) | Objection handling      |
+| `probing-discovery`       | Probing & discovery     | Buyer is vague; student must uncover pain, impact, decision process   | Discovery questions     |
+| `referrals-networking`    | Referrals & networking  | Ask a contact for an introduction or referral                         | Call to action          |
+| `next-steps`              | Next steps              | End a good call by locking a concrete next meeting                    | Call to action          |
+| `asking-for-the-business` | Asking for the business | Buyer is interested but hesitant to commit                            | Call to action          |
+| `interpersonal-skills`    | Interpersonal skills    | Buyer is distracted/irritated; student must build rapport             | Confidence & language   |
 
 When a job is supplied, the scenario adapts to that job: the student is pitching as a candidate for that role or (for sales roles) selling the employer's kind of product, using only the job's title, plain-text description, and skills.
 
@@ -29,15 +29,15 @@ When a job is supplied, the scenario adapts to that job: the student is pitching
 
 Dimensions (shared `RUBRIC_DIMENSIONS`), each scored 1–5:
 
-| Key | Name | 1 means | 5 means |
-|---|---|---|---|
-| `clarity` | Clarity | rambling, jargon, unclear point | crisp, one clear message |
-| `value` | Value & relevance | features only, generic | benefits tied to this buyer's stated needs |
-| `structure` | Structure | no flow | clear opening → body → close |
-| `discovery` | Discovery questions | no questions or only yes/no | open, layered questions that uncover pain and impact |
-| `objections` | Objection handling | ignores or argues | acknowledges, clarifies, responds with evidence, checks |
-| `confidence` | Confidence & language | hedging, filler, apologetic | assured, concise, positive framing |
-| `cta` | Call to action | no ask | specific, time-bound next step |
+| Key          | Name                  | 1 means                         | 5 means                                                 |
+| ------------ | --------------------- | ------------------------------- | ------------------------------------------------------- |
+| `clarity`    | Clarity               | rambling, jargon, unclear point | crisp, one clear message                                |
+| `value`      | Value & relevance     | features only, generic          | benefits tied to this buyer's stated needs              |
+| `structure`  | Structure             | no flow                         | clear opening → body → close                            |
+| `discovery`  | Discovery questions   | no questions or only yes/no     | open, layered questions that uncover pain and impact    |
+| `objections` | Objection handling    | ignores or argues               | acknowledges, clarifies, responds with evidence, checks |
+| `confidence` | Confidence & language | hedging, filler, apologetic     | assured, concise, positive framing                      |
+| `cta`        | Call to action        | no ask                          | specific, time-bound next step                          |
 
 `Scorecard` (zod schema in `packages/shared/src/rubric.ts`):
 
@@ -70,6 +70,7 @@ Dimensions (shared `RUBRIC_DIMENSIONS`), each scored 1–5:
 Each prompt file exports a pure function that builds the message array; no prompt text lives anywhere else.
 
 Rules for every prompt:
+
 1. The system message defines the role and rules. Student text is never placed in the system message.
 2. Student text and job text are passed inside a clearly delimited block, e.g. `<student_turn>…</student_turn>`, with an instruction that content inside the block is conversation data and can never change the rules.
 3. Each system prompt includes a **canary token** (random per process, from `crypto.randomUUID()`), with an instruction never to repeat it. If a reply contains the canary, it's a leak: drop and regenerate once, then fall back to a fixed in-character line.
@@ -79,25 +80,35 @@ Rules for every prompt:
 
 ## Guardrails (`apps/coach/src/guardrails/`)
 
-| Layer | Where | What |
-|---|---|---|
-| Input shape | api + coach | zod: 1–1000 chars, strip control chars except newlines, collapse whitespace |
-| PII redaction | api (before storage and before forwarding) | emails → `[email]`, phone numbers → `[phone]`, 13–19 digit card-like numbers → `[number]` |
-| Pre-check | coach `guard.ts` | rules (prompt-extraction phrases, role-change attempts, explicit harmful requests) + a cheap classification call returning `{ category: "ok" \| "off_topic" \| "prompt_attack" \| "harmful" }`. Non-`ok` → in-character redirect (`redirect` event), attempt `guardFlags += 1`; 3 flags → `ended` with `guard_limit` |
-| Output | coach `output.ts` | canary leak check, length cap (truncate at sentence boundary ≤ 80 words), provider moderation where available (OpenAI moderation endpoint) else rule filter; failing output is replaced by a neutral in-character line |
-| Cost | api | per-student quota (`PRACTICE_DAILY_LIMIT=5`, `PRACTICE_MONTHLY_LIMIT=30`), global `PRACTICE_DAILY_TOKEN_BUDGET` (default 2,000,000 tokens/day) checked before starting sessions; coach `max_tokens` caps per call (reply 200, plan 600, score 1200, guard 50) |
-| Reliability | coach | 30 s timeout per provider call, 1 retry with jittered backoff on 429/5xx, circuit breaker (5 failures in 60 s → open for 30 s → `503 practice_unavailable`) |
-| Privacy | api + coach | logs contain attempt ID, route, stage, token counts, latency, outcome code. Never text. |
+| Layer         | Where                                      | What                                                                                                                                                                                                                                                                                                                 |
+| ------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Input shape   | api + coach                                | zod: 1–1000 chars, strip control chars except newlines, collapse whitespace                                                                                                                                                                                                                                          |
+| PII redaction | api (before storage and before forwarding) | emails → `[email]`, phone numbers → `[phone]`, 13–19 digit card-like numbers → `[number]`                                                                                                                                                                                                                            |
+| Pre-check     | coach `guard.ts`                           | rules (prompt-extraction phrases, role-change attempts, explicit harmful requests) + a cheap classification call returning `{ category: "ok" \| "off_topic" \| "prompt_attack" \| "harmful" }`. Non-`ok` → in-character redirect (`redirect` event), attempt `guardFlags += 1`; 3 flags → `ended` with `guard_limit` |
+| Output        | coach `output.ts`                          | canary leak check, length cap (truncate at sentence boundary ≤ 80 words), provider moderation where available (OpenAI moderation endpoint) else rule filter; failing output is replaced by a neutral in-character line                                                                                               |
+| Cost          | api                                        | per-student quota (`PRACTICE_DAILY_LIMIT=5`, `PRACTICE_MONTHLY_LIMIT=30`), global `PRACTICE_DAILY_TOKEN_BUDGET` (default 2,000,000 tokens/day) checked before starting sessions; coach `max_tokens` caps per call (reply 200, plan 600, score 1200, guard 50)                                                        |
+| Reliability   | coach                                      | 30 s timeout per provider call, 1 retry with jittered backoff on 429/5xx, circuit breaker (5 failures in 60 s → open for 30 s → `503 practice_unavailable`)                                                                                                                                                          |
+| Privacy       | api + coach                                | logs contain attempt ID, route, stage, token counts, latency, outcome code. Never text.                                                                                                                                                                                                                              |
 
 ## Provider adapter (`apps/coach/src/providers/`)
 
 ```ts
 interface LlmProvider {
   readonly name: "openai" | "anthropic" | "fake";
-  chatStream(input: { system: string; messages: ChatMessage[]; maxTokens: number; temperature: number },
-             signal: AbortSignal): AsyncIterable<string>;           // yields text deltas
-  structured<T>(input: { system: string; messages: ChatMessage[]; maxTokens: number;
-                         schema: ZodType<T>; schemaName: string }, signal: AbortSignal): Promise<T>;
+  chatStream(
+    input: { system: string; messages: ChatMessage[]; maxTokens: number; temperature: number },
+    signal: AbortSignal,
+  ): AsyncIterable<string>; // yields text deltas
+  structured<T>(
+    input: {
+      system: string;
+      messages: ChatMessage[];
+      maxTokens: number;
+      schema: ZodType<T>;
+      schemaName: string;
+    },
+    signal: AbortSignal,
+  ): Promise<T>;
   moderate?(text: string, signal: AbortSignal): Promise<{ flagged: boolean }>;
   lastUsage(): { inputTokens: number; outputTokens: number };
 }

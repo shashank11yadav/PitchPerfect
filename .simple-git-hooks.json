@@ -1,0 +1,3 @@
+{
+  "pre-commit": "npx prettier --check --ignore-unknown $(git diff --cached --name-only --diff-filter=ACM) && node scripts/check-attribution.mjs && (command -v gitleaks >/dev/null && gitleaks protect --staged --config .gitleaks.toml || true)"
+}

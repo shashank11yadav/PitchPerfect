@@ -1,0 +1,50 @@
+{
+  "name": "pitchperfect",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "postinstall": "simple-git-hooks",
+    "predev": "npm run build -w packages/shared",
+    "dev": "concurrently -n api,coach,web -c blue,magenta,green \"npm:dev -w apps/api\" \"npm:dev -w apps/coach\" \"npm:dev -w apps/web\"",
+    "dev:infra": "docker compose up -d mongo mailpit",
+    "seed": "npm run seed -w apps/api",
+    "admin": "npm run admin -w apps/api --",
+    "purge": "npm run purge -w apps/api",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "check:dead": "knip && jscpd",
+    "check:attribution": "node scripts/check-attribution.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
+    "@types/node": "22.20.5",
+    "concurrently": "10.0.6",
+    "eslint": "10.13.0",
+    "jscpd": "5.4.1",
+    "knip": "6.42.1",
+    "prettier": "3.9.10",
+    "simple-git-hooks": "2.14.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0",
+    "vitest": "5.0.5"
+  },
+  "allowScripts": {
+    "simple-git-hooks": false,
+    "fsevents": false
+  }
+}

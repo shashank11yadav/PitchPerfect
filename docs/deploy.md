@@ -4,13 +4,13 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
 
 ## Topology
 
-| Piece | Recommended host | Notes |
-|---|---|---|
-| web | Vercel (Next.js) | `API_ORIGIN` points at the api's private or public URL; the browser only sees the web origin |
-| api | Render or Fly.io (Docker, `apps/api/Dockerfile`) | Public only to web's rewrite (restrict by secret header `x-pp-proxy` if the host can't do private networking) |
-| coach | Render private service or Fly.io private app (`apps/coach/Dockerfile`) | Never public; reachable only from api |
-| MongoDB | New MongoDB Atlas cluster | New database user with least privilege, IP allowlist for api only, TLS required |
-| Email | Any SMTP provider (e.g. Postmark, Resend SMTP, SES) | SPF/DKIM for the sending domain |
+| Piece   | Recommended host                                                       | Notes                                                                                                         |
+| ------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| web     | Vercel (Next.js)                                                       | `API_ORIGIN` points at the api's private or public URL; the browser only sees the web origin                  |
+| api     | Render or Fly.io (Docker, `apps/api/Dockerfile`)                       | Public only to web's rewrite (restrict by secret header `x-pp-proxy` if the host can't do private networking) |
+| coach   | Render private service or Fly.io private app (`apps/coach/Dockerfile`) | Never public; reachable only from api                                                                         |
+| MongoDB | New MongoDB Atlas cluster                                              | New database user with least privilege, IP allowlist for api only, TLS required                               |
+| Email   | Any SMTP provider (e.g. Postmark, Resend SMTP, SES)                    | SPF/DKIM for the sending domain                                                                               |
 
 ## Steps
 

@@ -2,19 +2,19 @@
 
 ## Services
 
-| Service | Path | Runtime | Port | Exposed publicly | Owns |
-|---|---|---|---|---|---|
-| web | `apps/web` | Next.js (App Router), React, Tailwind CSS | 3000 | Yes | Pages, UI, SEO, proxying `/api/*` |
-| api | `apps/api` | Express 5, Mongoose, MongoDB | 4000 | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas |
-| coach | `apps/coach` | Fastify | 4100 | **Never** | Personas, conversation turns, scoring, guardrails, LLM calls |
-| shared | `packages/shared` | TypeScript library | n/a | n/a | zod schemas, types, constants |
-| mongo | Docker `mongo:8` | | 27017 | No | Data |
-| mailpit | Docker `axllent/mailpit` | | 1025 SMTP, 8025 UI | Dev only | Catches outgoing email locally |
+| Service | Path                     | Runtime                                   | Port               | Exposed publicly                    | Owns                                                         |
+| ------- | ------------------------ | ----------------------------------------- | ------------------ | ----------------------------------- | ------------------------------------------------------------ |
+| web     | `apps/web`               | Next.js (App Router), React, Tailwind CSS | 3000               | Yes                                 | Pages, UI, SEO, proxying `/api/*`                            |
+| api     | `apps/api`               | Express 5, Mongoose, MongoDB              | 4000               | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas   |
+| coach   | `apps/coach`             | Fastify                                   | 4100               | **Never**                           | Personas, conversation turns, scoring, guardrails, LLM calls |
+| shared  | `packages/shared`        | TypeScript library                        | n/a                | n/a                                 | zod schemas, types, constants                                |
+| mongo   | Docker `mongo:8`         |                                           | 27017              | No                                  | Data                                                         |
+| mailpit | Docker `axllent/mailpit` |                                           | 1025 SMTP, 8025 UI | Dev only                            | Catches outgoing email locally                               |
 
 ### Why three services
 
 - **web** renders public pages on the server for SEO and serves the app UI. The browser only ever talks to the web origin; Next.js rewrites `/api/:path*` to `${API_ORIGIN}/api/:path*`, so the session cookie is always first-party and production needs no cross-site CORS.
-- **api** is the only component with database access and the only component that decides *who may do what*. Every authorization check lives here.
+- **api** is the only component with database access and the only component that decides _who may do what_. Every authorization check lives here.
 - **coach** is the independent practice partner. It holds the LLM keys and nothing else: no database, no user accounts, no cookies. It trusts only HMAC-signed requests from api, so it can be deployed, scaled, rate-limited, and swapped independently, and a compromise of web cannot reach the LLM keys.
 
 ## Monorepo layout
@@ -72,21 +72,21 @@ docker-compose.yml
 
 All collections have `createdAt`/`updatedAt` timestamps. IDs are ObjectIds. Never expose `passwordHash`, token hashes, or `scenarioPrivate` in responses.
 
-| Collection | Key fields | Indexes |
-|---|---|---|
-| `users` | `email` (lowercased), `passwordHash` (argon2id), `role` (`student`\|`employer`), `name.first`, `name.last`, `emailVerifiedAt?`, `ageConfirmedAt?` (students), `practiceConsentAt?` (students) | unique `email` |
-| `studentprofiles` | `userId`, `school`, `major`, `gradYear`, `targetRole`, `industry`, `state`, `resumeFileId?`, `lessonsCompleted: SkillSlug[]` | unique `userId` |
-| `employerprofiles` | `userId`, `jobTitle`, `companyId` | unique `userId`, `companyId` |
-| `companies` | `ownerId`, `name`, `slug`, `website`, `linkedinUrl?`, `pitch`, `logoUrl?`, `verification` (`verified`\|`unverified`\|`suspended`) | unique `slug`, unique `ownerId` |
-| `jobs` | `companyId`, `slug`, `title`, `location`, `workplace` (`onsite`\|`hybrid`\|`remote`), `employmentType` (`internship`\|`full_time`\|`part_time`\|`contract`), `descriptionHtml` (sanitized), `skills: string[]`, `pay` {`type` `range`\|`exact`\|`unpaid`, `min?`, `max?`, `amount?`, `currency` `USD`\|`EUR`\|`CAD`, `frequency` `hourly`\|`weekly`\|`monthly`\|`annually`, `commission` bool}, `status` (`draft`\|`active`\|`archived`), `publishedAt?`, `closesAt?` | unique `slug`; `{companyId, status}`; `{status, publishedAt}`; text index on `title`,`skills` |
-| `applications` | `jobId`, `studentId`, `status` (`applied`\|`shortlisted`\|`interview`\|`hired`\|`rejected`\|`withdrawn`\|`closed`), `savedByEmployer` bool, `sharedAttemptId?`, `interview?` {`startsAt`, `meetingUrl`} | unique `{jobId, studentId}`; `{studentId}`; `{jobId, status}` |
-| `savedjobs` | `studentId`, `jobId` | unique `{studentId, jobId}` |
-| `practiceattempts` | `studentId`, `skill`, `jobId?`, `status` (`active`\|`completed`\|`abandoned`\|`ended_by_guard`), `scenarioPublic` {`personaName`, `personaTitle`, `companyType`, `personality`, `openingLine`}, `scenarioPrivate` {`hiddenObjections[]`, `winConditions[]`}, `transcript[]` {`role` `student`\|`partner`, `text`, `at`, `flagged` bool}, `guardFlags` int, `scorecard?`, `provider`, `model`, `tokens` {`input`, `output`}, `startedAt`, `endedAt?`, `expiresAt` | `{studentId, startedAt:-1}`; TTL on `expiresAt` |
-| `authtokens` | `userId`, `type` (`verify_email`\|`reset_password`), `tokenHash` (sha256), `expiresAt`, `usedAt?` | unique `tokenHash`; TTL on `expiresAt` |
-| `usagedays` | `day` (YYYY-MM-DD UTC), `inputTokens`, `outputTokens`, `sessions` | unique `day` |
-| `sessions` | managed by `connect-mongo` | TTL managed by store |
-| `ratelimits` | managed by the rate-limit store | TTL |
-| GridFS `resumes` | PDF bytes, metadata `{ownerId}` | |
+| Collection         | Key fields                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Indexes                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `users`            | `email` (lowercased), `passwordHash` (argon2id), `role` (`student`\|`employer`), `name.first`, `name.last`, `emailVerifiedAt?`, `ageConfirmedAt?` (students), `practiceConsentAt?` (students)                                                                                                                                                                                                                                                                         | unique `email`                                                                                |
+| `studentprofiles`  | `userId`, `school`, `major`, `gradYear`, `targetRole`, `industry`, `state`, `resumeFileId?`, `lessonsCompleted: SkillSlug[]`                                                                                                                                                                                                                                                                                                                                          | unique `userId`                                                                               |
+| `employerprofiles` | `userId`, `jobTitle`, `companyId`                                                                                                                                                                                                                                                                                                                                                                                                                                     | unique `userId`, `companyId`                                                                  |
+| `companies`        | `ownerId`, `name`, `slug`, `website`, `linkedinUrl?`, `pitch`, `logoUrl?`, `verification` (`verified`\|`unverified`\|`suspended`)                                                                                                                                                                                                                                                                                                                                     | unique `slug`, unique `ownerId`                                                               |
+| `jobs`             | `companyId`, `slug`, `title`, `location`, `workplace` (`onsite`\|`hybrid`\|`remote`), `employmentType` (`internship`\|`full_time`\|`part_time`\|`contract`), `descriptionHtml` (sanitized), `skills: string[]`, `pay` {`type` `range`\|`exact`\|`unpaid`, `min?`, `max?`, `amount?`, `currency` `USD`\|`EUR`\|`CAD`, `frequency` `hourly`\|`weekly`\|`monthly`\|`annually`, `commission` bool}, `status` (`draft`\|`active`\|`archived`), `publishedAt?`, `closesAt?` | unique `slug`; `{companyId, status}`; `{status, publishedAt}`; text index on `title`,`skills` |
+| `applications`     | `jobId`, `studentId`, `status` (`applied`\|`shortlisted`\|`interview`\|`hired`\|`rejected`\|`withdrawn`\|`closed`), `savedByEmployer` bool, `sharedAttemptId?`, `interview?` {`startsAt`, `meetingUrl`}                                                                                                                                                                                                                                                               | unique `{jobId, studentId}`; `{studentId}`; `{jobId, status}`                                 |
+| `savedjobs`        | `studentId`, `jobId`                                                                                                                                                                                                                                                                                                                                                                                                                                                  | unique `{studentId, jobId}`                                                                   |
+| `practiceattempts` | `studentId`, `skill`, `jobId?`, `status` (`active`\|`completed`\|`abandoned`\|`ended_by_guard`), `scenarioPublic` {`personaName`, `personaTitle`, `companyType`, `personality`, `openingLine`}, `scenarioPrivate` {`hiddenObjections[]`, `winConditions[]`}, `transcript[]` {`role` `student`\|`partner`, `text`, `at`, `flagged` bool}, `guardFlags` int, `scorecard?`, `provider`, `model`, `tokens` {`input`, `output`}, `startedAt`, `endedAt?`, `expiresAt`      | `{studentId, startedAt:-1}`; TTL on `expiresAt`                                               |
+| `authtokens`       | `userId`, `type` (`verify_email`\|`reset_password`), `tokenHash` (sha256), `expiresAt`, `usedAt?`                                                                                                                                                                                                                                                                                                                                                                     | unique `tokenHash`; TTL on `expiresAt`                                                        |
+| `usagedays`        | `day` (YYYY-MM-DD UTC), `inputTokens`, `outputTokens`, `sessions`                                                                                                                                                                                                                                                                                                                                                                                                     | unique `day`                                                                                  |
+| `sessions`         | managed by `connect-mongo`                                                                                                                                                                                                                                                                                                                                                                                                                                            | TTL managed by store                                                                          |
+| `ratelimits`       | managed by the rate-limit store                                                                                                                                                                                                                                                                                                                                                                                                                                       | TTL                                                                                           |
+| GridFS `resumes`   | PDF bytes, metadata `{ownerId}`                                                                                                                                                                                                                                                                                                                                                                                                                                       |                                                                                               |
 
 ### Ownership rules (enforced in api, tested in api integration tests)
 
@@ -98,11 +98,13 @@ All collections have `createdAt`/`updatedAt` timestamps. IDs are ObjectIds. Neve
 ## Key request flows
 
 ### Sign up → verify → sign in
+
 1. `POST /api/auth/signup` validates with `SignupSchema` (shared), checks password policy, creates `users` + role profile (+ `companies` for employers, verified if email domain matches website domain), sends a verification email with a single-use token (stored hashed, 24 h expiry).
 2. `POST /api/auth/verify-email {token}` marks `emailVerifiedAt`.
 3. `POST /api/auth/signin` verifies argon2id hash, regenerates the session ID, stores `{userId, role}` in the session. The cookie is `pp.sid`, `httpOnly`, `Secure` (prod), `SameSite=Lax`, rolling 7 days, absolute 30 days.
 
 ### Practice session
+
 ```
 web practice room            api                                 coach                 provider
   │ POST /practice/sessions ─► auth+verified+consent+quota ─► POST /v1/plan (HMAC) ─► structured()
@@ -113,20 +115,22 @@ web practice room            api                                 coach          
   │ POST /practice/sessions/:id/end ─► POST /v1/score (HMAC) ─► structured(Scorecard)
   │ ◄── {scorecard}           saves scorecard, tokens, usage day
 ```
+
 Browser speech recognition produces the text; the browser's `speechSynthesis` speaks the partner's reply. No audio is sent to PitchPerfect servers.
 
 ### Employer applicant pipeline
+
 `GET /api/employer/jobs/:id/applications` → `PATCH /api/employer/applications/:id {status}` → `POST /api/employer/applications/:id/interview {startsAt, meetingUrl}` (student gets an email). Every step checks the job belongs to the employer's company.
 
 ## Routes (web)
 
-| Path | Rendering | Access |
-|---|---|---|
-| `/`, `/students`, `/employers`, `/how-it-works`, `/about`, `/privacy`, `/terms` | Static | Public |
-| `/jobs`, `/jobs/[slug]` | Server-rendered (revalidate 60 s) | Public |
-| `/signin`, `/signup`, `/signup/student`, `/signup/employer`, `/verify-email`, `/forgot-password`, `/reset-password` | Static shell + client forms | Signed-out |
-| `/app` (dashboard), `/app/learn`, `/app/learn/[skill]`, `/app/practice`, `/app/practice/[skill]`, `/app/practice/attempt/[id]`, `/app/history`, `/app/jobs`, `/app/applications`, `/app/settings` | Client app, `noindex` | Student |
-| `/employer` (dashboard), `/employer/company`, `/employer/jobs`, `/employer/jobs/new`, `/employer/jobs/[id]`, `/employer/jobs/[id]/applicants`, `/employer/settings` | Client app, `noindex` | Employer |
+| Path                                                                                                                                                                                              | Rendering                         | Access     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ---------- |
+| `/`, `/students`, `/employers`, `/how-it-works`, `/about`, `/privacy`, `/terms`                                                                                                                   | Static                            | Public     |
+| `/jobs`, `/jobs/[slug]`                                                                                                                                                                           | Server-rendered (revalidate 60 s) | Public     |
+| `/signin`, `/signup`, `/signup/student`, `/signup/employer`, `/verify-email`, `/forgot-password`, `/reset-password`                                                                               | Static shell + client forms       | Signed-out |
+| `/app` (dashboard), `/app/learn`, `/app/learn/[skill]`, `/app/practice`, `/app/practice/[skill]`, `/app/practice/attempt/[id]`, `/app/history`, `/app/jobs`, `/app/applications`, `/app/settings` | Client app, `noindex`             | Student    |
+| `/employer` (dashboard), `/employer/company`, `/employer/jobs`, `/employer/jobs/new`, `/employer/jobs/[id]`, `/employer/jobs/[id]/applicants`, `/employer/settings`                               | Client app, `noindex`             | Employer   |
 
 Route protection: Next.js middleware checks for the session cookie and redirects to `/signin?next=…`; the page then calls `GET /api/auth/me` and redirects on 401/403 (wrong role → own dashboard). The API is the real gate; the client guard is only UX.
 

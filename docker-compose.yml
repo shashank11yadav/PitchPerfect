@@ -1,0 +1,58 @@
+services:
+  mongo:
+    image: mongo:8
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  coach:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/coach/Dockerfile
+    env_file: apps/coach/.env
+    environment:
+      HOST: 0.0.0.0
+
+  api:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: apps/api/.env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/pitchperfect
+      COACH_URL: http://coach:4100
+      SMTP_HOST: mailpit
+    depends_on:
+      mongo:
+        condition: service_healthy
+      coach:
+        condition: service_started
+
+  web:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      API_ORIGIN: http://api:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  mongo-data:

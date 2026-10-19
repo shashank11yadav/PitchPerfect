@@ -1,0 +1,9 @@
+node_modules
+dist
+.next
+coverage
+.private
+package-lock.json
+*.tsbuildinfo
+playwright-report
+test-results
