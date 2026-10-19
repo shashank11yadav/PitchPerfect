@@ -8,8 +8,7 @@
     },
     "packages/shared": {},
     "apps/api": {
-      "entry": ["src/server.ts", "src/scripts/*.ts"],
-      "ignore": ["src/index.ts"]
+      "entry": ["src/scripts/*.ts", "test/**/*.test.ts"]
     },
     "apps/coach": {
       "entry": ["src/server.ts", "evals/run.ts"],

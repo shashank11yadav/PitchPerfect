@@ -19,6 +19,7 @@ All request and response bodies are JSON unless noted. Schema names refer to exp
 | 413     | `file_too_large`                                                          |
 | 415     | `unsupported_file`                                                        |
 | 429     | `rate_limited`, `quota_exceeded`, `budget_exhausted` (with `Retry-After`) |
+| 500     | `internal_error` (message is always "Something went wrong")               |
 | 502/503 | `upstream_error`, `practice_unavailable`                                  |
 
 - **Pagination:** list endpoints take `?page=1&pageSize=20` (max 50) and return `{ items, page, pageSize, total }`.

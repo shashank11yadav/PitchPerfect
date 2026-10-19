@@ -45,6 +45,8 @@
   },
   "allowScripts": {
     "simple-git-hooks": false,
-    "fsevents": false
+    "fsevents": false,
+    "esbuild": false,
+    "mongodb-memory-server": false
   }
 }

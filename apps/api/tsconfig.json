@@ -1,9 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
+    "rootDir": ".",
+    "outDir": "node_modules/.cache/tsc",
+    "emitDeclarationOnly": true
   },
-  "include": ["src"],
+  "include": ["src", "test"],
   "references": [{ "path": "../../packages/shared" }]
 }
