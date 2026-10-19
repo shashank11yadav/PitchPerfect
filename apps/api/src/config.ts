@@ -82,6 +82,15 @@ const envSchema = z
         message: "must be an https URL in production",
       });
     }
+    if (env.TRUST_PROXY < 1) {
+      // Behind the platform proxy the app sees plain http; without trusting it, Secure cookies
+      // are never sent and nobody can stay signed in.
+      ctx.addIssue({
+        code: "custom",
+        path: ["TRUST_PROXY"],
+        message: "must be at least 1 in production",
+      });
+    }
     if (!env.SMTP_HOST) {
       ctx.addIssue({ code: "custom", path: ["SMTP_HOST"], message: "is required in production" });
     }

@@ -14,8 +14,10 @@ export interface RateLimitOptions {
   key: (req: Request) => string;
 }
 
-/** Key by client address (IPv6 addresses are grouped by /64). */
-export const byIp = (req: Request): string => ipKeyGenerator(req.ip ?? "unknown");
+const IPV6_SUBNET = 64;
+
+/** Key by client address; IPv6 addresses are grouped by /64, the usual per-customer allocation. */
+export const byIp = (req: Request): string => ipKeyGenerator(req.ip ?? "unknown", IPV6_SUBNET);
 
 /**
  * Fixed-window limiter backed by Mongo. Over the limit it fails with `rate_limited` (429) and a

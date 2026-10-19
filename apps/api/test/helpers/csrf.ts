@@ -12,13 +12,19 @@ export async function fetchCsrfToken(agent: TestAgent): Promise<string> {
   return (res.body as { csrfToken: string }).csrfToken;
 }
 
-/** An agent that already holds a CSRF token; `post` sends it with the correct Origin. */
-export async function csrfAgent(app: Express) {
-  const agent = request.agent(app);
+/** Fetches a CSRF token for an existing agent; `post` sends it with the correct Origin. */
+export async function withCsrf(agent: TestAgent) {
   const token = await fetchCsrfToken(agent);
   return {
     agent,
     token,
     post: (path: string) => agent.post(path).set("Origin", TEST_ORIGIN).set("x-csrf-token", token),
   };
+}
+
+export type CsrfAgent = Awaited<ReturnType<typeof withCsrf>>;
+
+/** A new agent that already holds a CSRF token. */
+export function csrfAgent(app: Express): Promise<CsrfAgent> {
+  return withCsrf(request.agent(app));
 }

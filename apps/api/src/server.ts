@@ -3,6 +3,7 @@ import { ConfigError, loadConfig } from "./config.js";
 import { connectDb, disconnectDb } from "./db/connect.js";
 import { createLogger } from "./logger.js";
 import { createHttpCoachClient } from "./services/coach-client.js";
+import { createSmtpMailer } from "./services/mailer.js";
 
 const SHUTDOWN_GRACE_MS = 10_000;
 
@@ -27,7 +28,11 @@ try {
   process.exit(1);
 }
 
-const app = createApp({ config, coach: createHttpCoachClient(config.COACH_URL) });
+const app = createApp({
+  config,
+  coach: createHttpCoachClient(config.COACH_URL),
+  mailer: createSmtpMailer(config),
+});
 const server = app.listen(config.PORT, () => {
   logger.info({ port: config.PORT, env: config.NODE_ENV }, "api listening");
 });

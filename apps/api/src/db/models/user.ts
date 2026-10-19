@@ -10,6 +10,8 @@ export interface UserAttrs {
   emailVerifiedAt?: Date;
   ageConfirmedAt?: Date;
   practiceConsentAt?: Date;
+  /** Bumped to end every session at once (password reset/change); sessions store their copy. */
+  sessionVersion: number;
 }
 
 const userSchema = new Schema<UserAttrs>(
@@ -25,6 +27,7 @@ const userSchema = new Schema<UserAttrs>(
     emailVerifiedAt: Date,
     ageConfirmedAt: Date,
     practiceConsentAt: Date,
+    sessionVersion: { type: Number, default: 0, min: 0 },
   },
   schemaOptions(["passwordHash"]),
 );

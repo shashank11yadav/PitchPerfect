@@ -42,10 +42,12 @@ export function createCsrf(config: Config): Csrf {
 
   const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
     getSecret: () => config.CSRF_SECRET,
-    getSessionIdentifier: (req) =>
-      sessionUserId(req) === undefined
-        ? `anonymous:${anonymousIdOf(req) ?? ""}`
-        : `session:${req.sessionID}`,
+    getSessionIdentifier: (req) => {
+      if (sessionUserId(req) !== undefined) return `session:${req.sessionID}`;
+      // Without a browser id there is nothing to bind to: a one-off random id makes every token
+      // fail, instead of all such browsers sharing one identifier.
+      return `anonymous:${anonymousIdOf(req) ?? randomBytes(32).toString("hex")}`;
+    },
     cookieName: CSRF_COOKIE,
     cookieOptions,
   });

@@ -9,9 +9,17 @@ declare module "express-session" {
   interface SessionData {
     userId: string;
     role: Role;
+    /** The user's `sessionVersion` at sign-in; a mismatch means the session was revoked. */
+    sessionVersion: number;
     /** Epoch milliseconds of sign-in; the 30-day absolute limit counts from here. */
     createdAt: number;
   }
+}
+
+export interface SessionIdentity {
+  userId: string;
+  role: Role;
+  sessionVersion: number;
 }
 
 const SESSION_COOKIE = "pp.sid";
@@ -141,11 +149,16 @@ function maybeSession(req: express.Request): express.Request["session"] | undefi
 /**
  * Replaces the session id (prevents fixation) and records who signed in. Call after the
  * credentials check; any CSRF token issued before sign-in stops matching, so clients refetch it.
+ * A sign-in starts a fresh 30-day absolute window. Privilege changes pass `preserveCreatedAt` so
+ * regenerating the id never extends the window without signing in again.
  */
 export function regenerateSession(
   req: express.Request,
-  identity: { userId: string; role: Role },
+  identity: SessionIdentity,
+  { preserveCreatedAt = false }: { preserveCreatedAt?: boolean } = {},
 ): Promise<void> {
+  const previousCreatedAt = maybeSession(req)?.createdAt;
+  const createdAt = (preserveCreatedAt ? previousCreatedAt : undefined) ?? Date.now();
   // `destroySession` (or the absolute-limit check) leaves the request without a session.
   if (maybeSession(req) === undefined) req.sessionStore.generate(req);
   return new Promise((resolve, reject) => {
@@ -156,7 +169,8 @@ export function regenerateSession(
       }
       req.session.userId = identity.userId;
       req.session.role = identity.role;
-      req.session.createdAt = Date.now();
+      req.session.sessionVersion = identity.sessionVersion;
+      req.session.createdAt = createdAt;
       req.session.save((saveError: unknown) => {
         if (saveError) reject(asError(saveError));
         else resolve();
@@ -194,4 +208,9 @@ export function destroySession(req: express.Request, res: Response): Promise<voi
 /** Id of the signed-in user, if any. Safe after `destroySession`, when `req.session` is gone. */
 export function sessionUserId(req: express.Request): string | undefined {
   return maybeSession(req)?.userId;
+}
+
+/** The `sessionVersion` recorded at sign-in (0 for sessions that predate it). */
+export function sessionVersionOf(req: express.Request): number {
+  return maybeSession(req)?.sessionVersion ?? 0;
 }

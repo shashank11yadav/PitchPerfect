@@ -11,7 +11,7 @@ All request and response bodies are JSON unless noted. Schema names refer to exp
 
 | Status  | `code` values                                                             |
 | ------- | ------------------------------------------------------------------------- |
-| 400     | `validation_failed`, `invalid_id`                                         |
+| 400     | `validation_failed`, `invalid_id`, `invalid_token`                        |
 | 401     | `unauthenticated`, `invalid_credentials`                                  |
 | 403     | `forbidden`, `csrf_failed`, `email_not_verified`, `consent_required`      |
 | 404     | `not_found` (also used for resources the caller doesn't own)              |

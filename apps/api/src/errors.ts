@@ -1,5 +1,6 @@
 export type ErrorFields = Record<string, string>;
 
+export type ValidationCode = "validation_failed" | "invalid_token";
 export type ForbiddenCode = "forbidden" | "csrf_failed" | "email_not_verified" | "consent_required";
 export type ConflictCode = "conflict" | "email_taken" | "already_applied";
 
@@ -18,8 +19,12 @@ export class AppError extends Error {
 }
 
 export class ValidationError extends AppError {
-  constructor(fields?: ErrorFields, message = "Some fields need attention") {
-    super("validation_failed", 400, message, fields);
+  constructor(
+    fields?: ErrorFields,
+    message = "Some fields need attention",
+    code: ValidationCode = "validation_failed",
+  ) {
+    super(code, 400, message, fields);
   }
 }
 

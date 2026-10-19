@@ -29,10 +29,14 @@ export function devEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   };
 }
 
-/** Valid production environment: https APP_URL, SMTP host, and no development placeholder secrets. */
+/**
+ * Valid production environment: https APP_URL, SMTP host, one trusted proxy, and no development
+ * placeholder secrets.
+ */
 export function prodEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   return devEnv({
     NODE_ENV: "production",
+    TRUST_PROXY: "1",
     APP_URL: "https://pitchperfect.example.com",
     SMTP_HOST: "smtp.example.com",
     SESSION_SECRET: "s".repeat(48),

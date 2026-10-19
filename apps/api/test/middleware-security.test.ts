@@ -1,5 +1,7 @@
 import type { Request, Router } from "express";
 import mongoose from "mongoose";
+import { createHash } from "node:crypto";
+import { doubleCsrf } from "csrf-csrf";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIMITS, type Role } from "@pitchperfect/shared";
@@ -36,7 +38,19 @@ function extraRoutes(router: Router): void {
     res.json({ ok: true });
   });
   router.get("/__test/login/:id/:role", async (req, res) => {
-    await regenerateSession(req, { userId: req.params.id, role: req.params.role as Role });
+    await regenerateSession(req, {
+      userId: req.params.id,
+      role: req.params.role as Role,
+      sessionVersion: 0,
+    });
+    res.json({ sessionId: req.sessionID });
+  });
+  router.get("/__test/elevate/:id/:role", async (req, res) => {
+    await regenerateSession(
+      req,
+      { userId: req.params.id, role: req.params.role as Role, sessionVersion: 0 },
+      { preserveCreatedAt: true },
+    );
     res.json({ sessionId: req.sessionID });
   });
   router.get("/__test/logout", async (req, res) => {
@@ -166,6 +180,52 @@ describe("CSRF protection", () => {
         .send({})
         .expect(200);
     }
+  });
+
+  it("fails closed for an anonymous request without the pp.aid browser id", async () => {
+    // Mint a token/cookie pair the way the app would if it bound anonymous visitors to a shared
+    // constant; it must never be accepted.
+    const { config } = makeTestApp();
+    const { generateCsrfToken } = doubleCsrf({
+      getSecret: () => config.CSRF_SECRET,
+      getSessionIdentifier: () => "anonymous:",
+      cookieName: "pp.csrf",
+      cookieOptions: { sameSite: "lax", secure: false, path: "/", httpOnly: true },
+    });
+    let cookie = "";
+    const fakeRes = {
+      cookie: (_name: string, value: string) => {
+        cookie = value;
+      },
+    };
+    const token = generateCsrfToken(
+      { cookies: {} } as unknown as Request,
+      fakeRes as unknown as Parameters<typeof generateCsrfToken>[1],
+    );
+
+    const res = await request(app)
+      .post("/api/__test/write")
+      .set("Origin", ORIGIN)
+      .set("Cookie", `pp.csrf=${encodeURIComponent(cookie)}`)
+      .set("x-csrf-token", token)
+      .send({});
+
+    expect(res.status).toBe(403);
+    expect(errorOf(res).code).toBe("csrf_failed");
+  });
+
+  it("rejects a token whose pp.aid cookie was dropped", async () => {
+    const agent = request.agent(app);
+    const res = await agent.get("/api/auth/csrf");
+    const csrfCookie = cookieHeader(res, "pp.csrf")?.split(";")[0] ?? "";
+
+    const post = await request(app)
+      .post("/api/__test/write")
+      .set("Origin", ORIGIN)
+      .set("Cookie", csrfCookie)
+      .set("x-csrf-token", (res.body as { csrfToken: string }).csrfToken)
+      .send({});
+    expect(errorOf(post).code).toBe("csrf_failed");
   });
 
   it("returns the same token while the cookie is still valid", async () => {
@@ -388,6 +448,65 @@ describe("sessions", () => {
     expect(await mongoose.connection.collection("sessions").countDocuments()).toBe(0);
   });
 
+  it("ends sessions whose version no longer matches the user's (password reset)", async () => {
+    const { agent, user } = await signedIn();
+    await agent.get("/api/__test/me").expect(200);
+    await User.updateOne({ _id: user._id }, { $inc: { sessionVersion: 1 } });
+
+    const res = await agent.get("/api/__test/me");
+
+    expect(res.status).toBe(401);
+    expect(cookieHeader(res, "pp.sid")).toMatch(/^pp\.sid=;/);
+    expect(await mongoose.connection.collection("sessions").countDocuments()).toBe(0);
+  });
+
+  it("stores the session version in the session", async () => {
+    const user = await makeUser();
+    await request(app).get(`/api/__test/login/${user.id}/student`).expect(200);
+    const stored = await mongoose.connection.collection("sessions").findOne();
+    expect(JSON.parse(String(stored?.session))).toMatchObject({
+      userId: user.id,
+      role: "student",
+      sessionVersion: 0,
+    });
+  });
+
+  it("keeps the absolute 30-day window across a privilege change (preserveCreatedAt)", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { agent, user } = await signedIn();
+    for (let step = 0; step < 4; step++) {
+      vi.setSystemTime(Date.now() + 6 * DAY_MS);
+      await agent.get("/api/__test/me").expect(200);
+    }
+
+    const sessionsBefore = await mongoose.connection.collection("sessions").find().toArray();
+    const elevated = await agent.get(`/api/__test/elevate/${user.id}/student`).expect(200);
+    expect(sessionsBefore.map((doc) => String(doc._id))).not.toContain(
+      (elevated.body as { sessionId: string }).sessionId,
+    );
+    // Day 30 + 1 hour from the original sign-in, but only 6 days after the privilege change.
+    vi.setSystemTime(Date.now() + 6 * DAY_MS + 60 * 60 * 1000);
+
+    await agent.get("/api/__test/me").expect(401);
+  });
+
+  it("starts a fresh window and a new session id on a plain sign-in", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { agent, user } = await signedIn();
+    for (let step = 0; step < 4; step++) {
+      vi.setSystemTime(Date.now() + 6 * DAY_MS);
+      await agent.get("/api/__test/me").expect(200);
+    }
+    const elevated = await agent.get(`/api/__test/elevate/${user.id}/student`).expect(200);
+    const relogin = await agent.get(`/api/__test/login/${user.id}/student`).expect(200);
+    expect((relogin.body as { sessionId: string }).sessionId).not.toBe(
+      (elevated.body as { sessionId: string }).sessionId,
+    );
+    vi.setSystemTime(Date.now() + 6 * DAY_MS + 60 * 60 * 1000);
+
+    await agent.get("/api/__test/me").expect(200);
+  });
+
   it("lets a user sign in again right after an over-age session is dropped", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { agent, user } = await signedIn();
@@ -527,9 +646,38 @@ describe("rate limits", () => {
 
     const docs = await mongoose.connection.collection("ratelimits").find().toArray();
     expect(docs).toHaveLength(1);
-    expect(String(docs[0]?._id)).toContain("test-limited");
+    expect(String(docs[0]?._id)).toBe(
+      `test-limited:${createHash("sha256").update("t").digest("hex")}`,
+    );
     const indexes = await mongoose.connection.collection("ratelimits").indexes();
     expect(indexes.some((index) => index.expireAfterSeconds === 0)).toBe(true);
+  });
+
+  it("never stores the raw key, so emails in keys stay out of the database", async () => {
+    await request(app)
+      .get("/api/__test/limited")
+      .set("x-test-key", "someone@example.test")
+      .expect(200);
+
+    const docs = await mongoose.connection.collection("ratelimits").find().toArray();
+    expect(JSON.stringify(docs)).not.toContain("someone");
+    expect(String(docs[0]?._id)).toMatch(/^test-limited:[0-9a-f]{64}$/);
+  });
+
+  it("groups IPv6 clients by /64", async () => {
+    const ipv6App = makeTestApp({ env: { TRUST_PROXY: "1" }, extraRoutes }).app;
+    await request(ipv6App)
+      .get("/api/__test/by-ip")
+      .set("X-Forwarded-For", "2001:db8:1:2:aaaa::1")
+      .expect(200);
+    const sameSlash64 = await request(ipv6App)
+      .get("/api/__test/by-ip")
+      .set("X-Forwarded-For", "2001:db8:1:2:bbbb::2");
+    expect(sameSlash64.status).toBe(429);
+    await request(ipv6App)
+      .get("/api/__test/by-ip")
+      .set("X-Forwarded-For", "2001:db8:1:3::1")
+      .expect(200);
   });
 
   it("does not overshoot under concurrent requests", async () => {

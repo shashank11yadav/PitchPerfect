@@ -13,7 +13,7 @@ import { originCheck } from "./middleware/origin-check.js";
 import { proxyGuard } from "./middleware/proxy-guard.js";
 import { requestId, requestIdOf } from "./middleware/request-id.js";
 import { sessionMiddleware } from "./middleware/session.js";
-import { csrfRoutes } from "./modules/auth/csrf.routes.js";
+import { authRoutes } from "./modules/auth/routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
 import type { CoachClient } from "./services/coach-client.js";
 import type { Mailer } from "./services/mailer.js";
@@ -29,7 +29,7 @@ function routeOf(req: express.Request): string | undefined {
 export interface AppDeps {
   config: Config;
   coach?: CoachClient;
-  mailer?: Mailer;
+  mailer: Mailer;
   now?: () => Date;
 }
 
@@ -90,7 +90,7 @@ export function createApp(
   app.use(csrf.csrfProtection);
 
   const api = express.Router();
-  api.use(csrfRoutes(csrf));
+  api.use(authRoutes({ config, mailer: deps.mailer, csrf }));
   api.use(healthRoutes(deps.coach));
   extraRoutes?.(api);
   app.use("/api", api);

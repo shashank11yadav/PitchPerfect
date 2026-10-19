@@ -1,8 +1,14 @@
 import { z } from "zod";
 import type { Role } from "../enums.js";
 import { currentPassword, emailField, httpsUrl, newPassword, tokenField } from "./common.js";
-import { companyFields } from "./employer.js";
-import { employerFields, nameFields, studentFields } from "./profile.js";
+import { companyFields, type PublicCompany } from "./employer.js";
+import {
+  employerFields,
+  nameFields,
+  studentFields,
+  type EmployerProfileView,
+  type StudentProfileView,
+} from "./profile.js";
 
 const emailAndPassword = { email: emailField(), password: newPassword() };
 
@@ -87,4 +93,11 @@ export interface PublicUser {
   emailVerifiedAt: string | null;
   /** Students only; `null` for employers and for students who have not consented. */
   practiceConsentAt: string | null;
+}
+
+/** `GET /api/auth/me`: the signed-in user, their role profile, and (employers) their company. */
+export interface AuthMe {
+  user: PublicUser;
+  profile: StudentProfileView | EmployerProfileView;
+  company?: PublicCompany;
 }

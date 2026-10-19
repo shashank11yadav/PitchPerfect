@@ -114,6 +114,12 @@ describe("loadConfig", () => {
       expect(() => loadConfig(env)).toThrow(/APP_URL/);
     });
 
+    it("requires TRUST_PROXY of at least 1, since Secure cookies need the proxy's https", () => {
+      expect(() => loadConfig(prodEnv({ TRUST_PROXY: "0" }))).toThrow(/TRUST_PROXY/);
+      expect(() => loadConfig(prodEnv({ TRUST_PROXY: "" }))).toThrow(/TRUST_PROXY/);
+      expect(loadConfig(prodEnv({ TRUST_PROXY: "2" })).TRUST_PROXY).toBe(2);
+    });
+
     it("requires a non-empty SMTP_HOST", () => {
       const env = prodEnv({ SMTP_HOST: "" });
       expect(() => loadConfig(env)).toThrow(/SMTP_HOST/);

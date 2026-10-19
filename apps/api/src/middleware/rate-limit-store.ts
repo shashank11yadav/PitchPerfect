@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import mongoose from "mongoose";
 import type { ClientRateLimitInfo, Options, Store } from "express-rate-limit";
 
@@ -46,8 +47,9 @@ class MongoRateLimitStore implements Store {
     return this.ready;
   }
 
+  /** Keys may contain emails or addresses; only their sha256 is stored. */
   private idFor(key: string): string {
-    return `${this.prefix}${key}`;
+    return `${this.prefix}${createHash("sha256").update(key).digest("hex")}`;
   }
 
   async increment(key: string): Promise<ClientRateLimitInfo> {

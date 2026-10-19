@@ -8,11 +8,12 @@
   },
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node -e \"require('node:fs').cpSync('src/services/data', 'dist/services/data', { recursive: true })\"",
     "start": "node dist/server.js"
   },
   "dependencies": {
     "@pitchperfect/shared": "0.0.0",
+    "argon2": "0.45.1",
     "connect-mongo": "6.0.0",
     "cookie-parser": "1.4.7",
     "csrf-csrf": "4.0.3",
@@ -21,14 +22,17 @@
     "express-session": "1.19.0",
     "helmet": "8.3.0",
     "mongoose": "9.11.2",
+    "nodemailer": "10.1.7",
     "pino": "10.4.0",
     "pino-http": "11.0.0",
+    "tldts": "7.4.18",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/cookie-parser": "1.4.10",
     "@types/express": "5.0.6",
     "@types/express-session": "1.19.0",
+    "@types/nodemailer": "8.0.2",
     "@types/supertest": "7.2.1",
     "mongodb-memory-server": "11.3.0",
     "supertest": "7.3.1",

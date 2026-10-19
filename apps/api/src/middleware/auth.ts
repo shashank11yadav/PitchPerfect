@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import type { Role } from "@pitchperfect/shared";
 import { User } from "../db/models/index.js";
 import { ForbiddenError, UnauthenticatedError } from "../errors.js";
-import { destroySession, sessionUserId } from "./session.js";
+import { destroySession, sessionUserId, sessionVersionOf } from "./session.js";
 
 /** The signed-in user as guards see it. Never includes the password hash. */
 interface SessionUser {
@@ -22,7 +22,8 @@ export function userOf(res: Response): SessionUser {
 
 /**
  * Loads the signed-in user once per request (cached on `res.locals.user`). Returns null when there
- * is no session. A session whose user no longer exists is destroyed.
+ * is no session. A session whose user no longer exists, or whose `sessionVersion` is out of date
+ * (password reset or change), is destroyed.
  */
 export async function loadUser(req: Request, res: Response): Promise<SessionUser | null> {
   const cached = res.locals.user as SessionUser | undefined;
@@ -31,9 +32,12 @@ export async function loadUser(req: Request, res: Response): Promise<SessionUser
   const userId = sessionUserId(req);
   if (userId === undefined) return null;
   const doc = mongoose.isValidObjectId(userId)
-    ? await User.findById(userId).select("role emailVerifiedAt practiceConsentAt").lean()
+    ? await User.findById(userId)
+        .select("role emailVerifiedAt practiceConsentAt sessionVersion")
+        .lean()
     : null;
-  if (!doc) {
+  const revoked = doc?.sessionVersion !== sessionVersionOf(req);
+  if (!doc || revoked) {
     await destroySession(req, res);
     return null;
   }
