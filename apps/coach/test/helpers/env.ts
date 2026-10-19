@@ -16,7 +16,7 @@ export function devEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   };
 }
 
-/** Valid production environment: a real-looking secret and the fake provider. */
+/** Valid production environment: a real-looking secret and an explicitly chosen (fake) provider. */
 export function prodEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   return devEnv({ NODE_ENV: "production", COACH_SHARED_SECRET: "k".repeat(48), ...overrides });
 }

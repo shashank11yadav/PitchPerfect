@@ -100,6 +100,25 @@ describe("loadCoachConfig", () => {
     expect(loadCoachConfig(prodEnv()).isProd).toBe(true);
   });
 
+  describe("COACH_PROVIDER in production", () => {
+    it("must be set explicitly", () => {
+      expect(problemsFor(prodEnv({ COACH_PROVIDER: "" }))).toContain("COACH_PROVIDER");
+      const env = prodEnv();
+      delete env.COACH_PROVIDER;
+      expect(problemsFor(env)).toContain("COACH_PROVIDER");
+    });
+
+    it("may be an explicit fake", () => {
+      expect(loadCoachConfig(prodEnv({ COACH_PROVIDER: "fake" })).COACH_PROVIDER).toBe("fake");
+    });
+
+    it("may stay unset outside production", () => {
+      const env = devEnv();
+      delete env.COACH_PROVIDER;
+      expect(loadCoachConfig(env).COACH_PROVIDER).toBe("fake");
+    });
+  });
+
   describe("numeric variables", () => {
     it.each(["PORT", "COACH_TIMEOUT_MS"])("rejects %s=0 and non-integers", (name) => {
       for (const value of ["0", "-1", "1.5", "abc"]) {

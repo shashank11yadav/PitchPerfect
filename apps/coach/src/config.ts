@@ -20,7 +20,8 @@ const envSchema = z
       z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
     ),
     COACH_SHARED_SECRET: secret,
-    COACH_PROVIDER: unsetIfEmpty(z.enum(["fake", "openai", "anthropic"]).default("fake")),
+    // Unset means `fake` outside production; see the production check below.
+    COACH_PROVIDER: optional(z.enum(["fake", "openai", "anthropic"])),
     OPENAI_API_KEY: optional(z.string()),
     ANTHROPIC_API_KEY: optional(z.string()),
     COACH_MODEL: optional(z.string()),
@@ -28,18 +29,22 @@ const envSchema = z
     COACH_TIMEOUT_MS: integer(30_000),
   })
   .superRefine((env, ctx) => {
-    if (env.COACH_PROVIDER !== "fake") {
-      const required = [
-        PROVIDER_KEYS[env.COACH_PROVIDER],
-        "COACH_MODEL",
-        "COACH_SCORING_MODEL",
-      ] as const;
+    if (env.NODE_ENV === "production" && !env.COACH_PROVIDER) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["COACH_PROVIDER"],
+        message: "must be set explicitly in production",
+      });
+    }
+    const provider = env.COACH_PROVIDER ?? "fake";
+    if (provider !== "fake") {
+      const required = [PROVIDER_KEYS[provider], "COACH_MODEL", "COACH_SCORING_MODEL"] as const;
       for (const name of required) {
         if (!env[name]) {
           ctx.addIssue({
             code: "custom",
             path: [name],
-            message: `is required when COACH_PROVIDER is ${env.COACH_PROVIDER}`,
+            message: `is required when COACH_PROVIDER is ${provider}`,
           });
         }
       }
@@ -52,7 +57,11 @@ const envSchema = z
       });
     }
   })
-  .transform((env) => ({ ...env, isProd: env.NODE_ENV === "production" }));
+  .transform((env) => ({
+    ...env,
+    COACH_PROVIDER: env.COACH_PROVIDER ?? ("fake" as const),
+    isProd: env.NODE_ENV === "production",
+  }));
 
 export type CoachConfig = z.output<typeof envSchema>;
 

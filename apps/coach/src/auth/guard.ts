@@ -14,8 +14,12 @@ class HttpError extends Error {
   }
 }
 
+const JSON_CONTENT_TYPE = /^application\/json\s*(;|$)/i;
 const isJson = (request: FastifyRequest) =>
-  (request.headers["content-type"] ?? "").toLowerCase().startsWith("application/json");
+  JSON_CONTENT_TYPE.test(request.headers["content-type"] ?? "");
+
+/** The path exactly as the caller sent it, without the query string. */
+const sentPath = (request: FastifyRequest) => (request.raw.url ?? "").split("?", 1)[0] ?? "";
 
 /**
  * Requires every request, except routes marked `config: { public: true }`, to carry a valid HMAC
@@ -40,7 +44,14 @@ export function requireSignedRequests(app: FastifyInstance, secret: string): voi
     if (request.routeOptions.config.public) return;
 
     const raw = typeof request.body === "string" ? request.body : "";
-    if (!verifySignature(secret, request.headers, raw, Date.now() / 1000)) {
+    if (
+      !verifySignature(
+        secret,
+        request.headers,
+        { method: request.method, path: sentPath(request), body: raw },
+        Date.now() / 1000,
+      )
+    ) {
       return reply.code(401).send({ error: { code: "unauthenticated" } });
     }
     if (raw === "") {

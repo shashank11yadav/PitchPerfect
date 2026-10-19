@@ -141,7 +141,7 @@ Every route needs a signed-in employer. Every non-GET route also needs a verifie
 Base: `COACH_URL` (e.g. `http://coach:4100`). Every request carries:
 
 - `x-pp-timestamp`: unix seconds
-- `x-pp-signature`: hex HMAC-SHA256 of `${timestamp}.${rawBody}` with `COACH_SHARED_SECRET`
+- `x-pp-signature`: hex HMAC-SHA256 of `${timestamp}.${METHOD}.${path}.${rawBody}` with `COACH_SHARED_SECRET`, where `METHOD` is the uppercase HTTP method and `path` is the request path exactly as sent, without the query string (e.g. `/v1/plan`). An empty body signs as an empty string.
   Coach rejects if the signature is wrong or `|now − timestamp| > 60`.
 
 | Method | Path        | Body (shared schema)                                                                               | Response                                                                      |

@@ -37,7 +37,11 @@ describe("request logging", () => {
     const config = loadCoachConfig(devEnv({ LOG_LEVEL: "info" }));
     const app = buildCoachApp({ config, logStream: stream });
     const body = JSON.stringify({ studentText: "transcript-value" });
-    const headers = signRequest(config.COACH_SHARED_SECRET, body, Math.floor(Date.now() / 1000));
+    const headers = signRequest(
+      config.COACH_SHARED_SECRET,
+      { method: "POST", path: "/v1/plan", body },
+      Math.floor(Date.now() / 1000),
+    );
 
     await app.inject({
       method: "POST",

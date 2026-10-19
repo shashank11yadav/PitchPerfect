@@ -6,7 +6,7 @@ export function healthRoutes(
   app: FastifyInstance,
   config: Pick<CoachConfig, "COACH_PROVIDER">,
 ): void {
-  app.get("/healthz", { config: { public: true } }, () => ({
+  app.get("/healthz", { exposeHeadRoute: false, config: { public: true } }, () => ({
     status: "ok",
     provider: config.COACH_PROVIDER,
   }));
