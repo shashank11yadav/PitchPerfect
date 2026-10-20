@@ -27,9 +27,14 @@ export interface Session {
   refresh: () => Promise<void>;
   /** Signs out, forgets the CSRF token, refreshes, and goes to the home page. */
   signOut: () => Promise<void>;
+  /**
+   * True from `signOut` until someone signs in again, so a page guard that sees the session end
+   * lets the user go home instead of sending them to sign in.
+   */
+  leaving: boolean;
 }
 
-type Snapshot = Pick<Session, "status" | "user" | "profile" | "company">;
+type Snapshot = Pick<Session, "status" | "user" | "profile" | "company"> & { leaving?: boolean };
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -57,6 +62,7 @@ const SessionContext = createContext<Session>({
   status: "signed_out",
   refresh: noop,
   signOut: noop,
+  leaving: false,
 });
 
 interface SessionProviderProps {
@@ -75,7 +81,8 @@ export function SessionProvider({ initialStatus, children }: SessionProviderProp
   /** Only the newest request may set state, so a slow older answer can't win. */
   const latest = useRef(0);
 
-  const refresh = useCallback(async () => {
+  /** Asks the api; `leaving` marks a signed-out answer as the end of a deliberate sign-out. */
+  const load = useCallback(async (leaving: boolean) => {
     const request = ++latest.current;
     let next: Snapshot;
     try {
@@ -84,10 +91,12 @@ export function SessionProvider({ initialStatus, children }: SessionProviderProp
     } catch {
       // 401 is the ordinary signed-out answer. An outage also shows the signed-out links; the
       // api still guards every signed-in route.
-      next = { status: "signed_out" };
+      next = { status: "signed_out", leaving };
     }
     if (request === latest.current) setSnapshot(next);
   }, []);
+
+  const refresh = useCallback(() => load(false), [load]);
 
   const signOut = useCallback(async () => {
     try {
@@ -97,15 +106,18 @@ export function SessionProvider({ initialStatus, children }: SessionProviderProp
     }
     // The session ID changed, and the CSRF token was bound to the old one.
     resetCsrf();
-    await refresh();
+    await load(true);
     router.push("/");
-  }, [refresh, router]);
+  }, [load, router]);
 
   useEffect(() => {
     if (initialStatus === "loading") void refresh();
   }, [initialStatus, refresh]);
 
-  const value = useMemo(() => ({ ...snapshot, refresh, signOut }), [snapshot, refresh, signOut]);
+  const value = useMemo(
+    () => ({ ...snapshot, leaving: snapshot.leaving === true, refresh, signOut }),
+    [snapshot, refresh, signOut],
+  );
   return <SessionContext value={value}>{children}</SessionContext>;
 }
 
@@ -132,20 +144,20 @@ interface RequireRoleProps {
  * here after), and the other role goes to its own home. Only UX: the api is the real gate.
  */
 export function RequireRole({ role, children }: RequireRoleProps) {
-  const { status, user } = useSession();
+  const { status, user, leaving } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "signed_out") {
+    if (status === "signed_out" && !leaving) {
       const here = `${window.location.pathname}${window.location.search}`;
       router.replace(`/signin?next=${encodeURIComponent(here)}`);
     } else if (status === "signed_in" && user && user.role !== role) {
       router.replace(roleHome(user.role));
     }
-  }, [status, user, role, router]);
+  }, [status, user, role, router, leaving]);
 
   if (status === "signed_in" && user?.role === role) return children;
-  return <Checking label="Loading your account" />;
+  return <Checking label={leaving ? "Signing you out" : "Loading your account"} />;
 }
 
 interface SignedOutOnlyProps {

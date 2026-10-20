@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
@@ -34,4 +35,11 @@ const nextConfig: NextConfig = {
     Promise.resolve([{ source: "/api/:path*", destination: `${apiOrigin}/api/:path*` }]),
 };
 
-export default nextConfig;
+/**
+ * Lessons (`content/lessons/*.mdx`) compile to React components at build time, styled through
+ * `mdx-components.tsx`. Nothing runs in the browser that isn't a normal script chunk, so the CSP
+ * is unchanged.
+ */
+const withMDX = createMDX({});
+
+export default withMDX(nextConfig);

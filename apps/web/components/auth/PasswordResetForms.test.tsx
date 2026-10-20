@@ -122,6 +122,22 @@ describe("ResetPasswordForm", () => {
     );
   });
 
+  it("treats a malformed token (validation_failed on token) like an expired one", async () => {
+    serveApi({
+      "GET /api/auth/csrf": csrf,
+      "POST /api/auth/reset-password": () =>
+        errorResponse(400, "validation_failed", "Some fields need attention", {
+          fields: { token: "Too long" },
+        }),
+    });
+    render(<ResetPasswordForm token={TOKEN} />);
+    await submit("a much longer passphrase");
+    expect(
+      await screen.findByRole("heading", { name: "This link has expired or was already used" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("goes straight to the invalid state when the link has no token", () => {
     window.history.replaceState(null, "", "/reset-password");
     serveApi({});

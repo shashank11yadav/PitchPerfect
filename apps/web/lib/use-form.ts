@@ -21,7 +21,7 @@ interface Issue {
 }
 
 /** Anything with zod's `safeParse`, so the shared schemas can be passed straight in. */
-interface FormSchema<T> {
+export interface FormSchema<T> {
   safeParse(
     data: unknown,
   ): { success: true; data: T } | { success: false; error: { issues: readonly Issue[] } };
@@ -117,6 +117,23 @@ function toNested(values: FormValues): Record<string, unknown> {
   return root;
 }
 
+/** "Invalid token" → "Invalid token." so messages can be joined into one paragraph. */
+const asSentence = (message: string) => (/[.!?]$/.test(message) ? message : `${message}.`);
+
+/**
+ * Server field errors split into the ones this form has a field for and the rest (e.g. a link's
+ * `token`), which would otherwise vanish behind an empty "check the highlighted fields".
+ */
+function splitFields(fields: FieldErrors, initial: FormValues) {
+  const known: FieldErrors = {};
+  const others: string[] = [];
+  for (const [path, message] of Object.entries(fields)) {
+    if (path in initial) known[path] = message;
+    else others.push(message);
+  }
+  return { known, others };
+}
+
 /** Focuses the first control, in page order, that has an error. */
 function focusFirstError(form: HTMLFormElement | null, errors: FieldErrors) {
   if (!form) return;
@@ -209,9 +226,14 @@ export function useZodForm<T>(
       await onSubmit(parsed.data);
     } catch (error) {
       if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
-        setErrors(error.fields);
-        setFormError(CHECK_FIELDS);
-        focusFirstError(form, error.fields);
+        const { known, others } = splitFields(error.fields, initial);
+        setErrors(known);
+        setFormError(
+          [Object.keys(known).length > 0 ? CHECK_FIELDS : null, ...others.map(asSentence)]
+            .filter(Boolean)
+            .join(" "),
+        );
+        focusFirstError(form, known);
       } else {
         setFormError(formMessage(error, apiMessages));
       }

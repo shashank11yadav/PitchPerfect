@@ -39,6 +39,17 @@ export interface AttemptView {
   expiresAt: string;
 }
 
+/** `GET /api/practice/quota`: sessions started today and this month (UTC), against the limits. */
+export interface PracticeQuota {
+  dailyUsed: number;
+  dailyLimit: number;
+  monthlyUsed: number;
+  monthlyLimit: number;
+  available: boolean;
+  /** The next UTC midnight, when the daily count starts over. */
+  resetsAt: string;
+}
+
 export interface AttemptSummary {
   id: string;
   skill: SkillSlug;

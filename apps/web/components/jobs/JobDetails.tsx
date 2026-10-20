@@ -31,9 +31,9 @@ const SHELL: Record<
     header: "rounded-card bg-surface ring-1 ring-border",
     headerInner: "p-6 md:p-8",
     title: "text-h2 text-navy",
-    band: "py-8 md:px-8",
-    body: "",
-    soft: "rounded-card bg-primary-soft",
+    band: "p-6 md:p-8",
+    body: "mt-6 rounded-card bg-surface ring-1 ring-border",
+    soft: "mt-6 rounded-card bg-primary-soft",
   },
 };
 
@@ -86,11 +86,21 @@ interface JobDetailsProps {
   /** A link back to the list this job came from. */
   back?: { href: string; label: string };
   variant?: Variant;
+  /** `h2` inside the app, where the shell's title is the page's `h1`; sections step down too. */
+  titleAs?: "h1" | "h2";
 }
 
 /** One job, as students, employers and visitors all see it. The description goes through SafeHtml. */
-export function JobDetails({ job, company, actions, back, variant = "panel" }: JobDetailsProps) {
+export function JobDetails({
+  job,
+  company,
+  actions,
+  back,
+  variant = "panel",
+  titleAs: Title = "h1",
+}: JobDetailsProps) {
   const shell = SHELL[variant];
+  const Section = Title === "h1" ? "h2" : "h3";
   const website = httpsHref(company.website);
   const linkedin = httpsHref(company.linkedinUrl);
   const facts: [string, string][] = [
@@ -114,9 +124,9 @@ export function JobDetails({ job, company, actions, back, variant = "panel" }: J
           )}
           <div className="mt-6 grid gap-y-10 md:mt-10 lg:grid-cols-12 lg:gap-x-6">
             <div className="lg:col-span-8">
-              <h1 id="job-title" className={cn("max-w-[20ch]", shell.title)}>
+              <Title id="job-title" className={cn("max-w-[20ch]", shell.title)}>
                 {job.title}
-              </h1>
+              </Title>
               <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-lede font-semibold">
                 {company.name}
                 <CompanyBadge verification={company.verification} onDark={variant === "page"} />
@@ -135,9 +145,9 @@ export function JobDetails({ job, company, actions, back, variant = "panel" }: J
       <div className={shell.body}>
         <div className={cn(shell.band, "grid gap-y-12 lg:grid-cols-12 lg:gap-x-6")}>
           <section aria-labelledby="job-description-heading" className="min-w-0 lg:col-span-7">
-            <h2 id="job-description-heading" className="sr-only">
+            <Section id="job-description-heading" className="sr-only">
               About the role
-            </h2>
+            </Section>
             <SafeHtml html={job.descriptionHtml} className="text-lede" />
           </section>
           <aside aria-label="Job facts" className="lg:col-span-4 lg:col-start-9">
@@ -151,12 +161,12 @@ export function JobDetails({ job, company, actions, back, variant = "panel" }: J
             </dl>
             {job.skills.length > 0 && (
               <>
-                <h2
+                <Section
                   id="job-skills-heading"
                   className="mt-8 font-sans text-small font-normal text-muted"
                 >
                   Skills they&apos;re hiring for
-                </h2>
+                </Section>
                 <ul aria-label="Skills" className="mt-2 flex flex-wrap gap-2">
                   {job.skills.map((skill) => (
                     <li
@@ -180,12 +190,15 @@ export function JobDetails({ job, company, actions, back, variant = "panel" }: J
 
       <section aria-labelledby="job-company-heading" className={shell.soft}>
         <div className={cn(shell.band, "grid gap-y-8 lg:grid-cols-12 lg:gap-x-6")}>
-          <h2
+          <Section
             id="job-company-heading"
-            className="max-w-[16ch] text-section text-navy lg:col-span-5"
+            className={cn(
+              "max-w-[16ch] text-navy lg:col-span-5",
+              variant === "page" ? "text-section" : "text-h3",
+            )}
           >
             About {company.name}
-          </h2>
+          </Section>
           <div className="flex flex-col gap-6 text-ink lg:col-span-6 lg:col-start-7">
             {company.pitch && <p className="text-statement">{company.pitch}</p>}
             <div className="flex flex-col items-start gap-3">

@@ -112,6 +112,8 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* Fields the browser scrolls to (focus, errors) land below the sticky top bars. */
+    scroll-padding-top: 5rem;
   }
 
   body {

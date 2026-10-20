@@ -102,6 +102,20 @@ describe("VerifyEmailStatus", () => {
     expect(screen.queryByRole("button", { name: "Send a new link" })).not.toBeInTheDocument();
   });
 
+  it("treats a malformed token (validation_failed on token) like an expired one", async () => {
+    serveApi({
+      "GET /api/auth/csrf": csrf,
+      "POST /api/auth/verify-email": () =>
+        errorResponse(400, "validation_failed", "Some fields need attention", {
+          fields: { token: "Too long" },
+        }),
+    });
+    renderStatus();
+    expect(
+      await screen.findByRole("heading", { name: "This link has expired or was already used" }),
+    ).toBeInTheDocument();
+  });
+
   it("lets a signed-in unverified user send a new link", async () => {
     const fetchMock = serveApi({
       "GET /api/auth/me": () => jsonResponse(meBody("student", { verified: false })),

@@ -60,10 +60,14 @@ export function FieldHint({ id, hint }: Messages) {
   );
 }
 
+/**
+ * Not an alert: it's read as the control's description, and focus moves to the first invalid
+ * control. The form's own message is the one alert, so several errors don't all speak at once.
+ */
 export function FieldError({ id, error }: Messages) {
   if (!error) return null;
   return (
-    <p id={`${id}-error`} role="alert" className="flex items-start gap-1.5 text-small text-danger">
+    <p id={`${id}-error`} className="flex items-start gap-1.5 text-small text-danger">
       <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
       <span>{error}</span>
     </p>

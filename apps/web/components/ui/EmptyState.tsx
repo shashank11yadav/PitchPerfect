@@ -32,7 +32,7 @@ export function EmptyState({
         {icon ?? <Inbox className="size-6" />}
       </div>
       <Heading className="text-h4">{title}</Heading>
-      {description && <p className="max-w-prose text-muted">{description}</p>}
+      {description && <p className="max-w-prose text-ink">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );

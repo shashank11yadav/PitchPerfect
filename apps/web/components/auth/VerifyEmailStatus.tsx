@@ -5,44 +5,15 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { roleHome } from "@/lib/redirects";
 import { useSession } from "@/lib/session";
 import { formMessage } from "@/lib/use-form";
 import { AUTH_LINK } from "./AuthCard";
-import { DEAD_LINK_TITLE, DoneMessage, useForgetLinkToken } from "./form-parts";
+import { ResendVerification } from "./ResendVerification";
+import { DEAD_LINK_TITLE, DoneMessage, isDeadLinkError, useForgetLinkToken } from "./form-parts";
 
 type Phase = "checking" | "verified" | "invalid" | "failed";
-
-/** For a signed-in user whose address isn't confirmed yet: one button and its outcome. */
-function ResendLink({ email }: { email: string }) {
-  const [sending, setSending] = useState(false);
-  const [news, setNews] = useState("");
-
-  async function resend() {
-    setSending(true);
-    setNews("");
-    try {
-      await apiFetch("/auth/resend-verification", { method: "POST" });
-      setNews(`We sent a new link to ${email}.`);
-    } catch (error) {
-      setNews(formMessage(error));
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col items-start gap-4">
-      <Button size="lg" loading={sending} onClick={() => void resend()}>
-        Send a new link
-      </Button>
-      <p role="status" className="text-body text-ink empty:hidden">
-        {news}
-      </p>
-    </div>
-  );
-}
 
 interface VerifyEmailStatusProps {
   /** From the emailed link's query string. */
@@ -76,7 +47,7 @@ export function VerifyEmailStatus({ token }: VerifyEmailStatusProps) {
         if (status.current !== "signed_out") void refresh();
       },
       (error: unknown) => {
-        if (error instanceof ApiError && error.code === "invalid_token") {
+        if (isDeadLinkError(error)) {
           setPhase("invalid");
         } else {
           setProblem(formMessage(error));
@@ -148,7 +119,7 @@ export function VerifyEmailStatus({ token }: VerifyEmailStatusProps) {
       </>
     );
   } else if (signedIn) {
-    next = <ResendLink email={signedIn.email} />;
+    next = <ResendVerification email={signedIn.email} />;
   } else if (session.status === "signed_out") {
     next = (
       <p className="text-ink">

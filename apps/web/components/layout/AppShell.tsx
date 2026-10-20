@@ -37,8 +37,8 @@ const TAB_COLUMNS = ["", "grid-cols-1", "grid-cols-2", "grid-cols-3", "grid-cols
 interface AppShellProps {
   /** The role's links, e.g. `STUDENT_NAV`; those marked `tab` form the mobile tab bar. */
   links: readonly NavLink[];
-  /** The page title, rendered as the page's only `h1`. */
-  title: string;
+  /** The page title, rendered as the page's only `h1`. Defaults to the current link's label. */
+  title?: string | undefined;
   /** The account menu in the top bar. */
   account?: ReactNode;
   children: ReactNode;
@@ -48,10 +48,13 @@ interface AppShellProps {
 export function AppShell({ links, title, account, children }: AppShellProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  // The dashboard link ("/app") is a prefix of every other link, so the longest match wins.
-  const current = links
-    .filter(({ href }) => pathname === href || pathname.startsWith(`${href}/`))
-    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+  // The first link is the role's home ("/app"), a prefix of every page, so it only counts as
+  // current on its own path; for the others the longest match wins.
+  const home = links[0]?.href;
+  const currentLink = links
+    .filter(({ href }) => pathname === href || (href !== home && pathname.startsWith(`${href}/`)))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  const current = currentLink?.href;
   const tabs = links.filter((link) => link.tab === true).slice(0, MAX_TABS);
 
   const item = (link: NavLink, variant: "side" | "tab") => {
@@ -108,7 +111,7 @@ export function AppShell({ links, title, account, children }: AppShellProps) {
             )}
             <span className="sr-only">Menu</span>
           </button>
-          <h1 className="min-w-0 flex-1 truncate text-h4">{title}</h1>
+          <h1 className="min-w-0 flex-1 truncate text-h4">{title ?? currentLink?.label}</h1>
           {account}
         </header>
         <nav

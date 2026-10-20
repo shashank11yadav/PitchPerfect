@@ -28,7 +28,9 @@ describe("Field", () => {
     const input = screen.getByLabelText("Password");
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAccessibleDescription("12 to 128 characters. Password is too short.");
-    expect(screen.getByRole("alert")).toHaveTextContent("Password is too short.");
+    // Field errors are read through the description; only the form-level message is an alert,
+    // so a form with several errors doesn't fire a burst of announcements.
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("marks required fields on the control and in the label", () => {

@@ -26,14 +26,13 @@ export const PUBLIC_NAV: readonly NavLink[] = [
   { href: "/jobs", label: "Jobs" },
 ];
 
+/** Settings lives in the account menu (`RoleShell`), not here. */
 export const STUDENT_NAV: readonly NavLink[] = [
   { href: "/app", label: "Dashboard", icon: "dashboard", tab: true },
   { href: "/app/learn", label: "Learn", icon: "learn", tab: true },
   { href: "/app/practice", label: "Practice", icon: "practice", tab: true },
-  { href: "/app/history", label: "History", icon: "history" },
   { href: "/app/jobs", label: "Jobs", icon: "jobs", tab: true },
   { href: "/app/applications", label: "Applications", icon: "applications", tab: true },
-  { href: "/app/settings", label: "Settings", icon: "settings" },
 ];
 
 export const EMPLOYER_NAV: readonly NavLink[] = [

@@ -3,10 +3,16 @@
 import { LIMITS, ResetPasswordSchema } from "@pitchperfect/shared";
 import Link from "next/link";
 import { useState } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { useZodForm } from "@/lib/use-form";
 import { AUTH_LINK } from "./AuthCard";
-import { DEAD_LINK_TITLE, DoneMessage, SubmitRow, useForgetLinkToken } from "./form-parts";
+import {
+  DEAD_LINK_TITLE,
+  DoneMessage,
+  isDeadLinkError,
+  SubmitRow,
+  useForgetLinkToken,
+} from "./form-parts";
 import { PasswordField } from "./PasswordField";
 
 /** The client checks the password only; the token goes along as it came. */
@@ -28,7 +34,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       try {
         await apiFetch("/auth/reset-password", { method: "POST", body: { token, password } });
       } catch (error) {
-        if (error instanceof ApiError && error.code === "invalid_token") {
+        if (isDeadLinkError(error)) {
           setPhase("invalid");
           return;
         }

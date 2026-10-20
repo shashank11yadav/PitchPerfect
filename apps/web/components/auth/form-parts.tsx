@@ -5,6 +5,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
+import { ApiError } from "@/lib/api";
 import type { FieldErrors, RegisteredField } from "@/lib/use-form";
 import { PasswordField } from "./PasswordField";
 
@@ -15,7 +16,7 @@ interface FormBinding {
 }
 
 /** One message for the whole form, read out when it appears. */
-function FormAlert({ message }: { message: string | null }) {
+export function FormAlert({ message }: { message: string | null }) {
   if (!message) return null;
   return (
     <p
@@ -117,6 +118,18 @@ export function DoneMessage({ title, children }: DoneMessageProps) {
       </h2>
       {children}
     </div>
+  );
+}
+
+/**
+ * An emailed link the api won't take: expired or used (`invalid_token`), or a token so mangled
+ * (cut short or padded by a mail client) that it fails validation before it's even looked up.
+ */
+export function isDeadLinkError(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  return (
+    error.code === "invalid_token" ||
+    (error.code === "validation_failed" && "token" in error.fields)
   );
 }
 

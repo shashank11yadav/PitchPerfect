@@ -1,5 +1,6 @@
 import type { PublicJobSummary } from "@pitchperfect/shared";
 import Link from "next/link";
+import { cn } from "@/lib/cn";
 import { EMPLOYMENT_TYPE_LABELS, WORKPLACE_LABELS } from "@/lib/job-labels";
 import { CompanyBadge } from "./CompanyBadge";
 import { PayText } from "./PayText";
@@ -17,6 +18,8 @@ interface JobCardProps {
   /** Where the title links; the public job page by default. */
   href?: string;
   headingLevel?: "h2" | "h3";
+  /** Smaller type and spacing for lists inside the app. */
+  compact?: boolean;
 }
 
 /**
@@ -27,11 +30,17 @@ export function JobCard({
   job,
   href = `/jobs/${job.slug}`,
   headingLevel: Heading = "h3",
+  compact = false,
 }: JobCardProps) {
   return (
-    <article className="group relative grid gap-y-5 py-8 md:py-10 lg:grid-cols-12 lg:gap-x-6">
+    <article
+      className={cn(
+        "group relative grid lg:grid-cols-12 lg:gap-x-6",
+        compact ? "gap-y-3 py-6" : "gap-y-5 py-8 md:py-10",
+      )}
+    >
       <div className="lg:col-span-7">
-        <Heading className="text-h3 text-navy md:text-h2">
+        <Heading className={cn("text-navy", compact ? "text-h4 md:text-h3" : "text-h3 md:text-h2")}>
           <Link
             href={href}
             className="rounded-control decoration-[0.06em] underline-offset-[0.18em] group-hover:underline after:absolute after:inset-0"
@@ -52,7 +61,12 @@ export function JobCard({
       </div>
       <dl className="flex flex-wrap gap-x-5 gap-y-1 lg:col-span-4 lg:col-start-9 lg:flex-col lg:flex-nowrap lg:pt-1.5">
         <dt className="sr-only">Pay</dt>
-        <dd className="basis-full font-display text-lede font-semibold text-navy lg:basis-auto">
+        <dd
+          className={cn(
+            "basis-full font-display font-semibold text-navy lg:basis-auto",
+            compact ? "text-body" : "text-lede",
+          )}
+        >
           <PayText pay={job.pay} />
         </dd>
         <dt className="sr-only">Location</dt>

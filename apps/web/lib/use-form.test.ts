@@ -204,6 +204,33 @@ describe("useZodForm", () => {
     expect(form.result.current.formError).toBe("Something went wrong");
   });
 
+  it("shows field errors the form has no field for as the form-level message", async () => {
+    const onSubmit = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(
+        new ApiError(400, "validation_failed", "Some fields need attention", {
+          token: "Invalid token",
+        }),
+      )
+      .mockRejectedValueOnce(
+        new ApiError(400, "validation_failed", "Some fields need attention", {
+          email: "Use your work email",
+          file: "Send one PDF in the file field",
+        }),
+      );
+    const { result } = nameForm(onSubmit);
+
+    await act(() => result.current.handleSubmit(fakeEvent()));
+    expect(result.current.errors).toEqual({});
+    expect(result.current.formError).toBe("Invalid token.");
+
+    await act(() => result.current.handleSubmit(fakeEvent()));
+    expect(result.current.errors).toEqual({ email: "Use your work email" });
+    expect(result.current.formError).toBe(
+      "Check the highlighted fields. Send one PDF in the file field.",
+    );
+  });
+
   it("ignores a second submit while the first is running", () => {
     const onSubmit = vi.fn(() => new Promise<void>(() => undefined));
     const { result } = nameForm(onSubmit);

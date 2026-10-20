@@ -49,18 +49,25 @@ function filterParams({ q, workplace, employmentType }: JobQuery): URLSearchPara
 
 export const hasFilters = (query: JobQuery) => filterParams(query).size > 0;
 
-/** The board's URL for these filters on `page`; page 1 is left implicit. */
-export function jobsHref(query: JobQuery, page = query.page): string {
+/**
+ * The board's URL for these filters on `page`; page 1 is left implicit. `base` is the public
+ * board by default, or the student app's copy of it.
+ */
+export function jobsHref(query: JobQuery, page = query.page, base = "/jobs"): string {
   const params = filterParams(query);
   if (page > 1) params.set("page", String(page));
   const search = params.toString();
-  return search ? `/jobs?${search}` : "/jobs";
+  return search ? `${base}?${search}` : base;
 }
 
-/** `GET /api/jobs` for these filters. */
-export function jobsApiPath(query: JobQuery, pageSize: number): string {
+/** `GET /api/jobs` for these filters, as the path under `/api`. */
+export function jobsListPath(query: JobQuery, pageSize: number): string {
   const params = filterParams(query);
   params.set("page", String(query.page));
   params.set("pageSize", String(pageSize));
-  return `/api/jobs?${params.toString()}`;
+  return `/jobs?${params.toString()}`;
 }
+
+/** The same, as the full path the server calls. */
+export const jobsApiPath = (query: JobQuery, pageSize: number) =>
+  `/api${jobsListPath(query, pageSize)}`;

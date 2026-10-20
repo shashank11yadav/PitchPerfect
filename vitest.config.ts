@@ -65,7 +65,7 @@ export default defineConfig({
           root: "apps/web",
           environment: "jsdom",
           setupFiles: [webSetup],
-          include: ["proxy.test.ts", "{app,components,lib}/**/*.test.{ts,tsx}"],
+          include: ["proxy.test.ts", "{app,components,content,lib}/**/*.test.{ts,tsx}"],
         },
       },
     ],

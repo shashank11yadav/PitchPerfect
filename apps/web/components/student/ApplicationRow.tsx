@@ -1,0 +1,129 @@
+"use client";
+
+import type { ApplicationClosedReason, StudentApplicationView } from "@pitchperfect/shared";
+import { ArrowUpRight, CalendarClock } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { apiFetch } from "@/lib/api";
+import { formatInterviewTime, formatLocalDate } from "@/lib/local-time";
+import { OneApplication } from "@/lib/student-api";
+import { StatusPill } from "./StatusPill";
+
+/** Students can withdraw while an application is still open. */
+const WITHDRAWABLE = new Set(["applied", "shortlisted", "interview"]);
+
+const CLOSED_BECAUSE: Record<ApplicationClosedReason, string> = {
+  employer_left: "The employer left PitchPerfect, so this application was closed.",
+  job_archived: "This job was archived, so the application was closed.",
+};
+
+/** Only ever link an https meeting room; the api enforces it too. */
+const isHttps = (value: string) => URL.canParse(value) && new URL(value).protocol === "https:";
+
+interface ApplicationRowProps {
+  application: StudentApplicationView;
+  onChange: (application: StudentApplicationView) => void;
+}
+
+/** One application: the job as it was when the student applied, its status, and what's next. */
+export function ApplicationRow({ application, onChange }: ApplicationRowProps) {
+  const { job, status, interview, closedReason } = application;
+  const [confirming, setConfirming] = useState(false);
+
+  async function withdraw() {
+    const updated = await apiFetch(`/applications/${application.id}/withdraw`, {
+      method: "POST",
+      schema: OneApplication,
+    });
+    onChange(updated);
+  }
+
+  return (
+    <li className="grid gap-4 py-6 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:gap-x-8">
+      <div className="min-w-0">
+        <h2 className="text-h4">
+          {job.slug ? (
+            <Link href={`/app/jobs/${job.slug}`} className="pp-link rounded-control">
+              {job.title}
+            </Link>
+          ) : (
+            job.title
+          )}
+        </h2>
+        <p className="mt-1 text-ink">
+          <span>{job.companyName}</span>
+          <span className="text-muted">
+            {" · "}Applied{" "}
+            <time dateTime={application.appliedAt}>{formatLocalDate(application.appliedAt)}</time>
+          </span>
+        </p>
+        {!job.slug && status !== "closed" && (
+          <p className="mt-2 text-small text-muted">This job is no longer listed.</p>
+        )}
+        {status === "closed" && closedReason && (
+          <p className="mt-3 text-ink">{CLOSED_BECAUSE[closedReason]}</p>
+        )}
+        {status === "interview" && interview && (
+          <div className="mt-4 flex flex-col gap-2 rounded-control bg-primary-soft px-4 py-3 text-ink">
+            <p className="flex items-start gap-2 font-semibold">
+              <CalendarClock aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+              <span>
+                <span className="sr-only">Interview: </span>
+                <time dateTime={interview.startsAt}>{formatInterviewTime(interview.startsAt)}</time>
+              </span>
+            </p>
+            {isHttps(interview.meetingUrl) && (
+              <a
+                href={interview.meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="pp-link inline-flex items-center gap-1 self-start rounded-control pl-7 font-semibold text-primary"
+              >
+                Join the interview
+                <ArrowUpRight aria-hidden="true" className="size-4" />
+                <span className="sr-only">(opens in a new tab)</span>
+              </a>
+            )}
+          </div>
+        )}
+        {application.hasSharedScorecard && (
+          <p className="mt-3 text-small text-muted">
+            You shared a practice scorecard with this application.
+          </p>
+        )}
+      </div>
+      <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-start">
+        <StatusPill status={status} />
+        {WITHDRAWABLE.has(status) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setConfirming(true);
+            }}
+          >
+            Withdraw<span className="sr-only"> your application for {job.title}</span>
+          </Button>
+        )}
+      </div>
+      <ConfirmDialog
+        open={confirming}
+        onClose={() => {
+          setConfirming(false);
+        }}
+        title="Withdraw this application?"
+        description={
+          <>
+            {job.companyName} will see that you withdrew from {job.title}. You can&apos;t apply to
+            this job again afterwards.
+          </>
+        }
+        confirmLabel="Withdraw application"
+        cancelLabel="Keep it"
+        onConfirm={withdraw}
+      />
+    </li>
+  );
+}

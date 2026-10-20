@@ -1,18 +1,9 @@
 import mongoose from "mongoose";
+import type { PracticeQuota } from "@pitchperfect/shared";
 import type { Config } from "../../config.js";
 import { PracticeAttempt, UsageDay } from "../../db/models/index.js";
 import { BudgetExhaustedError, QuotaExceededError } from "../../errors.js";
 import { isDuplicateKey } from "../auth/service.js";
-
-export interface QuotaView {
-  dailyUsed: number;
-  dailyLimit: number;
-  monthlyUsed: number;
-  monthlyLimit: number;
-  available: boolean;
-  /** The next UTC midnight, when the daily count starts over. */
-  resetsAt: string;
-}
 
 type QuotaConfig = Pick<
   Config,
@@ -67,7 +58,7 @@ export async function getQuota(
   config: QuotaConfig,
   studentId: string,
   now: Date,
-): Promise<QuotaView> {
+): Promise<PracticeQuota> {
   const [dailyUsed, monthlyUsed] = await Promise.all([
     countStarted(studentId, utcDay(now), utcDay(now, 1), now),
     countStarted(studentId, utcMonth(now), utcMonth(now, 1), now),

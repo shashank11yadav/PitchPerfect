@@ -12,13 +12,13 @@ import { hasFilters, type JobQuery } from "@/lib/job-query";
  * The board's search, as a plain GET form: it works without JavaScript, and the URL it produces
  * is what the server renders. A new search starts again from page 1.
  */
-export function JobFilters({ query }: { query: JobQuery }) {
+export function JobFilters({ query, action = "/jobs" }: { query: JobQuery; action?: string }) {
   return (
     <form
       role="search"
       aria-label="Search jobs"
       method="get"
-      action="/jobs"
+      action={action}
       className="grid grid-cols-2 gap-x-4 gap-y-5 sm:gap-x-6 lg:grid-cols-12 lg:items-end"
     >
       <Field label="Search" className="col-span-2 lg:col-span-5">
@@ -57,7 +57,7 @@ export function JobFilters({ query }: { query: JobQuery }) {
           Search
         </button>
         {hasFilters(query) && (
-          <Link href="/jobs" className="pp-link rounded-control py-2 font-semibold text-primary">
+          <Link href={action} className="pp-link rounded-control py-2 font-semibold text-primary">
             Clear filters
           </Link>
         )}
