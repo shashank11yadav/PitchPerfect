@@ -40,7 +40,7 @@ These rules apply to every workspace. If a rule here conflicts with a habit, the
 
 ## Security habits (details in security.md)
 
-- Never build HTML from user input except through the shared sanitizer. Never use `dangerouslySetInnerHTML` except in `SafeHtml`, which takes already-sanitized HTML and sanitizes it again.
+- Never build HTML from user input except through the shared sanitizer. Never use `dangerouslySetInnerHTML` except in `SafeHtml`, which takes already-sanitized HTML and sanitizes it again, and `JsonLd`, which writes `JSON.stringify` output with `<`, `>`, `&`, U+2028 and U+2029 escaped as `\uXXXX` (React would entity-encode a text child and break the JSON). These are the only two exceptions.
 - Never log request bodies, transcripts, passwords, tokens, or résumé contents. Log IDs, routes, status codes, timings.
 - Never read secrets outside `config.ts`.
 - Never put secrets, personal data, or real people's information in fixtures, seeds, screenshots, or docs. Seed data is fictional.

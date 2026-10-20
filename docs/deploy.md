@@ -23,7 +23,7 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
    - Set every variable from `apps/api/.env.example`, with `NODE_ENV=production`, `APP_URL=https://<web domain>` and `COACH_URL=<private coach URL>`.
    - Run `npm run admin -w apps/api -- migrate` (builds indexes) once.
    - Run `npm run seed -w apps/api -- --demo` only for a demo environment, with `SEED_DEMO_PASSWORD` (12 or more characters) set in that shell. The password is never printed, and re-running the seed never changes an existing account's password.
-5. **Deploy web:** set `API_ORIGIN`, `SITE_URL`, and `PROXY_SHARED_SECRET` if used. `API_ORIGIN` must be set when the app is **built**, because Next.js compiles the `/api` rewrite into the build. See [The web proxy](#the-web-proxy) below.
+5. **Deploy web:** set `API_ORIGIN`, `SITE_URL`, and `PROXY_SHARED_SECRET` if used. `API_ORIGIN` must be set when the app is **built**, because Next.js compiles the `/api` rewrite into the build. Build shared first, since web imports its compiled output: `npm run build -w packages/shared && npm run build -w apps/web` (the root `npm run build` does both in that order). See [The web proxy](#the-web-proxy) below.
 6. **Verify:**
    - Run `npx playwright test --config e2e/playwright.smoke.config.ts` with `BASE_URL` set to the deployed URL. It runs a read-only smoke test of the public pages, `/api/health`, and the headers.
    - Run Lighthouse on `/`, `/jobs` and one job page.
@@ -35,7 +35,10 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
 The browser only talks to web. Next.js rewrites `/api/*` to `${API_ORIGIN}/api/*`, and `apps/web/proxy.ts` sets these headers on each proxied request:
 
 - `x-pp-proxy`: the shared secret, when `PROXY_SHARED_SECRET` is set. Any value the client sent is dropped first.
-- `x-forwarded-proto` and `x-forwarded-host`: the public protocol and host. The api sets `Secure` cookies only when it trusts these, so it needs `TRUST_PROXY` of 1 or more in production.
+- `x-forwarded-proto`: the protocol of the request web received. The api marks its cookies `Secure` only when it trusts this header.
+- `x-forwarded-host`: the host web received. Behind a platform this is the public domain; under a self-hosted `next start` it is the server's own host. The api doesn't rely on it: email links come from `APP_URL`.
+
+Set the api's `TRUST_PROXY` to the number of proxy hops between the internet and the api, counting web. For example, Vercel → Render load balancer → api is 2. Too low, and the api sees a proxy's address as the client, so all users share one rate-limit bucket (and with 0, `Secure` cookies never work). Too high, and the api trusts addresses the client wrote into `X-Forwarded-For`, so a client can spoof its IP.
 
 `X-Forwarded-For` is passed through unchanged, and the api's per-IP rate limits read it. Run web behind a platform or reverse proxy that sets or appends it (Vercel overwrites it with the real client address; nginx can append with `proxy_add_x_forwarded_for`). If `next start` faces the internet directly, a client can choose the address the api sees.
 

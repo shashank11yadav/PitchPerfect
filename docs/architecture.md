@@ -124,15 +124,17 @@ Browser speech recognition produces the text; the browser's `speechSynthesis` sp
 
 ## Routes (web)
 
-| Path                                                                                                                                                                                              | Rendering                         | Access     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ---------- |
-| `/`, `/students`, `/employers`, `/how-it-works`, `/about`, `/privacy`, `/terms`                                                                                                                   | Static                            | Public     |
-| `/jobs`, `/jobs/[slug]`                                                                                                                                                                           | Server-rendered (revalidate 60 s) | Public     |
-| `/signin`, `/signup`, `/signup/student`, `/signup/employer`, `/verify-email`, `/forgot-password`, `/reset-password`                                                                               | Static shell + client forms       | Signed-out |
-| `/app` (dashboard), `/app/learn`, `/app/learn/[skill]`, `/app/practice`, `/app/practice/[skill]`, `/app/practice/attempt/[id]`, `/app/history`, `/app/jobs`, `/app/applications`, `/app/settings` | Client app, `noindex`             | Student    |
-| `/employer` (dashboard), `/employer/company`, `/employer/jobs`, `/employer/jobs/new`, `/employer/jobs/[id]`, `/employer/jobs/[id]/applicants`, `/employer/settings`                               | Client app, `noindex`             | Employer   |
+| Path                                                                                                                                                                                              | Rendering                            | Access     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------- |
+| `/`, `/students`, `/employers`, `/how-it-works`, `/about`, `/privacy`, `/terms`                                                                                                                   | Server-rendered per request          | Public     |
+| `/jobs`, `/jobs/[slug]`                                                                                                                                                                           | Server-rendered per request          | Public     |
+| `/signin`, `/signup`, `/signup/student`, `/signup/employer`, `/verify-email`, `/forgot-password`, `/reset-password`                                                                               | Server-rendered shell + client forms | Signed-out |
+| `/app` (dashboard), `/app/learn`, `/app/learn/[skill]`, `/app/practice`, `/app/practice/[skill]`, `/app/practice/attempt/[id]`, `/app/history`, `/app/jobs`, `/app/applications`, `/app/settings` | Client app, `noindex`                | Student    |
+| `/employer` (dashboard), `/employer/company`, `/employer/jobs`, `/employer/jobs/new`, `/employer/jobs/[id]`, `/employer/jobs/[id]/applicants`, `/employer/settings`                               | Client app, `noindex`                | Employer   |
 
-Route protection: Next.js middleware checks for the session cookie and redirects to `/signin?next=…`; the page then calls `GET /api/auth/me` and redirects on 401/403 (wrong role → own dashboard). The API is the real gate; the client guard is only UX.
+Every page renders per request: the CSP nonce is new on each request, and Next.js adds it to scripts only while rendering a request. Never add `force-static`, `revalidate` or other ISR/static options to a page; the browser would block its scripts.
+
+Route protection: `apps/web/proxy.ts` (the Next.js 16 name for middleware) checks for the session cookie and redirects to `/signin?next=…`; the page then calls `GET /api/auth/me` and redirects on 401/403 (wrong role → own dashboard). The API is the real gate; the client guard is only UX.
 
 ## Configuration
 
