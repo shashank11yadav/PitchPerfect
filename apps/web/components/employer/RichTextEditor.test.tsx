@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { sanitizeJobHtml } from "@/lib/html-allowlist";
-import { jobDescriptionExtensions, linkHref } from "@/lib/rich-text";
+import { jobDescriptionExtensions, linkHref, linkPaste } from "@/lib/rich-text";
 import { RichTextEditor } from "./RichTextEditor";
 
 const editors: Editor[] = [];
@@ -107,6 +107,70 @@ describe("job description editor output", () => {
   });
 });
 
+/** Pastes `text` as plain text over "Apply here", selected, the way a browser would. */
+function pasteOverSelection(editor: Editor, text: string) {
+  editor.commands.setTextSelection({ from: 1, to: 11 });
+  const event = new Event("paste", { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "clipboardData", {
+    value: {
+      getData: (type: string) => (type === "text/plain" ? text : ""),
+      types: ["text/plain"],
+      files: [],
+    },
+  });
+  editor.view.dom.dispatchEvent(event);
+}
+
+describe("pasting a link over a selection", () => {
+  function pasteEditor() {
+    const refused = vi.fn();
+    const editor = new Editor({
+      extensions: jobDescriptionExtensions(),
+      content: "<p>Apply here</p>",
+      editorProps: { handlePaste: linkPaste(refused) },
+    });
+    editors.push(editor);
+    return { editor, refused };
+  }
+
+  it("never links a pasted address on its own, even without the editor's paste rule", () => {
+    const editor = new Editor({
+      extensions: jobDescriptionExtensions(),
+      content: "<p>Apply here</p>",
+    });
+    editors.push(editor);
+    pasteOverSelection(editor, "http://pitchwell-demo.example/apply");
+    expect(editor.getHTML()).not.toContain("<a");
+  });
+
+  it.each([
+    ["http://pitchwell-demo.example/apply", "Use a link that starts with https://."],
+    ["https://user:pw@pitchwell-demo.example", "Links with a username or password can’t be used."],
+    ["javascript:alert(1)", "Use a link that starts with https:// or an email address."],
+  ])("refuses %j with the link box's reason and leaves the words alone", (text, reason) => {
+    const { editor, refused } = pasteEditor();
+    pasteOverSelection(editor, text);
+    expect(refused).toHaveBeenCalledWith(reason);
+    expect(editor.getHTML()).toBe("<p>Apply here</p>");
+  });
+
+  it("links the selection to a pasted https address", () => {
+    const { editor, refused } = pasteEditor();
+    pasteOverSelection(editor, "https://pitchwell-demo.example/apply");
+    expect(refused).not.toHaveBeenCalled();
+    expect(editor.getHTML()).toBe(
+      '<p><a href="https://pitchwell-demo.example/apply" rel="noopener noreferrer nofollow" target="_blank">Apply here</a></p>',
+    );
+  });
+
+  it("pastes ordinary words as words", () => {
+    const { editor, refused } = pasteEditor();
+    pasteOverSelection(editor, "Send us a note");
+    expect(refused).not.toHaveBeenCalled();
+    expect(editor.getHTML()).toBe("<p>Send us a note</p>");
+  });
+});
+
 describe("linkHref", () => {
   it.each([
     ["https://pitchwell-demo.example/careers", "https://pitchwell-demo.example/careers"],
@@ -129,6 +193,7 @@ describe("linkHref", () => {
     ],
     ["not a link", "That doesn’t look like a web address or an email address."],
     ["mailto:", "That doesn’t look like a web address or an email address."],
+    ["mailto:%E0%A4%A", "That doesn’t look like a web address or an email address."],
   ])("refuses %j", (input, error) => {
     expect(linkHref(input)).toEqual({ error });
   });

@@ -28,7 +28,8 @@ interface ModalProps {
 
 /**
  * A modal dialog: focus moves in on open, Tab and Shift+Tab stay inside, Escape and the close
- * button call `onClose`, and focus returns to whatever had it before.
+ * button call `onClose`, and focus returns to whatever had it before, unless that is gone or the
+ * page has already moved focus somewhere on purpose.
  */
 export function Modal({ open, onClose, title, description, children, className }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -82,7 +83,11 @@ export function Modal({ open, onClose, title, description, children, className }
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = overflow;
-      if (previous?.isConnected) previous.focus();
+      // Back to whatever opened it, if that still exists and nothing else has taken focus since
+      // (a page that moved focus to news about the dialog's outcome keeps it there).
+      const active = document.activeElement;
+      const focusIsFree = !active || active === document.body || dialog.contains(active);
+      if (focusIsFree && previous?.isConnected) previous.focus();
     };
   }, [open]);
 

@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/Badge";
 
 type Tone = "neutral" | "info" | "success" | "danger";
 
-/** What each status is called, the same for the student and the employer. */
+/** What each status is called. The student's words; `EMPLOYER_STATUS_LABELS` differs in one. */
 export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   applied: "Applied",
   shortlisted: "Shortlisted",
@@ -12,6 +12,12 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   rejected: "Not selected",
   withdrawn: "Withdrawn",
   closed: "Closed",
+};
+
+/** On the employer's side a rejection is their call, "Not a fit"; the student sees "Not selected". */
+export const EMPLOYER_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  ...STATUS_LABELS,
+  rejected: "Not a fit",
 };
 
 const TONES: Record<ApplicationStatus, Tone> = {
@@ -25,6 +31,14 @@ const TONES: Record<ApplicationStatus, Tone> = {
 };
 
 /** An application's status as a pill; the word carries the meaning, the colour only helps. */
-export function StatusPill({ status }: { status: ApplicationStatus }) {
-  return <Badge tone={TONES[status]}>{STATUS_LABELS[status]}</Badge>;
+export function StatusPill({
+  status,
+  viewer = "student",
+}: {
+  status: ApplicationStatus;
+  /** Whose words to use: see `EMPLOYER_STATUS_LABELS`. */
+  viewer?: "student" | "employer";
+}) {
+  const labels = viewer === "employer" ? EMPLOYER_STATUS_LABELS : STATUS_LABELS;
+  return <Badge tone={TONES[status]}>{labels[status]}</Badge>;
 }

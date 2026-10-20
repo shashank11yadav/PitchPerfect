@@ -71,11 +71,8 @@ export function formatMonthlyReset(now: Date = new Date()): string {
 const LOCAL_INPUT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 const pad = (value: number) => String(value).padStart(2, "0");
 
-/**
- * A `datetime-local` value ("2026-11-02T15:00") read as wall-clock time in the viewer's zone, as
- * a UTC ISO string for the api; null when it isn't a real date and time.
- */
-export function localInputToIso(value: string): string | null {
+/** The parts of a `datetime-local` value, and the Date they make in the viewer's zone. */
+function readLocalInput(value: string) {
   const match = LOCAL_INPUT.exec(value);
   if (!match) return null;
   const [year, month, day, hour, minute] = match.slice(1).map(Number) as [
@@ -88,7 +85,28 @@ export function localInputToIso(value: string): string | null {
   const date = new Date(year, month - 1, day, hour, minute);
   // Date rolls "February 30" over into March; a real date keeps its own day.
   if (date.getMonth() !== month - 1 || date.getDate() !== day || hour > 23) return null;
-  return date.toISOString();
+  return { date, hour, minute };
+}
+
+/**
+ * True for a real date whose wall-clock time doesn't exist in the viewer's zone, because the
+ * clocks jump over it (2:30 AM on the day daylight saving starts in New York).
+ */
+export function isSkippedLocalTime(value: string): boolean {
+  const read = readLocalInput(value);
+  return (
+    read !== null && (read.date.getHours() !== read.hour || read.date.getMinutes() !== read.minute)
+  );
+}
+
+/**
+ * A `datetime-local` value ("2026-11-02T15:00") read as wall-clock time in the viewer's zone, as
+ * a UTC ISO string for the api; null when it isn't a real date and time there.
+ */
+export function localInputToIso(value: string): string | null {
+  const read = readLocalInput(value);
+  if (!read || isSkippedLocalTime(value)) return null;
+  return read.date.toISOString();
 }
 
 /** The other way: a UTC time as the viewer's `datetime-local` value, to fill the input. */

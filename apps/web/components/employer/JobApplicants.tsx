@@ -13,7 +13,7 @@ const TEXT_LINK =
 
 /** The applicants page: which job this is, then its applicant pipeline. */
 export function JobApplicants({ id, initialId }: { id: string; initialId?: string | undefined }) {
-  const job = useApi(`/employer/jobs/${id}`, OneJob);
+  const job = useApi(`/employer/jobs/${encodeURIComponent(id)}`, OneJob);
 
   if (job.state === "loading") return <Loading label="Loading the job" lines={4} />;
   if (job.state === "error") return <JobLoadError error={job.error} onRetry={job.reload} />;
@@ -21,7 +21,7 @@ export function JobApplicants({ id, initialId }: { id: string; initialId?: strin
   const { title, status } = job.data;
   return (
     <div className="flex flex-col gap-6">
-      <Link href={`/employer/jobs/${id}`} className={TEXT_LINK}>
+      <Link href={`/employer/jobs/${encodeURIComponent(id)}`} className={TEXT_LINK}>
         <ArrowLeft aria-hidden="true" className="size-4" />
         Back to the job
       </Link>

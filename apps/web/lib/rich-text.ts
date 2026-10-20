@@ -1,4 +1,5 @@
 import { Link } from "@tiptap/extension-link";
+import type { EditorView } from "@tiptap/pm/view";
 import { StarterKit } from "@tiptap/starter-kit";
 
 /**
@@ -19,6 +20,15 @@ const BARE_EMAIL = /^[^\s@:/]+@[^\s@:/]+\.[^\s@:/]+$/;
 const BARE_DOMAIN = /^[a-z0-9-]+(\.[a-z0-9-]+)+(?:[/?#]\S*)?$/i;
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
+/** Percent-decoded, or "" when the escapes are broken (`%E0%A4%A`). */
+function decoded(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return "";
+  }
+}
+
 /**
  * What an employer typed into the link box, as a link the allowlist keeps (`{ href }`), or the
  * reason it can't be one (`{ error }`). A bare email becomes `mailto:`, a bare domain `https://`.
@@ -33,9 +43,7 @@ export function linkHref(input: string): { href: string } | { error: string } {
   if (!URL.canParse(value)) return { error: NOT_A_LINK };
   const url = new URL(value);
   if (url.protocol === "mailto:") {
-    return BARE_EMAIL.test(decodeURIComponent(url.pathname))
-      ? { href: value }
-      : { error: NOT_A_LINK };
+    return BARE_EMAIL.test(decoded(url.pathname)) ? { href: value } : { error: NOT_A_LINK };
   }
   if (url.protocol === "http:") return { error: ONLY_HTTPS };
   if (url.protocol !== "https:") return { error: HTTPS_OR_EMAIL };
@@ -45,6 +53,32 @@ export function linkHref(input: string): { href: string } | { error: string } {
 
 /** Pasted and loaded links are held to the same rule as typed ones. */
 const isAllowedHref = (href: string) => "href" in linkHref(href) && SCHEME.test(href.trim());
+
+/** One word that is plainly meant as an address: it has a scheme, or is a bare email or domain. */
+const looksLikeLink = (text: string) =>
+  /^\S+$/.test(text) && (SCHEME.test(text) || BARE_EMAIL.test(text) || BARE_DOMAIN.test(text));
+
+/**
+ * Paste handling for the editor (`editorProps.handlePaste`): an address pasted over selected
+ * words links them when `linkHref` takes it, and otherwise leaves the words alone and reports
+ * the same reason the link box gives. Every other paste goes ahead as usual.
+ */
+export function linkPaste(onRefused: (reason: string) => void) {
+  return (view: EditorView, event: ClipboardEvent): boolean => {
+    const { from, to, empty } = view.state.selection;
+    const text = event.clipboardData?.getData("text/plain").trim() ?? "";
+    if (empty || !looksLikeLink(text)) return false;
+    const result = linkHref(text);
+    if ("error" in result) {
+      onRefused(result.error);
+      return true;
+    }
+    const link = view.state.schema.marks.link;
+    if (!link) return false;
+    view.dispatch(view.state.tr.addMark(from, to, link.create({ href: result.href })));
+    return true;
+  };
+}
 
 export function jobDescriptionExtensions() {
   return [
@@ -69,7 +103,9 @@ export function jobDescriptionExtensions() {
       protocols: ["https", "mailto"],
       defaultProtocol: "https",
       autolink: false,
-      linkOnPaste: true,
+      // Tiptap's own paste rule doesn't check the address; `linkPaste` does it instead.
+      linkOnPaste: false,
+      shouldAutoLink: isAllowedHref,
       openOnClick: false,
       isAllowedUri: isAllowedHref,
     }),

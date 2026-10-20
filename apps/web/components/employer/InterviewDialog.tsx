@@ -12,29 +12,47 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { apiFetch } from "@/lib/api";
 import { EMPLOYER_API_MESSAGES, OneApplicant } from "@/lib/employer-api";
-import { isoToLocalInput, localInputToIso, viewerTimeZone } from "@/lib/local-time";
+import {
+  isoToLocalInput,
+  isSkippedLocalTime,
+  localInputToIso,
+  viewerTimeZone,
+} from "@/lib/local-time";
 import { useZodForm, type FormSchema } from "@/lib/use-form";
 
 const PAST = "Pick a time that hasn’t passed yet";
+const SKIPPED = "That time doesn’t exist on this day";
+/** Stands in for a skipped wall-clock time, so the schema fails and the message can say why. */
+const SKIPPED_TIME = "skipped";
 
-/** The shared interview schema, with its "must be in the future" said the way this form says it. */
+/**
+ * The shared interview schema, with its errors said the way this form says them: a time that has
+ * passed, or one the clocks skip.
+ */
 const InterviewForm: FormSchema<Interview> = {
   safeParse(data) {
     const result = InterviewSchema.safeParse(data);
     if (result.success) return result;
-    const issues = result.error.issues.map((issue) =>
-      issue.code === "custom" && issue.path[0] === "startsAt" ? { ...issue, message: PAST } : issue,
-    );
+    const skipped =
+      typeof data === "object" &&
+      data !== null &&
+      "startsAt" in data &&
+      data.startsAt === SKIPPED_TIME;
+    const issues = result.error.issues.map((issue) => {
+      if (issue.path[0] !== "startsAt") return issue;
+      if (skipped) return { ...issue, message: SKIPPED };
+      return issue.code === "custom" ? { ...issue, message: PAST } : issue;
+    });
     return { success: false, error: { issues } };
   },
 };
 
 /** The datetime-local value, read in the viewer's zone, becomes UTC; anything else is "not given". */
-const toInterview = (input: Record<string, unknown>) => ({
-  ...input,
-  startsAt:
-    typeof input.startsAt === "string" ? (localInputToIso(input.startsAt) ?? undefined) : undefined,
-});
+function toInterview(input: Record<string, unknown>) {
+  const local = typeof input.startsAt === "string" ? input.startsAt : "";
+  const startsAt = localInputToIso(local) ?? (isSkippedLocalTime(local) ? SKIPPED_TIME : undefined);
+  return { ...input, startsAt };
+}
 
 interface InterviewDialogProps {
   open: boolean;
@@ -55,11 +73,14 @@ function InterviewFields({
   const { register, errors, formError, submitting, handleSubmit } = useZodForm(
     InterviewForm,
     async (body) => {
-      const updated = await apiFetch(`/employer/applications/${application.id}/interview`, {
-        method: "POST",
-        body,
-        schema: OneApplicant,
-      });
+      const updated = await apiFetch(
+        `/employer/applications/${encodeURIComponent(application.id)}/interview`,
+        {
+          method: "POST",
+          body,
+          schema: OneApplicant,
+        },
+      );
       onScheduled(updated);
       onClose();
     },

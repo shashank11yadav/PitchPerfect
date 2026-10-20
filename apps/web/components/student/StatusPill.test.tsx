@@ -24,4 +24,9 @@ describe("StatusPill", () => {
       unmount();
     }
   });
+
+  it("uses the employer's words on their side", () => {
+    render(<StatusPill status="rejected" viewer="employer" />);
+    expect(screen.getByText("Not a fit")).toBeInTheDocument();
+  });
 });

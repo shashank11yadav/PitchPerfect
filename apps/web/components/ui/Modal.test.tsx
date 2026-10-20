@@ -85,4 +85,49 @@ describe("Modal", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
   });
+
+  it("leaves focus alone when the trigger is gone or the page moved it on purpose", async () => {
+    function Outcome() {
+      const [open, setOpen] = useState(false);
+      const [done, setDone] = useState(false);
+      return (
+        <>
+          {!done && (
+            <Button
+              onClick={() => {
+                setOpen(true);
+              }}
+            >
+              Remove
+            </Button>
+          )}
+          <p tabIndex={-1} id="outcome">
+            {done ? "Removed." : ""}
+          </p>
+          <Modal
+            open={open}
+            onClose={() => {
+              setOpen(false);
+            }}
+            title="Remove it?"
+          >
+            <Button
+              onClick={() => {
+                setDone(true);
+                document.getElementById("outcome")?.focus();
+                setOpen(false);
+              }}
+            >
+              Yes, remove
+            </Button>
+          </Modal>
+        </>
+      );
+    }
+    render(<Outcome />);
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(screen.getByRole("button", { name: "Yes, remove" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.getElementById("outcome")).toHaveFocus();
+  });
 });

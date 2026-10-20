@@ -78,7 +78,7 @@ function RecentApplications({ data }: { data: EmployerDashboard }) {
               </span>
             </span>
             <span className="justify-self-start sm:justify-self-end">
-              <StatusPill status={application.status} />
+              <StatusPill status={application.status} viewer="employer" />
             </span>
           </Link>
         </li>

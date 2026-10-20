@@ -3,6 +3,7 @@ import {
   formatInterviewTime,
   formatResetTime,
   isoToLocalInput,
+  isSkippedLocalTime,
   localInputToIso,
 } from "./local-time";
 
@@ -63,6 +64,15 @@ describe("local time", () => {
     ]) {
       expect(localInputToIso(value)).toBeNull();
     }
+  });
+
+  it("knows a wall-clock time the clocks skip when they spring forward", () => {
+    expect(localInputToIso("2027-03-14T02:30")).toBeNull();
+    expect(isSkippedLocalTime("2027-03-14T02:30")).toBe(true);
+    expect(isSkippedLocalTime("2027-03-14T03:30")).toBe(false);
+    expect(isSkippedLocalTime("2027-03-14T01:59")).toBe(false);
+    expect(isSkippedLocalTime("soon")).toBe(false);
+    expect(localInputToIso("2027-03-14T03:30")).toBe("2027-03-14T07:30:00.000Z");
   });
 
   it("fills a datetime-local input from a UTC time, in the viewer's zone", () => {

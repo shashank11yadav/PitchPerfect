@@ -8,7 +8,7 @@ import {
   type EmployerApplicationView,
 } from "@pitchperfect/shared";
 import { Bookmark, Download } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { InterviewSlot } from "@/components/jobs/InterviewSlot";
 import { ScorecardDetails } from "@/components/practice/ScorecardDetails";
 import { StatusPill } from "@/components/student/StatusPill";
@@ -19,7 +19,7 @@ import { LoadError, Loading } from "@/components/ui/LoadState";
 import { ApiError, apiFetch } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { EMPLOYER_API_MESSAGES, OneApplicant, SharedScorecard } from "@/lib/employer-api";
-import { formatLocalDate } from "@/lib/local-time";
+import { formatInterviewTime, formatLocalDate } from "@/lib/local-time";
 import { useApi } from "@/lib/use-api";
 import { formMessage } from "@/lib/use-form";
 import { InterviewDialog } from "./InterviewDialog";
@@ -35,6 +35,13 @@ export function employerActions(status: ApplicationStatus): SettableStatus[] {
     (next): next is SettableStatus => next !== "interview",
   );
 }
+
+/** What each move did, as announced after it. */
+const MOVED: Record<SettableStatus, (firstName: string) => string> = {
+  shortlisted: (firstName) => `${firstName} is shortlisted.`,
+  hired: (firstName) => `${firstName} is marked as hired.`,
+  rejected: (firstName) => `${firstName} is marked as not a fit.`,
+};
 
 const ACTION_LABELS: Record<SettableStatus, string> = {
   shortlisted: "Shortlist",
@@ -68,7 +75,10 @@ function SharedScorecardPanel({
   applicationId: string;
   firstName: string;
 }) {
-  const shared = useApi(`/employer/applications/${applicationId}/scorecard`, SharedScorecard);
+  const shared = useApi(
+    `/employer/applications/${encodeURIComponent(applicationId)}/scorecard`,
+    SharedScorecard,
+  );
   if (shared.state === "loading") return <Loading label="Loading the scorecard" lines={4} />;
   if (shared.state === "error") {
     if (shared.error instanceof ApiError && shared.error.status === 404) {
@@ -110,23 +120,39 @@ interface ApplicantDrawerProps {
  */
 export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDrawerProps) {
   const { id, status, student, interview } = application;
+  const path = `/employer/applications/${encodeURIComponent(id)}`;
   const name = `${student.firstName} ${student.lastName}`;
   const [busy, setBusy] = useState<string | null>(null);
   const [problem, setProblem] = useState("");
   const [confirming, setConfirming] = useState<"hired" | "rejected" | null>(null);
   const [scheduling, setScheduling] = useState(false);
+  /** What the last move did, announced; and a counter that sends focus to the new status. */
+  const [news, setNews] = useState("");
+  const [moves, setMoves] = useState(0);
+  const statusLine = useRef<HTMLParagraphElement>(null);
+
+  // After a move the button (or dialog) that made it is often gone; the status is where it landed.
+  useEffect(() => {
+    if (moves > 0) statusLine.current?.focus();
+  }, [moves]);
+
+  const moved = (updated: EmployerApplicationView, message: string) => {
+    onChange(updated);
+    setNews(message);
+    setMoves((count) => count + 1);
+  };
 
   const withdrawn = status === "withdrawn";
   const canSchedule = canTransition(status, "interview", "employer");
   const actions = employerActions(status);
 
   async function setStatus(next: SettableStatus) {
-    const updated = await apiFetch(`/employer/applications/${id}`, {
+    const updated = await apiFetch(path, {
       method: "PATCH",
       body: { status: next },
       schema: OneApplicant,
     });
-    onChange(updated);
+    moved(updated, MOVED[next](student.firstName));
   }
 
   async function run(key: string, work: () => Promise<void>) {
@@ -144,7 +170,7 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
   const toggleSave = () =>
     run("save", async () => {
       const saved = !application.savedByEmployer;
-      await apiFetch(`/employer/applications/${id}/save`, { method: saved ? "PUT" : "DELETE" });
+      await apiFetch(`${path}/save`, { method: saved ? "PUT" : "DELETE" });
       onChange({ ...application, savedByEmployer: saved });
     });
 
@@ -185,9 +211,14 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
       </header>
 
       <div className="flex flex-col gap-4 border-t border-border pt-5">
-        <p className="flex items-center gap-2 text-ink">
+        <p
+          ref={statusLine}
+          tabIndex={-1}
+          data-testid="applicant-status"
+          className="flex items-center gap-2 self-start rounded-control text-ink outline-none"
+        >
           <span className="text-small text-muted">Status</span>
-          <StatusPill status={status} />
+          <StatusPill status={status} viewer="employer" />
         </p>
         {status === "interview" && interview && (
           <InterviewSlot interview={interview} linkLabel="Meeting link" />
@@ -228,6 +259,9 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
             ))}
           </div>
         )}
+        <p role="status" className="font-semibold text-ink empty:hidden">
+          {news}
+        </p>
         <p role="alert" className="text-danger empty:hidden">
           {problem}
         </p>
@@ -243,11 +277,7 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
               Résumé
             </h3>
             {application.hasResume ? (
-              <a
-                href={`/api/employer/applications/${id}/resume`}
-                download
-                className={cn(TEXT_LINK, "self-start")}
-              >
+              <a href={`/api${path}/resume`} download className={cn(TEXT_LINK, "self-start")}>
                 <Download aria-hidden="true" className="size-4" />
                 Download résumé (PDF)
               </a>
@@ -292,7 +322,15 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
         onClose={() => {
           setScheduling(false);
         }}
-        onScheduled={onChange}
+        onScheduled={(updated) => {
+          const when = updated.interview ? formatInterviewTime(updated.interview.startsAt) : "";
+          moved(
+            updated,
+            status === "interview"
+              ? `Interview moved to ${when}. ${student.firstName} gets an email with the new time.`
+              : `Interview booked for ${when}. ${student.firstName} gets an email with the details.`,
+          );
+        }}
       />
     </Card>
   );

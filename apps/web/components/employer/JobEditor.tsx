@@ -70,7 +70,7 @@ function StatusActions({ job, onChange }: StatusActionsProps) {
   const isDraft = job.status === "draft";
 
   async function changeStatus(status: JobStatus) {
-    return apiFetch(`/employer/jobs/${job.id}/status`, {
+    return apiFetch(`/employer/jobs/${encodeURIComponent(job.id)}/status`, {
       method: "POST",
       body: { status },
       schema: OneJob,
@@ -109,8 +109,8 @@ function StatusActions({ job, onChange }: StatusActionsProps) {
         )}
         {deletable && (
           <Button
-            variant="ghost"
-            className="text-danger hover:bg-danger/10"
+            variant="danger-ghost"
+
             onClick={() => {
               setPending("delete");
             }}
@@ -160,7 +160,7 @@ function StatusActions({ job, onChange }: StatusActionsProps) {
         cancelLabel="Keep it"
         apiMessages={EMPLOYER_API_MESSAGES}
         onConfirm={async () => {
-          await apiFetch(`/employer/jobs/${job.id}`, { method: "DELETE" });
+          await apiFetch(`/employer/jobs/${encodeURIComponent(job.id)}`, { method: "DELETE" });
           router.push("/employer/jobs");
         }}
       />
@@ -175,21 +175,24 @@ const CREATED_NEWS = {
 
 type CreatedAs = keyof typeof CREATED_NEWS;
 
+/** A job id that names nothing this company owns (or nothing at all). */
+export function JobNotFound() {
+  return (
+    <EmptyState
+      title="This job isn’t here"
+      description="It may have been deleted, or the link is wrong."
+      action={
+        <Link href="/employer/jobs" className={buttonClasses()}>
+          Back to your jobs
+        </Link>
+      }
+    />
+  );
+}
+
 /** A job that didn't load: gone (or another company's), or a retry. */
 export function JobLoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
-  if (error instanceof ApiError && error.status === 404) {
-    return (
-      <EmptyState
-        title="This job isn’t here"
-        description="It may have been deleted, or the link is wrong."
-        action={
-          <Link href="/employer/jobs" className={buttonClasses()}>
-            Back to your jobs
-          </Link>
-        }
-      />
-    );
-  }
+  if (error instanceof ApiError && error.status === 404) return <JobNotFound />;
   return <LoadError what="this job" onRetry={onRetry} />;
 }
 
@@ -201,7 +204,8 @@ interface JobEditorProps {
 
 /** One of the employer's jobs: edit it, preview it as students see it, and change its status. */
 export function JobEditor({ id, created }: JobEditorProps) {
-  const job = useApi(`/employer/jobs/${id}`, OneJob);
+  const jobPath = `/employer/jobs/${encodeURIComponent(id)}`;
+  const job = useApi(jobPath, OneJob);
   const company = useApi("/employer/company", OneCompany);
   const [news, setNews] = useState<ReactNode>(created ? CREATED_NEWS[created] : null);
 
@@ -230,14 +234,14 @@ export function JobEditor({ id, created }: JobEditorProps) {
 
   async function save(content: JobContent, intent: JobIntent) {
     setNews(null);
-    let updated = await apiFetch(`/employer/jobs/${id}`, {
+    let updated = await apiFetch(jobPath, {
       method: "PATCH",
       body: content,
       schema: OneJob,
     });
     job.update(() => updated);
     if (intent === "publish") {
-      updated = await apiFetch(`/employer/jobs/${id}/status`, {
+      updated = await apiFetch(`${jobPath}/status`, {
         method: "POST",
         body: { status: "active" },
         schema: OneJob,

@@ -7,7 +7,7 @@ import {
 } from "@pitchperfect/shared";
 import { ArrowLeft, Bookmark, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { STATUS_LABELS, StatusPill } from "@/components/student/StatusPill";
+import { EMPLOYER_STATUS_LABELS, StatusPill } from "@/components/student/StatusPill";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -23,7 +23,10 @@ type StatusFilter = ApplicationStatus | "all";
 
 const STATUS_FILTERS: readonly FilterOption<StatusFilter>[] = [
   { value: "all", label: "All" },
-  ...APPLICATION_STATUSES.map((status) => ({ value: status, label: STATUS_LABELS[status] })),
+  ...APPLICATION_STATUSES.map((status) => ({
+    value: status,
+    label: EMPLOYER_STATUS_LABELS[status],
+  })),
 ];
 
 const TEXT_BUTTON = "pp-link rounded-control font-semibold text-primary";
@@ -32,7 +35,7 @@ function applicationsPath(jobId: string, page: number, status: StatusFilter, sav
   const query = new URLSearchParams({ page: String(page) });
   if (status !== "all") query.set("status", status);
   if (saved) query.set("saved", "true");
-  return `/employer/jobs/${jobId}/applications?${query.toString()}`;
+  return `/employer/jobs/${encodeURIComponent(jobId)}/applications?${query.toString()}`;
 }
 
 const rowId = (id: string) => `applicant-${id}`;
@@ -54,17 +57,33 @@ export function ApplicantTable({ jobId, jobTitle, initialId }: ApplicantTablePro
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | undefined>(initialId);
   const returnTo = useRef<string | null>(null);
+  const filters = useRef<HTMLDivElement>(null);
   const list = useApi(applicationsPath(jobId, page, status, saved), ApplicantsPage);
+  const filtered = status !== "all" || saved;
 
   const selected =
     list.state === "ready" ? list.data.items.find((item) => item.id === selectedId) : undefined;
 
-  // Back from an applicant, focus lands on the row it was opened from.
+  // Back from an applicant, focus lands on the row it was opened from, or on the filters when a
+  // change took that row out of the filtered list.
+  const ready = list.state === "ready";
   useEffect(() => {
-    if (selected || !returnTo.current) return;
-    document.getElementById(rowId(returnTo.current))?.focus();
+    if (selected || !ready || !returnTo.current) return;
+    const row = document.getElementById(rowId(returnTo.current));
+    const fallback = filters.current?.querySelector<HTMLElement>('button[aria-pressed="true"]');
+    (row ?? fallback)?.focus();
     returnTo.current = null;
-  }, [selected]);
+  }, [selected, ready]);
+
+  /** Still in this list's filters after whatever was done to it? */
+  const matches = (item: EmployerApplicationView) =>
+    (status === "all" || item.status === status) && (!saved || item.savedByEmployer);
+
+  const back = (item: EmployerApplicationView) => {
+    returnTo.current = item.id;
+    setSelectedId(undefined);
+    if (!matches(item)) list.reload();
+  };
 
   // Into an applicant, focus moves to their name, so the change is announced.
   const openId = selected?.id;
@@ -85,8 +104,7 @@ export function ApplicantTable({ jobId, jobTitle, initialId }: ApplicantTablePro
         <button
           type="button"
           onClick={() => {
-            returnTo.current = selected.id;
-            setSelectedId(undefined);
+            back(selected);
           }}
           className={`${TEXT_BUTTON} inline-flex items-center gap-1.5 self-start py-1`}
         >
@@ -98,7 +116,6 @@ export function ApplicantTable({ jobId, jobTitle, initialId }: ApplicantTablePro
     );
   }
 
-  const filtered = status !== "all" || saved;
   const columns: Column<EmployerApplicationView>[] = [
     {
       key: "applicant",
@@ -142,7 +159,7 @@ export function ApplicantTable({ jobId, jobTitle, initialId }: ApplicantTablePro
       className: "w-px whitespace-nowrap",
       cell: (row) => (
         <span className="inline-flex items-center gap-2">
-          <StatusPill status={row.status} />
+          <StatusPill status={row.status} viewer="employer" />
           {row.savedByEmployer && (
             <>
               <Bookmark aria-hidden="true" className="size-4 fill-current text-primary" />
@@ -156,7 +173,10 @@ export function ApplicantTable({ jobId, jobTitle, initialId }: ApplicantTablePro
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div
+        ref={filters}
+        className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+      >
         <FilterTabs
           label="Status"
           options={STATUS_FILTERS}

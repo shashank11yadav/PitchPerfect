@@ -6,11 +6,13 @@ import {
   bodyOf,
   callsTo,
   csrf,
+  errorResponse,
   jsonResponse,
   lastBody,
   serveApi,
   type Route,
 } from "@/lib/test-api";
+import { JobApplicants } from "./JobApplicants";
 import { JobEditor } from "./JobEditor";
 import { JOB_ID, company, employerJob } from "./test-fixtures";
 
@@ -116,5 +118,35 @@ describe("JobEditor", () => {
     expect(
       within(preview).getByRole("heading", { name: "About Pitchwell Demo Hiring Co" }),
     ).toBeInTheDocument();
+  });
+
+  it("encodes the id in every request and treats an unknown job as not found", async () => {
+    const odd = "a/b?c";
+    const fetchMock = serveApi({
+      [`GET /api/employer/jobs/${encodeURIComponent(odd)}`]: () =>
+        errorResponse(404, "not_found", "Not found"),
+      "GET /api/employer/company": () => jsonResponse({ company: company() }),
+    });
+    render(<JobEditor id={odd} />);
+    expect(await screen.findByRole("heading", { name: "This job isn’t here" })).toBeVisible();
+    expect(callsTo(fetchMock, `GET /api/employer/jobs/${encodeURIComponent(odd)}`)).toBe(1);
+  });
+
+  it("marks deleting as destructive", async () => {
+    setup();
+    expect(await screen.findByRole("button", { name: "Delete draft" })).toHaveClass("text-danger");
+    expect(screen.getByRole("button", { name: "Delete draft" })).not.toHaveClass("text-primary");
+  });
+});
+
+describe("JobApplicants", () => {
+  it("encodes the job id it asks for", async () => {
+    const fetchMock = serveApi({
+      [`GET /api/employer/jobs/${encodeURIComponent("a/b")}`]: () =>
+        errorResponse(404, "not_found", "Not found"),
+    });
+    render(<JobApplicants id="a/b" />);
+    expect(await screen.findByRole("heading", { name: "This job isn’t here" })).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

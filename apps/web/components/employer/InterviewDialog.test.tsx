@@ -87,6 +87,15 @@ describe("InterviewDialog", () => {
     expect(callsTo(fetchMock, INTERVIEW)).toBe(0);
   });
 
+  it("refuses a time the clocks skip in spring", async () => {
+    const { fetchMock } = setup();
+    pickTime("2027-03-14T02:30");
+    await userEvent.type(screen.getByLabelText(/Meeting link/), "https://meet.example.test/riley");
+    await userEvent.click(screen.getByRole("button", { name: "Send invite" }));
+    expect(await screen.findByText("That time doesn’t exist on this day")).toBeVisible();
+    expect(callsTo(fetchMock, INTERVIEW)).toBe(0);
+  });
+
   it("asks for a time and an https meeting link", async () => {
     const { fetchMock } = setup();
     await userEvent.type(screen.getByLabelText(/Meeting link/), "http://meet.example.test/riley");

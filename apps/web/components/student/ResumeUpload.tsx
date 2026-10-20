@@ -105,9 +105,9 @@ export function ResumeUpload() {
             Download your résumé
           </a>
           <Button
-            variant="ghost"
+            variant="danger-ghost"
             size="sm"
-            className="text-danger hover:bg-danger/10"
+
             onClick={() => {
               setConfirming(true);
             }}

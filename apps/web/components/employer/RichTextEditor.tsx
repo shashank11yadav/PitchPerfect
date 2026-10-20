@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, FieldError, FieldHint, describedByIds } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/cn";
-import { jobDescriptionExtensions, linkHref } from "@/lib/rich-text";
+import { jobDescriptionExtensions, linkHref, linkPaste } from "@/lib/rich-text";
 
 type ToolId =
   "bold" | "italic" | "underline" | "h3" | "h4" | "bulletList" | "orderedList" | "blockquote";
@@ -319,6 +319,7 @@ export function RichTextEditor({
   const id = useId();
   const apple = useApple();
   const [linking, setLinking] = useState(false);
+  const [pasteProblem, setPasteProblem] = useState("");
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -343,6 +344,9 @@ export function RichTextEditor({
     immediatelyRender: false,
     editorProps: {
       attributes,
+      handlePaste: linkPaste((reason) => {
+        setPasteProblem(`That link wasn’t added. ${reason}`);
+      }),
       handleKeyDown: (_view, event) => {
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
           event.preventDefault();
@@ -353,6 +357,7 @@ export function RichTextEditor({
       },
     },
     onUpdate: ({ editor: current }) => {
+      setPasteProblem("");
       onChangeRef.current(current.isEmpty ? "" : current.getHTML());
     },
   });
@@ -403,7 +408,7 @@ export function RichTextEditor({
           aria-label="Formatting"
           aria-controls={id}
           onKeyDown={moveFocus}
-          className="flex flex-wrap border-b sm:gap-0.5 border-border bg-surface-2 p-1"
+          className="flex flex-wrap border-b border-border bg-surface-2 p-1 sm:gap-0.5"
         >
           {TOOLS.map((tool) => (
             <ToolButton
@@ -438,6 +443,9 @@ export function RichTextEditor({
           />
         )}
         <EditorContent editor={editor} />
+        <p role="alert" className="px-3.5 pb-3 text-small text-danger empty:hidden">
+          {pasteProblem}
+        </p>
       </div>
       <FieldError id={id} error={error} />
     </div>

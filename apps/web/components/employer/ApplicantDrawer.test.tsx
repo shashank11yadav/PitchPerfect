@@ -1,5 +1,7 @@
 import type { ApplicationStatus } from "@pitchperfect/shared";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import type { EmployerApplicationView } from "@pitchperfect/shared";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetCsrf } from "@/lib/api";
@@ -189,5 +191,87 @@ describe("ApplicantDrawer", () => {
       expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ savedByEmployer: true }));
     });
     expect(callsTo(fetchMock, `PUT ${BASE}/save`)).toBe(1);
+  });
+});
+
+/** The drawer as its list holds it: the application it shows follows each change. */
+function Pipeline({ start }: { start: EmployerApplicationView }) {
+  const [view, setView] = useState(start);
+  return (
+    <ApplicantDrawer
+      application={view}
+      jobTitle="Sales development representative"
+      onChange={setView}
+    />
+  );
+}
+
+function setupLive(view = applicant()) {
+  serveApi({
+    "GET /api/auth/csrf": csrf,
+    [`PATCH ${BASE}`]: (init) =>
+      jsonResponse({ application: { ...view, ...(bodyOf(init) as object), interview: null } }),
+    [`POST ${BASE}/interview`]: (init) =>
+      jsonResponse({ application: { ...view, status: "interview", interview: bodyOf(init) } }),
+  });
+  render(<Pipeline start={view} />);
+}
+
+const statusLine = () => screen.getByTestId("applicant-status");
+
+describe("ApplicantDrawer after a move", () => {
+  it("puts focus on the new status and announces it after a shortlist", async () => {
+    setupLive();
+    await userEvent.click(screen.getByRole("button", { name: "Shortlist" }));
+    await waitFor(() => {
+      expect(statusLine()).toHaveFocus();
+    });
+    expect(statusLine()).toHaveTextContent("Shortlisted");
+    expect(screen.getByRole("status")).toHaveTextContent("Riley is shortlisted.");
+  });
+
+  it("lands on the status, not the vanished button, after confirming a rejection", async () => {
+    setupLive();
+    const trigger = screen.getByRole("button", { name: "Not a fit" });
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("button", { name: "Mark as not a fit" }));
+    await waitFor(() => {
+      expect(statusLine()).toHaveFocus();
+    });
+    expect(trigger).not.toBeInTheDocument();
+    expect(statusLine()).toHaveTextContent("Not a fit");
+    expect(screen.getByRole("status")).toHaveTextContent("Riley is marked as not a fit.");
+  });
+
+  it("does the same after hiring", async () => {
+    setupLive(
+      applicant({
+        status: "interview",
+        interview: {
+          startsAt: "2026-11-03T15:30:00.000Z",
+          meetingUrl: "https://meet.example.test/a",
+        },
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Hire" }));
+    await userEvent.click(screen.getByRole("button", { name: "Mark as hired" }));
+    await waitFor(() => {
+      expect(statusLine()).toHaveFocus();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Riley is marked as hired.");
+  });
+
+  it("announces a booked interview and focuses the status", async () => {
+    setupLive(applicant({ status: "shortlisted" }));
+    await userEvent.click(screen.getByRole("button", { name: "Schedule interview" }));
+    fireEvent.change(screen.getByLabelText(/Date and time/), {
+      target: { value: "2030-11-02T15:00" },
+    });
+    await userEvent.type(screen.getByLabelText(/Meeting link/), "https://meet.example.test/riley");
+    await userEvent.click(screen.getByRole("button", { name: "Send invite" }));
+    await waitFor(() => {
+      expect(statusLine()).toHaveFocus();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(/Interview booked for .*2030/);
   });
 });
