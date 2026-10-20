@@ -35,6 +35,7 @@ const QUOTA = {
   monthlyUsed: 7,
   monthlyLimit: 30,
   available: true,
+  budgetExhausted: false,
   resetsAt: "2026-10-21T00:00:00.000Z",
 };
 

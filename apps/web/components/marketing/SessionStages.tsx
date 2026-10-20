@@ -2,7 +2,8 @@ import { STAGES, type Stage } from "@pitchperfect/shared";
 import type { ReactNode } from "react";
 import { InView, InViewItem } from "@/components/motion/in-view";
 import { cn } from "@/lib/cn";
-import { PracticeRoomPreview, STAGE_LABELS } from "./PracticeRoomPreview";
+import { STAGE_LABELS } from "@/components/practice/StageStepper";
+import { PracticeRoomPreview } from "./PracticeRoomPreview";
 import type { RoomMoment } from "./sample-session";
 import { Section, SectionTitle } from "./Section";
 

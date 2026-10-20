@@ -55,8 +55,11 @@ describe("ScorecardPreview", () => {
     expect(
       screen.getByRole("img", { name: new RegExp(`^Overall score: ${String(overall)} `) }),
     ).toBeInTheDocument();
-    for (const { name } of RUBRIC_DIMENSIONS) {
-      expect(screen.getByRole("meter", { name })).toBeInTheDocument();
+    for (const { key, name } of RUBRIC_DIMENSIONS) {
+      const score = SAMPLE_SCORECARD.dimensions.find((dimension) => dimension.key === key)?.score;
+      expect(
+        screen.getByRole("meter", { name: `${name}: ${String(score)} out of 5` }),
+      ).toBeInTheDocument();
     }
   });
 

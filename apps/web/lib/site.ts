@@ -31,6 +31,8 @@ export const STUDENT_NAV: readonly NavLink[] = [
   { href: "/app", label: "Dashboard", icon: "dashboard", tab: true },
   { href: "/app/learn", label: "Learn", icon: "learn", tab: true },
   { href: "/app/practice", label: "Practice", icon: "practice", tab: true },
+  // Not a tab: phones reach it from the practice pages and the menu.
+  { href: "/app/history", label: "History", icon: "history" },
   { href: "/app/jobs", label: "Jobs", icon: "jobs", tab: true },
   { href: "/app/applications", label: "Applications", icon: "applications", tab: true },
 ];

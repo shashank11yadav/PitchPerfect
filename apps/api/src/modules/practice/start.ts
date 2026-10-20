@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import {
   LIMITS,
   type CoachPlanRequest,
-  type ScenarioPublic,
+  type StartedSession,
   type StartPractice,
 } from "@pitchperfect/shared";
 import { toAttemptView } from "../../db/mappers.js";
@@ -61,12 +61,6 @@ async function claimStart(deps: PracticeDeps, studentId: string, input: StartPra
     }
     throw error;
   }
-}
-
-export interface StartedSession {
-  attemptId: string;
-  scenario: ScenarioPublic;
-  limits: { maxTurns: number; maxChars: number; expiresAt: string };
 }
 
 /**

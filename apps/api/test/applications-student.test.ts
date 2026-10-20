@@ -382,3 +382,146 @@ describe("POST /api/applications/:id/withdraw", () => {
     expect((await employer.post(withdrawPath(application._id)).send()).status).toBe(403);
   });
 });
+
+describe("PUT /api/applications/:id/scorecard", () => {
+  const sharePath = (id: mongoose.Types.ObjectId) => `/api/applications/${id.toString()}/scorecard`;
+
+  async function ownApplication(status: StudentApplicationView["status"] = "applied") {
+    const { job } = await openJob();
+    const { session, user } = await studentSession();
+    const application = await createApplication({ jobId: job._id, studentId: user._id, status });
+    return { session, user, application };
+  }
+
+  it("shares the student's own completed attempt", async () => {
+    const { session, user, application } = await ownApplication();
+    const attempt = await createAttempt(user._id);
+
+    const res = await session
+      .put(sharePath(application._id))
+      .send({ attemptId: attempt._id.toString() });
+
+    expect(res.status).toBe(200);
+    expect(viewOf(res)).toMatchObject({
+      id: application._id.toString(),
+      hasSharedScorecard: true,
+      sharedAttemptId: attempt._id.toString(),
+    });
+    expect((await Application.findById(application._id))?.sharedAttemptId).toEqual(attempt._id);
+  });
+
+  it("replaces a shared attempt, and null unshares", async () => {
+    const { session, user, application } = await ownApplication("interview");
+    const first = await createAttempt(user._id);
+    const second = await createAttempt(user._id);
+    await Application.updateOne({ _id: application._id }, { sharedAttemptId: first._id });
+
+    const swapped = await session.put(sharePath(application._id)).send({
+      attemptId: second._id.toString(),
+    });
+    expect(viewOf(swapped).sharedAttemptId).toBe(second._id.toString());
+
+    const unshared = await session.put(sharePath(application._id)).send({ attemptId: null });
+
+    expect(unshared.status).toBe(200);
+    expect(viewOf(unshared)).toMatchObject({ hasSharedScorecard: false, sharedAttemptId: null });
+    expect((await Application.findById(application._id))?.sharedAttemptId).toBeUndefined();
+  });
+
+  it("404s for another student's attempt and leaves the share alone", async () => {
+    const { session, user, application } = await ownApplication();
+    const mine = await createAttempt(user._id);
+    await Application.updateOne({ _id: application._id }, { sharedAttemptId: mine._id });
+    const other = await createStudent();
+    const theirs = await createAttempt(other.user._id);
+
+    const res = await session.put(sharePath(application._id)).send({
+      attemptId: theirs._id.toString(),
+    });
+    const missing = await session.put(sharePath(application._id)).send({
+      attemptId: new mongoose.Types.ObjectId().toString(),
+    });
+
+    expect(res.status).toBe(404);
+    expect(missing.status).toBe(404);
+    expect((await Application.findById(application._id))?.sharedAttemptId).toEqual(mine._id);
+  });
+
+  it("refuses an attempt that isn't completed", async () => {
+    const { session, user, application } = await ownApplication();
+    const attempt = await createAttempt(user._id, { status: "abandoned" });
+
+    const res = await session.put(sharePath(application._id)).send({
+      attemptId: attempt._id.toString(),
+    });
+
+    expect(res.status).toBe(400);
+    expect(errorOf(res).code).toBe("validation_failed");
+    expect(errorOf(res).fields).toHaveProperty("attemptId");
+    expect((await Application.findById(application._id))?.sharedAttemptId).toBeUndefined();
+  });
+
+  it.each(["withdrawn", "closed"] as const)(
+    "is not allowed on a %s application",
+    async (status) => {
+      const { session, user, application } = await ownApplication(status);
+      const attempt = await createAttempt(user._id);
+
+      const share = await session.put(sharePath(application._id)).send({
+        attemptId: attempt._id.toString(),
+      });
+      const unshare = await session.put(sharePath(application._id)).send({ attemptId: null });
+
+      for (const res of [share, unshare]) {
+        expect(res.status).toBe(400);
+        expect(errorOf(res).code).toBe("invalid_transition");
+      }
+      expect((await Application.findById(application._id))?.sharedAttemptId).toBeUndefined();
+    },
+  );
+
+  it("404s for another student's application and changes nothing", async () => {
+    const { job } = await openJob();
+    const { session, user } = await studentSession();
+    const mine = await createAttempt(user._id);
+    const owner = await createStudent();
+    const theirs = await createApplication({ jobId: job._id, studentId: owner.user._id });
+
+    const res = await session.put(sharePath(theirs._id)).send({ attemptId: mine._id.toString() });
+
+    expect(res.status).toBe(404);
+    expect((await Application.findById(theirs._id))?.sharedAttemptId).toBeUndefined();
+    const missing = await session
+      .put(sharePath(new mongoose.Types.ObjectId()))
+      .send({ attemptId: null });
+    expect(missing.status).toBe(404);
+  });
+
+  it("validates the id and the body", async () => {
+    const { session, application } = await ownApplication();
+
+    expect(
+      (await session.put("/api/applications/nope/scorecard").send({ attemptId: null })).status,
+    ).toBe(400);
+    for (const body of [{}, { attemptId: "nope" }, { attemptId: null, status: "hired" }]) {
+      const res = await session.put(sharePath(application._id)).send(body);
+      expect(res.status).toBe(400);
+      expect(errorOf(res).code).toBe("validation_failed");
+    }
+  });
+
+  it("requires a signed-in student", async () => {
+    const { job, email, password } = await openJob();
+    const owner = await createStudent();
+    const application = await createApplication({ jobId: job._id, studentId: owner.user._id });
+
+    const anonymous = await csrfAgent(app);
+    expect((await anonymous.put(sharePath(application._id)).send({ attemptId: null })).status).toBe(
+      401,
+    );
+    const employer = await signIn(request.agent(app), email, password);
+    expect((await employer.put(sharePath(application._id)).send({ attemptId: null })).status).toBe(
+      403,
+    );
+  });
+});

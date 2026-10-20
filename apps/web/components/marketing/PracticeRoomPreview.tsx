@@ -1,17 +1,9 @@
-import { STAGES } from "@pitchperfect/shared";
 import { Clock, MessagesSquare, Mic, Send } from "lucide-react";
 import { PersonaCard } from "@/components/practice/PersonaCard";
+import { StageStepper } from "@/components/practice/StageStepper";
 import { TranscriptBubble } from "@/components/practice/TranscriptBubble";
 import { cn } from "@/lib/cn";
 import { OBJECTION_MOMENT, turnsLeft, type RoomMoment } from "./sample-session";
-
-export const STAGE_LABELS = {
-  opening: "Opening",
-  discovery: "Discovery",
-  pitch: "Pitch",
-  objection: "Objection",
-  close: "Close",
-} as const;
 
 const LEVELS = ["h-2", "h-4", "h-6", "h-3", "h-5"];
 
@@ -34,7 +26,6 @@ export function PracticeRoomPreview({
   className,
 }: PracticeRoomPreviewProps) {
   const { persona, skillTitle, stage, timeLeft, transcript, streamedReply } = moment;
-  const current = STAGES.indexOf(stage);
   return (
     <figure
       data-ui
@@ -65,31 +56,7 @@ export function PracticeRoomPreview({
         </div>
       </div>
 
-      <ol
-        aria-label="Conversation stages"
-        className="flex gap-1.5 border-b border-border px-4 py-3 @2xl:px-6"
-      >
-        {STAGES.map((stage, index) => (
-          <li
-            key={stage}
-            aria-current={index === current ? "step" : undefined}
-            className="flex min-w-0 flex-1 flex-col gap-1.5"
-          >
-            <span
-              aria-hidden="true"
-              className={cn("h-1 rounded-pill", index <= current ? "bg-primary" : "bg-border")}
-            />
-            <span
-              className={cn(
-                "truncate text-caption",
-                index === current ? "font-bold text-primary" : "text-muted",
-              )}
-            >
-              {STAGE_LABELS[stage]}
-            </span>
-          </li>
-        ))}
-      </ol>
+      <StageStepper stage={stage} className="border-b border-border px-4 py-3 @2xl:px-6" />
 
       <div className="grid gap-4 bg-surface-2 p-4 @2xl:grid-cols-[15rem_1fr] @2xl:gap-6 @2xl:p-6">
         <PersonaCard persona={persona} titleAs="p" className="self-start" />

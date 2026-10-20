@@ -1,9 +1,14 @@
 import type { RequestHandler } from "express";
-import type { ApplySchema, pageQuery } from "@pitchperfect/shared";
+import type { ApplySchema, pageQuery, ShareScorecardSchema } from "@pitchperfect/shared";
 import { ConflictError } from "../../errors.js";
 import { userOf } from "../../middleware/auth.js";
 import { getInput, type IdParamSchema } from "../../middleware/validate.js";
-import { applyToJob, listStudentApplications, withdrawApplication } from "./service.js";
+import {
+  applyToJob,
+  listStudentApplications,
+  shareScorecard,
+  withdrawApplication,
+} from "./service.js";
 
 export const applicationHandlers = {
   apply: (async (_req, res) => {
@@ -23,5 +28,15 @@ export const applicationHandlers = {
   withdraw: (async (_req, res) => {
     const { params } = getInput<{ params: typeof IdParamSchema }>(res);
     res.json({ application: await withdrawApplication(userOf(res).id, params.id) });
+  }) satisfies RequestHandler,
+
+  shareScorecard: (async (_req, res) => {
+    const { params, body } = getInput<{
+      params: typeof IdParamSchema;
+      body: typeof ShareScorecardSchema;
+    }>(res);
+    res.json({
+      application: await shareScorecard(userOf(res).id, params.id, body.attemptId),
+    });
   }) satisfies RequestHandler,
 };

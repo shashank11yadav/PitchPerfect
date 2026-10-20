@@ -54,14 +54,22 @@ function countStarted(studentId: string, from: Date, to: Date, now: Date): Promi
   });
 }
 
+/** True once today's `usagedays` row has used up the global token budget. */
+async function budgetSpent(config: QuotaConfig, now: Date): Promise<boolean> {
+  const today = await UsageDay.findOne({ day: dayKey(now) }).lean();
+  const spent = (today?.inputTokens ?? 0) + (today?.outputTokens ?? 0);
+  return spent >= config.PRACTICE_DAILY_TOKEN_BUDGET;
+}
+
 export async function getQuota(
   config: QuotaConfig,
   studentId: string,
   now: Date,
 ): Promise<PracticeQuota> {
-  const [dailyUsed, monthlyUsed] = await Promise.all([
+  const [dailyUsed, monthlyUsed, budgetExhausted] = await Promise.all([
     countStarted(studentId, utcDay(now), utcDay(now, 1), now),
     countStarted(studentId, utcMonth(now), utcMonth(now, 1), now),
+    budgetSpent(config, now),
   ]);
   const dailyLimit = config.PRACTICE_DAILY_LIMIT;
   const monthlyLimit = config.PRACTICE_MONTHLY_LIMIT;
@@ -70,7 +78,8 @@ export async function getQuota(
     dailyLimit,
     monthlyUsed,
     monthlyLimit,
-    available: dailyUsed < dailyLimit && monthlyUsed < monthlyLimit,
+    available: dailyUsed < dailyLimit && monthlyUsed < monthlyLimit && !budgetExhausted,
+    budgetExhausted,
     resetsAt: utcDay(now, 1).toISOString(),
   };
 }
@@ -89,12 +98,7 @@ export async function assertCanStart(
     throw new QuotaExceededError(secondsUntil(now, utcMonth(now, 1)));
   }
   if (quota.dailyUsed >= quota.dailyLimit) throw new QuotaExceededError(secondsToMidnight(now));
-
-  const today = await UsageDay.findOne({ day: dayKey(now) }).lean();
-  const spent = (today?.inputTokens ?? 0) + (today?.outputTokens ?? 0);
-  if (spent >= config.PRACTICE_DAILY_TOKEN_BUDGET) {
-    throw new BudgetExhaustedError(secondsToMidnight(now));
-  }
+  if (quota.budgetExhausted) throw new BudgetExhaustedError(secondsToMidnight(now));
 }
 
 /** Adds coach usage to today's `usagedays` row (created on first use); `session` counts a start. */

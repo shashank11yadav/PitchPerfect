@@ -20,6 +20,7 @@ const quota = (overrides: Partial<PracticeQuota> = {}): PracticeQuota => ({
   monthlyUsed: 7,
   monthlyLimit: 30,
   available: true,
+  budgetExhausted: false,
   resetsAt: "2026-10-21T00:00:00.000Z",
   ...overrides,
 });
@@ -39,10 +40,17 @@ describe("QuotaMeter", () => {
     ).toBeInTheDocument();
   });
 
-  it("explains a pause for everyone when the student still has sessions left", () => {
-    render(<QuotaMeter quota={quota({ available: false })} />);
+  it("explains a pause for everyone when today's practice budget is spent", () => {
+    render(<QuotaMeter quota={quota({ available: false, budgetExhausted: true })} />);
     expect(
       screen.getByText("Practice is paused for today. It opens again today at 8:00 PM EDT."),
+    ).toBeInTheDocument();
+  });
+
+  it("gives the daily reset when today's sessions are used up", () => {
+    render(<QuotaMeter quota={quota({ dailyUsed: 5, available: false })} />);
+    expect(
+      screen.getByText("You’ve used today’s sessions. The count starts over today at 8:00 PM EDT."),
     ).toBeInTheDocument();
   });
 });

@@ -144,7 +144,7 @@ describe("RubricBar", () => {
       />,
     );
     expect(screen.getByRole("heading", { name: "Objection handling" })).toBeInTheDocument();
-    expect(screen.getByRole("meter", { name: "Objection handling" })).toHaveAttribute(
+    expect(screen.getByRole("meter", { name: "Objection handling: 4 out of 5" })).toHaveAttribute(
       "aria-valuenow",
       "4",
     );
@@ -153,7 +153,7 @@ describe("RubricBar", () => {
     expect(screen.getByText("What if we started with one depot for a month?")).toBeInTheDocument();
   });
 
-  it("leaves out the quote when there is no evidence", () => {
+  it("says so when there is no quote to show", () => {
     const { container } = render(
       <RubricBar
         name="Clarity"
@@ -163,6 +163,7 @@ describe("RubricBar", () => {
       />,
     );
     expect(container.querySelector("blockquote")).toBeNull();
+    expect(screen.getByText("No quote available")).toBeInTheDocument();
     expect(screen.queryByText("Counts double")).not.toBeInTheDocument();
   });
 });

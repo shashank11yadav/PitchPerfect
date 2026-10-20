@@ -45,9 +45,20 @@ export interface PracticeQuota {
   dailyLimit: number;
   monthlyUsed: number;
   monthlyLimit: number;
+  /** False when either limit is used up or `budgetExhausted`. */
   available: boolean;
+  /** Today's global token budget is spent: no one can start a session until the next UTC day. */
+  budgetExhausted: boolean;
   /** The next UTC midnight, when the daily count starts over. */
   resetsAt: string;
+}
+
+/** `201` from `POST /api/practice/sessions`. */
+export interface StartedSession {
+  attemptId: string;
+  scenario: ScenarioPublic;
+  /** `expiresAt` is when the session stops taking turns (20 minutes after it started). */
+  limits: { maxTurns: number; maxChars: number; expiresAt: string };
 }
 
 export interface AttemptSummary {

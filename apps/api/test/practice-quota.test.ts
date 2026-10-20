@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PracticeAttempt } from "../src/db/models/index.js";
+import type { PracticeQuota } from "@pitchperfect/shared";
+import { PracticeAttempt, UsageDay } from "../src/db/models/index.js";
 import { csrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
 import { errorOf } from "./helpers/error-body.js";
@@ -18,15 +19,6 @@ const harness = usePracticeHarness();
 const QUOTA_PATH = "/api/practice/quota";
 const NOW = new Date("2026-03-10T15:00:00Z");
 
-interface Quota {
-  dailyUsed: number;
-  dailyLimit: number;
-  monthlyUsed: number;
-  monthlyLimit: number;
-  available: boolean;
-  resetsAt: string;
-}
-
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NOW);
@@ -39,7 +31,7 @@ afterEach(() => {
 async function quotaOf(session: Awaited<ReturnType<typeof practiceStudent>>["session"]) {
   const res = await session.agent.get(QUOTA_PATH);
   expect(res.status).toBe(200);
-  return res.body as Quota;
+  return res.body as PracticeQuota;
 }
 
 const studentEntry = { role: "student" as const, text: "Hello", at: NOW, flagged: false };
@@ -54,8 +46,26 @@ describe("GET /api/practice/quota", () => {
       monthlyUsed: 0,
       monthlyLimit: 30,
       available: true,
+      budgetExhausted: false,
       resetsAt: "2026-03-11T00:00:00.000Z",
     });
+  });
+
+  it("is unavailable while today's global token budget is spent, and says so", async () => {
+    const { session } = await practiceStudent(harness.app);
+    await UsageDay.create({ day: "2026-03-10", inputTokens: 1_500_000, outputTokens: 499_999 });
+    expect(await quotaOf(session)).toMatchObject({ available: true, budgetExhausted: false });
+
+    await UsageDay.updateOne({ day: "2026-03-10" }, { $inc: { outputTokens: 1 } });
+    expect(await quotaOf(session)).toMatchObject({
+      dailyUsed: 0,
+      available: false,
+      budgetExhausted: true,
+    });
+
+    // Yesterday's spending doesn't count against today.
+    vi.setSystemTime(new Date("2026-03-11T00:01:00Z"));
+    expect(await quotaOf(session)).toMatchObject({ available: true, budgetExhausted: false });
   });
 
   it("counts every planned session this UTC day and month, turns or not", async () => {

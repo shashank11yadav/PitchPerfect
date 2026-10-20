@@ -20,13 +20,16 @@ function Bar({ label, used, limit }: { label: string; used: number; limit: numbe
 
 /** The line under the bars: when sessions come back, or why there are none right now. */
 function resetNote(quota: PracticeQuota): string {
-  const { dailyUsed, dailyLimit, monthlyUsed, monthlyLimit, available, resetsAt } = quota;
+  const { dailyUsed, dailyLimit, monthlyUsed, monthlyLimit, budgetExhausted, resetsAt } = quota;
   if (monthlyUsed >= monthlyLimit) {
     return `You’ve used this month’s sessions. They start over ${formatMonthlyReset()}.`;
   }
-  // Sessions left, yet none available: today's practice budget for everyone is spent.
-  if (!available && dailyUsed < dailyLimit) {
+  // Today's practice budget for everyone is spent, whatever this student has left.
+  if (budgetExhausted) {
     return `Practice is paused for today. It opens again ${formatResetTime(resetsAt)}.`;
+  }
+  if (dailyUsed >= dailyLimit) {
+    return `You’ve used today’s sessions. The count starts over ${formatResetTime(resetsAt)}.`;
   }
   return `The daily count starts over ${formatResetTime(resetsAt)}.`;
 }

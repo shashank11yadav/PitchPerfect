@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { ApplySchema, pageQuery } from "@pitchperfect/shared";
+import { ApplySchema, pageQuery, ShareScorecardSchema } from "@pitchperfect/shared";
 import { requireRole, requireVerified } from "../../middleware/auth.js";
 import { IdParamSchema, validate } from "../../middleware/validate.js";
 import { applicationHandlers } from "./handlers.js";
@@ -22,6 +22,12 @@ export function applicationRoutes(): Router {
     student,
     validate({ params: IdParamSchema }),
     applicationHandlers.withdraw,
+  );
+  router.put(
+    "/applications/:id/scorecard",
+    student,
+    validate({ params: IdParamSchema, body: ShareScorecardSchema }),
+    applicationHandlers.shareScorecard,
   );
   return router;
 }

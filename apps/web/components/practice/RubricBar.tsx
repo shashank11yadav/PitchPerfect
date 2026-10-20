@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
 
@@ -25,21 +24,22 @@ export function RubricBar({
   weighted = false,
   headingLevel: Heading = "h4",
 }: RubricBarProps) {
-  const id = useId();
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <Heading id={id} className="text-small font-bold text-ink">
-          {name}
-        </Heading>
-        {weighted && <Badge tone="info">Counts double</Badge>}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Heading className="text-small font-bold text-ink">{name}</Heading>
+        {weighted && (
+          <Badge tone="info" className="whitespace-nowrap">
+            Counts double
+          </Badge>
+        )}
         <span className="ml-auto text-small font-bold text-navy tabular-nums">
           {score}/{MAX_SCORE}
         </span>
       </div>
       <div
         role="meter"
-        aria-labelledby={id}
+        aria-label={`${name}: ${String(score)} out of ${String(MAX_SCORE)}`}
         aria-valuemin={1}
         aria-valuemax={MAX_SCORE}
         aria-valuenow={score}
@@ -54,10 +54,12 @@ export function RubricBar({
         ))}
       </div>
       <p className="text-small text-ink">{justification}</p>
-      {evidence && (
+      {evidence ? (
         <blockquote className="border-l-2 border-primary/40 pl-3 text-small text-ink italic before:content-['“'] after:content-['”']">
           {evidence}
         </blockquote>
+      ) : (
+        <p className="border-l-2 border-border pl-3 text-small text-muted">No quote available</p>
       )}
     </div>
   );

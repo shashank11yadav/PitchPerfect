@@ -27,7 +27,7 @@ describe("display primitives", () => {
       <EmptyState
         title="No attempts yet"
         description="Your scorecards will appear here."
-        action={<a href="/app/practice">Start practice</a>}
+        action={<a href="#practice">Start practice</a>}
       />,
     );
     expect(screen.getByRole("heading", { level: 2, name: "No attempts yet" })).toBeInTheDocument();

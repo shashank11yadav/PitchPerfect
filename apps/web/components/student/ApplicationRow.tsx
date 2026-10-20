@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { apiFetch } from "@/lib/api";
 import { formatInterviewTime, formatLocalDate } from "@/lib/local-time";
+import { attemptPath } from "@/lib/practice/paths";
 import { OneApplication } from "@/lib/student-api";
 import { StatusPill } from "./StatusPill";
 
@@ -98,9 +99,16 @@ export function ApplicationRow({ application, onChange }: ApplicationRowProps) {
             )}
           </div>
         )}
-        {application.hasSharedScorecard && (
+        {application.sharedAttemptId && (
           <p className="mt-3 text-small text-muted">
-            You shared a practice scorecard with this application.
+            You shared{" "}
+            <Link
+              href={attemptPath(application.sharedAttemptId)}
+              className="pp-link rounded-control font-semibold text-primary"
+            >
+              a practice scorecard
+            </Link>{" "}
+            with this application.
           </p>
         )}
       </div>

@@ -1,5 +1,10 @@
 import mongoose from "mongoose";
-import type { Page, PageQuery, StudentApplicationView } from "@pitchperfect/shared";
+import type {
+  ApplicationStatus,
+  Page,
+  PageQuery,
+  StudentApplicationView,
+} from "@pitchperfect/shared";
 import { toStudentApplicationView } from "../../db/mappers.js";
 import { Application, Company, Job, PracticeAttempt } from "../../db/models/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../errors.js";
@@ -42,16 +47,17 @@ async function viewsOf(applications: ApplicationDoc[]): Promise<StudentApplicati
   );
 }
 
-/** The attempt must be the student's own and finished; anyone else's looks like it doesn't exist. */
-async function assertShareable(studentId: string, attemptId: string): Promise<void> {
+/**
+ * The attempt must be the student's own and finished; anyone else's looks like it doesn't exist.
+ * `field` names the body field in the validation error.
+ */
+async function assertShareable(studentId: string, attemptId: string, field: string): Promise<void> {
   const attempt = await PracticeAttempt.findOne({ _id: attemptId, studentId })
     .select("status")
     .lean();
   if (!attempt) throw new NotFoundError();
   if (attempt.status !== "completed") {
-    throw new ValidationError({
-      sharedAttemptId: "Finish that practice session before sharing it",
-    });
+    throw new ValidationError({ [field]: "Finish that practice session before sharing it" });
   }
 }
 
@@ -69,7 +75,9 @@ export async function applyToJob(
   sharedAttemptId?: string,
 ): Promise<ApplyResult> {
   const { job, company } = await findListedJob({ _id: jobId });
-  if (sharedAttemptId !== undefined) await assertShareable(studentId, sharedAttemptId);
+  if (sharedAttemptId !== undefined) {
+    await assertShareable(studentId, sharedAttemptId, "sharedAttemptId");
+  }
 
   const now = new Date();
   try {
@@ -134,5 +142,43 @@ export async function withdrawApplication(
   ).lean();
   if (!updated)
     throw new ConflictError("conflict", "That application just changed. Refresh and try again");
+  return toStudentApplicationView(updated, await listedSlug(updated.jobId));
+}
+
+/** A withdrawn or closed application is over; it no longer shares anything with the employer. */
+const NO_SHARING: readonly ApplicationStatus[] = ["withdrawn", "closed"];
+
+/**
+ * Shares one of the student's completed attempts with their own application (404 for anyone
+ * else's), replacing any earlier one; `null` stops sharing. A withdrawn or closed application is
+ * `400 invalid_transition`.
+ */
+export async function shareScorecard(
+  studentId: string,
+  applicationId: string,
+  attemptId: string | null,
+): Promise<StudentApplicationView> {
+  const application = await Application.findOne({ _id: applicationId, studentId })
+    .select("status")
+    .lean();
+  if (!application) throw new NotFoundError();
+  const notOpen = () =>
+    new ValidationError(
+      undefined,
+      `A ${application.status} application can't share a scorecard`,
+      "invalid_transition",
+    );
+  if (NO_SHARING.includes(application.status)) throw notOpen();
+  if (attemptId !== null) await assertShareable(studentId, attemptId, "attemptId");
+
+  // Guarded on the status, so a withdrawal or closing in between wins.
+  const updated = await Application.findOneAndUpdate(
+    { _id: applicationId, studentId, status: mongoose.trusted({ $nin: NO_SHARING }) },
+    attemptId === null
+      ? { $unset: { sharedAttemptId: "" } }
+      : { $set: { sharedAttemptId: attemptId } },
+    { returnDocument: "after" },
+  ).lean();
+  if (!updated) throw notOpen();
   return toStudentApplicationView(updated, await listedSlug(updated.jobId));
 }

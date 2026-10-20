@@ -43,6 +43,7 @@ export function application(
     },
     interview: null,
     hasSharedScorecard: false,
+    sharedAttemptId: null,
     ...overrides,
   };
 }

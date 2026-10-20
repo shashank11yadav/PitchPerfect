@@ -49,6 +49,8 @@ export interface StudentApplicationView {
   job: { id: string; slug: string | null; title: string; companyName: string };
   interview: InterviewView | null;
   hasSharedScorecard: boolean;
+  /** The practice attempt this application shares with the employer, if any. */
+  sharedAttemptId: string | null;
 }
 
 export interface EmployerApplicationView {

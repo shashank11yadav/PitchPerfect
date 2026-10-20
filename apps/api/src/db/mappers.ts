@@ -129,6 +129,7 @@ export function toStudentApplicationView(
         }
       : null,
     hasSharedScorecard: application.sharedAttemptId != null,
+    sharedAttemptId: application.sharedAttemptId?.toString() ?? null,
   };
 }
 

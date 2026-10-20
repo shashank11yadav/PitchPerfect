@@ -1,10 +1,12 @@
 import {
   isSkillSlug,
   type AttemptSummary,
+  type AttemptView,
   type Page,
   type PracticeQuota,
   type ResumeInfo,
   type SkillSlug,
+  type StartedSession,
   type StudentApplicationView,
 } from "@pitchperfect/shared";
 import { ApiError, type Parser } from "./api";
@@ -60,6 +62,8 @@ export const Quota: Parser<PracticeQuota> = {
       typeof data.dailyLimit === "number" &&
       typeof data.monthlyUsed === "number" &&
       typeof data.monthlyLimit === "number" &&
+      typeof data.available === "boolean" &&
+      typeof data.budgetExhausted === "boolean" &&
       typeof data.resetsAt === "string"
     ) {
       return data as unknown as PracticeQuota;
@@ -85,5 +89,38 @@ export const OneApplication: Parser<StudentApplicationView> = {
       return data.application as unknown as StudentApplicationView;
     }
     throw unexpected("application");
+  },
+};
+
+/** `201` from `POST /practice/sessions`. */
+export const StartedPractice: Parser<StartedSession> = {
+  parse(data) {
+    if (
+      isObject(data) &&
+      typeof data.attemptId === "string" &&
+      isObject(data.scenario) &&
+      typeof data.scenario.openingLine === "string" &&
+      isObject(data.limits) &&
+      typeof data.limits.expiresAt === "string"
+    ) {
+      return data as unknown as StartedSession;
+    }
+    throw unexpected("/practice/sessions");
+  },
+};
+
+/** `{ attempt }` from `GET /practice/sessions/:id` and `POST /practice/sessions/:id/end`. */
+export const OneAttempt: Parser<AttemptView> = {
+  parse(data) {
+    if (
+      isObject(data) &&
+      isObject(data.attempt) &&
+      isSkillSlug(data.attempt.skill) &&
+      isObject(data.attempt.scenarioPublic) &&
+      Array.isArray(data.attempt.transcript)
+    ) {
+      return data.attempt as unknown as AttemptView;
+    }
+    throw unexpected("attempt");
   },
 };

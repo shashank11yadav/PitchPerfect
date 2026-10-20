@@ -73,6 +73,7 @@ describe("RoleShell", () => {
       "/app",
       "/app/learn",
       "/app/practice",
+      "/app/history",
       "/app/jobs",
       "/app/applications",
     ]);
