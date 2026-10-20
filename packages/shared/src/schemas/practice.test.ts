@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ShareScorecardSchema, StartPracticeSchema, TurnSchema } from "./practice.js";
+import {
+  AttemptListQuerySchema,
+  ShareScorecardSchema,
+  StartPracticeSchema,
+  TurnSchema,
+} from "./practice.js";
 
 describe("TurnSchema", () => {
   it("counts characters as code points: 1000 emoji pass, 1001 fail", () => {
@@ -43,5 +48,21 @@ describe("ShareScorecardSchema", () => {
     expect(ShareScorecardSchema.safeParse({ attemptId: null }).success).toBe(true);
     expect(ShareScorecardSchema.safeParse({}).success).toBe(false);
     expect(ShareScorecardSchema.safeParse({ attemptId: "x" }).success).toBe(false);
+  });
+});
+
+describe("AttemptListQuerySchema", () => {
+  it("takes an optional skill with the usual paging", () => {
+    expect(AttemptListQuerySchema.parse({})).toEqual({ page: 1, pageSize: 20 });
+    expect(AttemptListQuerySchema.parse({ skill: "pitching", page: "2" })).toEqual({
+      skill: "pitching",
+      page: 2,
+      pageSize: 20,
+    });
+  });
+
+  it("rejects unknown skills and keys", () => {
+    expect(AttemptListQuerySchema.safeParse({ skill: "juggling" }).success).toBe(false);
+    expect(AttemptListQuerySchema.safeParse({ status: "active" }).success).toBe(false);
   });
 });

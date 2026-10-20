@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import helmet from "helmet";
 import mongoose from "mongoose";
+import type { DestinationStream } from "pino";
 import { pinoHttp } from "pino-http";
 import { LIMITS } from "@pitchperfect/shared";
 import type { Config } from "./config.js";
@@ -19,6 +20,7 @@ import { employerRoutes } from "./modules/employer/routes.js";
 import { healthRoutes } from "./modules/health/routes.js";
 import { jobRoutes } from "./modules/jobs/routes.js";
 import { lessonRoutes } from "./modules/lessons/routes.js";
+import { practiceRoutes } from "./modules/practice/routes.js";
 import { profileRoutes } from "./modules/profile/routes.js";
 import type { CoachClient } from "./services/coach-client.js";
 import type { Mailer } from "./services/mailer.js";
@@ -36,6 +38,8 @@ export interface AppDeps {
   coach?: CoachClient;
   mailer: Mailer;
   now?: () => Date;
+  /** Where request logs go; defaults to stdout. Tests pass a capture stream. */
+  logStream?: DestinationStream;
 }
 
 /**
@@ -55,7 +59,7 @@ export function createApp(
   app.use(requestId);
   app.use(
     pinoHttp({
-      logger: createLogger(config.LOG_LEVEL),
+      logger: createLogger(config.LOG_LEVEL, deps.logStream),
       genReqId: (req) => req.id,
       // Log only what docs/security.md allows: ids, route, method, status, timing.
       serializers: {
@@ -100,6 +104,7 @@ export function createApp(
   api.use(lessonRoutes());
   api.use(jobRoutes());
   api.use(applicationRoutes());
+  api.use("/practice", practiceRoutes({ config, coach: deps.coach }));
   api.use("/employer", employerRoutes({ mailer: deps.mailer }));
   api.use(healthRoutes(deps.coach));
   extraRoutes?.(api);

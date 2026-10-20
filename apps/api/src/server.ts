@@ -20,7 +20,7 @@ try {
 
 const app = createApp({
   config,
-  coach: createHttpCoachClient(config.COACH_URL),
+  coach: createHttpCoachClient(config),
   mailer: createSmtpMailer(config),
 });
 const server = app.listen(config.PORT, () => {

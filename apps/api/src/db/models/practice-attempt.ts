@@ -4,6 +4,7 @@ import {
   LLM_PROVIDERS,
   ScorecardSchema,
   SKILL_SLUGS,
+  STAGES,
   TRANSCRIPT_ROLES,
   type AttemptStatus,
   type LlmProvider,
@@ -11,6 +12,7 @@ import {
   type ScenarioPrivate,
   type ScenarioPublic,
   type SkillSlug,
+  type Stage,
   type TranscriptRole,
 } from "@pitchperfect/shared";
 import { schemaOptions } from "../schema-options.js";
@@ -31,6 +33,8 @@ export interface PracticeAttemptAttrs {
   scenarioPrivate: ScenarioPrivate;
   transcript: StoredTranscriptEntry[];
   guardFlags: number;
+  /** Conversation stage reached so far; it only ever moves forward. */
+  stage: Stage;
   scorecard: Scorecard | null;
   provider: LlmProvider;
   model: string;
@@ -84,6 +88,7 @@ const practiceAttemptSchema = new Schema<PracticeAttemptAttrs>(
     scenarioPrivate: { type: scenarioPrivateSchema, required: true, select: false },
     transcript: { type: [transcriptEntrySchema], default: [] },
     guardFlags: { type: Number, default: 0, min: 0 },
+    stage: { type: String, enum: STAGES, default: "opening" },
     // Stored as given; the shared Scorecard schema is the single definition of its shape.
     scorecard: {
       type: Schema.Types.Mixed,

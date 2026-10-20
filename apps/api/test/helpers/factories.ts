@@ -10,6 +10,7 @@ import {
 } from "../../src/db/models/index.js";
 import type { ApplicationAttrs } from "../../src/db/models/application.js";
 import type { JobAttrs } from "../../src/db/models/job.js";
+import type { PracticeAttemptAttrs } from "../../src/db/models/practice-attempt.js";
 import { slugify } from "../../src/db/slug.js";
 import { sanitizeJobHtml } from "../../src/services/html-sanitizer.js";
 import { hashPassword } from "../../src/services/passwords.js";
@@ -117,8 +118,11 @@ export function createApplication(
   });
 }
 
-/** A finished practice attempt for `studentId`. */
-export function createAttempt(studentId: mongoose.Types.ObjectId) {
+/** A finished practice attempt for `studentId`, unless `overrides` say otherwise. */
+export function createAttempt(
+  studentId: mongoose.Types.ObjectId,
+  overrides: Partial<PracticeAttemptAttrs> = {},
+) {
   return PracticeAttempt.create({
     studentId,
     skill: "pitching",
@@ -133,7 +137,10 @@ export function createAttempt(studentId: mongoose.Types.ObjectId) {
     scenarioPrivate: { hiddenObjections: ["price", "timing"], winConditions: ["books a call"] },
     provider: "fake",
     model: "fake-1",
+    // Set here rather than by the schema default, which reads the clock before fake timers.
+    startedAt: new Date(),
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    ...overrides,
   });
 }
 
