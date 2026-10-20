@@ -3,7 +3,7 @@
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buttonClasses } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 import { PUBLIC_NAV, type NavLink } from "@/lib/site";
@@ -20,6 +20,23 @@ interface NavbarProps {
 export function Navbar({ links = PUBLIC_NAV }: NavbarProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // While the mobile menu is open, focus starts in it and Escape closes it, returning focus.
+  useEffect(() => {
+    if (!open) return;
+    menuRef.current?.querySelector("a")?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      toggleRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   const linkList = (className: string) =>
     links.map(({ href, label }) => (
@@ -59,6 +76,7 @@ export function Navbar({ links = PUBLIC_NAV }: NavbarProps) {
           </Link>
         </div>
         <button
+          ref={toggleRef}
           type="button"
           aria-expanded={open}
           aria-controls="mobile-nav"
@@ -75,7 +93,12 @@ export function Navbar({ links = PUBLIC_NAV }: NavbarProps) {
           <span className="sr-only">Menu</span>
         </button>
       </nav>
-      <div id="mobile-nav" hidden={!open} className="border-t border-border bg-surface md:hidden">
+      <div
+        ref={menuRef}
+        id="mobile-nav"
+        hidden={!open}
+        className="border-t border-border bg-surface md:hidden"
+      >
         <ul className="flex flex-col gap-1 px-4 py-3">{linkList("block px-2 py-3")}</ul>
         <div className="flex gap-3 px-4 pb-4">
           <Link

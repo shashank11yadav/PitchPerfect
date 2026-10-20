@@ -1,0 +1,157 @@
+import { act, render, screen, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { PersonaCard } from "./PersonaCard";
+import { RubricBar } from "./RubricBar";
+import { ScoreRing, scoreBand } from "./ScoreRing";
+import { TranscriptBubble } from "./TranscriptBubble";
+
+function stubReducedMotion(reduce: boolean) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      matches: reduce && query.includes("reduce"),
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  );
+}
+
+const useFakeFrames = () =>
+  vi.useFakeTimers({
+    toFake: ["requestAnimationFrame", "cancelAnimationFrame", "setTimeout", "performance"],
+  });
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
+
+describe("PersonaCard", () => {
+  it("labels the persona as AI and shows their role, company type and personality", () => {
+    render(
+      <PersonaCard
+        persona={{
+          personaName: "Maya Chen",
+          personaTitle: "VP Operations",
+          companyType: "Regional logistics company",
+          personality: "Direct, time-pressed, open to good ideas",
+        }}
+      />,
+    );
+    const card = screen.getByRole("region", { name: "Maya Chen" });
+    expect(within(card).getByText("AI practice partner")).toBeInTheDocument();
+    expect(within(card).getByText("VP Operations")).toBeInTheDocument();
+    expect(within(card).getByText("Regional logistics company")).toBeInTheDocument();
+    const chips = within(within(card).getByRole("list", { name: "Personality" })).getAllByRole(
+      "listitem",
+    );
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "Direct",
+      "time-pressed",
+      "open to good ideas",
+    ]);
+  });
+});
+
+describe("TranscriptBubble", () => {
+  it("names who spoke for screen readers", () => {
+    render(
+      <ul>
+        <TranscriptBubble from="partner" speaker="Maya Chen" text="What do you have for me?" />
+        <TranscriptBubble from="student" speaker="You" text="A faster way to plan routes." />
+      </ul>,
+    );
+    const [partner, student] = screen.getAllByRole("listitem");
+    expect(partner).toHaveTextContent("Maya Chen said: What do you have for me?");
+    expect(student).toHaveTextContent("You said: A faster way to plan routes.");
+  });
+});
+
+describe("scoreBand", () => {
+  it.each([
+    [0, "Needs work"],
+    [49, "Needs work"],
+    [50, "Developing"],
+    [79, "Developing"],
+    [80, "Strong"],
+    [100, "Strong"],
+  ])("puts %i in the %s band", (score, label) => {
+    expect(scoreBand(score).label).toBe(label);
+  });
+});
+
+describe("ScoreRing", () => {
+  it("renders the final score and band on the server, before any script runs", () => {
+    const html = renderToString(<ScoreRing score={82} />);
+    expect(html).toContain(">82<");
+    expect(html).toContain("Strong");
+    expect(html).toContain('aria-label="Overall score: 82 out of 100, strong"');
+  });
+
+  it("shows the final score straight away when reduced motion is preferred", () => {
+    stubReducedMotion(true);
+    useFakeFrames();
+    render(<ScoreRing score={64} />);
+    expect(screen.getByRole("img", { name: "Overall score: 64 out of 100, developing" })).toBe(
+      screen.getByRole("img"),
+    );
+    expect(screen.getByText("64")).toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.getByText("64")).toBeInTheDocument();
+  });
+
+  it("counts up to the final score when motion is allowed, keeping the label exact", () => {
+    stubReducedMotion(false);
+    useFakeFrames();
+    render(<ScoreRing score={91} />);
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    const midway = Number(screen.getByTestId("score-value").textContent);
+    expect(midway).toBeLessThan(91);
+    expect(screen.getByRole("img")).toHaveAccessibleName("Overall score: 91 out of 100, strong");
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.getByTestId("score-value")).toHaveTextContent("91");
+  });
+});
+
+describe("RubricBar", () => {
+  it("shows the score out of five, the justification, and the quoted evidence", () => {
+    render(
+      <RubricBar
+        name="Objection handling"
+        score={4}
+        weighted
+        justification="Acknowledged the cost concern and answered it with a pilot offer."
+        evidence="What if we started with one depot for a month?"
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Objection handling" })).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Objection handling" })).toHaveAttribute(
+      "aria-valuenow",
+      "4",
+    );
+    expect(screen.getByText("4/5")).toBeInTheDocument();
+    expect(screen.getByText("Counts double")).toBeInTheDocument();
+    expect(screen.getByText("What if we started with one depot for a month?")).toBeInTheDocument();
+  });
+
+  it("leaves out the quote when there is no evidence", () => {
+    const { container } = render(
+      <RubricBar
+        name="Clarity"
+        score={2}
+        justification="The main point was hard to find."
+        evidence={null}
+      />,
+    );
+    expect(container.querySelector("blockquote")).toBeNull();
+    expect(screen.queryByText("Counts double")).not.toBeInTheDocument();
+  });
+});

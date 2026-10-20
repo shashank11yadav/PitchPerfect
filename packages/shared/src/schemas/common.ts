@@ -67,6 +67,15 @@ export const pageQuery = z.strictObject({
 });
 export type PageQuery = z.infer<typeof pageQuery>;
 
+/** Response envelope for list endpoints, for parsing a page of `item`. */
+export const pageSchema = <T extends z.ZodType>(item: T) =>
+  z.object({
+    items: z.array(item),
+    page: z.number().int(),
+    pageSize: z.number().int(),
+    total: z.number().int(),
+  });
+
 /** Response envelope for list endpoints. */
 export interface Page<T> {
   items: T[];

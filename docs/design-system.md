@@ -94,7 +94,7 @@ Each component is implemented once:
   - `JobPosting` on `/jobs/[slug]` (verified companies only), with `title`, `description`, `datePosted`, `validThrough`, `employmentType`, `hiringOrganization`, `jobLocation` or `jobLocationType: TELECOMMUTE`, and `baseSalary` when present.
 - Semantic structure: one `h1` per page, ordered headings, `<main>`, `<nav>`, `<footer>`, descriptive link text, and `alt` on every meaningful image.
 - Performance:
-  - Public pages are server-rendered or static with minimal client JS, and use `next/image` for images.
+  - Public pages are server-rendered per request with minimal client JS, and use `next/image` for images.
   - No layout shift from fonts (`next/font`).
   - Lighthouse ≥ 90 in all four categories, checked in CI with `@lhci/cli` against `next start`.
 - `noindex` on the app, employer, auth, and unverified-company job pages.

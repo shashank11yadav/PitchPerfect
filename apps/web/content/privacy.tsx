@@ -1,0 +1,262 @@
+import type { LegalSection } from "@/components/marketing/LegalDocument";
+
+const AI_PROVIDER = "our AI provider (OpenAI or Anthropic, depending on configuration)";
+const CONTACT = "the maintainer listed on the project's GitHub page";
+
+/** The privacy policy template. It must match the data flows in docs/security.md. */
+export const PRIVACY_SECTIONS: readonly LegalSection[] = [
+  {
+    id: "summary",
+    title: "The short version",
+    body: (
+      <ul>
+        <li>
+          We collect what you give us to run your account, your practice and your applications.
+        </li>
+        <li>
+          Practice transcripts are processed by {AI_PROVIDER} to play the buyer and score the
+          session, and are deleted after 180 days.
+        </li>
+        <li>We never receive or store audio. Your browser turns your speech into text.</li>
+        <li>Employers only see what you send them when you apply.</li>
+        <li>
+          We use two security cookies and a session cookie. No advertising, analytics or tracking.
+        </li>
+        <li>You can delete any practice session, and your whole account, at any time.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "who-we-are",
+    title: "Who we are",
+    body: (
+      <p>
+        PitchPerfect is open-source software for practicing sales conversations and hiring for
+        entry-level sales roles. In this policy, &ldquo;we&rdquo; means whoever operates this
+        PitchPerfect site. To reach us, contact {CONTACT}.
+      </p>
+    ),
+  },
+  {
+    id: "what-we-collect",
+    title: "What we collect",
+    body: (
+      <ul>
+        <li>
+          <strong>Account:</strong> your name, email address, whether you are a student or an
+          employer, and the date you confirmed you are 18 or older. Your password is stored only as
+          a one-way hash.
+        </li>
+        <li>
+          <strong>Student profile:</strong> school, major, graduation year, target role, industry,
+          state, and which lessons you have finished.
+        </li>
+        <li>
+          <strong>Résumé:</strong> the PDF you upload, up to 2 MB.
+        </li>
+        <li>
+          <strong>Practice sessions:</strong> the skill, the job if you practiced for one, the buyer
+          scenario, what you and the partner said, your scorecard, timestamps, and how much AI
+          processing the session used. We also record when you accepted the practice notice.
+        </li>
+        <li>
+          <strong>Jobs and applications:</strong> jobs you save, jobs you apply to, the scorecard
+          you chose to share, each application&apos;s status, and interview times and links.
+        </li>
+        <li>
+          <strong>Employers:</strong> your job title; your company&apos;s name, website, LinkedIn
+          page, pitch and logo link; your job posts; and your notes on applicants&apos; status.
+        </li>
+        <li>
+          <strong>Technical records:</strong> request logs with an ID, the page or endpoint, the
+          result and how long it took. Logs never contain what you typed or said.
+        </li>
+      </ul>
+    ),
+  },
+  {
+    id: "how-we-use-it",
+    title: "How we use it",
+    body: (
+      <ul>
+        <li>To run your account and keep it secure.</li>
+        <li>To run practice sessions, score them, and show you your history.</li>
+        <li>To send the applications you submit, and the details you share, to that employer.</li>
+        <li>To show public job listings and company profiles.</li>
+        <li>
+          To send account emails: verifying your address, resetting your password, interview
+          invitations, and notices when an application you made is closed.
+        </li>
+        <li>To keep the service working and fair: rate limits, usage limits and abuse checks.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "speech",
+    title: "Speech and audio",
+    body: (
+      <>
+        <p>
+          Voice practice uses your browser&apos;s built-in speech recognition. PitchPerfect never
+          receives or stores audio; only the text you choose to send reaches us. Some browsers
+          recognize speech by sending the audio to their maker (Google, Apple or Microsoft), under
+          that company&apos;s own privacy terms. Where your browser offers on-device recognition, it
+          is used automatically.
+        </p>
+        <p>
+          The partner&apos;s replies are read aloud by your browser&apos;s own speech voices. Text
+          mode is always available if you would rather not use your microphone.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "processors",
+    title: "Who else processes your data",
+    body: (
+      <ul>
+        <li>
+          <strong>{AI_PROVIDER}</strong> receives the text of your practice turns, the scenario and,
+          if you practiced for a job, that job&apos;s title, description and skills. Before anything
+          is sent, email addresses, phone numbers and card-like numbers are replaced with
+          placeholders. We don&apos;t add your name or email address, but anything you say in a
+          session is sent as you said it.
+        </li>
+        <li>
+          <strong>An email delivery service</strong> sends account and interview emails, so it
+          receives your email address and the message.
+        </li>
+        <li>
+          <strong>A breached-password check:</strong> when you choose a password, the first five
+          characters of a hash of it are sent to a breached-password lookup service. The password
+          itself never leaves our servers.
+        </li>
+        <li>
+          <strong>Our hosting and database providers</strong> store the data described here on our
+          behalf.
+        </li>
+      </ul>
+    ),
+  },
+  {
+    id: "employers",
+    title: "What employers see",
+    body: (
+      <>
+        <p>
+          When you apply to a job, that employer sees your name, school, major, graduation year,
+          your résumé if you uploaded one, and the one scorecard you chose to share. They do not see
+          your email address or any other practice session.
+        </p>
+        <p>
+          A shared scorecard is a live link, not a copy. If you delete that session, withdraw the
+          application, or the session reaches its 180-day limit, the employer sees that it is no
+          longer shared.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "cookies",
+    title: "Cookies",
+    body: (
+      <>
+        <p>PitchPerfect sets only the cookies it needs to work:</p>
+        <ul>
+          <li>
+            <strong>pp.sid</strong> keeps you signed in. It lasts up to 7 days without activity and
+            30 days at most.
+          </li>
+          <li>
+            <strong>pp.csrf</strong> holds a security token that protects your forms from other
+            websites.
+          </li>
+          <li>
+            <strong>pp.aid</strong> is a random ID that ties that security token to your browser
+            before you sign in.
+          </li>
+        </ul>
+        <p>There are no advertising, analytics or tracking cookies, and no third-party scripts.</p>
+      </>
+    ),
+  },
+  {
+    id: "retention",
+    title: "How long we keep it",
+    body: (
+      <ul>
+        <li>Practice transcripts and scorecards: 180 days, then deleted automatically.</li>
+        <li>Email verification links: 24 hours. Password reset links: 30 minutes.</li>
+        <li>Everything else: until you delete it or delete your account.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "deletion",
+    title: "Deleting your data",
+    body: (
+      <>
+        <p>
+          You can delete any practice session from your history. You can delete your account from
+          your settings, and this signs you out everywhere.
+        </p>
+        <ul>
+          <li>
+            <strong>Students:</strong> deleting your account removes your account, profile, résumé,
+            saved jobs, applications and practice sessions.
+          </li>
+          <li>
+            <strong>Employers:</strong> deleting your account removes your account, your company,
+            its jobs and its interviews. Open applications to those jobs are closed, and the
+            applicants are told by email.
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    id: "security",
+    title: "How we protect it",
+    body: (
+      <p>
+        Passwords are hashed with argon2id. Sessions use secure, HTTP-only cookies. Every request is
+        checked so people can only reach their own data, and employers can only reach applications
+        to their own jobs. Résumés are only ever downloaded, never shown in the browser. The
+        practice partner service cannot be reached from the internet. No system is perfectly secure;
+        if you find a problem, please report it to {CONTACT}.
+      </p>
+    ),
+  },
+  {
+    id: "age",
+    title: "Age",
+    body: (
+      <p>
+        PitchPerfect is for people 18 or older. Students confirm their age when they sign up. If we
+        learn that an account belongs to someone younger, we will delete it.
+      </p>
+    ),
+  },
+  {
+    id: "choices",
+    title: "Your choices",
+    body: (
+      <p>
+        You can see and change your profile, email address and password in your settings, choose
+        whether to share a scorecard each time you apply, practice in text mode instead of voice,
+        and delete sessions or your whole account. We don&apos;t offer a download of your data yet;
+        ask {CONTACT} if you need a copy.
+      </p>
+    ),
+  },
+  {
+    id: "changes",
+    title: "Changes and contact",
+    body: (
+      <p>
+        If this policy changes, we will update the date at the top of this page. For questions about
+        your data, contact {CONTACT}.
+      </p>
+    ),
+  },
+];

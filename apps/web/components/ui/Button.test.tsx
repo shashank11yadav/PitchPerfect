@@ -37,4 +37,15 @@ describe("Button", () => {
     expect(button.className).toContain("bg-danger");
     expect(button.className).toContain("h-12");
   });
+
+  it("has inverse variants for navy backgrounds", () => {
+    render(
+      <>
+        <Button variant="inverse">Start</Button>
+        <Button variant="inverse-outline">Learn more</Button>
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "Start" }).className).toContain("bg-white");
+    expect(screen.getByRole("button", { name: "Learn more" }).className).toContain("border-white");
+  });
 });

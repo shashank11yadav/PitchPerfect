@@ -21,7 +21,7 @@ function LinkColumn({ title, links }: { title: string; links: readonly NavLink[]
 
 export function Footer() {
   return (
-    <footer className="bg-navy text-white">
+    <footer className="pp-on-dark bg-navy text-white">
       <div className="mx-auto grid max-w-content gap-10 px-4 py-12 sm:px-6 md:grid-cols-[2fr_1fr_1fr]">
         <div>
           <Logo inverted />

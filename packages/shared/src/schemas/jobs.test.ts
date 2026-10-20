@@ -5,6 +5,8 @@ import {
   JobListQuerySchema,
   JobStatusUpdateSchema,
   JobUpdateSchema,
+  PublicJobSummaryPageSchema,
+  type PublicJobSummary,
 } from "./jobs.js";
 
 const job = () => ({
@@ -161,5 +163,43 @@ describe("EmployerJobListQuerySchema", () => {
       page: 2,
     });
     expect(EmployerJobListQuerySchema.safeParse({ status: "nope" }).success).toBe(false);
+  });
+});
+
+describe("PublicJobSummaryPageSchema", () => {
+  const summary = (): PublicJobSummary => ({
+    id: "65f1c0ffee0000000000abcd",
+    slug: "sales-development-intern-a1b2",
+    title: "Sales development intern",
+    location: "Boston, MA",
+    workplace: "hybrid",
+    employmentType: "internship",
+    pay: job().pay,
+    skills: ["Communication"],
+    publishedAt: "2026-10-01T12:00:00.000Z",
+    company: {
+      name: "Quarrow Logistics Software",
+      slug: "quarrow-logistics-software",
+      logoUrl: null,
+      verification: "verified",
+    },
+  });
+
+  it("parses a page of the public job board as the api sends it", () => {
+    const page = { items: [summary()], page: 1, pageSize: 50, total: 1 };
+    const parsed = PublicJobSummaryPageSchema.parse(page);
+    const items: PublicJobSummary[] = parsed.items;
+    expect(items).toEqual([summary()]);
+  });
+
+  it("rejects a page whose items are not job summaries", () => {
+    const page = {
+      items: [{ ...summary(), company: { name: "x" } }],
+      page: 1,
+      pageSize: 50,
+      total: 1,
+    };
+    expect(PublicJobSummaryPageSchema.safeParse(page).success).toBe(false);
+    expect(PublicJobSummaryPageSchema.safeParse({ items: "nope" }).success).toBe(false);
   });
 });

@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 /** Anything with a zod-style `parse`, so callers can pass shared response schemas. */
-interface Parser<T> {
+export interface Parser<T> {
   parse(data: unknown): T;
 }
 
@@ -62,7 +62,7 @@ function stringFields(value: unknown): Record<string, string> {
 }
 
 /** Reads the api's `{ error: { code, message, fields? } }` envelope; anything else is internal. */
-async function toApiError(res: Response): Promise<ApiError> {
+export async function toApiError(res: Response): Promise<ApiError> {
   const body: unknown = await res.json().catch(() => undefined);
   const error = isRecord(body) ? body.error : undefined;
   if (isRecord(error) && typeof error.code === "string") {

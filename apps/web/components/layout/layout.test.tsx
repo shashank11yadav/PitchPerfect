@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { EMPLOYER_NAV, PUBLIC_NAV, STUDENT_NAV } from "@/lib/site";
 import { AppShell } from "./AppShell";
 import { Footer } from "./Footer";
@@ -50,6 +50,38 @@ describe("Navbar", () => {
     await userEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(menu).toBeVisible();
+  });
+
+  it("moves focus into the opened menu, and Escape closes it and returns focus", async () => {
+    render(<Navbar />);
+    const toggle = screen.getByRole("button", { name: "Menu" });
+    const menu = document.getElementById("mobile-nav");
+    if (!menu) throw new Error("no mobile menu");
+    await userEvent.click(toggle);
+    expect(within(menu).getByRole("link", { name: "Students" })).toHaveFocus();
+
+    await userEvent.keyboard("{Escape}");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(menu).not.toBeVisible();
+    expect(toggle).toHaveFocus();
+  });
+
+  it("closes the menu when a link in it is followed", async () => {
+    // jsdom can't navigate; stop the link's default action after React has handled the click.
+    const stopNavigation = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("click", stopNavigation);
+    onTestFinished(() => {
+      window.removeEventListener("click", stopNavigation);
+    });
+    render(<Navbar />);
+    const toggle = screen.getByRole("button", { name: "Menu" });
+    const menu = document.getElementById("mobile-nav");
+    if (!menu) throw new Error("no mobile menu");
+    await userEvent.click(toggle);
+    await userEvent.click(within(menu).getByRole("link", { name: "Employers" }));
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 });
 

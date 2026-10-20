@@ -1,16 +1,14 @@
 import { z } from "zod";
 import {
+  COMPANY_VERIFICATION,
   CURRENCIES,
   EMPLOYMENT_TYPES,
   JOB_STATUSES,
   PAY_FREQUENCIES,
   WORKPLACES,
-  type EmploymentType,
-  type Workplace,
 } from "../enums.js";
 import { LIMITS } from "../limits.js";
-import { pageQuery } from "./common.js";
-import type { PublicCompany } from "./employer.js";
+import { pageQuery, pageSchema } from "./common.js";
 
 const money = () => z.number().positive().max(LIMITS.payMax);
 
@@ -66,18 +64,28 @@ export const JobListQuerySchema = pageQuery.extend({
 });
 export type JobListQuery = z.infer<typeof JobListQuerySchema>;
 
-export interface PublicJobSummary {
-  id: string;
-  slug: string;
-  title: string;
-  location: string;
-  workplace: Workplace;
-  employmentType: EmploymentType;
-  pay: JobPay;
-  skills: string[];
-  publishedAt: string | null;
-  company: Pick<PublicCompany, "name" | "slug" | "logoUrl" | "verification">;
-}
+/** Response: one job on the public board. Unknown keys are dropped, so the api can add fields. */
+export const PublicJobSummarySchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  location: z.string(),
+  workplace: z.enum(WORKPLACES),
+  employmentType: z.enum(EMPLOYMENT_TYPES),
+  pay: PaySchema,
+  skills: z.array(z.string()),
+  publishedAt: z.string().nullable(),
+  company: z.object({
+    name: z.string(),
+    slug: z.string(),
+    logoUrl: z.string().nullable(),
+    verification: z.enum(COMPANY_VERIFICATION),
+  }),
+});
+export type PublicJobSummary = z.infer<typeof PublicJobSummarySchema>;
+
+/** Response of `GET /api/jobs`. */
+export const PublicJobSummaryPageSchema = pageSchema(PublicJobSummarySchema);
 
 export interface PublicJob extends PublicJobSummary {
   /** Already sanitized by the api. */

@@ -96,6 +96,7 @@
     font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
     font-weight: 700;
     color: var(--pp-navy);
+    text-wrap: balance;
   }
 
   a {
@@ -106,6 +107,11 @@
   :focus-visible {
     outline: 2px solid var(--pp-blue);
     outline-offset: 2px;
+  }
+
+  /* On navy and blue surfaces the blue ring would disappear, so it turns white there. */
+  .pp-on-dark :focus-visible {
+    outline-color: var(--pp-surface);
   }
 
   @media (prefers-reduced-motion: reduce) {

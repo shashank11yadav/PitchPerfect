@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 import { Spinner } from "./Spinner";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "inverse" | "inverse-outline";
 type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
@@ -10,6 +10,9 @@ const VARIANTS: Record<Variant, string> = {
   secondary: "border border-primary bg-surface text-primary hover:bg-primary-soft",
   ghost: "text-primary hover:bg-primary-soft",
   danger: "bg-danger text-white hover:opacity-90",
+  // For navy backgrounds, where the brand blue has too little contrast.
+  inverse: "bg-white text-navy hover:bg-primary-soft",
+  "inverse-outline": "border border-white/70 text-white hover:bg-white/10",
 };
 
 const SIZES: Record<Size, string> = {
