@@ -74,7 +74,8 @@ describe("POST /api/practice/sessions/:id/turns", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toMatch(/^text\/event-stream/);
-    expect(res.headers["cache-control"]).toBe("no-store");
+    // no-transform keeps the web proxy from gzipping, and so buffering, the stream.
+    expect(res.headers["cache-control"]).toBe("no-store, no-transform");
     expect(res.headers["x-accel-buffering"]).toBe("no");
     expect(events.at(0)?.event).toBe("delta");
     expect(events.at(-1)?.event).toBe("done");

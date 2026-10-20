@@ -23,12 +23,29 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
    - Set every variable from `apps/api/.env.example`, with `NODE_ENV=production`, `APP_URL=https://<web domain>` and `COACH_URL=<private coach URL>`.
    - Run `npm run admin -w apps/api -- migrate` (builds indexes) once.
    - Run `npm run seed -w apps/api -- --demo` only for a demo environment, with `SEED_DEMO_PASSWORD` (12 or more characters) set in that shell. The password is never printed, and re-running the seed never changes an existing account's password.
-5. **Deploy web:** set `API_ORIGIN`, `SITE_URL`, and `PROXY_SHARED_SECRET` if used.
+5. **Deploy web:** set `API_ORIGIN`, `SITE_URL`, and `PROXY_SHARED_SECRET` if used. `API_ORIGIN` must be set when the app is **built**, because Next.js compiles the `/api` rewrite into the build. See [The web proxy](#the-web-proxy) below.
 6. **Verify:**
    - Run `npx playwright test --config e2e/playwright.smoke.config.ts` with `BASE_URL` set to the deployed URL. It runs a read-only smoke test of the public pages, `/api/health`, and the headers.
    - Run Lighthouse on `/`, `/jobs` and one job page.
    - Run the [security checklist](security.md#pre-release-security-checklist).
 7. **Schedule the purge job:** run `npm run purge -w apps/api` daily. It removes expired tokens and attempts as a backstop for the TTL indexes, marks sessions that were left `active` long past the 20-minute limit as abandoned, and removes `starting` placeholders of session starts that never finished (older than 5 minutes).
+
+## The web proxy
+
+The browser only talks to web. Next.js rewrites `/api/*` to `${API_ORIGIN}/api/*`, and `apps/web/proxy.ts` sets these headers on each proxied request:
+
+- `x-pp-proxy`: the shared secret, when `PROXY_SHARED_SECRET` is set. Any value the client sent is dropped first.
+- `x-forwarded-proto` and `x-forwarded-host`: the public protocol and host. The api sets `Secure` cookies only when it trusts these, so it needs `TRUST_PROXY` of 1 or more in production.
+
+`X-Forwarded-For` is passed through unchanged, and the api's per-IP rate limits read it. Run web behind a platform or reverse proxy that sets or appends it (Vercel overwrites it with the real client address; nginx can append with `proxy_add_x_forwarded_for`). If `next start` faces the internet directly, a client can choose the address the api sees.
+
+Practice turns stream as server-sent events through the same rewrite:
+
+- The api sends `Cache-Control: no-store, no-transform`. Without `no-transform`, Next.js gzips the proxied response and holds the whole stream until it ends.
+- `experimental.proxyTimeout` is 60 s. That is the longest a proxied request may sit idle, and it is above the api's 35 s practice partner timeout.
+- A proxy in front of web must not buffer `text/event-stream` responses either. The api also sends `X-Accel-Buffering: no` for nginx.
+
+Every page is rendered per request, because the CSP nonce is new on each request. Static pages would carry no nonce, and the browser would block their scripts.
 
 ## Environment variables
 

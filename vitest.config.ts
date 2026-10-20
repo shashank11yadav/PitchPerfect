@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 const apiGlobalSetup = fileURLToPath(new URL("./apps/api/test/setup.ts", import.meta.url));
+const webSetup = fileURLToPath(new URL("./apps/web/vitest.setup.ts", import.meta.url));
 
 // The subpath entries must come before the package root, which would otherwise match them first.
 const alias = {
@@ -15,9 +16,16 @@ const alias = {
   "@pitchperfect/coach/app": fileURLToPath(new URL("./apps/coach/src/app.ts", import.meta.url)),
 };
 
+const webAlias = {
+  ...alias,
+  "@/": fileURLToPath(new URL("./apps/web/", import.meta.url)),
+};
+
 export default defineConfig({
   test: {
     passWithNoTests: true,
+    // Explicit: every test file gets a fresh module graph (module-level caches, mocks).
+    isolate: true,
     projects: [
       {
         resolve: { alias },
@@ -48,6 +56,16 @@ export default defineConfig({
           root: "apps/coach",
           environment: "node",
           include: ["test/**/*.test.ts", "src/**/*.test.ts", "evals/**/*.test.ts"],
+        },
+      },
+      {
+        resolve: { alias: webAlias },
+        test: {
+          name: "web",
+          root: "apps/web",
+          environment: "jsdom",
+          setupFiles: [webSetup],
+          include: ["proxy.test.ts", "{app,components,lib}/**/*.test.{ts,tsx}"],
         },
       },
     ],

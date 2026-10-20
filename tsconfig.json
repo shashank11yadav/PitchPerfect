@@ -1,4 +1,17 @@
 {
   "files": [],
-  "references": [{ "path": "packages/shared" }, { "path": "apps/api" }, { "path": "apps/coach" }]
+  "references": [
+    {
+      "path": "packages/shared"
+    },
+    {
+      "path": "apps/api"
+    },
+    {
+      "path": "apps/coach"
+    },
+    {
+      "path": "apps/web"
+    }
+  ]
 }

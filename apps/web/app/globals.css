@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+/* Brand tokens (docs/design-system.md). Components use these through the Tailwind theme only. */
+:root {
+  --pp-blue: #3f56d2;
+  --pp-blue-600: #3447b8;
+  --pp-blue-50: #eef1fc;
+  --pp-navy: #2d3c90;
+  --pp-navy-900: #1d275e;
+  --pp-ink: #212529;
+  --pp-muted: #6c757d;
+  --pp-surface: #ffffff;
+  --pp-surface-2: #f8f9fa;
+  --pp-border: #e9ecef;
+  --pp-success: #1f8a5b;
+  --pp-warning: #b7791f;
+  --pp-danger: #c53030;
+  --pp-shadow: 0 1px 2px rgb(16 24 40 / 0.06), 0 4px 12px rgb(16 24 40 / 0.06);
+  --pp-shadow-strong: 0 2px 4px rgb(16 24 40 / 0.08), 0 8px 24px rgb(16 24 40 / 0.1);
+}
+
+@theme inline {
+  /* Only brand colours exist, so nothing off-palette can slip in. */
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-primary: var(--pp-blue);
+  --color-primary-hover: var(--pp-blue-600);
+  --color-primary-soft: var(--pp-blue-50);
+  --color-navy: var(--pp-navy);
+  --color-navy-900: var(--pp-navy-900);
+  --color-ink: var(--pp-ink);
+  --color-muted: var(--pp-muted);
+  --color-surface: var(--pp-surface);
+  --color-surface-2: var(--pp-surface-2);
+  --color-border: var(--pp-border);
+  --color-success: var(--pp-success);
+  --color-warning: var(--pp-warning);
+  --color-danger: var(--pp-danger);
+
+  /* `--font-heading` and `--font-body` are set by next/font in app/layout.tsx. */
+  --font-*: initial;
+  --font-display: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+
+  /* Type scale: size / line height. */
+  --text-*: initial;
+  --text-display: 3.5rem;
+  --text-display--line-height: 4rem;
+  --text-display-sm: 2.5rem;
+  --text-display-sm--line-height: 3rem;
+  --text-h1: 2.5rem;
+  --text-h1--line-height: 3rem;
+  --text-h2: 2rem;
+  --text-h2--line-height: 2.5rem;
+  --text-h3: 1.5rem;
+  --text-h3--line-height: 2rem;
+  --text-h4: 1.25rem;
+  --text-h4--line-height: 1.75rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.625rem;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.375rem;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.125rem;
+
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --radius-pill: 999px;
+
+  --shadow-card: var(--pp-shadow);
+  --shadow-card-hover: var(--pp-shadow-strong);
+
+  --container-content: 1200px;
+  --container-prose: 70ch;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--pp-surface-2);
+    color: var(--pp-ink);
+    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+    font-size: --theme(--text-body);
+    line-height: --theme(--text-body--line-height);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 700;
+    color: var(--pp-navy);
+  }
+
+  a {
+    color: inherit;
+  }
+
+  /* One focus style everywhere: a 2 px brand ring with an offset. */
+  :focus-visible {
+    outline: 2px solid var(--pp-blue);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Reading styles for the allowlisted tags rendered by SafeHtml. */
+@layer components {
+  .pp-prose {
+    max-width: --theme(--container-prose);
+    color: var(--pp-ink);
+  }
+
+  .pp-prose > * + * {
+    margin-top: 1rem;
+  }
+
+  .pp-prose h3 {
+    font-size: --theme(--text-h4);
+    line-height: --theme(--text-h4--line-height);
+  }
+
+  .pp-prose h4 {
+    font-size: --theme(--text-body);
+    line-height: --theme(--text-body--line-height);
+  }
+
+  .pp-prose ul,
+  .pp-prose ol {
+    padding-left: 1.5rem;
+  }
+
+  .pp-prose ul {
+    list-style: disc;
+  }
+
+  .pp-prose ol {
+    list-style: decimal;
+  }
+
+  .pp-prose a {
+    color: var(--pp-blue);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .pp-prose blockquote {
+    border-left: 4px solid var(--pp-border);
+    padding-left: 1rem;
+    color: var(--pp-ink);
+  }
+}

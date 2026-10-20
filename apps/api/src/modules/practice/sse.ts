@@ -11,7 +11,8 @@ export interface PracticeStream {
 
 const HEADERS = {
   "content-type": "text/event-stream; charset=utf-8",
-  "cache-control": "no-store",
+  // no-transform: the web's /api proxy would otherwise gzip the stream and hold it until the end.
+  "cache-control": "no-store, no-transform",
   connection: "keep-alive",
   "x-accel-buffering": "no",
 } as const;
