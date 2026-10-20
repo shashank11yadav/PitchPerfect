@@ -109,6 +109,8 @@ describe("PracticeRoom", () => {
     const live = document.querySelector('[aria-live="polite"][data-live="reply"]');
     if (!(live instanceof HTMLElement)) throw new Error("no live region");
     expect(live).toHaveTextContent("An hour? Doing what");
+    // Busy while the reply arrives, so screen readers wait for the whole thing.
+    expect(live).toHaveAttribute("aria-busy", "true");
 
     turn.emit({
       type: "done",
@@ -120,7 +122,9 @@ describe("PracticeRoom", () => {
       turn.finish();
       await Promise.resolve();
     });
-    expect(live).not.toHaveTextContent("Doing what");
+    expect(live).toHaveAttribute("aria-busy", "false");
+    // Read out once, the checked final text with who said it.
+    expect(live.textContent).toBe("Dana Ruiz said: An hour? Doing what, exactly?");
     expect(screen.getByRole("list", { name: "Transcript" })).toHaveTextContent(
       "Dana Ruiz said: An hour? Doing what, exactly?",
     );
@@ -187,6 +191,35 @@ describe("PracticeRoom", () => {
         expect.objectContaining({ method: "POST" }),
       );
     });
+  });
+
+  it("goes back to a fresh start screen on Practice again after scoring in place", async () => {
+    const user = userEvent.setup();
+    serveApi({
+      "GET /api/auth/csrf": csrf,
+      "POST /api/practice/sessions/65f1c0ffee00000000000b01/end": () =>
+        jsonResponse({ attempt: completedAttempt() }),
+      "GET /api/me/applications?pageSize=50": () => jsonResponse(pageOf([], 0, 50)),
+      "GET /api/practice/quota": () =>
+        jsonResponse({
+          dailyUsed: 1,
+          dailyLimit: 5,
+          monthlyUsed: 4,
+          monthlyLimit: 30,
+          available: true,
+          budgetExhausted: false,
+          resetsAt: "2026-10-21T00:00:00.000Z",
+        }),
+      "GET /api/practice/attempts?pageSize=1": () => jsonResponse(pageOf([])),
+    });
+    render(<PracticeRoom attempt={activeAttempt()} />);
+    await user.click(screen.getByRole("button", { name: "End session" }));
+    await user.click(screen.getByRole("button", { name: "End and score" }));
+    await user.click(await screen.findByRole("button", { name: "Practice again" }));
+
+    expect(await screen.findByRole("button", { name: "Start the call" })).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /^Overall score/ })).toBeNull();
+    expect(window.location.pathname).toBe("/app/practice/pitching");
   });
 });
 

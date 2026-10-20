@@ -32,8 +32,11 @@ export type RoomMode = "voice" | "text";
 export type SpeechErrorCode =
   "not-allowed" | "service-not-allowed" | "network" | "no-speech" | "aborted";
 
-/** Why the room stopped taking turns: the api's reasons, or a session too short to score. */
-export type RoomEndReason = EndedReason | "abandoned";
+/**
+ * Why the room stopped taking turns: the api's reasons, a session too short to score, or one a
+ * new session in another tab replaced.
+ */
+export type RoomEndReason = EndedReason | "abandoned" | "replaced";
 
 /** A transcript line as the room shows it. */
 export interface RoomEntry extends Pick<TranscriptEntry, "role" | "text"> {
@@ -90,12 +93,15 @@ export type RoomAction =
   | { type: "done"; stage: Stage; turnsLeft: number; finalText: string }
   | { type: "redirect"; text: string }
   | { type: "ended"; reason: EndedReason }
-  | { type: "stream_error"; code: string; message?: string }
+  | { type: "replaced" }
+  /** `counted`: the partner had started answering, so the api counts the turn as used. */
+  | { type: "stream_error"; code: string; message?: string; counted?: boolean }
   | { type: "end_requested" }
   | { type: "end_failed"; code: string; message: string }
   | { type: "scored"; attempt: AttemptView }
   | { type: "set_mode"; mode: RoomMode }
-  | { type: "edit_draft"; text: string };
+  | { type: "edit_draft"; text: string }
+  | { type: "reset" };
 
 const INTERRUPTED_MESSAGE = "Reply interrupted — try again";
 const BUSY_MESSAGE = "Still working on the last reply";
@@ -124,7 +130,21 @@ export const END_NOTICES: Record<RoomEndReason, string> = {
     "This session ended because several messages were off the call. Your other sessions aren’t affected. Start a new session when you’re ready.",
   abandoned:
     "This session wasn’t scored. A scorecard needs at least two of your replies, so start a new session and keep going a little longer.",
+  replaced: "You started a new call in another tab, so this one stopped. It wasn’t scored.",
 };
+
+/** Scoring needs this many unflagged student turns (the api's rule). */
+const MIN_SCORED_TURNS = 2;
+
+/**
+ * Why an attempt has no scorecard. An abandoned one with enough turns to score was replaced by a
+ * newer session; one with fewer was ended too early.
+ */
+export function unscoredReason(attempt: Pick<AttemptView, "status" | "transcript">): RoomEndReason {
+  if (attempt.status === "ended_by_guard") return "guard_limit";
+  const turns = attempt.transcript.filter((entry) => entry.role === "student" && !entry.flagged);
+  return turns.length >= MIN_SCORED_TURNS ? "replaced" : "abandoned";
+}
 
 export function initialRoomState(mode: RoomMode = "voice"): RoomState {
   return {
@@ -190,7 +210,10 @@ function send(state: RoomState): RoomState {
   };
 }
 
-function streamError(state: RoomState, code: string, message?: string): RoomState {
+function streamError(
+  state: RoomState,
+  { code, message, counted = false }: { code: string; message?: string; counted?: boolean },
+): RoomState {
   if (!inTurn(state)) return state;
   const last = lastEntry(state);
   const unanswered = last?.role === "student" ? last : undefined;
@@ -198,6 +221,7 @@ function streamError(state: RoomState, code: string, message?: string): RoomStat
     ...state,
     status: "ready",
     streamingText: "",
+    turnsLeft: counted ? Math.max(0, state.turnsLeft - 1) : state.turnsLeft,
     error: {
       code,
       message: message ?? (code === "conflict" ? BUSY_MESSAGE : INTERRUPTED_MESSAGE),
@@ -209,7 +233,7 @@ function streamError(state: RoomState, code: string, message?: string): RoomStat
   };
 }
 
-function ended(state: RoomState, reason: EndedReason): RoomState {
+function ended(state: RoomState, reason: EndedReason | "replaced"): RoomState {
   if (state.status === "scored" || state.status === "ending") return state;
   const next: RoomState = {
     ...state,
@@ -243,11 +267,12 @@ function scored(state: RoomState, attempt: AttemptView): RoomState {
   if (attempt.scorecard) {
     return { ...state, status: "scored", scorecard: attempt.scorecard, result: attempt };
   }
+  const reason = unscoredReason(attempt);
   return {
     ...state,
     status: "ended",
-    endedReason: "abandoned",
-    notice: END_NOTICES.abandoned,
+    endedReason: reason,
+    notice: END_NOTICES[reason],
     result: attempt,
   };
 }
@@ -307,7 +332,8 @@ export function practiceReducer(state: RoomState, action: RoomAction): RoomState
         stage: action.stage,
         turnsLeft: action.turnsLeft,
         streamingText: "",
-        announcement: state.streamingText ? "" : action.finalText,
+        // Read out once, now that the checked text is in; the deltas weren't announced.
+        announcement: action.finalText,
         transcript: [...state.transcript, { role: "partner", text: action.finalText }],
       };
     case "redirect":
@@ -327,8 +353,10 @@ export function practiceReducer(state: RoomState, action: RoomAction): RoomState
       };
     case "ended":
       return ended(state, action.reason);
+    case "replaced":
+      return ended(state, "replaced");
     case "stream_error":
-      return streamError(state, action.code, action.message);
+      return streamError(state, action);
     case "end_requested":
       if (!canEnd(state)) return state;
       return { ...state, status: "ending", error: undefined };
@@ -350,6 +378,13 @@ export function practiceReducer(state: RoomState, action: RoomAction): RoomState
         status: state.status === "listening" ? "ready" : state.status,
       };
     case "edit_draft":
-      return { ...state, draft: action.text };
+      // Typing while listening takes over: speech stops adding to what the student wrote.
+      return {
+        ...state,
+        draft: action.text,
+        status: state.status === "listening" ? "ready" : state.status,
+      };
+    case "reset":
+      return initialRoomState(state.mode);
   }
 }

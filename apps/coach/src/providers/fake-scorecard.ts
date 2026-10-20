@@ -6,12 +6,29 @@ import {
   type Scorecard,
 } from "@pitchperfect/shared";
 
+/**
+ * The fake provider's scorer: simple text heuristics, written up the way a sales coach would say
+ * them. Every quote is a verbatim slice of a student turn, and every number comes from the turns.
+ */
+
 type Score = 1 | 2 | 3 | 4 | 5;
+
 interface Judgement {
   score: Score;
   justification: string;
   evidence: string | null;
+  /** Said when this is one of the call's best dimensions; null when it isn't true enough. */
+  strength: string | null;
+  improvement: string;
+  /** The line to rewrite when this is the weakest dimension and has no quote of its own. */
+  fallback: string;
+  /** A stronger version of `line`, aimed at what this dimension scored low on. */
+  rewrite: (line: string) => string;
 }
+
+/** "1 question", "3 questions". */
+export const plural = (count: number, word: string) =>
+  `${String(count)} ${count === 1 ? word : `${word}s`}`;
 
 const clamp = (value: number): Score => Math.min(5, Math.max(1, Math.round(value))) as Score;
 
@@ -22,121 +39,363 @@ const sentencesOf = (turn: string) =>
     .map((sentence) => sentence.trim())
     .filter(Boolean);
 
-const quote = (sentence: string | undefined) =>
-  sentence === undefined ? null : sentence.slice(0, LIMITS.evidenceMaxLength).trimEnd();
+const quote = (sentence: string) => sentence.slice(0, LIMITS.evidenceMaxLength).trimEnd();
 
 const wordCount = (text: string) => text.split(/\s+/).filter(Boolean).length;
 
-const DATED_ASK =
-  /\b(monday|tuesday|wednesday|thursday|friday|tomorrow|next week|next month|this week|\d{1,2}(:\d{2})?\s?(am|pm)|\d{1,2}:\d{2})\b/i;
+/** A sentence without its closing punctuation, for building on. */
+const bare = (sentence: string) => sentence.replace(/[.!?]+$/, "");
+
+const TIME_PHRASE =
+  /\b(?:next\s+)?(?:monday|tuesday|wednesday|thursday|friday|tomorrow)(?:\s+at\s+\d{1,2}(?::\d{2})?\s?(?:am|pm)?)?|\b\d{1,2}(?::\d{2})?\s?(?:am|pm)\b|\b(?:next|this) week\b/i;
 const ASK =
-  /\b(meet|meeting|call|demo|next step|follow up|schedule|book|introduce|introduction|trial)\b/i;
-const OPEN_QUESTION = /^(what|how|why|which|tell me|walk me)\b/i;
+  /\b(meet|meeting|call|demo|next step|follow up|schedule|book|introduce|introduction|trial|pilot)\b/i;
+const OPEN_QUESTION = /^(what|how|why|which|where|who|tell me|walk me)\b/i;
 const ACKNOWLEDGE =
-  /\b(understand|fair|makes sense|hear you|good question|great question|i see)\b/i;
+  /\b(understand|fair|makes sense|hear you|good question|great question|i see|i get it)\b/i;
 const PROOF = /\b(\d+|for example|customers|teams like|case study|results)\b/i;
-const BENEFIT = /\b(save|saves|reduce|cut|grow|increase|faster|less|help|helps)\b/i;
+const BENEFIT = /\b(save|saves|reduce|cut|cuts|grow|increase|faster|less|stops|help|helps)\b/i;
 const YOU = /\b(you|your|yours)\b/gi;
-const FILLER = /\b(um|uh|er|maybe|sorry|i think|i guess|just|kind of|sort of|basically)\b/gi;
+const HEDGES = [
+  "um",
+  "uh",
+  "sorry",
+  "i think",
+  "i guess",
+  "just",
+  "maybe",
+  "kind of",
+  "sort of",
+  "basically",
+];
+const HEDGE = new RegExp(`\\b(${HEDGES.join("|")})\\b`, "gi");
+/** The same words, for `test`: a global pattern would carry `lastIndex` between calls. */
+const HEDGE_ONE = new RegExp(HEDGE.source, "i");
 const OPENER = /\b(hi|hello|my name|i'm|i am|thanks for)\b/i;
 
-const IMPROVED_LINES: Record<RubricKey, string> = {
-  clarity: "In one line: we cut the time your team spends on scheduling by half.",
-  value: "Since you said bookings eat your mornings, this gives your team those hours back.",
-  structure: "Let me share why I called, ask a couple of questions, and then suggest a next step.",
-  discovery: "What happens today when a booking goes wrong, and what does that cost your team?",
-  objections: "That's fair. Teams your size felt the same, and saw the cost back within a quarter.",
-  confidence: "We help teams like yours save four hours a week on scheduling.",
-  cta: "Could we book twenty minutes next Tuesday at 10am to walk your team through it?",
-};
+const ASK_LINE = "Could we book 20 minutes on Thursday at 10am to go through it together?";
+const DISCOVERY_LINE = "How do you handle that today, and what happens when it goes wrong?";
+
+/** Picks sentences for evidence so no two dimensions quote the same line. */
+function quoter() {
+  const used = new Set<string>();
+  return (...candidates: (string | undefined)[]): string | null => {
+    const fresh = candidates.find(
+      (candidate): candidate is string => candidate !== undefined && !used.has(candidate),
+    );
+    if (fresh === undefined) return null;
+    used.add(fresh);
+    return quote(fresh);
+  };
+}
+
+/** "‘just’, ‘I think’" from the hedges actually used, in the student's own casing. */
+function hedgeList(text: string): { count: number; list: string } {
+  const found = text.match(HEDGE) ?? [];
+  const distinct = [...new Set(found.map((hedge) => hedge.toLowerCase()))].slice(0, 3);
+  return {
+    count: found.length,
+    list: distinct.map((hedge) => `‘${hedge.replace(/^i /, "I ")}’`).join(", "),
+  };
+}
+
+/** The line with its hedges taken out and the first letter put back in capitals. */
+function withoutHedges(line: string): string {
+  const cleaned = line
+    .replace(HEDGE, "")
+    .replace(/\s+,/g, ",")
+    .replace(/^[\s,]+/, "")
+    .replace(/,\s*,/g, ",")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+/** The first clause of a long line, as its own sentence. */
+function shortened(line: string): string {
+  const words = bare(line).split(/\s+/);
+  const clause =
+    bare(line)
+      .split(/,|\band\b|\bwhich\b/)[0]
+      ?.trim() ?? "";
+  const short = wordCount(clause) >= 4 ? clause : words.slice(0, 12).join(" ");
+  return `${short}.`;
+}
 
 function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
   const sentences = turns.flatMap(sentencesOf);
-  const find = (pattern: RegExp) => sentences.find((sentence) => pattern.test(sentence));
+  const all = turns.join(" ");
+  const take = quoter();
+  const first = (pattern: RegExp) => sentences.find((sentence) => pattern.test(sentence));
+  const last = sentences.at(-1) ?? "";
+
   const questions = sentences.filter((sentence) => sentence.includes("?"));
   const open = questions.filter((sentence) => OPEN_QUESTION.test(sentence));
-  const averageWords = turns.length ? wordCount(turns.join(" ")) / turns.length : 0;
-  const fillers = turns.join(" ").match(FILLER)?.length ?? 0;
-  const youCount = turns.join(" ").match(YOU)?.length ?? 0;
+  const closed = questions.find((sentence) => !OPEN_QUESTION.test(sentence));
+  const averageWords = turns.length ? Math.round(wordCount(all) / turns.length) : 0;
+  const longest = [...sentences].sort((a, b) => wordCount(b) - wordCount(a))[0] ?? "";
+  const tidiest = sentences.find((sentence) => {
+    const words = wordCount(sentence);
+    return words >= 5 && words <= 18 && !sentence.includes("?");
+  });
+  const hedges = hedgeList(all);
+  const hedged = first(HEDGE_ONE);
+  const youCount = all.match(YOU)?.length ?? 0;
   const benefits = sentences.filter((sentence) => BENEFIT.test(sentence));
-  const dated = find(DATED_ASK);
-  const ask = dated ?? find(ASK);
-  const acknowledged = find(ACKNOWLEDGE);
-  const proof = find(PROOF);
-  const opener = OPENER.test(turns[0] ?? "");
+  const timed = first(TIME_PHRASE);
+  const time = timed?.match(TIME_PHRASE)?.[0];
+  const ask = timed ?? first(ASK);
+  const acknowledged = first(ACKNOWLEDGE);
+  const proof = sentences.find((sentence) => PROOF.test(sentence) && sentence !== acknowledged);
+  const opener = OPENER.test(turns[0] ?? "") ? sentences[0] : undefined;
 
-  const clarityBands = [35, 60, 90, 140];
-  const clarity = clamp(5 - clarityBands.filter((limit) => averageWords > limit).length);
-  const structurePoints = [turns.length >= 3, questions.length > 0, ask !== undefined, opener];
+  // Structure first, so the opening line is its evidence and clarity quotes something else.
+  const missing = [
+    !opener && {
+      reason: "You skipped the introduction, so they never heard who was calling or why.",
+      fix: "Open with who you are and why you called, in one sentence.",
+      rewrite: (line: string) => `Thanks for taking the call. ${line}`,
+    },
+    questions.length === 0 && {
+      reason:
+        "You pitched without asking anything first, so the pitch had nothing of theirs to hang on.",
+      fix: "Ask one question about how they work today before you describe anything.",
+      rewrite: (line: string) => `${bare(line)}. ${DISCOVERY_LINE}`,
+    },
+    turns.length < 3 && {
+      reason: `The call ended after ${plural(turns.length, "turn")}, before it could get anywhere.`,
+      fix: "Stay in the call longer: answer what they say and move it toward a decision.",
+      rewrite: (line: string) => `${bare(line)}. ${DISCOVERY_LINE}`,
+    },
+    !ask && {
+      reason: "It ended without an ask, so there was nothing for them to agree to.",
+      fix: "Finish with a clear ask for the next meeting.",
+      rewrite: (line: string) => `${bare(line)}. ${ASK_LINE}`,
+    },
+  ].filter((part) => part !== false);
+  const structureScore = clamp(5 - missing.length);
 
-  return {
-    clarity: {
-      score: averageWords === 0 ? 1 : clarity,
-      justification: `Turns averaged ${String(Math.round(averageWords))} words; shorter turns keep one clear message.`,
-      evidence: quote(sentences[0]),
-    },
-    value: {
-      score: clamp(
-        1 + Math.min(2, benefits.length) + Number(youCount >= 2) + Number(youCount >= 5),
-      ),
-      justification: `${String(benefits.length)} sentence(s) named a benefit; the buyer was addressed directly ${String(youCount)} time(s).`,
-      evidence: quote(benefits[0]),
-    },
-    structure: {
-      score: clamp(1 + structurePoints.filter(Boolean).length),
-      justification: "Checked for an opening, questions, enough back-and-forth, and a closing ask.",
-      evidence: quote(sentences[0]),
-    },
-    discovery: {
-      score: clamp(1 + questions.length),
-      justification: `${String(questions.length)} question(s) asked, ${String(open.length)} of them open-ended.`,
-      evidence: quote(open[0] ?? questions[0]),
-    },
-    objections: {
-      score: clamp(1 + (acknowledged ? 2 : 0) + (proof ? 1 : 0)),
-      justification: acknowledged
-        ? "Pushback was acknowledged before responding."
-        : "Pushback was not acknowledged before responding.",
-      evidence: quote(acknowledged),
-    },
-    confidence: {
-      score: clamp(5 - fillers),
-      justification: `${String(fillers)} filler or hedging word(s) used.`,
-      evidence: quote(find(new RegExp(FILLER.source, "i")) ?? sentences[0]),
-    },
-    cta: {
-      score: dated ? 5 : ask ? 3 : 1,
-      justification: dated
-        ? "Asked for a specific, time-bound next step."
-        : ask
-          ? "Asked for a next step but without a time."
-          : "No next step was requested.",
-      evidence: quote(ask),
-    },
+  // Quotes are handed out most telling first: a hedge, the ask, a question, the pushback answer.
+  const quotes = {
+    confidence: hedged ? take(hedged) : null,
+    cta: take(ask),
+    discovery: take(...open, ...questions),
+    objections: take(acknowledged),
+    value: take(...benefits),
+    structure: take(opener, sentences[0]),
+    clarity: null as string | null,
   };
+  quotes.clarity = take(tidiest, longest, ...sentences);
+  quotes.confidence ??= take(...sentences.filter((sentence) => !HEDGE_ONE.test(sentence)));
+
+  const clarityScore =
+    averageWords === 0
+      ? 1
+      : clamp(5 - [30, 50, 80, 120].filter((limit) => averageWords > limit).length);
+  const clarity: Judgement = {
+    score: clarityScore,
+    justification:
+      clarityScore >= 4
+        ? `Your turns ran about ${plural(averageWords, "word")}, short enough that each one landed as one point.`
+        : clarityScore === 3
+          ? `Your turns ran about ${plural(averageWords, "word")}. Cut each one down to a single point and it would land harder.`
+          : `Your turns ran about ${plural(averageWords, "word")}, so the main point got buried. Say the one thing you want remembered, then stop.`,
+    evidence: quotes.clarity,
+    strength:
+      clarityScore >= 4
+        ? `Your turns stayed short, about ${plural(averageWords, "word")} each.`
+        : null,
+    improvement:
+      clarityScore >= 4
+        ? "Keep your turns this short when the call gets harder."
+        : `Keep each turn to one point. Yours ran about ${plural(averageWords, "word")}.`,
+    fallback: longest,
+    rewrite: shortened,
+  };
+
+  const valueScore = clamp(
+    1 + Math.min(2, benefits.length) + Number(youCount >= 2) + Number(youCount >= 5),
+  );
+  const value: Judgement = {
+    score: valueScore,
+    justification:
+      valueScore >= 4
+        ? `You said “you” or “your” ${plural(youCount, "time")} and named what would get better for them.`
+        : benefits.length > 0
+          ? `You named ${benefits.length === 1 ? "a benefit" : plural(benefits.length, "benefit")}, but in your terms. Tie it to something they told you, so it's about their problem.`
+          : "You described what you do, not what they'd get. Name one thing that changes for them.",
+    evidence: quotes.value,
+    strength: valueScore >= 4 ? "You framed it around what they'd get, not what you sell." : null,
+    improvement: "Name one thing that gets better for them, in the words they used.",
+    fallback: sentences[0] ?? last,
+    rewrite: (line) => `${bare(line)}. What would that be worth to your team?`,
+  };
+
+  const structure: Judgement = {
+    score: structureScore,
+    justification:
+      missing[0]?.reason ??
+      "The call had a clear opening, questions in the middle and an ask at the end.",
+    evidence: quotes.structure,
+    strength:
+      missing.length === 0 ? "The call had a beginning, a middle and an ask, in that order." : null,
+    improvement: missing[0]?.fix ?? "Sum up what you heard before you make the ask.",
+    fallback: sentences[0] ?? last,
+    rewrite: missing[0]?.rewrite ?? ((line) => `${bare(line)}. ${ASK_LINE}`),
+  };
+
+  const discoveryScore = clamp(
+    1 + questions.length + Math.min(1, open.length) - (open.length ? 0 : 1),
+  );
+  const discovery: Judgement = {
+    score: discoveryScore,
+    justification:
+      questions.length === 0
+        ? "You didn't ask a single question. Even one, like how they handle it today, changes the call."
+        : open.length === 0
+          ? `You asked ${plural(questions.length, "question")}, but ${questions.length === 1 ? "it" : "each one"} could be answered with yes or no. Start with how or what to get them talking.`
+          : discoveryScore >= 4
+            ? `You asked ${plural(questions.length, "question")}, ${open.length === questions.length ? "all of them open" : `${String(open.length)} of them open`}, and let them do the talking.`
+            : `You asked ${plural(questions.length, "question")} and one was open. Follow the good one up with what the problem costs them.`,
+    evidence: quotes.discovery,
+    strength:
+      open.length > 0
+        ? `You asked ${plural(open.length, "open question")} and let them answer.`
+        : null,
+    improvement:
+      open.length === 0
+        ? "Ask how they handle it today before you pitch anything."
+        : "After a good answer, ask what the problem costs them.",
+    fallback: closed ?? last,
+    rewrite: () => DISCOVERY_LINE,
+  };
+
+  const objectionsScore = clamp(
+    1 + (acknowledged ? 2 : 0) + (proof ? 1 : 0) + (acknowledged && proof && open.length ? 1 : 0),
+  );
+  const objections: Judgement = {
+    score: objectionsScore,
+    justification: acknowledged
+      ? proof
+        ? "When they pushed back, you agreed it was fair before answering, and you backed it up with something concrete."
+        : "You acknowledged the pushback, which keeps them talking. Add one fact or result next time so the answer has weight."
+      : "No line shows you acknowledging their pushback. When it comes, say it's fair, ask what's behind it, then answer with one fact.",
+    evidence: quotes.objections,
+    strength: acknowledged
+      ? "You took the pushback calmly and said it was fair before answering."
+      : null,
+    improvement:
+      "When they push back, say it's fair, ask what's behind it, then answer with one fact.",
+    fallback: benefits[0] ?? last,
+    rewrite: () => "That's a fair concern. Can I ask what's behind it before I answer?",
+  };
+
+  const confidenceScore = clamp(5 - hedges.count);
+  const confidence: Judgement = {
+    score: confidenceScore,
+    justification:
+      hedges.count === 0
+        ? "No hedging or filler. You said what you meant and stopped."
+        : `You hedged ${plural(hedges.count, "time")} (${hedges.list}). Drop ${hedges.count === 1 ? "it" : "them"} and the same lines sound certain.`,
+    evidence: quotes.confidence,
+    strength: hedges.count === 0 ? "No hedging. Your lines sounded sure of themselves." : null,
+    improvement:
+      hedges.count === 0
+        ? "Keep the same steady tone when they push back."
+        : `Cut the hedges (${hedges.list}). They make good points sound unsure.`,
+    fallback: sentences[0] ?? last,
+    rewrite: withoutHedges,
+  };
+
+  const ctaScore: Score = timed ? 5 : ask ? 3 : 1;
+  const cta: Judgement = {
+    score: ctaScore,
+    justification: timed
+      ? `You asked for a specific time, ${time ?? "a set day"}, so all they had to do was say yes.`
+      : ask
+        ? "You asked for a next step but left the time open. Offer a day and a time so it's easy to agree."
+        : "You never asked for anything, so the call ended without a next step. Ask for a meeting before you hang up.",
+    evidence: quotes.cta,
+    strength: timed
+      ? `You asked for a specific time: ${time ?? "a set day"}.`
+      : ask
+        ? "You asked for a next step."
+        : null,
+    improvement: timed
+      ? "Ask who else should be in that meeting."
+      : ask
+        ? "Put a day and a time on your ask."
+        : "End with a clear ask for a meeting.",
+    fallback: last,
+    rewrite: (line) =>
+      timed
+        ? `${bare(line)}, and could you bring whoever else would need to sign off?`
+        : ask
+          ? `${bare(line)}, on Thursday at 10am?`
+          : `${bare(line)}. ${ASK_LINE}`,
+  };
+
+  return { clarity, value, structure, discovery, objections, confidence, cta };
 }
+
+/** True things to say about any call the student kept going. */
+const FALLBACK_STRENGTHS = [
+  "You got the conversation started and kept it going.",
+  "You stayed on the call to the end.",
+  "You kept your turns about the call.",
+];
 
 /** A rubric-shaped scorecard from simple text heuristics; quotes come only from `turns`. */
 export function heuristicScorecard(turns: readonly string[], weighted: RubricKey): Scorecard {
   const judged = judge(turns);
-  const dimensions = RUBRIC_DIMENSIONS.map(({ key }) => ({ key, ...judged[key] }));
-  const ranked = [...RUBRIC_DIMENSIONS].sort((a, b) => judged[b.key].score - judged[a.key].score);
-  const weakest = ranked.slice(-3).reverse();
-  const longest = turns
-    .flatMap(sentencesOf)
-    .reduce<string | undefined>(
-      (best, s) => (s.length > (best?.length ?? 0) ? s : best),
-      undefined,
-    );
+  const dimensions = RUBRIC_DIMENSIONS.map(({ key }) => {
+    const { score, justification, evidence } = judged[key];
+    return { key, score, justification, evidence };
+  });
+  const byScore = [...RUBRIC_DIMENSIONS].map(({ key }) => key);
+  // Among equal scores, the specific things a student did make better praise than general ones.
+  const praiseOrder: RubricKey[] = [
+    "cta",
+    "discovery",
+    "objections",
+    "value",
+    "clarity",
+    "confidence",
+    "structure",
+  ];
+  const best = [...praiseOrder].sort((a, b) => judged[b].score - judged[a].score);
+  // Lowest first; among equals, one with a quote, so the rewrite works on a real line.
+  const worst = [...byScore].sort(
+    (a, b) =>
+      judged[a].score - judged[b].score ||
+      Number(judged[b].evidence !== null) - Number(judged[a].evidence !== null),
+  );
+
+  const strengths = [
+    ...best.flatMap((key) => (judged[key].strength ? [judged[key].strength] : [])),
+    ...FALLBACK_STRENGTHS,
+  ].slice(0, LIMITS.scorecardListSize);
+  const improvements = worst
+    .map((key) => judged[key].improvement)
+    .filter((line, index, lines) => lines.indexOf(line) === index)
+    .slice(0, LIMITS.scorecardListSize);
+
+  // The weakest dimension that has a quote, so the rewrite works on a line the student said and
+  // answers that score; with no quotes at all, the weakest one's fallback line.
+  const target =
+    judged[worst.find((key) => judged[key].evidence !== null) ?? worst[0] ?? "clarity"];
+  const original = target.evidence ?? quote(target.fallback || (turns[0] ?? ""));
+  const rewritten = original ? target.rewrite(original) : "";
+  const improved =
+    rewritten && rewritten !== original ? rewritten : `${bare(original)}. ${ASK_LINE}`;
 
   return {
     overall: computeOverall(dimensions, weighted),
     dimensions,
-    strengths: ranked.slice(0, 3).map((d) => `${d.name}: ${d.high}.`),
-    improvements: weakest.map((d) => `${d.name}: aim for ${d.high.toLowerCase()}.`),
-    strongerLine: {
-      original: (longest ?? "No student turns.").slice(0, LIMITS.transcriptEntryMaxLength),
-      improved: IMPROVED_LINES[weakest[0]?.key ?? "cta"],
-    },
+    strengths,
+    improvements,
+    strongerLine: original
+      ? { original, improved: improved.slice(0, LIMITS.transcriptEntryMaxLength) }
+      : { original: "No student turns.", improved: ASK_LINE },
   };
 }

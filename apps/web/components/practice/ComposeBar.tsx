@@ -15,6 +15,9 @@ import { VoicePicker } from "./VoicePicker";
 const MAX = LIMITS.turnMaxChars;
 const count = new Intl.NumberFormat("en-US");
 
+const ON_DEVICE_NOTE =
+  "Speech is turned into text on this device. PitchPerfect never stores audio.";
+
 export const VOICE_DISCLOSURE =
   "Your browser may send audio to Google, Apple, or Microsoft to transcribe it. PitchPerfect never stores audio.";
 
@@ -119,7 +122,7 @@ export function ComposeBar({ room }: { room: PracticeRoomControls }) {
               {voiceMode ? "Type instead" : "Talk instead"}
             </button>
           )}
-          {voice.supported && (
+          {voice.supported && voiceMode && (
             <VoicePicker
               voices={voice.voices}
               voice={voice.voice}
@@ -143,11 +146,7 @@ export function ComposeBar({ room }: { room: PracticeRoomControls }) {
 
         <p className="text-caption text-muted">
           {recognition.supported ? (
-            <>
-              {VOICE_DISCLOSURE}
-              {recognition.onDevice &&
-                " This browser can transcribe on your device, so it does."}{" "}
-            </>
+            <>{recognition.onDevice ? ON_DEVICE_NOTE : VOICE_DISCLOSURE} </>
           ) : (
             "This browser can’t turn speech into text, so this call is typed. Chrome, Edge and Safari can listen. "
           )}

@@ -20,12 +20,13 @@ const initials = (name: string) =>
     .map((part) => part.charAt(0).toUpperCase())
     .join("");
 
-/** "Direct, time-pressed" becomes two chips. */
+/** "Direct, time-pressed" becomes two chips, each starting with a capital. */
 const traits = (personality: string) =>
   personality
     .split(/[,;]/)
     .map((trait) => trait.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((trait) => trait.charAt(0).toUpperCase() + trait.slice(1));
 
 /** Who the student is talking to. The persona has a human name but is always labelled as AI. */
 export function PersonaCard({ persona, titleAs: Title = "h2", className }: PersonaCardProps) {

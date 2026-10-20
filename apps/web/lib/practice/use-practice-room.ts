@@ -2,9 +2,9 @@
 
 import { LIMITS, type AttemptView, type PracticeEvent, type SkillSlug } from "@pitchperfect/shared";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { apiFetch, apiStream } from "@/lib/api";
+import { ApiError, apiFetch, apiStream } from "@/lib/api";
 import { OneAttempt, StartedPractice } from "@/lib/student-api";
-import { attemptPath } from "./paths";
+import { attemptPath, practiceHref } from "./paths";
 import { endProblem, startProblem, turnProblem } from "./practice-messages";
 import {
   canEnd,
@@ -22,9 +22,16 @@ import { useSpeechSynthesis } from "./use-speech-synthesis";
 const SESSION_MS = LIMITS.sessionSeconds * 1000;
 const TICK_MS = 1000;
 
+/** The stored lines after the opening line, which some transcripts (seeded ones) include. */
+export function withoutOpening(attempt: Pick<AttemptView, "scenarioPublic" | "transcript">) {
+  const [first, ...rest] = attempt.transcript;
+  const opening = first?.role === "partner" && first.text === attempt.scenarioPublic.openingLine;
+  return opening ? rest : attempt.transcript;
+}
+
 /** A session already under way, as the api stored it: picked up where it was left. */
 function resumedState(attempt: AttemptView, mode: RoomMode): RoomState {
-  const transcript: RoomEntry[] = attempt.transcript.map(({ role, text, flagged }) =>
+  const transcript: RoomEntry[] = withoutOpening(attempt).map(({ role, text, flagged }) =>
     flagged ? { role, text, flagged: true } : { role, text },
   );
   const studentTurns = transcript.filter((entry) => entry.role === "student").length;
@@ -183,6 +190,23 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
     [speakReply],
   );
 
+  /**
+   * A 409 on a turn: either the last reply is still running, or this session ended elsewhere (a
+   * new call in another tab replaces it; ending there scores it). Asks the api which.
+   */
+  const settleConflict = useCallback(async (attemptId: string) => {
+    let attempt;
+    try {
+      attempt = await apiFetch(`/practice/sessions/${attemptId}`, { schema: OneAttempt });
+    } catch {
+      dispatch({ type: "stream_error", code: "conflict" });
+      return;
+    }
+    if (attempt.status === "active") dispatch({ type: "stream_error", code: "conflict" });
+    else if (attempt.scorecard) dispatch({ type: "scored", attempt });
+    else dispatch({ type: "replaced" });
+  }, []);
+
   const send = useCallback(() => {
     const current = latest.current;
     if (busy.current !== null || !canSend(current) || !current.attemptId) return;
@@ -194,27 +218,39 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
 
     const controller = new AbortController();
     turn.current = controller;
+    const attemptId = current.attemptId;
     let settled = false;
+    /** Frees the room for the next turn, unless a newer turn already owns it. */
+    const release = () => {
+      if (turn.current !== controller) return;
+      turn.current = null;
+      busy.current = null;
+    };
     const handle = (event: PracticeEvent) => {
-      if (event.type !== "delta") settled = true;
+      if (event.type !== "delta") {
+        settled = true;
+        // The turn is decided; a Send or End right after this must not be dropped.
+        release();
+      }
       onEvent(event);
     };
-    apiStream(`/practice/sessions/${current.attemptId}/turns`, { text }, handle, controller.signal)
+    apiStream(`/practice/sessions/${attemptId}/turns`, { text }, handle, controller.signal)
       .then(
         () => {
           // The stream closed without saying how the turn ended.
-          if (!settled) dispatch({ type: "stream_error", code: "upstream_error" });
+          if (!settled) dispatch({ type: "stream_error", code: "upstream_error", counted: true });
         },
-        (error: unknown) => {
+        async (error: unknown) => {
           if (controller.signal.aborted) return;
+          if (error instanceof ApiError && error.code === "conflict") {
+            await settleConflict(attemptId);
+            return;
+          }
           dispatch({ type: "stream_error", ...turnProblem(error) });
         },
       )
-      .finally(() => {
-        if (turn.current === controller) turn.current = null;
-        busy.current = null;
-      });
-  }, [cancel, onEvent, stopListening]);
+      .finally(release);
+  }, [cancel, onEvent, settleConflict, stopListening]);
 
   const end = useCallback(async () => {
     const current = latest.current;
@@ -251,9 +287,26 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
     [stopListening],
   );
 
-  const editDraft = useCallback((text: string) => {
-    dispatch({ type: "edit_draft", text });
-  }, []);
+  const editDraft = useCallback(
+    (text: string) => {
+      // Typing takes over from speech; the reducer stops adding to the draft as well.
+      if (latest.current.status === "listening") stopListening();
+      dispatch({ type: "edit_draft", text });
+    },
+    [stopListening],
+  );
+
+  /** Back to the start screen for another call of the same skill. */
+  const reset = useCallback(() => {
+    turn.current?.abort();
+    turn.current = null;
+    busy.current = null;
+    stopListening();
+    cancel();
+    dispatch({ type: "reset" });
+    // The address still names the old session; point it back at this skill's start screen.
+    window.history.replaceState(null, "", practiceHref(skill, jobId));
+  }, [cancel, jobId, skill, stopListening]);
 
   const timeLeftMs = expiresAt === undefined ? null : Math.max(0, Date.parse(expiresAt) - now);
 
@@ -269,6 +322,7 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
     stopListening,
     setMode,
     editDraft,
+    reset,
   };
 }
 

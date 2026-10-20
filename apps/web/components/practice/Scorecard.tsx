@@ -10,8 +10,14 @@ import { DeleteAttempt } from "./DeleteAttempt";
 import { ScorecardDetails } from "./ScorecardDetails";
 import { ShareScorecard } from "./ShareScorecard";
 
+interface ScorecardProps {
+  attempt: AttemptView;
+  /** Given when the scorecard replaced the room in place: Practice again resets that room. */
+  onPracticeAgain?: (() => void) | undefined;
+}
+
 /** A finished, scored session: the scorecard, then what the student can do with it. */
-export function Scorecard({ attempt }: { attempt: AttemptView }) {
+export function Scorecard({ attempt, onPracticeAgain }: ScorecardProps) {
   const { scorecard } = attempt;
   if (!scorecard) return null;
   const skill = getSkill(attempt.skill);
@@ -29,12 +35,18 @@ export function Scorecard({ attempt }: { attempt: AttemptView }) {
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <Link
-              href={practiceHref(attempt.skill, attempt.jobId ?? undefined)}
-              className={buttonClasses()}
-            >
-              Practice again
-            </Link>
+            {onPracticeAgain ? (
+              <button type="button" onClick={onPracticeAgain} className={buttonClasses()}>
+                Practice again
+              </button>
+            ) : (
+              <Link
+                href={practiceHref(attempt.skill, attempt.jobId ?? undefined)}
+                className={buttonClasses()}
+              >
+                Practice again
+              </Link>
+            )}
             <DeleteAttempt attemptId={attempt.id} />
           </div>
         </header>

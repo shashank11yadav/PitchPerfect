@@ -38,8 +38,8 @@ describe("PersonaCard", () => {
     );
     expect(chips.map((chip) => chip.textContent)).toEqual([
       "Direct",
-      "time-pressed",
-      "open to good ideas",
+      "Time-pressed",
+      "Open to good ideas",
     ]);
   });
 });

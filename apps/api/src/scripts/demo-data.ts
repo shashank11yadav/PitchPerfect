@@ -245,7 +245,7 @@ export const DEMO_ATTEMPTS: readonly DemoAttempt[] = [
       ],
       [
         "value",
-        3,
+        2,
         "Benefits stayed general; the slow reporting Elena mentioned was not used.",
         null,
       ],

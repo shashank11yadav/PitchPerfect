@@ -123,6 +123,12 @@ export function PracticeOverview({ jobId }: { jobId?: string | undefined }) {
             </Link>
           )}
         </div>
+        {lessons.state === "error" && (
+          <LoadError what="your lesson progress" onRetry={lessons.reload} />
+        )}
+        {attempts.state === "error" && (
+          <LoadError what="your last scores" onRetry={attempts.reload} />
+        )}
         {lessons.state === "loading" || attempts.state === "loading" ? (
           <Loading label="Loading the skills" lines={6} />
         ) : (

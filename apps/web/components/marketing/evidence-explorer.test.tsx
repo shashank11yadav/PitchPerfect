@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { EvidenceExplorer } from "./EvidenceExplorer";
-import { SAMPLE_SCORECARD } from "./sample-session";
+import { EvidenceExplorerClient } from "./EvidenceExplorerClient";
+import { SAMPLE_SCORECARD, SAMPLE_TRANSCRIPT } from "./sample-session";
 
 const evidenceFor = (key: string) =>
   SAMPLE_SCORECARD.dimensions.find((dimension) => dimension.key === key)?.evidence;
@@ -30,8 +31,40 @@ describe("EvidenceExplorer", () => {
     expect(screen.getByText(/^Discovery questions, 3 out of 5/)).toBeInTheDocument();
   });
 
+  it("quotes a line for every dimension of the sample", () => {
+    for (const { evidence } of SAMPLE_SCORECARD.dimensions) {
+      expect(SAMPLE_TRANSCRIPT.some((entry) => evidence && entry.text.includes(evidence))).toBe(
+        true,
+      );
+    }
+  });
+
   it("says so when a score has no single quote behind it", async () => {
-    render(<EvidenceExplorer />);
+    render(
+      <EvidenceExplorerClient
+        rows={[
+          {
+            key: "objections",
+            name: "Objection handling",
+            score: 4,
+            justification: "Good.",
+            evidence: "That's fair",
+          },
+          {
+            key: "structure",
+            name: "Structure",
+            score: 3,
+            justification: "Loose.",
+            evidence: null,
+          },
+        ]}
+        transcript={SAMPLE_TRANSCRIPT}
+        personaName="Maya Chen"
+        skillTitle="Objection handling"
+        overall={66}
+        weighted="objections"
+      />,
+    );
     await userEvent.click(screen.getByRole("button", { name: /^Structure/ }));
     const transcript = screen.getByRole("list", { name: "Sample transcript" });
     expect(transcript.querySelectorAll("mark")).toHaveLength(0);

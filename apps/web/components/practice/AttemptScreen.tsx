@@ -9,7 +9,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadError, Loading } from "@/components/ui/LoadState";
 import { ApiError } from "@/lib/api";
 import { formatLocalDate } from "@/lib/local-time";
-import { END_NOTICES } from "@/lib/practice/practice-reducer";
+import { END_NOTICES, unscoredReason } from "@/lib/practice/practice-reducer";
+import { withoutOpening } from "@/lib/practice/use-practice-room";
 import { practiceHref } from "@/lib/practice/paths";
 import { OneAttempt } from "@/lib/student-api";
 import { useApi } from "@/lib/use-api";
@@ -22,10 +23,13 @@ import { TranscriptBubble } from "./TranscriptBubble";
 function UnscoredAttempt({ attempt }: { attempt: AttemptView }) {
   const { title } = getSkill(attempt.skill);
   const persona = attempt.scenarioPublic.personaName;
+  const reason = unscoredReason(attempt);
   const why =
-    attempt.status === "ended_by_guard"
+    reason === "guard_limit"
       ? "This session ended early because several messages were off the call."
-      : END_NOTICES.abandoned;
+      : reason === "replaced"
+        ? "This call stopped when you started a new one, so it wasn’t scored."
+        : END_NOTICES.abandoned;
   return (
     <Card as="article" aria-labelledby="unscored-title" className="flex flex-col gap-6 md:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -51,7 +55,7 @@ function UnscoredAttempt({ attempt }: { attempt: AttemptView }) {
           speaker={persona}
           text={attempt.scenarioPublic.openingLine}
         />
-        {attempt.transcript.map((entry, index) => (
+        {withoutOpening(attempt).map((entry, index) => (
           <TranscriptBubble
             key={index}
             from={entry.role}

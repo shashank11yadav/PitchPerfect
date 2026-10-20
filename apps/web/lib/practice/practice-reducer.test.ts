@@ -163,12 +163,28 @@ describe("practiceReducer: a turn", () => {
     expect(done.transcript).toHaveLength(3);
   });
 
-  it("announces a reply that arrived without any streamed text", () => {
-    const done = run(
+  it("announces the final reply once, whether or not it streamed", () => {
+    const quiet = run(
       readyRoom({ draft: "Hello" }),
       { type: "send" },
       { type: "done", stage: "opening", turnsLeft: 19, finalText: "Go on." },
     );
+    expect(quiet.announcement).toBe("Go on.");
+
+    const streamed = run(
+      readyRoom({ draft: "Hello" }),
+      { type: "send" },
+      { type: "delta", text: "Go " },
+      { type: "delta", text: "on" },
+    );
+    // Nothing is announced while the reply is still arriving.
+    expect(streamed.announcement).toBe("");
+    const done = run(streamed, {
+      type: "done",
+      stage: "opening",
+      turnsLeft: 19,
+      finalText: "Go on.",
+    });
     expect(done.announcement).toBe("Go on.");
   });
 
@@ -230,6 +246,22 @@ describe("practiceReducer: interrupted replies (review focus 2)", () => {
     );
     const students = state.transcript.filter((entry) => entry.role === "student");
     expect(students).toEqual([{ role: "student", text: "We plan every load overnight." }]);
+  });
+
+  it("counts the turn when the partner had started answering", () => {
+    const counted = run(
+      readyRoom({ draft: "Hello", turnsLeft: 12 }),
+      { type: "send" },
+      { type: "delta", text: "Well" },
+      { type: "stream_error", code: "upstream_error", counted: true },
+    );
+    expect(counted.turnsLeft).toBe(11);
+    const refused = run(
+      readyRoom({ draft: "Hello", turnsLeft: 12 }),
+      { type: "send" },
+      { type: "stream_error", code: "rate_limited", counted: false },
+    );
+    expect(refused.turnsLeft).toBe(12);
   });
 
   it("says the last reply is still running on a 409", () => {
@@ -330,6 +362,41 @@ describe("practiceReducer: ending (review focus 5)", () => {
     expect(scored.result?.id).toBe("65f1c0ffee00000000000b01");
   });
 
+  it("tells a session replaced from another tab apart from one too short to score", () => {
+    const replaced = run(
+      readyRoom({ draft: "Next point" }),
+      { type: "send" },
+      { type: "replaced" },
+    );
+    expect(replaced).toMatchObject({
+      status: "ended",
+      endedReason: "replaced",
+      draft: "Next point",
+    });
+    expect(replaced.notice).toBe(
+      "You started a new call in another tab, so this one stopped. It wasn’t scored.",
+    );
+    expect(canEnd(replaced)).toBe(false);
+
+    // Ending a session the other tab already replaced returns it unscored, with enough turns.
+    const scoredLater = run(
+      readyRoom(),
+      { type: "end_requested" },
+      {
+        type: "scored",
+        attempt: {
+          ...attempt(null, "abandoned"),
+          transcript: [
+            { role: "student", text: "One" },
+            { role: "partner", text: "Two" },
+            { role: "student", text: "Three" },
+          ],
+        },
+      },
+    );
+    expect(scoredLater.endedReason).toBe("replaced");
+  });
+
   it("explains a session too short to score", () => {
     const state = run(
       readyRoom(),
@@ -373,5 +440,23 @@ describe("practiceReducer: modes", () => {
 
   it("edits the draft", () => {
     expect(run(readyRoom(), { type: "edit_draft", text: "Hi" }).draft).toBe("Hi");
+  });
+
+  it("stops adding speech once the student types into the draft", () => {
+    const state = run(
+      readyRoom(),
+      { type: "listen_start" },
+      { type: "interim", text: "We plan" },
+      { type: "edit_draft", text: "We plan loads" },
+      { type: "interim", text: "We plan routes" },
+      { type: "final", text: "We plan routes" },
+    );
+    expect(state).toMatchObject({ status: "ready", draft: "We plan loads" });
+  });
+
+  it("resets to a fresh start screen for another call", () => {
+    const fresh = run(readyRoom({ draft: "x" }), { type: "reset" });
+    expect(fresh).toMatchObject({ status: "idle", draft: "", transcript: [] });
+    expect(fresh.attemptId).toBeUndefined();
   });
 });

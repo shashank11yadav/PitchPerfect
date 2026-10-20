@@ -144,7 +144,7 @@ const dimensions: Scorecard["dimensions"] = [
     score: 3,
     justification:
       "A strong opening question, but the pitch came before the cost of the problem was clear.",
-    evidence: null,
+    evidence: "Thanks for making time, Maya. Before I pitch anything",
   },
   {
     key: "discovery",
@@ -163,7 +163,7 @@ const dimensions: Scorecard["dimensions"] = [
     key: "confidence",
     score: 4,
     justification: "Calm and concise throughout, with no filler or apologies.",
-    evidence: null,
+    evidence: "and you only continue if your dispatchers actually use it",
   },
   {
     key: "cta",

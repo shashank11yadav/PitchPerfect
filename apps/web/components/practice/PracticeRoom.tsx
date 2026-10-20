@@ -7,7 +7,6 @@ import { useEffect, useRef } from "react";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/cn";
-import { practiceHref } from "@/lib/practice/paths";
 import { canEnd, type RoomEntry, type RoomState } from "@/lib/practice/practice-reducer";
 import { usePracticeRoom, type PracticeRoomControls } from "@/lib/practice/use-practice-room";
 import { ComposeBar } from "./ComposeBar";
@@ -58,7 +57,7 @@ function Transcript({ state, persona }: { state: RoomState; persona: string }) {
         ))}
       </ul>
       {/* New replies are read out from here as they arrive; finished ones join the list above. */}
-      <div aria-live="polite" data-live="reply">
+      <div aria-live="polite" aria-busy={replying} data-live="reply">
         {replying && (
           <TranscriptBubble
             as="div"
@@ -68,7 +67,7 @@ function Transcript({ state, persona }: { state: RoomState; persona: string }) {
             pending
           />
         )}
-        <p className="sr-only">{state.announcement}</p>
+        <p className="sr-only">{state.announcement && `${persona} said: ${state.announcement}`}</p>
       </div>
       {/* Room for the reply box and tab bar that stay over the bottom of the screen. */}
       <div ref={end} className="scroll-mb-44 md:scroll-mb-32" />
@@ -77,7 +76,7 @@ function Transcript({ state, persona }: { state: RoomState; persona: string }) {
 }
 
 /** Instead of the compose bar once the session can't take turns. */
-function EndedPanel({ room, skill }: { room: PracticeRoomControls; skill: SkillSlug }) {
+function EndedPanel({ room }: { room: PracticeRoomControls }) {
   const { state } = room;
   return (
     <div className="flex flex-col gap-4 border-t border-border bg-surface px-4 py-5 md:px-6">
@@ -95,9 +94,9 @@ function EndedPanel({ room, skill }: { room: PracticeRoomControls; skill: SkillS
             End and score
           </Button>
         ) : (
-          <Link href={practiceHref(skill)} className={buttonClasses({ size: "lg" })}>
+          <button type="button" onClick={room.reset} className={buttonClasses({ size: "lg" })}>
             Start a new session
-          </Link>
+          </button>
         )}
         <Link href="/app/history" className="pp-link rounded-control font-semibold text-primary">
           Your past sessions
@@ -161,7 +160,7 @@ function Session({ room, skill }: { room: PracticeRoomControls; skill: SkillSlug
       {state.status === "ending" ? (
         <Scoring />
       ) : state.status === "ended" ? (
-        <EndedPanel room={room} skill={skill} />
+        <EndedPanel room={room} />
       ) : (
         <ComposeBar room={room} />
       )}
@@ -175,7 +174,8 @@ function Session({ room, skill }: { room: PracticeRoomControls; skill: SkillSlug
  */
 export function PracticeRoom(props: PracticeRoomProps) {
   const skill = props.attempt ? props.attempt.skill : props.skill;
-  const room = usePracticeRoom({ skill, jobId: props.jobId, resume: props.attempt });
+  const jobId = props.attempt ? (props.attempt.jobId ?? undefined) : props.jobId;
+  const room = usePracticeRoom({ skill, jobId, resume: props.attempt });
   const { status, result } = room.state;
 
   // The scorecard replaces a long transcript: start it at the top, ring first.
@@ -187,9 +187,9 @@ export function PracticeRoom(props: PracticeRoomProps) {
     case "idle":
     case "starting":
     case "error":
-      return <RoomLobby skill={skill} jobId={props.jobId} room={room} />;
+      return <RoomLobby skill={skill} jobId={jobId} room={room} />;
     case "scored":
-      return result ? <Scorecard attempt={result} /> : null;
+      return result ? <Scorecard attempt={result} onPracticeAgain={room.reset} /> : null;
     case "ready":
     case "listening":
     case "sending":
