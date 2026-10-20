@@ -1,89 +1,96 @@
+import { Mic } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { CtaLinks } from "./CtaLinks";
+import { PracticeRoomPreview } from "./PracticeRoomPreview";
+import { WRAP } from "./Section";
+import { ShaderField } from "./ShaderField";
 
-interface HeroProps {
-  eyebrow?: string;
-  /** The page's h1. */
-  title: ReactNode;
-  lead: ReactNode;
-  actions?: ReactNode;
-  /** Short facts under the actions. */
-  footnote?: ReactNode;
-  /** The product visual beside the text on wide screens. */
-  visual?: ReactNode;
-  /** Less vertical space, for inner pages. */
-  compact?: boolean;
-}
+const LEVELS = [0.55, 0.9, 0.7, 1, 0.6, 0.8];
 
-/** Soft circles and a dot grid behind the hero; purely decorative. */
-function Backdrop() {
+/**
+ * The practice room's voice control, drawn at the size of a word: it sits in the headline where
+ * the pitch itself would be. Sized in em, so it scales with the type. Decorative.
+ */
+function VoiceStrip() {
   return (
-    <svg
+    <ShaderField
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 size-full"
-      preserveAspectRatio="xMidYMid slice"
-      viewBox="0 0 1200 640"
+      className="order-first my-3 h-16 w-full rounded-pill sm:order-none sm:my-0 sm:ml-[0.22em] sm:h-[0.74em] sm:w-auto sm:min-w-[2.4em] sm:flex-1 sm:translate-y-[0.04em]"
     >
-      <defs>
-        <radialGradient id="hero-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#3f56d2" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="#3f56d2" stopOpacity="0" />
-        </radialGradient>
-        <pattern id="hero-dots" width="28" height="28" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="1.4" fill="#ffffff" fillOpacity="0.09" />
-        </pattern>
-      </defs>
-      <rect width="1200" height="640" fill="url(#hero-dots)" />
-      <circle cx="1020" cy="120" r="360" fill="url(#hero-glow)" />
-      <circle cx="80" cy="640" r="300" fill="url(#hero-glow)" />
-    </svg>
+      <span className="flex h-full items-center gap-4 px-2 sm:gap-[0.16em] sm:px-[0.1em]">
+        <span className="flex aspect-square h-12 items-center justify-center rounded-pill bg-white text-navy sm:h-[0.56em]">
+          <Mic className="size-6 sm:size-[0.26em]" strokeWidth={2.5} />
+        </span>
+        <span className="pp-level flex h-6 items-end gap-1 sm:h-[0.3em] sm:gap-[0.06em]">
+          {LEVELS.map((level, index) => (
+            <span
+              key={index}
+              className="w-1 rounded-pill bg-white sm:w-[0.07em]"
+              style={{ height: `${String(level * 100)}%`, ["--i" as string]: index }}
+            />
+          ))}
+        </span>
+      </span>
+    </ShaderField>
   );
 }
 
-/** The navy band at the top of every public page. It holds the page's only h1. */
-export function Hero({
-  eyebrow,
-  title,
-  lead,
-  actions,
-  footnote,
-  visual,
-  compact = false,
-}: HeroProps) {
+/**
+ * The home page's first screen: the tagline set as large as the page allows, the voice strip in
+ * its second line, and the practice room rising out of the navy into the section below.
+ */
+export function HomeHero({ lead }: { lead: ReactNode }) {
   return (
-    <div className="pp-on-dark relative isolate overflow-hidden bg-linear-to-b from-navy to-navy-900">
-      <Backdrop />
+    <div>
+      <div className="pp-on-dark bg-navy text-white">
+        <div className={cn(WRAP, "pt-12 md:pt-20")}>
+          <h1 className="text-hero font-bold text-white">
+            <span className="block">Practice your pitch.</span>{" "}
+            <span className="flex flex-wrap items-center sm:flex-nowrap">
+              <span>Get hired.</span>
+              <VoiceStrip />
+            </span>
+          </h1>
+          <div className="mt-10 grid gap-y-12 md:mt-14 lg:grid-cols-12 lg:gap-x-6">
+            <div className="lg:col-span-4">
+              <div className="max-w-[36ch] text-statement text-white">{lead}</div>
+              <CtaLinks className="mt-8" />
+            </div>
+            <div className="relative z-10 -mb-28 min-w-0 md:-mb-48 lg:col-span-8 lg:col-start-5">
+              <PracticeRoomPreview floating />
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* The white ground the practice room overlaps into. */}
+      <div aria-hidden="true" className="h-28 bg-surface md:h-48" />
+    </div>
+  );
+}
+
+interface PageHeroProps {
+  /** The page's h1: two lines at most. */
+  title: ReactNode;
+  lead: ReactNode;
+  actions?: ReactNode;
+}
+
+/** Inner pages: the title on the left, the lead and actions at the opposite end of its baseline. */
+export function PageHero({ title, lead, actions }: PageHeroProps) {
+  return (
+    <div className="pp-on-dark bg-navy text-white">
       <div
         className={cn(
-          "relative mx-auto grid max-w-content items-center gap-12 px-4 sm:px-6",
-          compact ? "py-12 md:py-16" : "py-14 md:py-24",
-          visual && "lg:grid-cols-[1fr_minmax(0,31rem)] lg:gap-16",
+          WRAP,
+          "grid gap-y-8 pt-14 pb-16 md:pt-24 md:pb-24 lg:grid-cols-12 lg:gap-x-6",
         )}
       >
-        <div className="max-w-2xl">
-          {eyebrow && (
-            <p className="inline-flex rounded-pill bg-white/10 px-3 py-1 text-small font-semibold text-white ring-1 ring-white/20">
-              {eyebrow}
-            </p>
-          )}
-          <h1
-            className={cn(
-              "text-white",
-              eyebrow && "mt-5",
-              compact
-                ? "text-h1 md:text-[3rem] md:leading-[3.5rem]"
-                : "text-display-sm md:text-display",
-            )}
-          >
-            {title}
-          </h1>
-          <div className="mt-5 max-w-xl text-body text-white/85 md:text-h4 md:font-normal">
-            {lead}
-          </div>
-          {actions && <div className="mt-8 flex flex-col gap-3 sm:flex-row">{actions}</div>}
-          {footnote && <div className="mt-8">{footnote}</div>}
+        <h1 className="max-w-[19ch] text-title font-bold text-white lg:col-span-8">{title}</h1>
+        <div className="self-end lg:col-span-4 lg:col-start-9">
+          <div className="max-w-[44ch] text-lede text-white">{lead}</div>
+          {actions && <div className="mt-8">{actions}</div>}
         </div>
-        {visual && <div className="min-w-0">{visual}</div>}
       </div>
     </div>
   );

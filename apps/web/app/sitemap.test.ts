@@ -71,7 +71,8 @@ describe("sitemap", () => {
       "https://example.test/jobs/verified-one",
       "https://example.test/jobs/verified-three",
     ]);
-    expect(entries.at(-1)?.lastModified).toBe("2026-10-01T12:00:00.000Z");
+    // publishedAt is when a job went live, not when its page last changed, so it is left out.
+    expect(entries.every((entry) => entry.lastModified === undefined)).toBe(true);
 
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       "http://api.test:4000/api/jobs?pageSize=50&page=1",

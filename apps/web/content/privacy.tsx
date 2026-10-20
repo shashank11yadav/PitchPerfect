@@ -1,4 +1,5 @@
 import type { LegalSection } from "@/components/marketing/LegalDocument";
+import { COPY_LIMITS as L } from "./limits";
 
 const AI_PROVIDER = "our AI provider (OpenAI or Anthropic, depending on configuration)";
 const CONTACT = "the maintainer listed on the project's GitHub page";
@@ -10,19 +11,20 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     title: "The short version",
     body: (
       <ul>
+        <li>We keep what you give us to run your account, your practice and your applications.</li>
         <li>
-          We collect what you give us to run your account, your practice and your applications.
+          Your practice turns go to {AI_PROVIDER}, which plays the buyer and scores the session.
+          Transcripts are deleted after {L.retentionDays} days.
         </li>
         <li>
-          Practice transcripts are processed by {AI_PROVIDER} to play the buyer and score the
-          session, and are deleted after 180 days.
+          We never get your audio. Your browser turns speech into text before anything is sent.
         </li>
-        <li>We never receive or store audio. Your browser turns your speech into text.</li>
-        <li>Employers only see what you send them when you apply.</li>
+        <li>An employer sees only what you send with an application to their job.</li>
         <li>
-          We use two security cookies and a session cookie. No advertising, analytics or tracking.
+          There are three cookies: one keeps you signed in, two protect your forms. We don&apos;t
+          use advertising, analytics or tracking cookies.
         </li>
-        <li>You can delete any practice session, and your whole account, at any time.</li>
+        <li>You can delete any practice session, or your whole account, whenever you like.</li>
       </ul>
     ),
   },
@@ -43,16 +45,16 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     body: (
       <ul>
         <li>
-          <strong>Account:</strong> your name, email address, whether you are a student or an
-          employer, and the date you confirmed you are 18 or older. Your password is stored only as
-          a one-way hash.
+          <strong>Account:</strong> your name, email address, and whether you are a student or an
+          employer. Your password is stored only as a one-way hash. Students also confirm they are
+          18 or older, and we record the date they did.
         </li>
         <li>
           <strong>Student profile:</strong> school, major, graduation year, target role, industry,
           state, and which lessons you have finished.
         </li>
         <li>
-          <strong>Résumé:</strong> the PDF you upload, up to 2 MB.
+          <strong>Résumé:</strong> the PDF you upload, up to {L.resumeMegabytes} MB.
         </li>
         <li>
           <strong>Practice sessions:</strong> the skill, the job if you practiced for one, the buyer
@@ -70,6 +72,11 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
         <li>
           <strong>Technical records:</strong> request logs with an ID, the page or endpoint, the
           result and how long it took. Logs never contain what you typed or said.
+        </li>
+        <li>
+          <strong>Abuse limits:</strong> short-lived counters keyed to your IP address and, for
+          sign-in and password resets, your email address. We store a one-way hash of each key,
+          never the address itself.
         </li>
       </ul>
     ),
@@ -150,8 +157,8 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
         </p>
         <p>
           A shared scorecard is a live link, not a copy. If you delete that session, withdraw the
-          application, or the session reaches its 180-day limit, the employer sees that it is no
-          longer shared.
+          application, or the session reaches its {L.retentionDays}-day limit, the employer sees
+          that it is no longer shared.
         </p>
       </>
     ),
@@ -164,8 +171,8 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
         <p>PitchPerfect sets only the cookies it needs to work:</p>
         <ul>
           <li>
-            <strong>pp.sid</strong> keeps you signed in. It lasts up to 7 days without activity and
-            30 days at most.
+            <strong>pp.sid</strong> keeps you signed in. It lasts up to {L.sessionRollingDays} days
+            without activity and {L.sessionAbsoluteDays} days at most.
           </li>
           <li>
             <strong>pp.csrf</strong> holds a security token that protects your forms from other
@@ -185,8 +192,17 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     title: "How long we keep it",
     body: (
       <ul>
-        <li>Practice transcripts and scorecards: 180 days, then deleted automatically.</li>
-        <li>Email verification links: 24 hours. Password reset links: 30 minutes.</li>
+        <li>
+          Practice transcripts and scorecards: {L.retentionDays} days, then deleted automatically.
+        </li>
+        <li>
+          Email verification links: {L.verifyHours} hours. Password reset links: {L.resetMinutes}{" "}
+          minutes.
+        </li>
+        <li>
+          Rate-limit counters (the hashed IP address and email keys used to stop abuse): from one
+          minute to an hour, depending on the action, then deleted automatically.
+        </li>
         <li>Everything else: until you delete it or delete your account.</li>
       </ul>
     ),
@@ -232,8 +248,9 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     title: "Age",
     body: (
       <p>
-        PitchPerfect is for people 18 or older. Students confirm their age when they sign up. If we
-        learn that an account belongs to someone younger, we will delete it.
+        PitchPerfect is for people 18 or older. Students confirm their age when they sign up, and
+        employers sign up with a work email. If we learn that an account belongs to someone younger,
+        we delete it.
       </p>
     ),
   },

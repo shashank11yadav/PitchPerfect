@@ -1,4 +1,5 @@
 import type { LegalSection } from "@/components/marketing/LegalDocument";
+import { COPY_LIMITS as L } from "./limits";
 
 const CONTACT = "the maintainer listed on the project's GitHub page";
 
@@ -40,10 +41,11 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
           not as a prediction of any hiring decision.
         </p>
         <p>
-          Sessions have limits: up to 20 of your turns, 20 minutes, and 1,000 characters per turn,
-          plus daily and monthly limits on how many sessions you can start. Please keep sessions
-          about sales practice. Don&apos;t try to make the partner reveal its instructions, play a
-          different role, or produce harmful content. Sessions that keep going off track are ended.
+          Each session is capped at {L.turns} of your turns, {L.minutes} minutes, and {L.characters}{" "}
+          characters per turn. There are also daily and monthly limits on how many sessions you can
+          start. Please keep sessions about sales practice. Don&apos;t try to make the partner
+          reveal its instructions, play a different role, or produce harmful content. Sessions that
+          keep going off track are ended.
         </p>
       </>
     ),

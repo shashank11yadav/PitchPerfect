@@ -30,7 +30,7 @@ interface ButtonStyle {
 /** Button styles, also for links that look like buttons. */
 export function buttonClasses({ variant = "primary", size = "md", className }: ButtonStyle = {}) {
   return cn(
-    "inline-flex items-center justify-center gap-2 rounded-control font-semibold whitespace-nowrap transition-colors",
+    "pp-press inline-flex items-center justify-center gap-2 rounded-pill font-semibold whitespace-nowrap",
     "disabled:cursor-not-allowed disabled:opacity-60 aria-busy:cursor-progress",
     VARIANTS[variant],
     SIZES[size],

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useEntryReveal } from "@/components/motion/use-entry-reveal";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
 
@@ -29,48 +30,32 @@ const RADIUS = 52;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const easeOut = (t: number) => 1 - (1 - t) ** 3;
 
-const prefersReducedMotion = () =>
-  typeof window.matchMedia !== "function" ||
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-/** Counts from 0 to `target` once the element is on screen, unless motion is reduced. */
+/**
+ * The number to show. Server HTML and a ring already on screen show the final score; only a ring
+ * that is still off screen after hydration drops to 0 and counts up once it scrolls into view.
+ * Reduced motion always shows the final score.
+ */
 function useCountUp(target: number) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [value, setValue] = useState(target);
+  const { ref, phase } = useEntryReveal<HTMLDivElement>();
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    if (prefersReducedMotion()) return;
+    if (phase !== "play") return;
     let frame = 0;
-    const run = () => {
-      let start: number | undefined;
-      const tick = (now: number) => {
-        start ??= now;
-        const progress = Math.min((now - start) / DURATION_MS, 1);
-        setValue(Math.round(target * easeOut(progress)));
-        if (progress < 1) frame = requestAnimationFrame(tick);
-      };
-      frame = requestAnimationFrame(tick);
+    let start: number | undefined;
+    const tick = (now: number) => {
+      start ??= now;
+      const elapsed = Math.min((now - start) / DURATION_MS, 1);
+      setProgress(elapsed);
+      if (elapsed < 1) frame = requestAnimationFrame(tick);
     };
-
-    const element = ref.current;
-    if (typeof IntersectionObserver !== "function" || !element) {
-      run();
-      return () => {
-        cancelAnimationFrame(frame);
-      };
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry?.isIntersecting) return;
-      observer.disconnect();
-      run();
-    });
-    observer.observe(element);
+    frame = requestAnimationFrame(tick);
     return () => {
-      observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [target]);
+  }, [phase]);
 
+  const value = phase === "static" ? target : Math.round(target * easeOut(progress));
   return { ref, value };
 }
 

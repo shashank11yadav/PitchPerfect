@@ -7,12 +7,13 @@ import {
   SAMPLE_PERSONA,
   SAMPLE_SKILL_TITLE,
   SAMPLE_STAGE,
+  SAMPLE_STREAMED_REPLY,
   SAMPLE_TIME_LEFT,
   SAMPLE_TRANSCRIPT,
   SAMPLE_TURNS_LEFT,
 } from "./sample-session";
 
-const STAGE_LABELS = {
+export const STAGE_LABELS = {
   opening: "Opening",
   discovery: "Discovery",
   pitch: "Pitch",
@@ -22,13 +23,25 @@ const STAGE_LABELS = {
 
 const LEVELS = ["h-2", "h-4", "h-6", "h-3", "h-5"];
 
-/** A static practice room built from the real components, filled with the sample session. */
-export function PracticeRoomPreview({ className }: { className?: string }) {
+interface PracticeRoomPreviewProps {
+  /** Lifted with a shadow, for when the window overlaps the edge between two sections. */
+  floating?: boolean;
+  className?: string;
+}
+
+/**
+ * A static practice room built from the real components and the sample session. In a wide frame
+ * the persona sits beside the transcript, as in the app on desktop. The partner's last reply
+ * streams in the first time it scrolls into view.
+ */
+export function PracticeRoomPreview({ floating = false, className }: PracticeRoomPreviewProps) {
   const current = STAGES.indexOf(SAMPLE_STAGE);
   return (
     <figure
+      data-ui
       className={cn(
-        "overflow-hidden rounded-[20px] bg-surface shadow-[0_24px_64px_-16px_rgb(10_16_48/0.55)] ring-1 ring-black/5",
+        "@container overflow-hidden rounded-[20px] bg-surface text-ink",
+        floating ? "shadow-float" : "ring-1 ring-border",
         className,
       )}
     >
@@ -36,7 +49,7 @@ export function PracticeRoomPreview({ className }: { className?: string }) {
         A sample practice session: a student practicing objection handling with an AI practice
         partner.
       </figcaption>
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 @2xl:px-6">
         <div>
           <p className="text-caption text-muted">Practice</p>
           <p className="text-small font-bold text-ink">{SAMPLE_SKILL_TITLE}</p>
@@ -55,7 +68,7 @@ export function PracticeRoomPreview({ className }: { className?: string }) {
 
       <ol
         aria-label="Conversation stages"
-        className="flex gap-1.5 border-b border-border px-4 py-3"
+        className="flex gap-1.5 border-b border-border px-4 py-3 @2xl:px-6"
       >
         {STAGES.map((stage, index) => (
           <li
@@ -79,8 +92,8 @@ export function PracticeRoomPreview({ className }: { className?: string }) {
         ))}
       </ol>
 
-      <div className="flex flex-col gap-4 bg-surface-2 p-4">
-        <PersonaCard persona={SAMPLE_PERSONA} titleAs="p" />
+      <div className="grid gap-4 bg-surface-2 p-4 @2xl:grid-cols-[15rem_1fr] @2xl:gap-6 @2xl:p-6">
+        <PersonaCard persona={SAMPLE_PERSONA} titleAs="p" className="self-start" />
         <ul aria-label="Transcript" className="flex flex-col gap-2.5">
           {SAMPLE_TRANSCRIPT.map((entry) => (
             <TranscriptBubble
@@ -90,16 +103,29 @@ export function PracticeRoomPreview({ className }: { className?: string }) {
               text={entry.text}
             />
           ))}
+          <TranscriptBubble
+            from="partner"
+            speaker={SAMPLE_PERSONA.personaName}
+            text={SAMPLE_STREAMED_REPLY}
+            streaming
+          />
         </ul>
       </div>
 
-      <div aria-hidden="true" className="flex items-center gap-3 border-t border-border px-4 py-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-pill bg-primary text-white shadow-card">
+      <div
+        aria-hidden="true"
+        className="flex items-center gap-3 border-t border-border px-4 py-3 @2xl:px-6"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-pill bg-primary text-white">
           <Mic className="size-5" />
         </span>
-        <span className="flex h-6 items-end gap-0.5">
+        <span className="pp-level flex h-6 items-end gap-0.5">
           {LEVELS.map((height, index) => (
-            <span key={index} className={cn("w-1 rounded-pill bg-primary/60", height)} />
+            <span
+              key={index}
+              className={cn("w-1 rounded-pill bg-primary/60", height)}
+              style={{ ["--i" as string]: index }}
+            />
           ))}
         </span>
         <span className="min-w-0 flex-1 truncate rounded-control border border-border px-3 py-2 text-small text-muted">

@@ -1,4 +1,4 @@
-import { Hero } from "@/components/marketing/Hero";
+import { PageHero } from "@/components/marketing/Hero";
 import { LegalDocument } from "@/components/marketing/LegalDocument";
 import { LEGAL_UPDATED } from "@/content/legal";
 import { TERMS_SECTIONS } from "@/content/terms";
@@ -9,8 +9,7 @@ export const metadata = pageMetadata(PUBLIC_PAGES.terms);
 export default function TermsPage() {
   return (
     <>
-      <Hero
-        compact
+      <PageHero
         title="Terms of use"
         lead={<p>The rules for using PitchPerfect as a student or an employer.</p>}
       />

@@ -1,3 +1,4 @@
+import { LIMITS } from "@pitchperfect/shared";
 import type { Metadata } from "next";
 import { render, screen, within } from "@testing-library/react";
 import type { ComponentType } from "react";
@@ -116,5 +117,51 @@ describe("privacy page", () => {
       expect(main).toHaveTextContent(fact);
     }
     expect(main).toHaveTextContent(/no (advertising|analytics|tracking)/i);
+  });
+});
+
+describe("privacy page, carried review fixes", () => {
+  it("says how long the rate-limit store keeps IP addresses and email-derived keys", () => {
+    const { container } = render(<PrivacyPage />);
+    const retention = container.querySelector("#retention + div");
+    expect(retention).toHaveTextContent(/IP address/);
+    expect(retention).toHaveTextContent(/email/);
+    expect(retention).toHaveTextContent(/an hour/);
+  });
+
+  it("asks only students to confirm they are 18 or older", () => {
+    render(<PrivacyPage />);
+    const account = screen.getByText("Account:").closest("li");
+    expect(account).toHaveTextContent("Students also confirm they are 18 or older");
+    expect(account).not.toHaveTextContent(/employer, and the date you confirmed/);
+  });
+});
+
+describe("numbers in the copy come from the shared limits", () => {
+  const minutes = String(LIMITS.sessionSeconds / 60);
+  const chars = LIMITS.turnMaxChars.toLocaleString("en-US");
+
+  it.each([
+    ["/how-it-works", HowItWorksPage],
+    ["/terms", TermsPage],
+  ])("%s states the session limits", (_path, Page) => {
+    const { container } = render(<Page />);
+    expect(container).toHaveTextContent(`${String(LIMITS.maxStudentTurns)} of your turns`);
+    expect(container).toHaveTextContent(`${minutes} minutes`);
+    expect(container).toHaveTextContent(`${chars} characters`);
+  });
+
+  it("labels the env-configurable session quota as a default", () => {
+    render(<HomePage />);
+    const answer = screen.getByText(/practice sessions a day/);
+    expect(answer).toHaveTextContent(
+      `${String(LIMITS.dailyQuota)} practice sessions a day and ${String(LIMITS.monthlyQuota)} a month`,
+    );
+    expect(answer).toHaveTextContent(/default/i);
+  });
+
+  it("states transcript retention from the shared limit", () => {
+    const { container } = render(<PrivacyPage />);
+    expect(container).toHaveTextContent(`${String(LIMITS.attemptRetentionDays)} days`);
   });
 });

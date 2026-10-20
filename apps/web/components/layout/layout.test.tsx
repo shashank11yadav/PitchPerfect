@@ -35,10 +35,7 @@ describe("Navbar", () => {
     }
     expect(within(nav).getByRole("link", { name: "Jobs" })).toHaveAttribute("aria-current", "page");
     expect(within(nav).getByRole("link", { name: "Students" })).not.toHaveAttribute("aria-current");
-    expect(within(nav).getByRole("link", { name: "Get started" })).toHaveAttribute(
-      "href",
-      "/signup",
-    );
+    expect(within(nav).getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
   });
 
   it("toggles the mobile menu", async () => {

@@ -1,79 +1,69 @@
-import { Check } from "lucide-react";
 import Link from "next/link";
+import { InView, InViewItem } from "@/components/motion/in-view";
 import { CtaBand } from "@/components/marketing/CtaBand";
-import { CtaLinks } from "@/components/marketing/CtaLinks";
+import { EmployerField } from "@/components/marketing/EmployerField";
+import { EvidenceExplorer } from "@/components/marketing/EvidenceExplorer";
 import { Faq } from "@/components/marketing/Faq";
-import { ForEmployers } from "@/components/marketing/ForEmployers";
-import { ForStudents } from "@/components/marketing/ForStudents";
-import { Hero } from "@/components/marketing/Hero";
+import { HomeHero } from "@/components/marketing/Hero";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
-import { PracticeRoomPreview } from "@/components/marketing/PracticeRoomPreview";
-import { ScorecardPreview } from "@/components/marketing/ScorecardPreview";
-import { Section, SectionHeading } from "@/components/marketing/Section";
+import { Section, SectionTitle } from "@/components/marketing/Section";
+import { SkillsList } from "@/components/marketing/SkillsList";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { HOME_FAQ } from "@/content/faq";
 import { organizationJsonLd, pageMetadata, PUBLIC_PAGES, websiteJsonLd } from "@/lib/seo";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.home);
 
-const FACTS = ["Voice or text", "Eight sales skills", "Scored on a seven-part rubric"];
-
 export default function HomePage() {
   return (
     <>
       <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
-      <Hero
-        eyebrow="Sales practice with an AI practice partner"
-        title={
-          <>
-            <span className="block">Practice your pitch.</span>{" "}
-            <span className="block text-primary-soft">Get hired.</span>
-          </>
-        }
+      <HomeHero
         lead={
           <p>
-            Speak to an AI practice partner that plays a realistic buyer. Get a scorecard with
-            quotes from your own words, then apply to roles with employers who can see your skills.
+            Run a sales call with an AI practice partner playing a busy buyer. Your scorecard quotes
+            what you actually said, and you can attach it when you apply for a sales job.
           </p>
         }
-        actions={<CtaLinks />}
-        footnote={
-          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-small text-white/85">
-            {FACTS.map((fact) => (
-              <li key={fact} className="inline-flex items-center gap-2">
-                <Check aria-hidden="true" className="size-4 text-white" />
-                {fact}
-              </li>
-            ))}
-          </ul>
-        }
-        visual={<PracticeRoomPreview />}
       />
-      <HowItWorks />
-      <ForStudents />
-      <ForEmployers />
-      <Section tone="muted" labelledBy="scorecard-heading">
-        <SectionHeading
-          id="scorecard-heading"
-          eyebrow="Sample scorecard"
-          title="Feedback that points at what you actually said"
-          lead="Every session ends with a score out of 100, seven rubric scores with reasons, and a stronger way to say one of your lines."
-          align="center"
-        />
-        <div className="mt-10">
-          <ScorecardPreview />
+
+      <Section labelledBy="evidence-heading" className="pt-8 md:pt-12">
+        <InView className="grid gap-y-6 lg:grid-cols-12 lg:items-end lg:gap-x-6">
+          <InViewItem className="lg:col-span-7">
+            <SectionTitle id="evidence-heading" size="title" className="max-w-[15ch]">
+              Every score points at a line you said
+            </SectionTitle>
+          </InViewItem>
+          <InViewItem className="lg:col-span-4 lg:col-start-9">
+            <p className="max-w-[42ch] text-lede text-ink">
+              The call ends with a score out of 100 and seven rubric scores, each with a reason.
+              Pick one to see the words it&apos;s based on. Quotes are checked against your
+              transcript, so none are made up.
+            </p>
+          </InViewItem>
+        </InView>
+        <div className="mt-14 md:mt-20">
+          <EvidenceExplorer />
         </div>
+        <p className="mt-6 text-small text-ink">
+          A fictional session with Maya Chen, an invented VP of operations. The rubric is the real
+          one.
+        </p>
       </Section>
+
+      <HowItWorks />
+      <SkillsList rubricHref="/students#rubric-heading" />
+      <EmployerField />
       <Faq
-        heading="Questions, answered"
+        heading="Before you sign up"
         lead={
-          <>
-            More detail on sessions and scoring is on{" "}
-            <Link href="/how-it-works" className="font-semibold text-primary underline">
+          <p>
+            More on sessions and scoring is on{" "}
+            <Link href="/how-it-works" className="pp-link font-semibold text-primary">
               how it works
             </Link>
             .
-          </>
+          </p>
         }
         items={HOME_FAQ}
       />

@@ -1,73 +1,64 @@
-import { BadgeCheck, CalendarClock, ClipboardList, FilePenLine, Mic, Quote } from "lucide-react";
+import { InView, InViewItem } from "@/components/motion/in-view";
+import { ApplicantsPreview } from "@/components/marketing/ApplicantsPreview";
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { CtaLinks } from "@/components/marketing/CtaLinks";
-import { FeatureGrid, type Feature } from "@/components/marketing/FeatureGrid";
-import { ApplicantsPreview } from "@/components/marketing/ForEmployers";
-import { Hero } from "@/components/marketing/Hero";
-import { Section, SectionHeading } from "@/components/marketing/Section";
+import {
+  InviteFragment,
+  JobPostFragment,
+  ListingsFragment,
+} from "@/components/marketing/fragments";
+import { PageHero } from "@/components/marketing/Hero";
+import { Section, SectionTitle } from "@/components/marketing/Section";
+import { StatementRows, type Statement } from "@/components/marketing/StatementRows";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.employers);
 
-const FEATURES: Feature[] = [
+const FEATURES: Statement[] = [
   {
-    icon: FilePenLine,
     title: "Post a role",
-    body: "Write the description, list the skills, set the pay and the workplace, and publish when you are ready. Drafts stay private.",
+    body: "Write the description, list the skills, set the pay and the workplace, and publish when you're ready. Drafts stay private.",
   },
   {
-    icon: Mic,
-    title: "Candidates practice your role",
-    body: "Students can start a practice session from your listing, built from its title, description and skills.",
+    title: "Candidates rehearse your role",
+    body: "Students can start a practice call from your listing, built from its title, description and skills.",
   },
   {
-    icon: Quote,
-    title: "Scorecards with evidence",
-    body: "When an applicant shares a scorecard, you see the rubric scores, the reasons and the quotes they came from.",
+    title: "Scorecards with quotes",
+    body: "When an applicant shares a scorecard, you see the scores, the reasons, and the lines they came from.",
   },
   {
-    icon: ClipboardList,
-    title: "A simple pipeline",
-    body: "Move each applicant from applied to shortlisted, interview, and hired or rejected, and save the ones to revisit.",
+    title: "A short pipeline",
+    body: "Move people from applied to shortlisted, interview, and hired or rejected. Save the ones you want to come back to.",
   },
   {
-    icon: CalendarClock,
     title: "Interview invites",
     body: "Pick a time and add a meeting link. The candidate gets an email and sees the interview in their applications.",
   },
   {
-    icon: BadgeCheck,
     title: "A verified badge",
-    body: "Confirm a work email on your company's domain and your listings show as verified to candidates and to search engines.",
+    body: "Confirm a work email on your company's domain and your listings show as verified, to candidates and to search engines.",
   },
 ];
 
 const VERIFY_STEPS = [
-  {
-    title: "Sign up with your work email",
-    body: "Add your company's name and website when you create the account.",
-  },
-  {
-    title: "Confirm the email",
-    body: "We send a one-time link. Free email providers never count as a company domain.",
-  },
-  {
-    title: "Domains match, you are verified",
-    body: "If your email's domain matches your website's, the company is verified. Unverified listings still appear, with a badge.",
-  },
+  "Sign up with your work email, and add your company's name and website.",
+  "Confirm the email with the one-time link we send. Free email providers never count as a company domain.",
+  "If the email's domain matches the website's, you're verified. Unverified listings still go live, with a badge.",
 ];
+
+/** Each step starts further in than the last, so the three read as a sequence without numbers. */
+const STEP_INDENTS = ["", "lg:ml-[12%]", "lg:ml-[24%]"];
 
 export default function EmployersPage() {
   return (
     <>
-      <Hero
-        compact
-        eyebrow="For employers"
-        title="Meet sales candidates who have already practiced"
+      <PageHero
+        title="Hire people who practiced the job"
         lead={
           <p>
             Post entry-level sales roles and review applicants with their résumé and, when they
-            choose to share it, a scorecard from a practice conversation.
+            choose to share it, a scorecard from a practice call.
           </p>
         }
         actions={
@@ -78,51 +69,90 @@ export default function EmployersPage() {
         }
       />
 
-      <Section labelledBy="features-heading">
-        <SectionHeading
-          id="features-heading"
-          title="From posting to interview in one place"
-          lead="Everything you need to run an entry-level sales hire, without a separate tracker."
-        />
-        <FeatureGrid items={FEATURES} className="mt-10" />
+      <Section labelledBy="review-heading">
+        <div className="grid items-center gap-y-14 lg:grid-cols-12 lg:gap-x-6">
+          <InView className="min-w-0 lg:col-span-6">
+            <InViewItem>
+              <ApplicantsPreview />
+            </InViewItem>
+          </InView>
+          <InView className="lg:col-span-5 lg:col-start-8">
+            <InViewItem>
+              <SectionTitle id="review-heading" size="title">
+                Hear how they handle a buyer
+              </SectionTitle>
+            </InViewItem>
+            <InViewItem>
+              <p className="mt-6 max-w-[42ch] text-lede text-ink">
+                A shared scorecard links to the candidate&apos;s practice session. If they delete
+                that session or withdraw, it stops being shared. Résumés download as PDF files and
+                never open in the browser.
+              </p>
+            </InViewItem>
+          </InView>
+        </div>
       </Section>
 
-      <Section tone="muted" labelledBy="review-heading">
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          <SectionHeading
-            id="review-heading"
-            title="See how a candidate handles a buyer"
-            lead="A shared scorecard is a live link to the candidate's practice session. If they delete that session or withdraw, it is no longer shared. Résumés download as PDF files and are never shown in the browser."
+      <Section ground="soft" labelledBy="features-heading">
+        <div className="grid items-start gap-y-12 lg:grid-cols-12 lg:gap-x-6">
+          <div className="lg:sticky lg:top-28 lg:col-span-5">
+            <SectionTitle id="features-heading" size="title">
+              From posting to interview
+            </SectionTitle>
+            <p className="mt-6 max-w-[34ch] text-lede text-ink">
+              What you need for an entry-level sales hire, without a separate tracker.
+            </p>
+            <InView className="mt-10 grid max-w-md gap-4">
+              <InViewItem>
+                <JobPostFragment />
+              </InViewItem>
+              <InViewItem>
+                <InviteFragment />
+              </InViewItem>
+            </InView>
+          </div>
+          <StatementRows
+            items={FEATURES}
+            layout="pinned"
+            className="lg:col-span-6 lg:col-start-7"
           />
-          <ApplicantsPreview />
         </div>
       </Section>
 
       <Section labelledBy="verify-heading">
-        <SectionHeading
-          id="verify-heading"
-          title="How company verification works"
-          lead="Verification is an automatic domain check. It tells candidates that the person posting really uses the company's email, not that we vouch for the job."
-        />
-        <ol className="mt-10 grid gap-4 md:grid-cols-3">
-          {VERIFY_STEPS.map(({ title, body }, index) => (
-            <li
-              key={title}
-              className="rounded-card border border-border bg-surface p-6 shadow-card"
-            >
-              <span className="flex size-9 items-center justify-center rounded-pill bg-primary-soft font-display font-bold text-primary">
-                {index + 1}
-              </span>
-              <h3 className="mt-4 text-h4">{title}</h3>
-              <p className="mt-2 text-ink">{body}</p>
-            </li>
-          ))}
-        </ol>
+        <div className="grid gap-y-6 lg:grid-cols-12 lg:items-end lg:gap-x-6">
+          <SectionTitle id="verify-heading" size="title" className="max-w-[14ch] lg:col-span-7">
+            How verification works
+          </SectionTitle>
+          <p className="max-w-[40ch] text-lede text-ink lg:col-span-4 lg:col-start-9">
+            It&apos;s an automatic domain check. It tells candidates the person posting really has a
+            company email. It doesn&apos;t mean we vouch for the job.
+          </p>
+        </div>
+        <div className="mt-14 grid items-end gap-y-12 md:mt-20 lg:grid-cols-12 lg:gap-x-6">
+          <InView as="ol" className="flex flex-col gap-4 lg:col-span-7">
+            {VERIFY_STEPS.map((step, index) => (
+              <InViewItem
+                key={step}
+                as="li"
+                className={`max-w-xl rounded-[20px] bg-primary-soft p-6 text-statement text-navy md:p-8 ${STEP_INDENTS[index] ?? ""}`}
+              >
+                {step}
+              </InViewItem>
+            ))}
+          </InView>
+          <InView className="min-w-0 lg:col-span-4 lg:col-start-9">
+            <InViewItem>
+              <p className="mb-4 text-small font-semibold text-ink">What candidates see</p>
+              <ListingsFragment />
+            </InViewItem>
+          </InView>
+        </div>
       </Section>
 
       <CtaBand
-        title="Ready to meet your next sales hire?"
-        body="Create an employer account, post a role, and start reviewing applicants who have practiced the conversation."
+        title="Post your first sales role"
+        body="Create an employer account, post a role, and review applicants who've practiced the call."
         primary={{ href: "/signup/employer", label: "Post a job" }}
         secondary={{ href: "/jobs", label: "See current jobs" }}
       />

@@ -44,9 +44,12 @@ export function ScorecardPreview() {
   return (
     <article
       aria-labelledby="sample-scorecard-title"
-      className="overflow-hidden rounded-[20px] border border-border bg-surface shadow-card"
+      className="overflow-hidden rounded-[20px] bg-surface text-ink"
     >
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 md:px-8">
+      <header
+        data-ui
+        className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 md:px-8"
+      >
         <div>
           <p className="text-caption font-semibold text-muted">Sample scorecard</p>
           <h3 id="sample-scorecard-title" className="text-h4">
@@ -57,14 +60,17 @@ export function ScorecardPreview() {
       </header>
 
       <div className="grid gap-8 p-5 md:p-8 lg:grid-cols-[15rem_1fr] lg:gap-10">
-        <div className="flex flex-col items-center gap-4 text-center lg:border-r lg:border-border lg:pr-10">
+        <div
+          data-ui
+          className="flex flex-col items-center gap-4 text-center lg:border-r lg:border-border lg:pr-10"
+        >
           <ScoreRing score={overall} />
           <p className="max-w-56 text-small text-ink">
-            {SAMPLE_SKILL_TITLE} counts double in this score, because it is the skill being
+            {SAMPLE_SKILL_TITLE} counts double in this score, because it&apos;s the skill being
             practiced.
           </p>
         </div>
-        <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+        <div data-ui className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
           {RUBRIC_DIMENSIONS.map(({ key, name }) => {
             const dimension = byKey.get(key);
             if (!dimension) return null;
@@ -82,7 +88,7 @@ export function ScorecardPreview() {
         </div>
       </div>
 
-      <div className="grid gap-8 border-t border-border bg-surface-2 p-5 md:grid-cols-3 md:p-8">
+      <div data-ui className="grid gap-8 bg-surface-2 p-5 md:grid-cols-3 md:p-8">
         <Points title="Strengths" items={strengths} icon={CircleCheck} iconClass="text-success" />
         <Points
           title="Improvements"
@@ -92,7 +98,7 @@ export function ScorecardPreview() {
         />
         <div>
           <h4 className="text-small font-bold text-ink">Stronger version</h4>
-          <div className="mt-3 rounded-card border border-border bg-surface p-4">
+          <div className="mt-3 rounded-card bg-surface p-4">
             <p className="text-caption font-semibold text-muted">You said</p>
             <p className="mt-1 text-small text-ink">{strongerLine.original}</p>
             <ArrowDown aria-hidden="true" className="my-2 size-4 text-primary" />

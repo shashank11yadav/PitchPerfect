@@ -1,22 +1,11 @@
 import { act, render, screen, within } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { observeEntries, stubReducedMotion } from "@/components/motion/test-utils";
 import { PersonaCard } from "./PersonaCard";
 import { RubricBar } from "./RubricBar";
 import { ScoreRing, scoreBand } from "./ScoreRing";
 import { TranscriptBubble } from "./TranscriptBubble";
-
-function stubReducedMotion(reduce: boolean) {
-  vi.stubGlobal(
-    "matchMedia",
-    vi.fn((query: string) => ({
-      matches: reduce && query.includes("reduce"),
-      media: query,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    })),
-  );
-}
 
 const useFakeFrames = () =>
   vi.useFakeTimers({
@@ -104,14 +93,36 @@ describe("ScoreRing", () => {
     expect(screen.getByText("64")).toBeInTheDocument();
   });
 
-  it("counts up to the final score when motion is allowed, keeping the label exact", () => {
+  it("keeps the final score when the ring is already on screen, so it never flickers to 0", () => {
     stubReducedMotion(false);
     useFakeFrames();
+    const io = observeEntries();
     render(<ScoreRing score={91} />);
+    act(() => {
+      io.fire({ isIntersecting: true, top: 120 });
+      vi.advanceTimersByTime(50);
+    });
+    expect(screen.getByTestId("score-value")).toHaveTextContent("91");
+  });
+
+  it("counts up from 0 when it starts off screen, once it scrolls in, keeping the label exact", () => {
+    stubReducedMotion(false);
+    useFakeFrames();
+    const io = observeEntries();
+    render(<ScoreRing score={91} />);
+    expect(screen.getByTestId("score-value")).toHaveTextContent("91");
+    act(() => {
+      io.fire({ isIntersecting: false, top: 2400 });
+    });
+    expect(screen.getByTestId("score-value")).toHaveTextContent("0");
+    act(() => {
+      io.fire({ isIntersecting: true, top: 300 });
+    });
     act(() => {
       vi.advanceTimersByTime(50);
     });
     const midway = Number(screen.getByTestId("score-value").textContent);
+    expect(midway).toBeGreaterThan(0);
     expect(midway).toBeLessThan(91);
     expect(screen.getByRole("img")).toHaveAccessibleName("Overall score: 91 out of 100, strong");
     act(() => {

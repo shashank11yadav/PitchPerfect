@@ -35,10 +35,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const jobs = await activeJobs().catch(() => []);
   const jobEntries = jobs
     .filter((job) => job.company.verification === "verified")
-    .map((job) => ({
-      url: `${SITE_URL}/jobs/${job.slug}`,
-      ...(job.publishedAt && { lastModified: job.publishedAt }),
-    }));
+    // No lastModified: publishedAt says when a job went live, not when its page last changed.
+    .map((job) => ({ url: `${SITE_URL}/jobs/${job.slug}` }));
 
   return [...pages, ...jobEntries];
 }

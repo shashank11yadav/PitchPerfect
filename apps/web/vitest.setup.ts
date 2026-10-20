@@ -1,6 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, vi } from "vitest";
+
+// `server-only` throws outside a React Server Components build; tests import server modules directly.
+vi.mock("server-only", () => ({}));
 
 afterEach(() => {
   cleanup();

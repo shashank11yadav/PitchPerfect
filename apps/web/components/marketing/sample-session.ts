@@ -44,6 +44,10 @@ export const SAMPLE_TRANSCRIPT = [
   },
 ] as const;
 
+/** The partner's answer to the last turn, shown arriving as a streamed reply. */
+export const SAMPLE_STREAMED_REPLY =
+  "One depot I could probably sell upstairs. Who on my side would have to set it up?";
+
 const dimensions: Scorecard["dimensions"] = [
   {
     key: "clarity",

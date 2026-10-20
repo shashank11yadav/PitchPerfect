@@ -1,3 +1,4 @@
+import "server-only";
 import { ApiError, toApiError, type Parser } from "./api";
 
 const TIMEOUT_MS = 5_000;

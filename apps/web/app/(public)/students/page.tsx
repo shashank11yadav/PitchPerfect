@@ -1,153 +1,145 @@
 import { RUBRIC_DIMENSIONS } from "@pitchperfect/shared";
-import {
-  AudioLines,
-  BookOpen,
-  Briefcase,
-  FileText,
-  Lock,
-  MessagesSquare,
-  Quote,
-} from "lucide-react";
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { CtaLinks } from "@/components/marketing/CtaLinks";
-import { FeatureGrid, type Feature } from "@/components/marketing/FeatureGrid";
-import { skillFeatures } from "@/components/marketing/ForStudents";
-import { Hero } from "@/components/marketing/Hero";
-import { PracticeRoomPreview } from "@/components/marketing/PracticeRoomPreview";
-import { Section, SectionHeading } from "@/components/marketing/Section";
+import { ApplyFragment, LessonFragment } from "@/components/marketing/fragments";
+import { PageHero } from "@/components/marketing/Hero";
+import { Section, SectionTitle } from "@/components/marketing/Section";
+import { StageShowcase } from "@/components/marketing/SessionStages";
+import { SkillsList } from "@/components/marketing/SkillsList";
+import { StatementRows, type Statement } from "@/components/marketing/StatementRows";
+import { COPY_LIMITS as L } from "@/content/limits";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.students);
 
-const FEATURES: Feature[] = [
+const FEATURES: Statement[] = [
   {
-    icon: BookOpen,
     title: "Short lessons",
-    body: "Eight written lessons, one per skill, each with a framework, an example and the common mistakes.",
+    body: "One for each skill, with a framework, a worked example and the mistakes people usually make.",
   },
   {
-    icon: MessagesSquare,
-    title: "A buyer who reacts",
-    body: "The AI practice partner plays a named buyer with a personality and hidden objections, and responds to what you actually say.",
+    title: "A buyer who pushes back",
+    body: "The partner plays a named buyer with a personality and objections they hold back. It reacts to what you actually say.",
   },
   {
-    icon: AudioLines,
-    title: "Voice or text",
-    body: "Hold to talk and edit the transcript before you send it, or type. Replies are spoken aloud and always captioned.",
+    title: "Talk or type",
+    body: "Hold to talk and fix the transcript before you send it, or just type. Replies are read aloud and always captioned.",
   },
   {
-    icon: Quote,
-    title: "Feedback with evidence",
-    body: "Each rubric score comes with a reason and a quote from your own turns, plus a stronger version of one of your lines.",
+    title: "Feedback you can check",
+    body: "Every rubric score comes with a reason and a quote from your turns, plus a better way to say one of your lines.",
   },
   {
-    icon: Briefcase,
-    title: "Practice for the job",
-    body: "Start a session from any job listing, and the scenario is built from that role's title, description and skills.",
+    title: "Practice for a real job",
+    body: "Start from any job listing and the scenario is built from that role's title, description and skills.",
   },
   {
-    icon: FileText,
     title: "Apply with proof",
-    body: "Apply with your résumé and, if you want, one scorecard. The employer sees the same scorecard you do.",
+    body: "Send your résumé and, if you like, one scorecard. The employer sees the same scorecard you do.",
   },
-];
-
-const PRIVACY_POINTS = [
-  "Your sessions are private unless you share a scorecard with an application.",
-  "Transcripts are deleted automatically after 180 days, and you can delete any session sooner.",
-  "PitchPerfect never receives or stores audio. Your browser turns speech into text.",
 ];
 
 export default function StudentsPage() {
   return (
     <>
-      <Hero
-        compact
-        eyebrow="For students"
-        title="Rehearse the sales conversations that get you hired"
+      <PageHero
+        title="Practice the calls interviews test"
         lead={
           <p>
-            Practice introductions, discovery, pitching and objections with an AI practice partner
-            before you face a real buyer or a hiring manager.
+            Sales interviews ask you to introduce yourself, find the problem, pitch and handle
+            pushback. Rehearse each one with an AI buyer, then read exactly what to change.
           </p>
         }
         actions={<CtaLinks secondary={{ href: "/how-it-works", label: "See how it works" }} />}
       />
 
-      <Section labelledBy="features-heading">
-        <SectionHeading
-          id="features-heading"
-          title="Everything you need to walk in prepared"
-          lead="Learn the idea, try it out loud, and see exactly what to change next time."
-        />
-        <FeatureGrid items={FEATURES} className="mt-10" />
-      </Section>
+      <StageShowcase title="A call that moves like a real one">
+        <p>
+          The call goes from opening to discovery, pitch, objection and close. You get {L.turns}{" "}
+          turns and {L.minutes} minutes, and you can stop whenever you want.
+        </p>
+        <p>
+          Your sessions stay private unless you share a scorecard with an application. Transcripts
+          are deleted after {L.retentionDays} days, and you can delete any session sooner.
+        </p>
+        <p>PitchPerfect never gets your audio. Your browser turns speech into text.</p>
+      </StageShowcase>
 
-      <Section tone="muted" labelledBy="room-heading">
-        <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          <div>
-            <SectionHeading
-              id="room-heading"
-              title="A practice room that feels like a real call"
-              lead="The conversation moves from opening to discovery, pitch, objection and close. You get up to 20 turns and 20 minutes, and you can end whenever you like."
-            />
-            <ul className="mt-8 flex flex-col gap-3">
-              {PRIVACY_POINTS.map((point) => (
-                <li key={point} className="flex gap-3 text-ink">
-                  <Lock aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" />
-                  {point}
-                </li>
-              ))}
-            </ul>
+      <Section ground="soft" labelledBy="features-heading">
+        <div className="grid items-start gap-y-12 lg:grid-cols-12 lg:gap-x-6">
+          <div className="lg:sticky lg:top-28 lg:col-span-5">
+            <SectionTitle id="features-heading" size="title">
+              What you get
+            </SectionTitle>
+            <div className="mt-10 grid max-w-md gap-4">
+              <LessonFragment />
+              <ApplyFragment />
+            </div>
           </div>
-          <PracticeRoomPreview />
+          <StatementRows
+            items={FEATURES}
+            layout="pinned"
+            className="lg:col-span-6 lg:col-start-7"
+          />
         </div>
       </Section>
 
-      <Section labelledBy="skills-heading">
-        <SectionHeading
-          id="skills-heading"
-          title="Eight skills, each with its own scenario"
-          lead="Every skill has a lesson and a practice scenario. The rubric dimension that matters most for the skill counts double in your score."
-        />
-        <FeatureGrid
-          items={skillFeatures({ withWeight: true })}
-          columns={4}
-          dense
-          className="mt-10"
-        />
-      </Section>
+      <SkillsList />
 
-      <Section tone="muted" labelledBy="rubric-heading">
-        <SectionHeading
-          id="rubric-heading"
-          title="The rubric, in plain words"
-          lead="Each dimension is scored from 1 to 5. Here is what the ends of the scale mean."
-        />
-        <div className="mt-10 overflow-hidden rounded-card border border-border bg-surface shadow-card">
-          <table className="w-full text-left text-small">
-            <caption className="sr-only">Rubric dimensions and what a 1 and a 5 mean</caption>
-            <thead className="bg-primary-soft text-ink">
+      <Section ground="soft" labelledBy="rubric-heading">
+        <div className="grid gap-y-6 lg:grid-cols-12 lg:items-end lg:gap-x-6">
+          <SectionTitle id="rubric-heading" size="title" className="max-w-[12ch] lg:col-span-7">
+            The rubric, in plain words
+          </SectionTitle>
+          <p className="max-w-[40ch] text-lede text-ink lg:col-span-4 lg:col-start-9">
+            Each line is scored from 1 to 5. Here is what each end of the scale sounds like.
+          </p>
+        </div>
+        {/* Phones get the same rubric as a list; the three-column table needs the width. */}
+        <ul className="mt-14 flex flex-col gap-3 md:hidden">
+          {RUBRIC_DIMENSIONS.map(({ key, name, low, high }) => (
+            <li key={key} className="rounded-[20px] bg-surface p-5">
+              <h3 className="font-display text-lede font-semibold text-navy">{name}</h3>
+              <dl className="mt-2 grid gap-2 text-ink">
+                <div>
+                  <dt className="text-small font-semibold">A 1 sounds like</dt>
+                  <dd>{low}</dd>
+                </div>
+                <div>
+                  <dt className="text-small font-semibold">A 5 sounds like</dt>
+                  <dd>{high}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-20 hidden overflow-hidden rounded-[20px] bg-surface md:block">
+          <table className="w-full text-left">
+            <caption className="sr-only">Rubric lines and what a 1 and a 5 sound like</caption>
+            <thead className="text-small text-ink">
               <tr>
-                <th scope="col" className="px-4 py-3 font-bold md:px-6">
-                  Dimension
+                <th scope="col" className="px-4 pt-6 pb-3 font-bold md:px-8">
+                  Line
                 </th>
-                <th scope="col" className="px-4 py-3 font-bold md:px-6">
+                <th scope="col" className="px-4 pt-6 pb-3 font-bold md:px-8">
                   A 1 sounds like
                 </th>
-                <th scope="col" className="px-4 py-3 font-bold md:px-6">
+                <th scope="col" className="px-4 pt-6 pb-3 font-bold md:px-8">
                   A 5 sounds like
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {RUBRIC_DIMENSIONS.map(({ key, name, low, high }) => (
-                <tr key={key}>
-                  <th scope="row" className="px-4 py-3 font-semibold text-navy md:px-6">
+                <tr key={key} className="align-baseline">
+                  <th
+                    scope="row"
+                    className="px-4 py-4 font-display text-lede font-semibold text-navy md:px-8"
+                  >
                     {name}
                   </th>
-                  <td className="px-4 py-3 text-ink md:px-6">{low}</td>
-                  <td className="px-4 py-3 text-ink md:px-6">{high}</td>
+                  <td className="px-4 py-4 text-ink md:px-8">{low}</td>
+                  <td className="px-4 py-4 text-ink md:px-8">{high}</td>
                 </tr>
               ))}
             </tbody>
@@ -155,7 +147,7 @@ export default function StudentsPage() {
         </div>
       </Section>
 
-      <CtaBand tone="white" />
+      <CtaBand />
     </>
   );
 }

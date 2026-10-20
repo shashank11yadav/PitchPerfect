@@ -16,7 +16,7 @@ interface NavbarProps {
   links?: readonly NavLink[];
 }
 
-/** The public site's sticky, translucent top navigation. */
+/** The public site's sticky top bar: wordmark, four links and one action, on a plain white ground. */
 export function Navbar({ links = PUBLIC_NAV }: NavbarProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -58,10 +58,10 @@ export function Navbar({ links = PUBLIC_NAV }: NavbarProps) {
     ));
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/85 backdrop-blur">
+    <header className="sticky top-0 z-40 bg-surface">
       <nav
         aria-label="Main"
-        className="mx-auto flex h-16 max-w-content items-center justify-between gap-6 px-4 sm:px-6"
+        className="mx-auto flex h-16 max-w-wide items-center justify-between gap-6 px-4 sm:px-6 lg:px-8"
       >
         <Link href="/" className="shrink-0 rounded-control">
           <Logo />
@@ -72,7 +72,7 @@ export function Navbar({ links = PUBLIC_NAV }: NavbarProps) {
             Sign in
           </Link>
           <Link href="/signup" className={buttonClasses()}>
-            Get started
+            Sign up
           </Link>
         </div>
         <button
@@ -97,7 +97,7 @@ export function Navbar({ links = PUBLIC_NAV }: NavbarProps) {
         ref={menuRef}
         id="mobile-nav"
         hidden={!open}
-        className="border-t border-border bg-surface md:hidden"
+        className="bg-surface shadow-float md:hidden"
       >
         <ul className="flex flex-col gap-1 px-4 py-3">{linkList("block px-2 py-3")}</ul>
         <div className="flex gap-3 px-4 pb-4">
@@ -108,7 +108,7 @@ export function Navbar({ links = PUBLIC_NAV }: NavbarProps) {
             Sign in
           </Link>
           <Link href="/signup" className={buttonClasses({ className: "flex-1" })}>
-            Get started
+            Sign up
           </Link>
         </div>
       </div>

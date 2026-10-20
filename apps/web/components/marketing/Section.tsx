@@ -1,52 +1,77 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
+/**
+ * Section grounds. Sections are told apart by a change of ground, never by a rule or a shadow:
+ * white, the soft blue tint, navy, and brand blue (kept for the closing call to action).
+ */
+type Ground = "white" | "soft" | "navy" | "blue";
+
+const GROUNDS: Record<Ground, string> = {
+  white: "bg-surface text-ink",
+  soft: "bg-primary-soft text-ink",
+  navy: "pp-on-dark bg-navy text-white",
+  blue: "pp-on-dark bg-primary text-white",
+};
+
+/** The page column: one pair of margins and one width for every public page. */
+export const WRAP = "mx-auto w-full max-w-wide px-4 sm:px-6 lg:px-8";
+
 interface SectionProps {
-  /** Public pages alternate white and light grey sections. */
-  tone?: "white" | "muted";
+  ground?: Ground;
   /** The id of the section's heading. */
   labelledBy?: string;
   className?: string;
+  /** Classes for the inner column, e.g. a 12-column grid. */
+  innerClassName?: string;
   children: ReactNode;
 }
 
-/** A full-width page section with the content column inside. */
-export function Section({ tone = "white", labelledBy, className, children }: SectionProps) {
+/** A full-width band with the page column inside. */
+export function Section({
+  ground = "white",
+  labelledBy,
+  className,
+  innerClassName,
+  children,
+}: SectionProps) {
   return (
     <section
       aria-labelledby={labelledBy}
-      className={cn(tone === "muted" ? "bg-surface-2" : "bg-surface", "py-12 md:py-20", className)}
+      className={cn(GROUNDS[ground], "py-20 md:py-32", className)}
     >
-      <div className="mx-auto max-w-content px-4 sm:px-6">{children}</div>
+      <div className={cn(WRAP, innerClassName)}>{children}</div>
     </section>
   );
 }
 
-interface SectionHeadingProps {
+interface SectionTitleProps {
   id: string;
-  eyebrow?: string;
-  title: ReactNode;
-  lead?: ReactNode;
-  align?: "left" | "center";
+  children: ReactNode;
+  /** `title` for the one big heading of a section, `section` for a working heading. */
+  size?: "title" | "section";
+  dark?: boolean;
   className?: string;
 }
 
-/** A section's h2, with an optional short label above it and a lead paragraph below. */
-export function SectionHeading({
+/** A section's h2. Sentence case, no label above it. */
+export function SectionTitle({
   id,
-  eyebrow,
-  title,
-  lead,
-  align = "left",
+  children,
+  size = "section",
+  dark = false,
   className,
-}: SectionHeadingProps) {
+}: SectionTitleProps) {
   return (
-    <div className={cn("max-w-2xl", align === "center" && "mx-auto text-center", className)}>
-      {eyebrow && <p className="text-small font-bold text-primary">{eyebrow}</p>}
-      <h2 id={id} className={cn("text-h3 md:text-h2", eyebrow && "mt-2")}>
-        {title}
-      </h2>
-      {lead && <p className="mt-4 text-body text-ink md:text-h4 md:font-normal">{lead}</p>}
-    </div>
+    <h2
+      id={id}
+      className={cn(
+        size === "title" ? "text-title" : "text-section",
+        dark ? "text-white" : "text-navy",
+        className,
+      )}
+    >
+      {children}
+    </h2>
   );
 }

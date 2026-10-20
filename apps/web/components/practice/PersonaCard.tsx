@@ -38,7 +38,7 @@ export function PersonaCard({ persona, titleAs: Title = "h2", className }: Perso
       <div className="flex items-start gap-3">
         <div
           aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-pill bg-linear-to-br from-primary to-navy font-display text-body font-semibold text-white"
+          className="flex size-12 shrink-0 items-center justify-center rounded-pill bg-navy font-display text-body font-semibold text-white"
         >
           {initials(persona.personaName)}
         </div>

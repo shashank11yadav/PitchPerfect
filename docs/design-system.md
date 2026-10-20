@@ -14,39 +14,68 @@ PitchPerfect is clean, airy, and confident: a light canvas, one strong blue, dee
 
 Defined once as CSS variables in `apps/web/app/globals.css` and mapped into Tailwind (`@theme`).
 
-| Token            | Value                                                                             | Use                                                                   |
-| ---------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `--pp-blue`      | `#3f56d2`                                                                         | primary buttons, links, focus ring, highlights                        |
-| `--pp-blue-600`  | `#3447b8`                                                                         | primary hover                                                         |
-| `--pp-blue-50`   | `#eef1fc`                                                                         | selected/soft backgrounds                                             |
-| `--pp-navy`      | `#2d3c90`                                                                         | headings on light, hero/footer backgrounds                            |
-| `--pp-navy-900`  | `#1d275e`                                                                         | hero gradient end, dark text on soft blue                             |
-| `--pp-ink`       | `#212529`                                                                         | body text                                                             |
-| `--pp-muted`     | `#6c757d`                                                                         | secondary text (≥ 4.5:1 on white; use `--pp-ink` on `--pp-surface-2`) |
-| `--pp-surface`   | `#ffffff`                                                                         | cards                                                                 |
-| `--pp-surface-2` | `#f8f9fa`                                                                         | page background                                                       |
-| `--pp-border`    | `#e9ecef`                                                                         | borders, dividers                                                     |
-| `--pp-success`   | `#1f8a5b`                                                                         | success, high scores (≥ 80)                                           |
-| `--pp-warning`   | `#b7791f`                                                                         | mid scores (50–79), unverified badge                                  |
-| `--pp-danger`    | `#c53030`                                                                         | errors, low scores (< 50), destructive actions                        |
-| radius           | `12px` (controls), `16px` (cards), `999px` (pills)                                |                                                                       |
-| shadow           | `0 1px 2px rgb(16 24 40 / .06), 0 4px 12px rgb(16 24 40 / .06)`                   | cards; stronger on hover                                              |
-| spacing          | 4-px scale; sections `py-20` desktop / `py-12` mobile; content max width `1200px` |                                                                       |
+| Token               | Value                                                                                                                                             | Use                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `--pp-blue`         | `#3f56d2`                                                                                                                                         | primary buttons, links, focus ring, highlights                          |
+| `--pp-blue-600`     | `#3447b8`                                                                                                                                         | primary hover                                                           |
+| `--pp-blue-50`      | `#eef1fc`                                                                                                                                         | selected/soft backgrounds, the "soft" section ground                    |
+| `--pp-blue-100`     | `#dbe1fa`                                                                                                                                         | highlighter behind quoted words (`.pp-mark`), selection                 |
+| `--pp-blue-300`     | `#6f82e6`                                                                                                                                         | light stop of the hero shader and its static fallback only              |
+| `--pp-navy`         | `#2d3c90`                                                                                                                                         | headings on light, hero/footer backgrounds                              |
+| `--pp-navy-900`     | `#1d275e`                                                                                                                                         | shader shadow stop, dark text on soft blue                              |
+| `--pp-navy-300`     | `#737fbd`                                                                                                                                         | display-size text only (3.8:1 on white), e.g. inactive stage words      |
+| `--pp-ink`          | `#212529`                                                                                                                                         | body text                                                               |
+| `--pp-muted`        | `#6c757d`                                                                                                                                         | secondary text (≥ 4.5:1 on white; use `--pp-ink` on `--pp-surface-2`)   |
+| `--pp-surface`      | `#ffffff`                                                                                                                                         | cards                                                                   |
+| `--pp-surface-2`    | `#f8f9fa`                                                                                                                                         | page background                                                         |
+| `--pp-border`       | `#e9ecef`                                                                                                                                         | borders, dividers                                                       |
+| `--pp-success`      | `#1f8a5b`                                                                                                                                         | success, high scores (≥ 80)                                             |
+| `--pp-warning`      | `#b7791f`                                                                                                                                         | mid scores (50–79), unverified badge                                    |
+| `--pp-danger`       | `#c53030`                                                                                                                                         | errors, low scores (< 50), destructive actions                          |
+| radius              | `12px` (inputs), `16px` (cards), `20px` (product windows), `999px` (buttons, pills)                                                               | buttons are fully round everywhere                                      |
+| shadow              | `0 1px 2px rgb(16 24 40 / .06), 0 4px 12px rgb(16 24 40 / .06)`                                                                                   | app cards; public pages use no resting shadows                          |
+| `--pp-shadow-float` | `0 32px 80px -24px rgb(13 19 56 / .55)`                                                                                                           | only a product window that overlaps a section edge, and the mobile menu |
+| spacing             | 4-px scale; public sections `py-32` desktop / `py-20` mobile; public page column `1360px` with 16/24/32 px margins (`WRAP`); app content `1200px` |                                                                         |
 
 Dark mode: not in v1 (documented in limits.md). Do not add partial dark styles.
+
+## Art direction (public pages)
+
+The public site is product-led and editorial. The pictures are the product's own screens, built
+from the real components with fictional sample data (a practice room, the scorecard, an applicant
+list, a lesson card, a job post, an interview invite). There are no stock photos, illustrations or
+icon-card grids.
+
+- **The idea:** the scorecard's evidence. Every score quotes words the student actually said, so the
+  page keeps putting a sentence next to its proof. The home page's live piece, the evidence explorer,
+  lets a visitor pick a rubric line and see the exact words it's based on marked in the transcript.
+- **Signature details:** the voice strip set inside the headline where the pitch would be (the
+  practice room's mic and level meter on a slow grain shader), the highlighter mark on quoted words,
+  and the verbs Learn / Practice / Get hired set at poster size as the headings of how it works.
+- **Composition:** one 12-column grid. Section headings sit on the left; their lead sentence sits at
+  the opposite end of the same baseline. Neighbouring sections never share a layout or a ground
+  (white, soft blue, navy, and brand blue only for the closing call to action). Sections are told
+  apart by ground, never by rules or shadows.
+- **House rules:** no labels above headings, no index numbers (order is shown by position or a real
+  `<ol>`), no gradients except the shader and its fallback, no glass, no emoji, headings at most two
+  lines at every width, running text in full ink at 16 px or more, one primary button per screen with
+  the second action as a plain text link.
+- **Footer:** the wordmark's letters run across the full width, cropped by the bottom edge.
 
 ## Typography
 
 - **Poppins** (600/700) for headings, **Manrope** (400/500/600/700) for body and UI, both loaded with `next/font/google` (self-hosted at build, `display: swap`). There is no runtime request to Google.
-- **Scale:** display 56/64, h1 40/48, h2 32/40, h3 24/32, h4 20/28, body 16/26, small 14/22, caption 12/18. Mobile display is 40/48.
+- **Scale (app):** display 56/64, h1 40/48, h2 32/40, h3 24/32, h4 20/28, body 16/26, small 14/22, caption 12/18. Mobile display is 40/48.
+- **Scale (public pages):** a few steps far apart, all fluid: `hero` clamp(32px, 7.4vw, 112px), `poster` clamp(44px, 11vw, 160px) for the how-it-works verbs, `title` clamp(34px, 5vw, 72px) for page and section titles, `section` clamp(30px, 3.6vw, 52px), `statement` clamp(19px, 1.6vw, 24px) and `lede` 18/28, plus body and small. Display steps use tight tracking (-0.03 to -0.045em) and leading near 1. Captions at 12 px appear only inside product fragments.
 - **Line length:** 60–75 characters for prose (lessons, legal pages).
 
 ## Layout and patterns
 
 - **Public pages:**
-  - Sticky translucent navbar: logo, Students, Employers, How it works, Jobs, then Sign in and a primary "Get started".
-  - Hero: navy gradient, headline, subcopy, two CTAs, and a product visual. The visual is a real, static-rendered practice-room mock built from the actual components, not a stock image.
-  - Sections alternate white and `--pp-surface-2`. Footer is navy with links and the legal pages.
+  - Sticky plain white bar: logo, Students, Employers, How it works, Jobs, then Sign in and a primary "Sign up".
+  - Home hero: flat navy, the tagline at hero size with the voice strip in its second line, one lead sentence, "Start practicing" plus an "I'm hiring" text link, and the practice room rising out of the navy into the white section below.
+  - Inner page heroes: flat navy, the title on the left and the lead at the opposite end of its baseline.
+  - The close of every page is a brand-blue band; the footer is navy with the cropped wordmark.
 - **App (student and employer):**
   - Desktop: left sidebar with icon + label, a top bar with page title and account menu, and content in cards.
   - Mobile: a bottom tab bar (max 5 items) and a top bar.
@@ -70,6 +99,14 @@ Each component is implemented once:
 - **Navigation:** `Navbar` (public), `AppShell` (sidebar/topbar/bottom tabs, links passed in by role), `Footer`.
 - **Domain:** `SkillCard`, `LessonContent`, `JobCard`, `JobDetails` (actions slot), `JobForm` (with `RichTextEditor`), `ApplicationRow`, `StatusPill`, `PersonaCard`, `TranscriptBubble`, `MicButton`, `ScoreRing`, `RubricBar`, `Scorecard`, `QuotaMeter`, `ConsentDialog`, `SafeHtml`.
 
+## Motion
+
+- **Hero shader:** Paper Shaders' grain gradient in the brand blues, loaded with `React.lazy` after the text renders. Under reduced motion, without WebGL 2, on the server and while it loads, the same strip is a static CSS gradient (`.pp-shader-fallback`). The library pauses it off screen and in hidden tabs. It needs no workers, blobs or eval, so the CSP is unchanged.
+- **Entrances:** `components/motion/in-view.tsx` (adapted from Motion Primitives) staggers a section's parts in as it first scrolls into view: 24 px rise with opacity, 700 ms, ease-out `cubic-bezier(.22,1,.36,1)`. Server HTML and anything already on screen render finished, so nothing waits for scripts and nothing flickers; `useEntryReveal` decides.
+- **Streamed reply:** the practice room's last partner reply arrives letter by letter (`text-effect.tsx`), over a transparent copy that keeps its space and gives screen readers the sentence once.
+- **Feedback:** buttons scale to 0.97 on press (`.pp-press`); text links show their underline on hover (`.pp-link`); the voice meters breathe.
+- **Reduced motion:** every one of these is off. The global rule also cuts CSS transitions and animations to 0.01 ms.
+
 ## Accessibility (WCAG 2.2 AA)
 
 - Every input has a visible `<label>`. Errors are linked with `aria-describedby` and announced.
@@ -77,7 +114,8 @@ Each component is implemented once:
 - All interactions work with a keyboard. In the practice room, Space holds-to-talk when focus is on the mic button, and Enter sends.
 - New partner replies are announced via an `aria-live="polite"` region. Speaking can be muted, and captions are always shown.
 - Colour is never the only signal: score bands also have labels, and status pills have text.
-- `prefers-reduced-motion` disables count-ups and transitions.
+- `prefers-reduced-motion` disables count-ups, entrances, the streamed reply, the shader and transitions.
+- The score ring shows its final value on the server and when it is already on screen; it only counts up from 0 if it was still off screen after hydration.
 - Contrast is checked with axe in Playwright (`@axe-core/playwright`) on every public page and the main app pages. There must be zero serious or critical violations.
 
 ## SEO checklist (public pages)

@@ -1,4 +1,4 @@
-import { Hero } from "@/components/marketing/Hero";
+import { PageHero } from "@/components/marketing/Hero";
 import { LegalDocument } from "@/components/marketing/LegalDocument";
 import { PRIVACY_SECTIONS } from "@/content/privacy";
 import { LEGAL_UPDATED } from "@/content/legal";
@@ -9,12 +9,12 @@ export const metadata = pageMetadata(PUBLIC_PAGES.privacy);
 export default function PrivacyPage() {
   return (
     <>
-      <Hero
-        compact
+      <PageHero
         title="Privacy policy"
         lead={
           <p>
-            What PitchPerfect collects, who processes it, how long it is kept, and how to delete it.
+            What PitchPerfect collects, who processes it, how long it&apos;s kept, and how to delete
+            it.
           </p>
         }
       />

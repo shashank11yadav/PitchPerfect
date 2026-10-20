@@ -77,3 +77,12 @@ describe("serverApi", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("server-api module", () => {
+  it("is marked server-only, so a client component importing it fails the build", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const path = await import("node:path");
+    const source = await readFile(path.join(import.meta.dirname, "server-api.ts"), "utf8");
+    expect(source.split("\n")[0]).toBe('import "server-only";');
+  });
+});
