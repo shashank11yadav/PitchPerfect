@@ -1,15 +1,15 @@
 import { Writable } from "node:stream";
-import type { IncomingMessage } from "node:http";
+import type { ClientRequest } from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { CoachTurnRequest } from "@pitchperfect/shared";
 import { PracticeAttempt, UsageDay } from "../src/db/models/index.js";
-import type { CsrfAgent } from "./helpers/csrf.js";
 import { csrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
 import { errorOf } from "./helpers/error-body.js";
 import {
-  parseEvents,
   practiceStudent,
   sendTurn,
+  sendTurnAndLeave,
   sendTurns,
   sessionsPath,
   startPractice,
@@ -45,40 +45,19 @@ async function activeAttempt() {
 
 const attemptOf = (attemptId: string) => PracticeAttempt.findById(attemptId).lean();
 
-/**
- * Sends a turn and hangs up once the first `delta` has arrived (after `whileStreaming`, if given,
- * has finished). Resolves with the events received before hanging up.
- */
-async function sendTurnAndLeave(
-  session: CsrfAgent,
-  attemptId: string,
-  text: string,
-  whileStreaming: () => Promise<void> = () => Promise.resolve(),
-) {
-  const res = await session
-    .post(`${sessionsPath}/${attemptId}/turns`)
-    .send({ text })
-    .buffer(true)
-    .parse((response, callback) => {
-      const stream = response as unknown as IncomingMessage;
-      let body = "";
-      let leaving = false;
-      stream.setEncoding("utf8");
-      stream.on("data", (chunk: string) => {
-        body += chunk;
-        if (leaving || !body.includes("event: delta")) return;
-        leaving = true;
-        void whileStreaming().then(() => {
-          callback(null, body);
-          stream.destroy();
-        });
-      });
-      stream.on("end", () => {
-        if (!leaving) callback(null, body);
-      });
-    });
-  return parseEvents(res.body as string);
+function deferred() {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
 }
+
+/** The documented estimate for an unanswered turn: request characters / 4 in, the reply cap out. */
+const estimatedUsage = (request: CoachTurnRequest | undefined) => ({
+  input: Math.ceil(JSON.stringify(request).length / 4),
+  output: 200,
+});
 
 describe("POST /api/practice/sessions/:id/turns", () => {
   it("streams the reply and stores the redacted student text with the final reply", async () => {
@@ -136,20 +115,46 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     expect((usageAfter?.outputTokens ?? 0) - (usageBefore?.outputTokens ?? 0)).toBe(turnOutput);
   });
 
-  it("forwards only unflagged history and the stored stage", async () => {
+  it("forwards flagged history marked as flagged, and the stored stage", async () => {
     const { session, attemptId } = await activeAttempt();
     await sendTurns(session, attemptId, 1);
     await sendTurn(session, attemptId, ATTACK);
+    const before = await attemptOf(attemptId);
     const turn = vi.spyOn(harness.coach, "turn");
 
     await sendTurn(session, attemptId, "Sorry about that. How do you plan routes today?");
 
     const stored = await attemptOf(attemptId);
     const forwarded = turn.mock.calls[0]?.[0];
-    expect(forwarded?.transcript).toHaveLength(2);
-    expect(forwarded?.transcript.every((entry) => entry.flagged !== true)).toBe(true);
-    expect(JSON.stringify(forwarded?.transcript)).not.toContain("ignore all previous");
+    expect(forwarded?.transcript.map((entry) => entry.flagged === true)).toEqual([
+      false,
+      false,
+      true,
+      true,
+    ]);
+    expect(forwarded?.transcript[0]).not.toHaveProperty("flagged");
+    expect(forwarded?.transcript[2]?.text).toBe(ATTACK);
+    expect(forwarded?.currentStage).toBe(before?.stage);
     expect(stored?.transcript).toHaveLength(6);
+  });
+
+  it("forwards at most the 40 most recent entries", async () => {
+    const { session, attemptId } = await activeAttempt();
+    const entries = Array.from({ length: 45 }, (_, index) => ({
+      role: index < 10 ? ("student" as const) : ("partner" as const),
+      text: `Entry ${String(index)}`,
+      at: new Date(),
+      flagged: false,
+    }));
+    await PracticeAttempt.updateOne({ _id: attemptId }, { transcript: entries });
+    const turn = vi.spyOn(harness.coach, "turn");
+
+    await sendTurn(session, attemptId, "Hello again");
+
+    const forwarded = turn.mock.calls[0]?.[0].transcript ?? [];
+    expect(forwarded).toHaveLength(40);
+    expect(forwarded[0]?.text).toBe("Entry 5");
+    expect(forwarded.at(-1)?.text).toBe("Entry 44");
   });
 
   it("rejects text over 1000 characters", async () => {
@@ -241,7 +246,7 @@ describe("POST /api/practice/sessions/:id/turns", () => {
 
   it("answers 409 to a second turn sent while the first is streaming", async () => {
     const { session, attemptId } = await activeAttempt();
-    harness.coach.stallAfterFirstDelta = true;
+    harness.coach.interrupt = "stall";
     let status = 0;
 
     await sendTurnAndLeave(session, attemptId, "Hello there", async () => {
@@ -251,26 +256,107 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     expect(status).toBe(409);
   });
 
-  it("releases the lock and stores nothing when the student leaves mid-reply", async () => {
+  it("charges a turn the student leaves mid-reply: flagged entry, estimated usage", async () => {
     const { session, attemptId } = await activeAttempt();
-    harness.coach.stallAfterFirstDelta = true;
+    harness.coach.interrupt = "stall";
+    const turn = vi.spyOn(harness.coach, "turn");
+    const before = await attemptOf(attemptId);
+    const usageBefore = await UsageDay.findOne().lean();
 
-    const events = await sendTurnAndLeave(session, attemptId, "Hello, do you have a minute?");
+    const events = await sendTurnAndLeave(session, attemptId, "Hello, call me on 617-555-0100");
 
     expect(events.map((event) => event.event)).toEqual(["delta"]);
     await vi.waitFor(async () => {
       expect((await attemptOf(attemptId))?.turnLockUntil).toBeNull();
     });
-    expect((await attemptOf(attemptId))?.transcript).toEqual([]);
+    const estimate = estimatedUsage(turn.mock.calls[0]?.[0]);
+    const stored = await attemptOf(attemptId);
+    expect(stored?.transcript).toMatchObject([
+      { role: "student", text: "Hello, call me on [phone]", flagged: true },
+    ]);
+    expect((stored?.tokens.input ?? 0) - (before?.tokens.input ?? 0)).toBe(estimate.input);
+    expect((stored?.tokens.output ?? 0) - (before?.tokens.output ?? 0)).toBe(200);
+    const usageAfter = await UsageDay.findOne().lean();
+    expect((usageAfter?.inputTokens ?? 0) - (usageBefore?.inputTokens ?? 0)).toBe(estimate.input);
+    expect((usageAfter?.outputTokens ?? 0) - (usageBefore?.outputTokens ?? 0)).toBe(200);
 
-    harness.coach.stallAfterFirstDelta = false;
+    harness.coach.interrupt = null;
     const next = await sendTurn(session, attemptId, "Hello, do you have a minute?");
     expect(next.events.at(-1)?.event).toBe("done");
-    expect(next.events.at(-1)?.data.turnsLeft).toBe(19);
-    expect((await attemptOf(attemptId))?.transcript).toHaveLength(2);
+    expect(next.events.at(-1)?.data.turnsLeft).toBe(18);
+    const after = await attemptOf(attemptId);
+    expect(after?.transcript.map((entry) => [entry.role, entry.flagged])).toEqual([
+      ["student", true],
+      ["student", false],
+      ["partner", false],
+    ]);
   });
 
-  it("reports a coach failure as an error event and stores nothing", async () => {
+  it("charges a turn the coach ends with an error event", async () => {
+    const { session, attemptId } = await activeAttempt();
+    harness.coach.interrupt = "error";
+    const turn = vi.spyOn(harness.coach, "turn");
+    const usageBefore = await UsageDay.findOne().lean();
+
+    const { events } = await sendTurn(session, attemptId, "Hello there");
+
+    expect(events.map((event) => event.event)).toEqual(["delta", "error"]);
+    expect(events[1]?.data).toEqual({ code: "upstream_error" });
+    const stored = await attemptOf(attemptId);
+    expect(stored?.transcript).toMatchObject([
+      { role: "student", text: "Hello there", flagged: true },
+    ]);
+    expect(stored?.turnLockUntil).toBeNull();
+    const estimate = estimatedUsage(turn.mock.calls[0]?.[0]);
+    const usageAfter = await UsageDay.findOne().lean();
+    expect((usageAfter?.inputTokens ?? 0) - (usageBefore?.inputTokens ?? 0)).toBe(estimate.input);
+    expect((usageAfter?.outputTokens ?? 0) - (usageBefore?.outputTokens ?? 0)).toBe(200);
+  });
+
+  it("does not call the coach when the student left before the turn started", async () => {
+    const { session, attemptId } = await activeAttempt();
+    const turn = vi.spyOn(harness.coach, "turn");
+    logLines.length = 0;
+    // Hold the server inside the lock query until the client has gone.
+    const reached = deferred();
+    const resume = deferred();
+    const findOneAndUpdate = PracticeAttempt.findOneAndUpdate.bind(PracticeAttempt);
+    vi.spyOn(PracticeAttempt, "findOneAndUpdate").mockImplementationOnce(((
+      ...args: Parameters<typeof findOneAndUpdate>
+    ) => {
+      const query = findOneAndUpdate(...args);
+      const then = query.then.bind(query);
+      query.then = ((onFulfilled, onRejected) => {
+        reached.resolve();
+        return resume.promise.then(() => then(onFulfilled, onRejected));
+      }) as typeof query.then;
+      return query;
+    }) as typeof findOneAndUpdate);
+
+    await expect(
+      session
+        .post(`${sessionsPath}/${attemptId}/turns`)
+        .send({ text: "Hello there" })
+        .on("request", (sent: { req: ClientRequest }) => {
+          void reached.promise.then(() => {
+            sent.req.destroy(new Error("client left"));
+          });
+        }),
+    ).rejects.toThrow("client left");
+    // Let the server see the connection close, then let the lock query finish.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    resume.resolve();
+
+    await vi.waitFor(() => {
+      expect(logLines.join("")).toContain('"outcome":"client_left"');
+    });
+    expect(turn).not.toHaveBeenCalled();
+    const stored = await attemptOf(attemptId);
+    expect(stored?.transcript).toEqual([]);
+    expect(stored?.turnLockUntil).toBeNull();
+  });
+
+  it("stores nothing when the coach refuses the turn before streaming", async () => {
     const { session, attemptId } = await activeAttempt();
     harness.stub.fail("/v1/turn", { status: 503, code: "practice_unavailable" });
 
@@ -281,6 +367,21 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     const stored = await attemptOf(attemptId);
     expect(stored?.transcript).toEqual([]);
     expect(stored?.turnLockUntil).toBeNull();
+  });
+
+  it("redacts personal data in a redirect line before storing and sending it", async () => {
+    const { session, attemptId } = await activeAttempt();
+    const usage = { provider: "fake", model: "fake", inputTokens: 1, outputTokens: 1 } as const;
+    vi.spyOn(harness.coach, "turn").mockImplementation(async function* () {
+      await Promise.resolve();
+      yield { type: "redirect", text: "Write to me at someone@example.test instead.", usage };
+    });
+
+    const { events } = await sendTurn(session, attemptId, "Hello there");
+
+    expect(events[0]?.data).toEqual({ text: "Write to me at [email] instead." });
+    const stored = await attemptOf(attemptId);
+    expect(stored?.transcript[1]?.text).toBe("Write to me at [email] instead.");
   });
 
   it("ends a session that has run past 20 minutes", async () => {

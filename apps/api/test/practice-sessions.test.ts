@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AttemptSummary, AttemptView, Page, ScenarioPublic } from "@pitchperfect/shared";
@@ -229,8 +230,8 @@ describe("POST /api/practice/sessions", () => {
     expect(untouched?.status).toBe("active");
   });
 
-  it("keeps the current session when planning fails", async () => {
-    const { session } = await practiceStudent(harness.app);
+  it("leaves no attempt behind when planning fails", async () => {
+    const { session, user } = await practiceStudent(harness.app);
     const first = await startPractice(session);
     harness.stub.fail("/v1/plan", { status: 503, code: "practice_unavailable" });
 
@@ -238,8 +239,82 @@ describe("POST /api/practice/sessions", () => {
 
     expect(res.status).toBe(503);
     expect(errorOf(res).code).toBe("practice_unavailable");
-    expect((await PracticeAttempt.findById(first.attemptId).lean())?.status).toBe("active");
-    expect(await PracticeAttempt.countDocuments()).toBe(1);
+    const attempts = await PracticeAttempt.find({ studentId: user._id }).lean();
+    expect(attempts.map((attempt) => [attempt._id.toString(), attempt.status])).toEqual([
+      [first.attemptId, "abandoned"],
+    ]);
+    const quota = await session.agent.get("/api/practice/quota");
+    expect((quota.body as { dailyUsed: number }).dailyUsed).toBe(0);
+  });
+
+  it("lets only one of many parallel starts through at a time", async () => {
+    const { session, user } = await practiceStudent(harness.app);
+
+    const results = await Promise.all(Array.from({ length: 6 }, () => startPractice(session)));
+
+    const statuses = results.map(({ res }) => res.status);
+    const started = statuses.filter((status) => status === 201).length;
+    expect(started).toBeGreaterThanOrEqual(1);
+    expect(started).toBeLessThanOrEqual(5);
+    for (const { res } of results) {
+      if (res.status !== 201) expect(errorOf(res).code).toMatch(/^(conflict|quota_exceeded)$/);
+    }
+    const live = await PracticeAttempt.countDocuments({
+      studentId: user._id,
+      status: mongoose.trusted({ $in: ["starting", "active"] }),
+    });
+    expect(live).toBe(1);
+  });
+
+  it("refuses a second live attempt for the same student at the database", async () => {
+    const { user } = await practiceStudent(harness.app);
+    await createAttempt(user._id, { status: "active" });
+
+    await expect(createAttempt(user._id, { status: "starting" })).rejects.toMatchObject({
+      code: 11000,
+    });
+    await expect(createAttempt(user._id, { status: "completed" })).resolves.toBeDefined();
+  });
+
+  it("answers 409 while another start is planning, and clears a stale one", async () => {
+    const { session, user } = await practiceStudent(harness.app);
+    const placeholder = await PracticeAttempt.create({
+      studentId: user._id,
+      skill: "pitching",
+      status: "starting",
+      startedAt: new Date(),
+      expiresAt: new Date(Date.now() + DAY_MS),
+    });
+
+    const busy = await startPractice(session);
+    expect(busy.res.status).toBe(409);
+    expect(errorOf(busy.res).code).toBe("conflict");
+
+    await PracticeAttempt.updateOne(
+      { _id: placeholder._id },
+      { startedAt: new Date(Date.now() - 2 * MINUTE_MS) },
+    );
+    const retried = await startPractice(session);
+    expect(retried.res.status).toBe(201);
+    expect(await PracticeAttempt.findById(placeholder._id)).toBeNull();
+  });
+
+  it("hides an attempt that is still being planned", async () => {
+    const { session, user } = await practiceStudent(harness.app);
+    const placeholder = await PracticeAttempt.create({
+      studentId: user._id,
+      skill: "pitching",
+      status: "starting",
+      startedAt: new Date(),
+      expiresAt: new Date(Date.now() + DAY_MS),
+    });
+    const id = placeholder._id.toString();
+
+    expect((await session.agent.get(`${sessionsPath}/${id}`)).status).toBe(404);
+    expect((await session.post(`${sessionsPath}/${id}/end`)).status).toBe(404);
+    expect((await session.delete(`/api/practice/attempts/${id}`)).status).toBe(404);
+    const list = await session.agent.get("/api/practice/attempts");
+    expect((list.body as Page<AttemptSummary>).total).toBe(0);
   });
 
   it("maps other coach failures to 502 upstream_error", async () => {
@@ -272,7 +347,12 @@ describe("GET /api/practice/sessions/:id", () => {
 
     expect(res.status).toBe(200);
     const { attempt } = res.body as { attempt: AttemptView };
-    expect(attempt).toMatchObject({ id: attemptId, status: "active", scorecard: null });
+    expect(attempt).toMatchObject({
+      id: attemptId,
+      status: "active",
+      stage: "opening",
+      scorecard: null,
+    });
     expect(res.text).not.toContain("hiddenObjections");
   });
 

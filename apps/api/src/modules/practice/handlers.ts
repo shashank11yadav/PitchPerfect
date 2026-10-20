@@ -9,10 +9,11 @@ import {
   endSession,
   getAttempt,
   listAttempts,
-  startSession,
   type PracticeDeps,
 } from "./service.js";
-import { openSse } from "./sse.js";
+import { openSse, watchDisconnect } from "./sse.js";
+import { startSession } from "./start.js";
+import { releaseTurnLock } from "./turn-lock.js";
 import { prepareTurn, runTurn } from "./turns.js";
 
 interface WithId {
@@ -37,10 +38,17 @@ export function practiceHandlers(deps: PracticeDeps) {
 
     /** Errors before the stream opens are JSON; after that they are an `error` event. */
     turn: (async (req, res) => {
+      const left = watchDisconnect(res);
       const { params, body } = getInput<WithId & { body: typeof TurnSchema }>(res);
       const coach = coachOf(deps);
       const prepared = await prepareTurn(userOf(res).id, params.id);
-      const stream = openSse(res);
+      if (left.aborted) {
+        // Gone before the turn started: the coach is never called and nothing is charged.
+        if (prepared.kind === "ready") await releaseTurnLock(prepared.lock);
+        req.log.info({ attemptId: params.id, outcome: "client_left" }, "practice turn finished");
+        return;
+      }
+      const stream = openSse(res, left);
       try {
         if (prepared.kind === "ended") stream.send({ type: "ended", reason: prepared.reason });
         else await runTurn({ coach, log: req.log, stream }, prepared.lock, body.text);

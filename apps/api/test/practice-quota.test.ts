@@ -1,10 +1,16 @@
 import request from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PracticeAttempt } from "../src/db/models/index.js";
 import { csrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
 import { errorOf } from "./helpers/error-body.js";
 import { createAttempt, createEmployer, signIn } from "./helpers/factories.js";
-import { practiceStudent, startPractice, usePracticeHarness } from "./helpers/practice.js";
+import {
+  practiceStudent,
+  sendTurnAndLeave,
+  startPractice,
+  usePracticeHarness,
+} from "./helpers/practice.js";
 
 useTestDb();
 const harness = usePracticeHarness();
@@ -64,6 +70,22 @@ describe("GET /api/practice/quota", () => {
     await createAttempt(other.user._id);
 
     expect(await quotaOf(session)).toMatchObject({ dailyUsed: 3, monthlyUsed: 4, available: true });
+  });
+
+  it("counts a session whose only turn was cut off", async () => {
+    const { session } = await practiceStudent(harness.app);
+    const { attemptId } = await startPractice(session);
+    harness.coach.interrupt = "stall";
+    await sendTurnAndLeave(session, attemptId, "Hello there");
+    await vi.waitFor(async () => {
+      expect((await PracticeAttempt.findById(attemptId).lean())?.turnLockUntil).toBeNull();
+    });
+    harness.coach.interrupt = null;
+
+    await startPractice(session);
+
+    expect((await PracticeAttempt.findById(attemptId).lean())?.status).toBe("abandoned");
+    expect(await quotaOf(session)).toMatchObject({ dailyUsed: 2 });
   });
 
   it("is unavailable once the daily or monthly limit is reached", async () => {

@@ -1,18 +1,25 @@
 import {
   LIMITS,
-  normalizeTurnText,
   redactPii,
   STAGES,
-  type CoachTurnEvent,
+  type CoachTurnRequest,
+  type EndedReason,
   type Stage,
   type Usage,
 } from "@pitchperfect/shared";
 import { PracticeAttempt } from "../../db/models/index.js";
-import { AppError, ConflictError, NotFoundError, UpstreamError } from "../../errors.js";
+import {
+  AppError,
+  ConflictError,
+  NotFoundError,
+  PracticeUnavailableError,
+  UpstreamError,
+} from "../../errors.js";
 import type { CoachClient } from "../../services/coach-client.js";
 import { recordUsage } from "./quota.js";
-import { scenarioOf, sessionEndsAt, studentTurnsOf, usableTranscript } from "./service.js";
-import type { EndedReason, PracticeStream } from "./sse.js";
+import { scenarioOf, sessionEndsAt, studentTurnsOf, visible } from "./service.js";
+import type { PracticeStream } from "./sse.js";
+import { estimateUnansweredTurn, redactTurn } from "./text.js";
 import { acquireTurnLock, releaseTurnLock, type TurnLock } from "./turn-lock.js";
 
 /** The slice of a logger a turn needs; pino's `req.log` fits. Only ids, codes, and counts go in. */
@@ -32,7 +39,7 @@ export async function prepareTurn(studentId: string, attemptId: string): Promise
   const now = new Date();
   const lock = await acquireTurnLock(attemptId, studentId, now);
   if (!lock) {
-    const current = await PracticeAttempt.findOne({ _id: attemptId, studentId })
+    const current = await PracticeAttempt.findOne({ _id: attemptId, studentId, ...visible() })
       .select("status")
       .lean();
     if (!current) throw new NotFoundError();
@@ -57,25 +64,29 @@ export async function prepareTurn(studentId: string, attemptId: string): Promise
   return { kind: "ready", lock };
 }
 
-/** Normalized, PII-redacted, and kept within the turn length (a placeholder can be longer). */
-function redactTurn(text: string): string {
-  return Array.from(redactPii(normalizeTurnText(text)))
-    .slice(0, LIMITS.turnMaxChars)
-    .join("");
-}
-
 /** The later of two stages: a session never moves backwards. */
 const laterStage = (stored: Stage, next: Stage): Stage =>
   STAGES.indexOf(next) > STAGES.indexOf(stored) ? next : stored;
 
-const tokensOf = (usage: Usage) => ({
+type TokenUsage = Pick<Usage, "inputTokens" | "outputTokens">;
+
+const tokensOf = (usage: TokenUsage) => ({
   "tokens.input": usage.inputTokens,
   "tokens.output": usage.outputTokens,
 });
 
-/** Only codes the browser knows are passed on. */
-const relayedCode = (code: string) =>
-  code === "practice_unavailable" ? "practice_unavailable" : "upstream_error";
+/** The coach's turn-request transcript cap. */
+const COACH_TRANSCRIPT_MAX = 40;
+
+/**
+ * History for the coach: every entry, flagged ones marked (the coach counts them as used turns
+ * but never replays them to the model), keeping the most recent 40.
+ */
+function coachTranscript(attempt: TurnLock["attempt"]): CoachTurnRequest["transcript"] {
+  return attempt.transcript
+    .slice(-COACH_TRANSCRIPT_MAX)
+    .map(({ role, text, flagged }) => (flagged ? { role, text, flagged } : { role, text }));
+}
 
 interface TurnContext {
   coach: CoachClient;
@@ -86,35 +97,36 @@ interface TurnContext {
 interface TurnOutcome {
   outcome: string;
   stage: Stage;
-  usage?: Usage;
+  usage?: TokenUsage;
+}
+
+interface TurnProgress {
+  /** True once the coach has sent anything back. */
+  started: boolean;
+  /** True once the turn's outcome is stored; nothing more is charged after that. */
+  stored: boolean;
 }
 
 async function relayTurn(
   { coach, stream }: TurnContext,
   { attempt }: TurnLock,
-  studentText: string,
+  request: CoachTurnRequest,
+  progress: TurnProgress,
 ): Promise<TurnOutcome> {
   const turnsLeft = LIMITS.maxStudentTurns - (studentTurnsOf(attempt) + 1);
-  const student = { role: "student" as const, text: studentText, at: new Date() };
-  const events: AsyncIterable<CoachTurnEvent> = coach.turn(
-    {
-      skill: attempt.skill,
-      ...scenarioOf(attempt),
-      transcript: usableTranscript(attempt),
-      studentText,
-      currentStage: attempt.stage,
-    },
-    stream.signal,
-  );
+  const student = { role: "student" as const, text: request.studentText, at: new Date() };
 
-  for await (const event of events) {
+  for await (const event of coach.turn(request, stream.signal)) {
+    progress.started = true;
     switch (event.type) {
       case "delta":
         stream.send({ type: "delta", text: event.text });
         break;
       case "error":
-        stream.send({ type: "error", code: relayedCode(event.code) });
-        return { outcome: relayedCode(event.code), stage: attempt.stage };
+        // Only codes the browser knows are passed on.
+        throw event.code === "practice_unavailable"
+          ? new PracticeUnavailableError()
+          : new UpstreamError();
       case "done": {
         // Only the checked final reply is stored, never the raw deltas.
         const finalText = redactPii(event.finalText);
@@ -128,14 +140,16 @@ async function relayTurn(
             $inc: tokensOf(event.usage),
           },
         );
+        progress.stored = true;
         await recordUsage(event.usage, new Date());
         stream.send({ type: "done", stage, turnsLeft, finalText });
         if (turnsLeft === 0) stream.send({ type: "ended", reason: "turn_limit" });
         return { outcome: "done", stage, usage: event.usage };
       }
       case "redirect": {
+        const text = redactPii(event.text);
         const endedByGuard = attempt.guardFlags + 1 >= LIMITS.guardFlagLimit;
-        const partner = { role: "partner" as const, text: event.text, at: new Date() };
+        const partner = { role: "partner" as const, text, at: new Date() };
         await PracticeAttempt.updateOne(
           { _id: attempt._id, status: "active" },
           {
@@ -151,8 +165,9 @@ async function relayTurn(
             ...(endedByGuard ? { $set: { status: "ended_by_guard", endedAt: new Date() } } : {}),
           },
         );
+        progress.stored = true;
         await recordUsage(event.usage, new Date());
-        stream.send({ type: "redirect", text: event.text });
+        stream.send({ type: "redirect", text });
         if (endedByGuard) stream.send({ type: "ended", reason: "guard_limit" });
         else if (turnsLeft === 0) stream.send({ type: "ended", reason: "turn_limit" });
         return {
@@ -168,28 +183,60 @@ async function relayTurn(
 }
 
 /**
+ * A turn the coach started but never finished still costs a turn and tokens, so leaving
+ * mid-reply can't be used to get around the turn limit, quota, or budget. The student's text is
+ * kept flagged (never replayed or scored), with no partner reply, and the usage is estimated.
+ */
+async function chargeUnanswered(
+  { attempt }: TurnLock,
+  request: CoachTurnRequest,
+): Promise<TokenUsage> {
+  const usage = estimateUnansweredTurn(request);
+  await PracticeAttempt.updateOne(
+    { _id: attempt._id, status: "active" },
+    {
+      $push: {
+        transcript: { role: "student", text: request.studentText, at: new Date(), flagged: true },
+      },
+      $inc: tokensOf(usage),
+    },
+  );
+  await recordUsage(usage, new Date());
+  return usage;
+}
+
+/**
  * Runs one locked turn: redacts the student's text, relays the coach's stream, and stores the
- * outcome. A client that leaves mid-reply aborts the coach call and nothing is stored. The lock
- * is always released; the log line holds ids, stage, tokens, and the outcome code, never text.
+ * outcome. When the client leaves or the coach fails after it started, the turn is charged (see
+ * `chargeUnanswered`); a coach that refuses the call outright costs nothing. The lock is always
+ * released, and the log line holds ids, stage, tokens, and the outcome code, never text.
  */
 export async function runTurn(ctx: TurnContext, lock: TurnLock, text: string): Promise<void> {
-  const attemptId = lock.attempt._id.toString();
-  let result: TurnOutcome = { outcome: "error", stage: lock.attempt.stage };
+  const { attempt } = lock;
+  const attemptId = attempt._id.toString();
+  const request: CoachTurnRequest = {
+    skill: attempt.skill,
+    ...scenarioOf(attempt),
+    transcript: coachTranscript(attempt),
+    studentText: redactTurn(text),
+    currentStage: attempt.stage,
+  };
+  const progress: TurnProgress = { started: false, stored: false };
+  let result: TurnOutcome = { outcome: "error", stage: attempt.stage };
   try {
-    result = await relayTurn(ctx, lock, redactTurn(text));
+    result = await relayTurn(ctx, lock, request, progress);
   } catch (error) {
-    if (ctx.stream.signal.aborted) {
-      result = { ...result, outcome: "aborted" };
-    } else {
-      const code = error instanceof AppError ? error.code : "internal_error";
-      if (!(error instanceof AppError)) {
-        // The name only: error messages can quote stored data.
-        const errorName = error instanceof Error ? error.name : typeof error;
-        ctx.log.error({ attemptId, errorName }, "turn failed");
-      }
-      result = { ...result, outcome: code };
-      ctx.stream.send({ type: "error", code });
+    const aborted = ctx.stream.signal.aborted;
+    const code = aborted ? "aborted" : error instanceof AppError ? error.code : "internal_error";
+    if (!aborted && !(error instanceof AppError)) {
+      // The name only: error messages can quote stored data.
+      const errorName = error instanceof Error ? error.name : typeof error;
+      ctx.log.error({ attemptId, errorName }, "turn failed");
     }
+    const charged = (aborted || progress.started) && !progress.stored;
+    const usage = charged ? await chargeUnanswered(lock, request) : undefined;
+    result = { ...result, outcome: code, usage };
+    if (!aborted) ctx.stream.send({ type: "error", code });
   } finally {
     await releaseTurnLock(lock);
   }

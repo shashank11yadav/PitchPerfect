@@ -22,6 +22,7 @@ export function practiceRoutes(deps: PracticeDeps): Router {
     limit: 60,
     key: byUser,
   });
+  const endLimit = rateLimit("practice-end", { windowMs: 10 * MINUTE_MS, limit: 20, key: byUser });
   const withId = validate({ params: IdParamSchema });
 
   const router = Router();
@@ -43,7 +44,7 @@ export function practiceRoutes(deps: PracticeDeps): Router {
     validate({ params: IdParamSchema, body: TurnSchema }),
     handle.turn,
   );
-  router.post("/sessions/:id/end", student, withId, handle.end);
+  router.post("/sessions/:id/end", student, endLimit, withId, handle.end);
   router.get("/attempts", student, validate({ query: AttemptListQuerySchema }), handle.list);
   router.delete("/attempts/:id", student, withId, handle.remove);
   return router;

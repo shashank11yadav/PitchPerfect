@@ -1,8 +1,9 @@
+import type { IncomingMessage } from "node:http";
 import type { Express } from "express";
 import type { DestinationStream } from "pino";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll } from "vitest";
-import type { CoachTurnEvent, CoachTurnRequest } from "@pitchperfect/shared";
+import { PracticeEvent, type CoachTurnEvent, type CoachTurnRequest } from "@pitchperfect/shared";
 import { User } from "../../src/db/models/index.js";
 import { createHttpCoachClient, type CoachClient } from "../../src/services/coach-client.js";
 import { makeTestApp } from "./app.js";
@@ -11,12 +12,25 @@ import { devEnv } from "./env.js";
 import { createStudent, signIn } from "./factories.js";
 import { startStubCoach, type StubCoach } from "./stub-coach.js";
 
+/** How a scripted turn breaks off after its first delta. */
+type Interruption = "stall" | "error";
+
+function aborted(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    signal.addEventListener("abort", () => {
+      resolve();
+    });
+  });
+}
+
 /**
- * The real HTTP coach client, plus a switch that holds a turn stream open after its first delta
- * until the caller aborts, to simulate a browser leaving mid-reply.
+ * The real HTTP coach client. `interrupt` makes the next turns break off after their first delta:
+ * `stall` holds the stream open until the caller aborts (a browser leaving mid-reply), `error`
+ * ends it with a coach `error` event.
  */
 class StallableCoach implements CoachClient {
-  stallAfterFirstDelta = false;
+  interrupt: Interruption | null = null;
 
   constructor(private readonly inner: CoachClient) {}
 
@@ -35,13 +49,12 @@ class StallableCoach implements CoachClient {
   async *turn(req: CoachTurnRequest, signal: AbortSignal): AsyncIterable<CoachTurnEvent> {
     for await (const event of this.inner.turn(req, signal)) {
       yield event;
-      if (this.stallAfterFirstDelta && event.type === "delta") {
-        await new Promise<void>((resolve) => {
-          signal.addEventListener("abort", () => {
-            resolve();
-          });
-        });
+      if (event.type !== "delta" || !this.interrupt) continue;
+      if (this.interrupt === "error") {
+        yield { type: "error", code: "upstream_error" };
+        return;
       }
+      await aborted(signal);
     }
   }
 }
@@ -71,7 +84,7 @@ export function usePracticeHarness(
   });
   afterEach(() => {
     harness.stub.clear();
-    harness.coach.stallAfterFirstDelta = false;
+    harness.coach.interrupt = null;
   });
   afterAll(async () => {
     await harness.stub.close();
@@ -97,8 +110,11 @@ export interface StreamEvent {
   data: Record<string, unknown>;
 }
 
-/** Parses `event:`/`data:` frames from an SSE body; comment lines are skipped. */
-export function parseEvents(body: string): StreamEvent[] {
+/**
+ * Parses `event:`/`data:` frames from an SSE body (comment lines are skipped) and checks each one
+ * against the shared `PracticeEvent` contract.
+ */
+function parseEvents(body: string): StreamEvent[] {
   return body
     .split("\n\n")
     .filter((frame) => frame.trim() !== "" && !frame.startsWith(":"))
@@ -106,7 +122,9 @@ export function parseEvents(body: string): StreamEvent[] {
       const lines = frame.split("\n");
       const event = lines.find((line) => line.startsWith("event: "))?.slice(7) ?? "";
       const data = lines.find((line) => line.startsWith("data: "))?.slice(6) ?? "null";
-      return { event, data: JSON.parse(data) as Record<string, unknown> };
+      const parsed = JSON.parse(data) as Record<string, unknown>;
+      PracticeEvent.parse({ ...parsed, type: event });
+      return { event, data: parsed };
     });
 }
 
@@ -139,4 +157,39 @@ export async function sendTurns(session: CsrfAgent, attemptId: string, count: nu
       throw new Error(`turn ${String(index + 1)} did not finish: ${JSON.stringify(events)}`);
     }
   }
+}
+
+/**
+ * Sends a turn and hangs up once the first `delta` has arrived (after `whileStreaming`, if given,
+ * has finished). Resolves with the events received before hanging up.
+ */
+export async function sendTurnAndLeave(
+  session: CsrfAgent,
+  attemptId: string,
+  text: string,
+  whileStreaming: () => Promise<void> = () => Promise.resolve(),
+) {
+  const res = await session
+    .post(`${sessionsPath}/${attemptId}/turns`)
+    .send({ text })
+    .buffer(true)
+    .parse((response, callback) => {
+      const stream = response as unknown as IncomingMessage;
+      let body = "";
+      let leaving = false;
+      stream.setEncoding("utf8");
+      stream.on("data", (chunk: string) => {
+        body += chunk;
+        if (leaving || !body.includes("event: delta")) return;
+        leaving = true;
+        void whileStreaming().then(() => {
+          callback(null, body);
+          stream.destroy();
+        });
+      });
+      stream.on("end", () => {
+        if (!leaving) callback(null, body);
+      });
+    });
+  return parseEvents(res.body as string);
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { AttemptStatus } from "../enums.js";
+import { STAGES, type AttemptStatus, type Stage } from "../enums.js";
+import { LIMITS } from "../limits.js";
 import type { Scorecard } from "../rubric.js";
 import type { SkillSlug } from "../skills.js";
 import type { ScenarioPublic, TranscriptEntry } from "./coach.js";
@@ -28,6 +29,8 @@ export interface AttemptView {
   skill: SkillSlug;
   jobId: string | null;
   status: AttemptStatus;
+  /** Conversation stage reached so far; it only moves forward. */
+  stage: Stage;
   scenarioPublic: ScenarioPublic;
   transcript: TranscriptEntry[];
   scorecard: Scorecard | null;
@@ -44,3 +47,25 @@ export interface AttemptSummary {
   startedAt: string;
   endedAt: string | null;
 }
+
+const ENDED_REASONS = ["guard_limit", "turn_limit", "expired"] as const;
+/** Why a session stopped taking turns. */
+export type EndedReason = (typeof ENDED_REASONS)[number];
+
+/**
+ * Events the browser receives from `POST /api/practice/sessions/:id/turns`. On the wire `type` is
+ * the SSE event name and the remaining fields are the `data:` JSON.
+ */
+export const PracticeEvent = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("delta"), text: z.string() }),
+  z.strictObject({
+    type: z.literal("done"),
+    stage: z.enum(STAGES),
+    turnsLeft: z.number().int().min(0).max(LIMITS.maxStudentTurns),
+    finalText: z.string(),
+  }),
+  z.strictObject({ type: z.literal("redirect"), text: z.string() }),
+  z.strictObject({ type: z.literal("ended"), reason: z.enum(ENDED_REASONS) }),
+  z.strictObject({ type: z.literal("error"), code: z.string().min(1) }),
+]);
+export type PracticeEvent = z.infer<typeof PracticeEvent>;

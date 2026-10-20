@@ -1,16 +1,5 @@
 import type { Response } from "express";
-import type { Stage } from "@pitchperfect/shared";
-
-/** Why a session stopped taking turns (docs/api.md). */
-export type EndedReason = "guard_limit" | "turn_limit" | "expired";
-
-/** What the browser receives from `/turns`; `type` is the event name, the rest is `data`. */
-type PracticeEvent =
-  | { type: "delta"; text: string }
-  | { type: "done"; stage: Stage; turnsLeft: number; finalText: string }
-  | { type: "redirect"; text: string }
-  | { type: "ended"; reason: EndedReason }
-  | { type: "error"; code: string };
+import type { PracticeEvent } from "@pitchperfect/shared";
 
 export interface PracticeStream {
   /** Aborts when the client disconnects before the stream has finished. */
@@ -27,18 +16,30 @@ const HEADERS = {
   "x-accel-buffering": "no",
 } as const;
 
-/** Starts a `text/event-stream` response and flushes its headers at once. */
-export function openSse(res: Response): PracticeStream {
+/**
+ * A signal that aborts when the client disconnects before the response has finished. Call it as
+ * early as possible: a client that is already gone aborts it at once.
+ */
+export function watchDisconnect(res: Response): AbortSignal {
   const controller = new AbortController();
-  res.on("close", () => {
-    if (!res.writableFinished) controller.abort();
-  });
+  if (res.destroyed || !res.socket || res.socket.destroyed) {
+    controller.abort();
+  } else {
+    res.on("close", () => {
+      if (!res.writableFinished) controller.abort();
+    });
+  }
+  return controller.signal;
+}
+
+/** Starts a `text/event-stream` response and flushes its headers at once. */
+export function openSse(res: Response, signal: AbortSignal): PracticeStream {
   res.writeHead(200, HEADERS);
   res.flushHeaders();
 
   const open = () => !res.destroyed && !res.writableEnded;
   return {
-    signal: controller.signal,
+    signal,
     send({ type, ...data }) {
       if (open()) res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
     },

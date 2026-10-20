@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AttemptListQuerySchema,
+  PracticeEvent,
   ShareScorecardSchema,
   StartPracticeSchema,
   TurnSchema,
@@ -64,5 +65,30 @@ describe("AttemptListQuerySchema", () => {
   it("rejects unknown skills and keys", () => {
     expect(AttemptListQuerySchema.safeParse({ skill: "juggling" }).success).toBe(false);
     expect(AttemptListQuerySchema.safeParse({ status: "active" }).success).toBe(false);
+  });
+});
+
+describe("PracticeEvent", () => {
+  it("accepts each event the browser receives from /turns", () => {
+    const events = [
+      { type: "delta", text: "Go" },
+      { type: "done", stage: "pitch", turnsLeft: 0, finalText: "Go on." },
+      { type: "redirect", text: "Let's get back to it." },
+      { type: "ended", reason: "guard_limit" },
+      { type: "ended", reason: "turn_limit" },
+      { type: "ended", reason: "expired" },
+      { type: "error", code: "upstream_error" },
+    ];
+    for (const event of events) expect(PracticeEvent.parse(event)).toEqual(event);
+  });
+
+  it("rejects unknown reasons, out-of-range turn counts, coach usage, and extra keys", () => {
+    expect(PracticeEvent.safeParse({ type: "ended", reason: "bored" }).success).toBe(false);
+    const done = { type: "done", stage: "pitch", finalText: "Go on." };
+    expect(PracticeEvent.safeParse({ ...done, turnsLeft: -1 }).success).toBe(false);
+    expect(PracticeEvent.safeParse({ ...done, turnsLeft: 21 }).success).toBe(false);
+    const usage = { provider: "fake", model: "fake", inputTokens: 1, outputTokens: 1 };
+    expect(PracticeEvent.safeParse({ ...done, turnsLeft: 3, usage }).success).toBe(false);
+    expect(PracticeEvent.safeParse({ type: "delta", text: "x", extra: 1 }).success).toBe(false);
   });
 });

@@ -34,7 +34,14 @@ export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 export const APPLICATION_CLOSED_REASONS = ["employer_left", "job_archived"] as const;
 export type ApplicationClosedReason = (typeof APPLICATION_CLOSED_REASONS)[number];
 
-export const ATTEMPT_STATUSES = ["active", "completed", "abandoned", "ended_by_guard"] as const;
+/** `starting` is a placeholder while the scenario is planned; it is never shown to anyone. */
+export const ATTEMPT_STATUSES = [
+  "starting",
+  "active",
+  "completed",
+  "abandoned",
+  "ended_by_guard",
+] as const;
 export type AttemptStatus = (typeof ATTEMPT_STATUSES)[number];
 
 export const STAGES = ["opening", "discovery", "pitch", "objection", "close"] as const;

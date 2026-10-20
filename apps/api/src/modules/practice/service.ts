@@ -1,25 +1,23 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import mongoose from "mongoose";
 import {
   LIMITS,
   type AttemptListQuery,
+  type AttemptStatus,
   type AttemptSummary,
   type AttemptView,
-  type CoachPlanRequest,
   type ScenarioPrivate,
   type ScenarioPublic,
-  type StartPractice,
   type TranscriptEntry,
   type Page,
 } from "@pitchperfect/shared";
 import type { Config } from "../../config.js";
 import { toAttemptSummary, toAttemptView } from "../../db/mappers.js";
-import { Application, PracticeAttempt, StudentProfile } from "../../db/models/index.js";
+import { Application, PracticeAttempt } from "../../db/models/index.js";
 import type { PracticeAttemptAttrs } from "../../db/models/practice-attempt.js";
 import { ConflictError, NotFoundError, PracticeUnavailableError } from "../../errors.js";
 import { NotEnoughTurnsError, type CoachClient } from "../../services/coach-client.js";
-import { htmlToPlainText } from "../../services/html-sanitizer.js";
-import { findListedJob } from "../jobs/service.js";
-import { assertCanStart, recordUsage } from "./quota.js";
+import { recordUsage } from "./quota.js";
 import {
   acquireTurnLock,
   releaseTurnLock,
@@ -33,13 +31,16 @@ export interface PracticeDeps {
   coach: CoachClient | undefined;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const SESSION_MS = LIMITS.sessionSeconds * 1000;
-/** Job text sent to the planner is clipped to this many characters. */
-const JOB_TEXT_MAX_CHARS = 4000;
 /** Scoring needs at least this many unflagged student turns. */
 const MIN_SCORED_TURNS = 2;
 const END_POLL_MS = 100;
+
+/** Matches every attempt except a `starting` placeholder, which no one ever sees. */
+export function visible() {
+  const notStarting: { $ne: AttemptStatus } = { $ne: "starting" };
+  return { status: mongoose.trusted(notStarting) };
+}
 
 export function coachOf(deps: PracticeDeps): CoachClient {
   if (!deps.coach) throw new PracticeUnavailableError();
@@ -71,85 +72,13 @@ export function scenarioOf(attempt: LockedAttempt): {
 }
 
 /** Unflagged entries only: guardrail redirects are never replayed or scored. */
-export const usableTranscript = (attempt: LockedAttempt): TranscriptEntry[] =>
+const usableTranscript = (attempt: LockedAttempt): TranscriptEntry[] =>
   attempt.transcript
     .filter((entry) => !entry.flagged)
     .map((entry) => ({ role: entry.role, text: entry.text }));
 
-async function planRequest(studentId: string, input: StartPractice): Promise<CoachPlanRequest> {
-  const listed = input.jobId ? await findListedJob({ _id: input.jobId }) : undefined;
-  const profile = await StudentProfile.findOne({ userId: studentId })
-    .select("targetRole industry")
-    .lean();
-  const job = listed?.job;
-  return {
-    skill: input.skill,
-    ...(profile?.targetRole ? { targetRole: profile.targetRole } : {}),
-    ...(profile?.industry ? { industry: profile.industry } : {}),
-    ...(job
-      ? {
-          job: {
-            title: job.title,
-            descriptionText: htmlToPlainText(job.descriptionHtml).slice(0, JOB_TEXT_MAX_CHARS),
-            skills: [...job.skills],
-          },
-        }
-      : {}),
-  };
-}
-
-export interface StartedSession {
-  attemptId: string;
-  scenario: ScenarioPublic;
-  limits: { maxTurns: number; maxChars: number; expiresAt: string };
-}
-
-/**
- * Checks quota and budget, plans a scenario, and starts a session. Any other active session of
- * the student is abandoned once the new scenario is ready, so a failed plan keeps the old one.
- */
-export async function startSession(
-  deps: PracticeDeps,
-  studentId: string,
-  input: StartPractice,
-): Promise<StartedSession> {
-  const coach = coachOf(deps);
-  await assertCanStart(deps.config, studentId, new Date());
-  const plan = await coach.plan(await planRequest(studentId, input));
-
-  const now = new Date();
-  await PracticeAttempt.updateMany(
-    { studentId, status: "active" },
-    { $set: { status: "abandoned", endedAt: now, turnLockUntil: null } },
-  );
-  const attempt = await PracticeAttempt.create({
-    studentId,
-    skill: input.skill,
-    jobId: input.jobId,
-    status: "active",
-    scenarioPublic: plan.scenarioPublic,
-    scenarioPrivate: plan.scenarioPrivate,
-    provider: plan.usage.provider,
-    model: plan.usage.model,
-    tokens: { input: plan.usage.inputTokens, output: plan.usage.outputTokens },
-    startedAt: now,
-    expiresAt: new Date(now.getTime() + deps.config.PRACTICE_RETENTION_DAYS * DAY_MS),
-  });
-  await recordUsage(plan.usage, now, { session: true });
-
-  return {
-    attemptId: attempt.id,
-    scenario: toAttemptView(attempt).scenarioPublic,
-    limits: {
-      maxTurns: LIMITS.maxStudentTurns,
-      maxChars: LIMITS.turnMaxChars,
-      expiresAt: sessionEndsAt(attempt).toISOString(),
-    },
-  };
-}
-
 export async function getAttempt(studentId: string, attemptId: string): Promise<AttemptView> {
-  const attempt = await PracticeAttempt.findOne({ _id: attemptId, studentId }).lean();
+  const attempt = await PracticeAttempt.findOne({ _id: attemptId, studentId, ...visible() }).lean();
   if (!attempt) throw new NotFoundError();
   return toAttemptView(attempt);
 }
@@ -158,7 +87,7 @@ export async function listAttempts(
   studentId: string,
   { skill, page, pageSize }: AttemptListQuery,
 ): Promise<Page<AttemptSummary>> {
-  const filter = { studentId, ...(skill ? { skill } : {}) };
+  const filter = { studentId, ...visible(), ...(skill ? { skill } : {}) };
   const [attempts, total] = await Promise.all([
     PracticeAttempt.find(filter)
       .sort({ startedAt: -1, _id: -1 })
@@ -172,7 +101,9 @@ export async function listAttempts(
 
 /** Deletes the student's own attempt and stops sharing it with any application. */
 export async function deleteAttempt(studentId: string, attemptId: string): Promise<void> {
-  const attempt = await PracticeAttempt.findOne({ _id: attemptId, studentId }).select("_id").lean();
+  const attempt = await PracticeAttempt.findOne({ _id: attemptId, studentId, ...visible() })
+    .select("_id")
+    .lean();
   if (!attempt) throw new NotFoundError();
   // Detach first, so a failure in between never leaves a share pointing at nothing.
   await Application.updateMany(
@@ -194,7 +125,11 @@ async function finish(
   return toAttemptView(attempt);
 }
 
-async function scoreLocked(coach: CoachClient, lock: TurnLock): Promise<AttemptView> {
+/**
+ * Scores a locked attempt, or abandons it when there are fewer than two unflagged student turns.
+ * A coach is needed only for the scoring itself.
+ */
+async function scoreLocked(deps: PracticeDeps, lock: TurnLock): Promise<AttemptView> {
   const { attempt } = lock;
   const transcript = usableTranscript(attempt);
   if (transcript.filter((entry) => entry.role === "student").length < MIN_SCORED_TURNS) {
@@ -203,7 +138,7 @@ async function scoreLocked(coach: CoachClient, lock: TurnLock): Promise<AttemptV
 
   let result;
   try {
-    result = await coach.score({
+    result = await coachOf(deps).score({
       skill: attempt.skill,
       ...scenarioOf(attempt),
       transcript,
@@ -233,15 +168,18 @@ export async function endSession(
   studentId: string,
   attemptId: string,
 ): Promise<AttemptView> {
-  const coach = coachOf(deps);
   const deadline = Date.now() + TURN_LOCK_MS;
   for (;;) {
-    const lock = await acquireTurnLock(attemptId, studentId, new Date());
-    if (lock) return scoreLocked(coach, lock);
-
-    const current = await PracticeAttempt.findOne({ _id: attemptId, studentId }).lean();
+    const current = await PracticeAttempt.findOne({
+      _id: attemptId,
+      studentId,
+      ...visible(),
+    }).lean();
     if (!current) throw new NotFoundError();
     if (current.status !== "active") return toAttemptView(current);
+
+    const lock = await acquireTurnLock(attemptId, studentId, new Date());
+    if (lock) return scoreLocked(deps, lock);
     if (Date.now() >= deadline) {
       throw new ConflictError("conflict", "This session is busy. Try again in a moment");
     }

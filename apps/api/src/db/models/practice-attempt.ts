@@ -48,6 +48,11 @@ export interface PracticeAttemptAttrs {
 
 const required = { type: String, required: true } as const;
 
+/** A `starting` placeholder holds no scenario yet; every other attempt must have one. */
+function planned(this: { status?: AttemptStatus }): boolean {
+  return this.status !== "starting";
+}
+
 const scenarioPublicSchema = new Schema<ScenarioPublic>(
   {
     personaName: required,
@@ -83,9 +88,9 @@ const practiceAttemptSchema = new Schema<PracticeAttemptAttrs>(
     skill: { type: String, enum: SKILL_SLUGS, required: true },
     jobId: { type: Schema.Types.ObjectId, ref: "Job" },
     status: { type: String, enum: ATTEMPT_STATUSES, default: "active" },
-    scenarioPublic: { type: scenarioPublicSchema, required: true },
+    scenarioPublic: { type: scenarioPublicSchema, required: planned },
     // Excluded from queries unless asked for with `.select("+scenarioPrivate")`.
-    scenarioPrivate: { type: scenarioPrivateSchema, required: true, select: false },
+    scenarioPrivate: { type: scenarioPrivateSchema, required: planned, select: false },
     transcript: { type: [transcriptEntrySchema], default: [] },
     guardFlags: { type: Number, default: 0, min: 0 },
     stage: { type: String, enum: STAGES, default: "opening" },
@@ -98,8 +103,8 @@ const practiceAttemptSchema = new Schema<PracticeAttemptAttrs>(
         message: "Scorecard is malformed",
       },
     },
-    provider: { type: String, enum: LLM_PROVIDERS, required: true },
-    model: required,
+    provider: { type: String, enum: LLM_PROVIDERS, required: planned },
+    model: { type: String, required: planned },
     tokens: {
       input: { type: Number, default: 0, min: 0 },
       output: { type: Number, default: 0, min: 0 },
@@ -113,6 +118,15 @@ const practiceAttemptSchema = new Schema<PracticeAttemptAttrs>(
 );
 
 practiceAttemptSchema.index({ studentId: 1, startedAt: -1 });
+// One live attempt per student: concurrent starts cannot both get past this.
+practiceAttemptSchema.index(
+  { studentId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ["starting", "active"] } },
+    name: "one_live_attempt_per_student",
+  },
+);
 
 export const PracticeAttempt = model<PracticeAttemptAttrs>(
   "PracticeAttempt",

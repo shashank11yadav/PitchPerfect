@@ -141,6 +141,7 @@ export function toAttemptView(attempt: Persisted<PracticeAttemptAttrs>): Attempt
     skill: attempt.skill,
     jobId: attempt.jobId?.toString() ?? null,
     status: attempt.status,
+    stage: attempt.stage,
     scenarioPublic: { personaName, personaTitle, companyType, personality, openingLine },
     transcript: attempt.transcript.map((entry) => ({
       role: entry.role,

@@ -489,7 +489,8 @@ describe("runPurge", () => {
     const { user } = await createStudent();
     const graceMinutes = LIMITS.sessionSeconds / 60 + 60;
     const stale = await createAttempt(user._id);
-    const justInside = await createAttempt(user._id);
+    // A student has at most one live attempt, so the second active one belongs to someone else.
+    const justInside = await createAttempt((await createStudent()).user._id);
     const finished = await createAttempt(user._id);
     await PracticeAttempt.updateOne(
       { _id: stale._id },

@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ScorecardSchema, type AttemptView, type CoachScoreResponse } from "@pitchperfect/shared";
+import { createApp } from "../src/app.js";
+import { loadConfig } from "../src/config.js";
 import { PracticeAttempt, UsageDay } from "../src/db/models/index.js";
 import type { CsrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
+import { devEnv } from "./helpers/env.js";
 import { errorOf } from "./helpers/error-body.js";
+import { createAttempt } from "./helpers/factories.js";
+import { FakeMailer } from "./helpers/fake-mailer.js";
 import {
   practiceStudent,
   sendTurn,
@@ -149,6 +154,37 @@ describe("POST /api/practice/sessions/:id/end", () => {
 
     expect(attemptOfBody(res)).toMatchObject({ status: "ended_by_guard", scorecard: null });
     expect(callCount(harness.stub, "/v1/score")).toBe(0);
+  });
+
+  it("limits a student to 20 ends in 10 minutes", async () => {
+    const { session, attemptId } = await attemptWithTurns(1);
+    for (let index = 0; index < 20; index += 1) {
+      expect((await end(session, attemptId)).status).toBe(200);
+    }
+
+    const res = await end(session, attemptId);
+
+    expect(res.status).toBe(429);
+    expect(errorOf(res).code).toBe("rate_limited");
+  });
+
+  it("ends without a coach when there is nothing to score", async () => {
+    const app = createApp({ config: loadConfig(devEnv()), mailer: new FakeMailer() });
+    const { session, user } = await practiceStudent(app);
+    const studentLine = { role: "student" as const, text: "Hi", at: new Date(), flagged: false };
+    const short = await createAttempt(user._id, { status: "active", transcript: [studentLine] });
+    expect(attemptOfBody(await end(session, short.id)).status).toBe("abandoned");
+    const done = await createAttempt(user._id);
+    expect(attemptOfBody(await end(session, done.id)).status).toBe("completed");
+
+    const long = await createAttempt(user._id, {
+      status: "active",
+      transcript: [studentLine, studentLine],
+    });
+    const res = await end(session, long.id);
+    expect(res.status).toBe(503);
+    expect(errorOf(res).code).toBe("practice_unavailable");
+    expect((await PracticeAttempt.findById(long._id).lean())?.turnLockUntil).toBeNull();
   });
 
   it("answers 404 for another student's attempt", async () => {
