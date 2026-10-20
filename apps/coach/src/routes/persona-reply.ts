@@ -3,7 +3,7 @@ import { withTimeout } from "../guardrails/circuit-breaker.js";
 import { createLeakScanner } from "../guardrails/leak-scan.js";
 import { checkOutput } from "../guardrails/output.js";
 import { FALLBACK_LINE } from "../prompts/fixed-lines.js";
-import { buildTurnPrompt, studentTurnNumber, turnLeakSource } from "../prompts/persona-turn.js";
+import { buildTurnPrompt, studentTurnNumber, TURN_LEAK_SOURCE } from "../prompts/persona-turn.js";
 import type { createUsageMeter } from "../providers/index.js";
 import type { ChatStreamInput } from "../providers/provider.js";
 import { ReplyFilter, splitStageTag, type BlockReason } from "./reply-filter.js";
@@ -12,6 +12,9 @@ import { reliably, type PracticeDeps } from "./support.js";
 
 const REPLY_TEMPERATURE = 0.8;
 
+/** Built once: the leak source holds only fixed rule text. */
+const leaks = createLeakScanner(TURN_LEAK_SOURCE);
+
 export interface TurnContext {
   deps: PracticeDeps;
   sse: SseStream;
@@ -19,7 +22,6 @@ export interface TurnContext {
   meter: ReturnType<typeof createUsageMeter>;
 }
 
-type Leaks = (text: string) => boolean;
 type Failure = BlockReason | "moderation" | "empty";
 
 interface Attempt {
@@ -57,7 +59,6 @@ async function stop(iterator: AsyncIterator<string>): Promise<void> {
  */
 async function streamOnce(
   input: ChatStreamInput,
-  leaks: Leaks,
   ctx: TurnContext,
   emit?: (text: string) => Promise<void>,
 ): Promise<Attempt> {
@@ -115,14 +116,13 @@ export async function personaReply(turn: CoachTurnRequest, ctx: TurnContext) {
     maxTokens: LIMITS.maxTokensReply,
     temperature: REPLY_TEMPERATURE,
   };
-  const leaks = createLeakScanner(turnLeakSource(turn));
   const sendDelta = (text: string) => ctx.sse.send({ type: "delta", text });
 
-  const first = await streamOnce(input, leaks, ctx, sendDelta);
+  const first = await streamOnce(input, ctx, sendDelta);
   let modelStage = first.stage;
   let checked = await check(first, ctx);
   if (!checked.ok && isLeak(checked.reason)) {
-    const second = await streamOnce(input, leaks, ctx);
+    const second = await streamOnce(input, ctx);
     modelStage = second.stage ?? modelStage;
     checked = await check(second, ctx);
     if (checked.ok) await sendDelta(checked.text);

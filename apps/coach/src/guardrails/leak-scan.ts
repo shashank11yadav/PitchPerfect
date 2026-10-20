@@ -1,5 +1,5 @@
-const SHINGLE_WORDS = 5;
-const MIN_CONTENT_WORDS = 2;
+const SHINGLE_WORDS = 6;
+const MIN_CONTENT_WORDS = 3;
 
 /** Words that never mark a phrase as coming from the instructions on their own. */
 const STOPWORDS = new Set(
@@ -11,12 +11,18 @@ const STOPWORDS = new Set(
   ).split(" "),
 );
 
-/** Phrases a persona never needs to say; they only come from the instructions. */
-const MARKER_PHRASES = ["win condition", "hidden objection", "system prompt"];
+/**
+ * Instruction vocabulary a persona never needs, matched as whole words after "my" or "your" so
+ * ordinary talk ("win conditions are tough", "our system prompts nurses") stays clean.
+ */
+const MARKER = /\b(?:my|your) (?:hidden objections?|win conditions?|system prompts?)\b/;
 const RAW_MARKERS = ["[task:"];
 
-/** The persona is told to say this when sincerely asked, so it never counts as a leak. */
-const SPEAKABLE = /\bAI practice partner\b/gi;
+/**
+ * Shingles never span these: sentence ends, line breaks, and "AI practice partner", which the
+ * persona is told to say when sincerely asked.
+ */
+const SEGMENT_BREAK = /(?<=[.!?])\s+|\n+|\bAI practice partner\b/gi;
 
 const words = (text: string) =>
   text
@@ -25,12 +31,13 @@ const words = (text: string) =>
     .match(/[\p{L}\p{N}]+/gu) ?? [];
 
 /**
- * Builds a check for replies that recite the instructions: any 5-word run of `instructions`
- * (with at least two content words), or a fixed marker phrase. Case and punctuation are ignored.
+ * Builds a check for replies that recite the instructions: any 6-word run within one sentence of
+ * `instructions` (with at least three content words), or a marker phrase. Case and punctuation
+ * are ignored.
  */
 export function createLeakScanner(instructions: string): (reply: string) => boolean {
   const shingles = new Set<string>();
-  for (const segment of instructions.split(SPEAKABLE)) {
+  for (const segment of instructions.split(SEGMENT_BREAK)) {
     const segmentWords = words(segment);
     for (let i = 0; i + SHINGLE_WORDS <= segmentWords.length; i += 1) {
       const gram = segmentWords.slice(i, i + SHINGLE_WORDS);
@@ -44,8 +51,7 @@ export function createLeakScanner(instructions: string): (reply: string) => bool
     const lower = reply.normalize("NFKC").toLowerCase();
     if (RAW_MARKERS.some((marker) => lower.includes(marker))) return true;
     const replyWords = words(reply);
-    const joined = ` ${replyWords.join(" ")}`;
-    if (MARKER_PHRASES.some((phrase) => joined.includes(` ${phrase}`))) return true;
+    if (MARKER.test(replyWords.join(" "))) return true;
     for (let i = 0; i + SHINGLE_WORDS <= replyWords.length; i += 1) {
       if (shingles.has(replyWords.slice(i, i + SHINGLE_WORDS).join(" "))) return true;
     }
