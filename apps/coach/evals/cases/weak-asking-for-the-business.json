@@ -1,0 +1,17 @@
+{
+  "id": "weak-asking-for-the-business",
+  "skill": "asking-for-the-business",
+  "kind": "weak",
+  "industry": "Software",
+  "studentTurns": [
+    "Um, so, thanks for the demo meeting. I guess you saw the product and everything.",
+    "I don't want to push you or anything. Sorry if this is annoying. It's fine if you don't want it, really.",
+    "Okay, well, I guess I'll just go then. Maybe think about it, or not, up to you. Sorry again."
+  ],
+  "expect": {
+    "overallRange": [0, 40],
+    "dimensions": {
+      "cta": [1, 2]
+    }
+  }
+}

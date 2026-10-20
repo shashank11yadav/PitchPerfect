@@ -15,7 +15,8 @@
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "eval": "tsx --env-file-if-exists=.env evals/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.135.0",

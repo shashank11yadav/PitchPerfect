@@ -1,0 +1,19 @@
+{
+  "id": "weak-introducing-yourself",
+  "skill": "introducing-yourself",
+  "kind": "weak",
+  "targetRole": "Sales trainee",
+  "job": {
+    "title": "Sales trainee",
+    "descriptionText": "Cobalt Print sells printing services to local businesses. Trainees shadow senior reps for three months and then take over a small territory.",
+    "skills": ["Prospecting", "Communication"]
+  },
+  "studentTurns": [
+    "Um, hi. I'm, like, a student, I guess. I don't really know what to say. Sorry.",
+    "I just, um, kind of think I might be okay at sales maybe? I'm not sure. I've never really done it.",
+    "Sorry, I think I'm bad at this. Yeah. That's it I guess."
+  ],
+  "expect": {
+    "overallRange": [0, 40]
+  }
+}

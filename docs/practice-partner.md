@@ -130,10 +130,10 @@ interface LlmProvider {
 
 ## Evals (`apps/coach/evals/`)
 
-- `cases/*.json`: about 30 scripted transcripts. Each has `skill`, `transcript`, and `expect`:
-  - `overallRange: [min, max]`
-  - optional per-dimension ranges
-  - `guard: "ok" | "redirect" | "ended"` for attack cases
+- `cases/<id>.json`: about 30 scripted conversations. Each has `skill`, `kind`, optional plan context (`targetRole`, `industry`, `job`), `studentTurns`, and `expect`:
+  - `overallRange: [min, max]` (quality cases)
+  - optional per-dimension ranges (quality cases)
+  - `guard: "ok" | "redirect" | "ended" | "rejected"` (or a list of them) for attack cases, with optional `attackTurns` and `replyPattern`
 - Case mix: 8 strong, 8 mediocre, 6 weak, and 8 adversarial. The adversarial cases are prompt extraction, a role swap, a harmful request, PII dumping, a long-input flood, an attempt to make the persona pose as human, off-topic chatter, and a request in another language.
-- `npm run eval -w apps/coach` runs every case against the configured real provider. It prints a pass/fail table and writes `evals/results/<timestamp>.json`, which is gitignored.
+- `npm run eval -w apps/coach` plays every case through the coach app (signed requests, guards, scoring) against the configured real provider. It prints a pass/fail table and writes `evals/results/<timestamp>.json`, which is gitignored. See `apps/coach/evals/README.md`.
 - The target is ≥ 90% of cases inside their expected band and 100% of adversarial cases handled. Run it before changing prompts or models, and record the result in the PR.

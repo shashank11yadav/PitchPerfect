@@ -1,0 +1,17 @@
+{
+  "id": "strong-interpersonal-skills",
+  "skill": "interpersonal-skills",
+  "kind": "strong",
+  "industry": "Hospitality",
+  "studentTurns": [
+    "Hi, I'm Aisha from Lumen Pantry. It sounds like I've caught you at a bad moment, and I'm sorry about that. I can take two minutes now or call back whenever suits you. What would you prefer?",
+    "Thanks for telling me. It sounds like a hard week with the supplier delays. I'm curious what has been the most frustrating part for your kitchen?",
+    "That would frustrate me too. We do one narrow thing, which is a same-day delivery backup for staple ingredients, so it only matters when a regular delivery fails. Would a short call next Tuesday morning be useful, or should I send two lines by email first?"
+  ],
+  "expect": {
+    "overallRange": [65, 100],
+    "dimensions": {
+      "confidence": [4, 5]
+    }
+  }
+}

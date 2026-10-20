@@ -5,6 +5,6 @@
     "outDir": "node_modules/.cache/tsc",
     "emitDeclarationOnly": true
   },
-  "include": ["src", "test"],
+  "include": ["src", "test", "evals"],
   "references": [{ "path": "../../packages/shared" }]
 }

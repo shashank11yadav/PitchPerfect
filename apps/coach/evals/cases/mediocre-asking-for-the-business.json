@@ -1,0 +1,14 @@
+{
+  "id": "mediocre-asking-for-the-business",
+  "skill": "asking-for-the-business",
+  "kind": "mediocre",
+  "industry": "Marketing",
+  "studentTurns": [
+    "I'm really glad you liked the proposal. You said the reporting looked useful and the price was within your budget.",
+    "So, I was wondering if you might be interested in maybe getting started at some point? Only if you feel ready, of course.",
+    "I understand if you need more time. Whenever you decide, just let me know and we can sort out the paperwork."
+  ],
+  "expect": {
+    "overallRange": [30, 70]
+  }
+}

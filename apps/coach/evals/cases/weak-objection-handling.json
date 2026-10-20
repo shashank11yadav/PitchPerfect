@@ -1,0 +1,17 @@
+{
+  "id": "weak-objection-handling",
+  "skill": "objection-handling",
+  "kind": "weak",
+  "industry": "Software",
+  "studentTurns": [
+    "Hello, I'm calling about our scheduling tool, which is the best one on the market.",
+    "No, that's not right. You're wrong about the price. Everyone else charges more and our tool is better, so it's not expensive at all.",
+    "You are not really listening. If you just looked at the product you would see that. Why would you say no to something this good?"
+  ],
+  "expect": {
+    "overallRange": [0, 40],
+    "dimensions": {
+      "objections": [1, 2]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "mediocre-interpersonal-skills",
+  "skill": "interpersonal-skills",
+  "kind": "mediocre",
+  "industry": "Retail",
+  "studentTurns": [
+    "Hi, I'm Taylor from Orchard Supply. I can tell you are busy, so I will be quick.",
+    "I'm sorry to bother you. We provide packaging for shops like yours, and I wanted to see if you have a minute to hear about our range of boxes, bags and tape, which come in many sizes.",
+    "I know everyone is busy these days. Can I tell you about our prices? They are really good and we offer free delivery on larger orders."
+  ],
+  "expect": {
+    "overallRange": [30, 70]
+  }
+}

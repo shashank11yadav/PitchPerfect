@@ -1,0 +1,17 @@
+{
+  "id": "weak-pitching",
+  "skill": "pitching",
+  "kind": "weak",
+  "industry": "Technology",
+  "studentTurns": [
+    "Our synergistic cloud-native platform leverages scalable AI-driven analytics to disrupt end-to-end workflows with best-in-class, enterprise-grade, omni-channel solutions.",
+    "It is a paradigm shift. The architecture is microservices based with an API-first approach and a robust data lake and real-time ETL pipelines on a Kubernetes backbone.",
+    "Anyway that is basically it. It is very innovative."
+  ],
+  "expect": {
+    "overallRange": [0, 40],
+    "dimensions": {
+      "value": [1, 2]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "strong-probing-discovery",
+  "skill": "probing-discovery",
+  "kind": "strong",
+  "industry": "Healthcare",
+  "studentTurns": [
+    "Hi, I'm Leila from Brightwell Software. Thanks for your time. I'd like to understand how your clinic runs before I say anything about what we do. Could you walk me through what happens from the moment a patient books an appointment?",
+    "Interesting, so reminders are done by hand. How often do patients miss appointments because of that, and what does an empty slot cost the clinic?",
+    "That sounds painful. Who else besides you would have a say in changing how reminders work, and what would a good fix need to do for your front desk team?",
+    "If I'm hearing you right, no-shows cost about eight slots a week, the front desk spends an hour a day on calls, and your practice manager signs off on new tools. Is that a fair summary, and what have you already tried?"
+  ],
+  "expect": {
+    "overallRange": [65, 100],
+    "dimensions": {
+      "discovery": [4, 5]
+    }
+  }
+}

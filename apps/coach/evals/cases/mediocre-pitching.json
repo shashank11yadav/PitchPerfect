@@ -1,0 +1,19 @@
+{
+  "id": "mediocre-pitching",
+  "skill": "pitching",
+  "kind": "mediocre",
+  "industry": "Fitness",
+  "job": {
+    "title": "Sales associate",
+    "descriptionText": "Pulsefit sells gym management software to small studios. The associate runs demos, follows up with leads, and keeps notes in the CRM.",
+    "skills": ["Demos", "Follow-up", "CRM"]
+  },
+  "studentTurns": [
+    "Hi, thanks for taking my call. I'm Jordan from Pulsefit. We make software for gyms with class booking, member billing, a mobile app and reports. It has a lot of features and our customers like it.",
+    "It also integrates with payment processors, sends emails to members, and has a dashboard for staff. We have more than 200 studios using it, and the price starts at 79 dollars a month.",
+    "Does that sound like something your studio could use? Let me know if you want more information and I can send some details."
+  ],
+  "expect": {
+    "overallRange": [30, 70]
+  }
+}

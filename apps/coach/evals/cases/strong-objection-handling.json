@@ -1,0 +1,18 @@
+{
+  "id": "strong-objection-handling",
+  "skill": "objection-handling",
+  "kind": "strong",
+  "industry": "Facilities management",
+  "studentTurns": [
+    "Hi, this is Marcus from Fieldnote. We replace paper maintenance logs with a phone app that technicians fill in on site. Thanks for making time.",
+    "That's a fair concern, and I would rather understand it than talk past it. Is it the cost itself that worries you, or whether it will pay for itself?",
+    "Thank you, that is useful. Buildings like yours usually lose about two hours per technician per week to re-typing paper logs. At your headcount that is more than the monthly fee, and one customer, a 12-building property group, recovered the cost within six weeks. Does that match what you are seeing?",
+    "If it helps, we can run a free four-week pilot on one building so you see your own numbers before deciding. Would starting the first Monday of next month work for your team?"
+  ],
+  "expect": {
+    "overallRange": [65, 100],
+    "dimensions": {
+      "objections": [4, 5]
+    }
+  }
+}

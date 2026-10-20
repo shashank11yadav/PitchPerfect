@@ -47,7 +47,7 @@ export default defineConfig({
           name: "coach",
           root: "apps/coach",
           environment: "node",
-          include: ["test/**/*.test.ts", "src/**/*.test.ts"],
+          include: ["test/**/*.test.ts", "src/**/*.test.ts", "evals/**/*.test.ts"],
         },
       },
     ],

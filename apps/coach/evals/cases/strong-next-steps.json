@@ -1,0 +1,17 @@
+{
+  "id": "strong-next-steps",
+  "skill": "next-steps",
+  "kind": "strong",
+  "industry": "Retail",
+  "studentTurns": [
+    "Thank you, I'm glad the walkthrough was useful. To recap, you want to cut stock-count time in your three stores, and your biggest worry is training the weekend staff. Did I get that right?",
+    "Great. For the next step I suggest a 45-minute working session with you and your operations lead so we can map the count process in one store. Would Thursday the 14th at 2pm suit you both?",
+    "Perfect. I'll send a calendar invite today with a short agenda, and I'll bring a sample count sheet from a similar store. Before then, could you share your current count schedule so I can come prepared?"
+  ],
+  "expect": {
+    "overallRange": [65, 100],
+    "dimensions": {
+      "cta": [4, 5]
+    }
+  }
+}

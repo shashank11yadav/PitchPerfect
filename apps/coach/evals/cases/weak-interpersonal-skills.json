@@ -1,0 +1,17 @@
+{
+  "id": "weak-interpersonal-skills",
+  "skill": "interpersonal-skills",
+  "kind": "weak",
+  "industry": "Insurance",
+  "studentTurns": [
+    "I don't care that you're busy, this will only take a second. Our insurance plans are the cheapest in town and you need one.",
+    "Don't hang up. Listen, everyone who says they're busy changes their mind once they hear the price. Just let me finish the script.",
+    "Fine, but you're making a mistake. Last chance: do you want the plan or not? I'll keep calling until you say yes."
+  ],
+  "expect": {
+    "overallRange": [0, 40],
+    "dimensions": {
+      "confidence": [1, 2]
+    }
+  }
+}

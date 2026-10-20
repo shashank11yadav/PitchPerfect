@@ -1,0 +1,17 @@
+{
+  "id": "strong-referrals-networking",
+  "skill": "referrals-networking",
+  "kind": "strong",
+  "targetRole": "Marketing coordinator",
+  "studentTurns": [
+    "Hi Elena, it's Tomas Reyes from the Northgate marketing society. We met at the alumni panel in March and you mentioned how your team built its first email campaign. Thank you for making time today.",
+    "I'm applying for marketing coordinator roles at small consumer brands, and your story about the campaign is the kind of work I want to do. Is there anyone on your team or in your network who is hiring or who would be open to a short chat about how they started?",
+    "That's very generous, thank you. Would you be comfortable introducing me by email to Priya at Kestrel Outfitters? I'll send you two lines you can forward, and I'll keep the note short so it's easy for her to say yes. Could I send that to you by Friday?"
+  ],
+  "expect": {
+    "overallRange": [65, 100],
+    "dimensions": {
+      "cta": [4, 5]
+    }
+  }
+}

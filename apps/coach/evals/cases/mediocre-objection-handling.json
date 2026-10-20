@@ -1,0 +1,15 @@
+{
+  "id": "mediocre-objection-handling",
+  "skill": "objection-handling",
+  "kind": "mediocre",
+  "industry": "Software",
+  "studentTurns": [
+    "Hi, thanks for your time. I'm Sam from Stackwell, we offer a project tracking tool for small agencies.",
+    "I understand the concern, but our price is actually pretty competitive when you look at everything you get. Most tools charge extra for the things we include.",
+    "I think if you tried it you would see the value. Lots of agencies felt the same at first and then they came around.",
+    "Is there anything else stopping you? I would really like to find a way to work together."
+  ],
+  "expect": {
+    "overallRange": [30, 70]
+  }
+}

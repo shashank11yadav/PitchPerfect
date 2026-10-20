@@ -1,0 +1,17 @@
+{
+  "id": "strong-pitching",
+  "skill": "pitching",
+  "kind": "strong",
+  "industry": "Design studios",
+  "studentTurns": [
+    "Hi, thanks for taking the call. I'm Priyanka from Tallybook. We help small design studios get paid faster by sending invoices automatically when a project milestone is marked done. Before I go further, how do you invoice clients today?",
+    "So chasing late payments eats a few hours every week. Studios your size usually tell us that time comes straight out of billable work. Tallybook sends the invoice the moment a milestone closes and reminds the client on day 7 and day 14, so you stop being the person who nags.",
+    "Our pilot studios cut their average payment time from 41 days to 19. Given the cash-flow squeeze you described, would it help to see that on your own recent projects? I could set up a demo on Thursday at 2pm."
+  ],
+  "expect": {
+    "overallRange": [65, 100],
+    "dimensions": {
+      "value": [4, 5]
+    }
+  }
+}

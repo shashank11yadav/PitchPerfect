@@ -1,0 +1,17 @@
+{
+  "id": "weak-probing-discovery",
+  "skill": "probing-discovery",
+  "kind": "weak",
+  "industry": "Restaurants",
+  "studentTurns": [
+    "Hi, we sell ordering software for restaurants. It takes orders, prints tickets and handles payments. It is very good.",
+    "Do you want it? It is only 99 dollars a month. Is that okay?",
+    "Do you have a restaurant? Is it busy? Okay, good. Then you need our software."
+  ],
+  "expect": {
+    "overallRange": [0, 40],
+    "dimensions": {
+      "discovery": [1, 2]
+    }
+  }
+}

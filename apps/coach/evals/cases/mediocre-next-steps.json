@@ -1,0 +1,14 @@
+{
+  "id": "mediocre-next-steps",
+  "skill": "next-steps",
+  "kind": "mediocre",
+  "industry": "Education",
+  "studentTurns": [
+    "Thanks so much for the conversation today. It was great to hear about how your school handles parent communication.",
+    "I think our platform would fit well. It might make sense for us to talk again sometime soon to go over the details, maybe with someone else from your team.",
+    "I'll follow up with you in a while and we can find a time that works. Let me know if you have any questions before then."
+  ],
+  "expect": {
+    "overallRange": [30, 70]
+  }
+}

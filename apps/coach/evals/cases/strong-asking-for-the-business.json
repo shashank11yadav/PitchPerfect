@@ -1,0 +1,17 @@
+{
+  "id": "strong-asking-for-the-business",
+  "skill": "asking-for-the-business",
+  "kind": "strong",
+  "industry": "Software",
+  "studentTurns": [
+    "I appreciate you being open about it. You told me the trial cut your reporting time by half and your team likes the dashboards, so what's holding you back from going ahead?",
+    "That makes sense, wanting to be sure the data stays private. Our security summary is one page and I can send it today. If it answers your concerns, would you be comfortable signing the annual plan by the end of this month?",
+    "To make it easy, I'll prepare the order form for 15 seats today and we can start onboarding on the 3rd, so your team has dashboards before the quarter closes. Shall I send it over this afternoon?"
+  ],
+  "expect": {
+    "overallRange": [65, 100],
+    "dimensions": {
+      "cta": [4, 5]
+    }
+  }
+}

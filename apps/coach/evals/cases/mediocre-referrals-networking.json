@@ -1,0 +1,14 @@
+{
+  "id": "mediocre-referrals-networking",
+  "skill": "referrals-networking",
+  "kind": "mediocre",
+  "targetRole": "Data analyst",
+  "studentTurns": [
+    "Hi Mr. Osei, thanks for replying to my message. I graduated in May with a statistics degree and I'm looking for work as a data analyst.",
+    "I read that your company has a growing analytics team and I'd love to learn more. I'm happy to do anything that would help me get started.",
+    "If you know anyone who might be hiring, maybe you could keep me in mind. I would really appreciate any help."
+  ],
+  "expect": {
+    "overallRange": [30, 70]
+  }
+}

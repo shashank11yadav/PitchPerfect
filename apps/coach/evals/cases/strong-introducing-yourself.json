@@ -1,0 +1,23 @@
+{
+  "id": "strong-introducing-yourself",
+  "skill": "introducing-yourself",
+  "kind": "strong",
+  "targetRole": "Junior operations analyst",
+  "industry": "Logistics",
+  "job": {
+    "title": "Junior operations analyst",
+    "descriptionText": "Harborline Freight moves pallets between regional warehouses. The analyst tracks stock levels, flags late shipments, and suggests ways to cut handling time. You will work with the warehouse leads every day.",
+    "skills": ["Spreadsheets", "Inventory tracking", "Communication"]
+  },
+  "studentTurns": [
+    "Hello, I'm Dana Whitfield, a final-year logistics student at Northgate University. Two summers ago I ran inventory counts at my family's hardware store, and last spring I built a spreadsheet that cut their counting time from six hours to two. I'm looking for a junior operations analyst role where I can keep finding those time savings.",
+    "What does a new analyst's first month look like on your team, and where do the warehouse leads feel the most friction right now?",
+    "That helps. The reorder-point work you mentioned is exactly what I did at the store, so I could start there. Would you have fifteen minutes next Wednesday at 10am for me to walk you through the spreadsheet?"
+  ],
+  "expect": {
+    "overallRange": [65, 100],
+    "dimensions": {
+      "clarity": [4, 5]
+    }
+  }
+}
