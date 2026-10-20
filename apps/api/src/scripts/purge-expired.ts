@@ -7,5 +7,6 @@ await runCli(async () => {
   console.log(`Expired or used tokens deleted: ${String(result.tokensDeleted)}`);
   console.log(`Stale active attempts abandoned: ${String(result.attemptsAbandoned)}`);
   console.log(`Applications detached from deleted attempts: ${String(result.sharesCleared)}`);
+  console.log(`Unfinished session starts removed: ${String(result.placeholdersDeleted)}`);
   return 0;
 });

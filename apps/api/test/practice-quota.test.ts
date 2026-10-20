@@ -58,7 +58,7 @@ describe("GET /api/practice/quota", () => {
     });
   });
 
-  it("counts this UTC day and month, skipping sessions abandoned before any turn", async () => {
+  it("counts every planned session this UTC day and month, turns or not", async () => {
     const { session, user } = await practiceStudent(harness.app);
     const other = await practiceStudent(harness.app);
     await createAttempt(user._id);
@@ -69,7 +69,35 @@ describe("GET /api/practice/quota", () => {
     await createAttempt(user._id, { startedAt: new Date("2026-02-28T12:00:00Z") });
     await createAttempt(other.user._id);
 
-    expect(await quotaOf(session)).toMatchObject({ dailyUsed: 3, monthlyUsed: 4, available: true });
+    expect(await quotaOf(session)).toMatchObject({ dailyUsed: 4, monthlyUsed: 5, available: true });
+  });
+
+  it("counts a start that is still planning, but not one that crashed", async () => {
+    const { session, user } = await practiceStudent(harness.app);
+    const placeholder = await PracticeAttempt.create({
+      studentId: user._id,
+      skill: "pitching",
+      status: "starting",
+      startedAt: new Date(NOW.getTime() - 2 * 60 * 1000),
+      expiresAt: new Date(NOW.getTime() + 24 * 60 * 60 * 1000),
+    });
+    expect(await quotaOf(session)).toMatchObject({ dailyUsed: 0 });
+
+    await PracticeAttempt.updateOne({ _id: placeholder._id }, { startedAt: NOW });
+    expect(await quotaOf(session)).toMatchObject({ dailyUsed: 1 });
+  });
+
+  it("refuses the sixth start of the day even when no session had a turn", async () => {
+    const { session } = await practiceStudent(harness.app);
+    for (let index = 0; index < 5; index += 1) {
+      expect((await startPractice(session)).res.status).toBe(201);
+    }
+
+    const { res } = await startPractice(session);
+
+    expect(res.status).toBe(429);
+    expect(errorOf(res).code).toBe("quota_exceeded");
+    expect(await quotaOf(session)).toMatchObject({ dailyUsed: 5, available: false });
   });
 
   it("counts a session whose only turn was cut off", async () => {

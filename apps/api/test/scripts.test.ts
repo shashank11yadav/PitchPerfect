@@ -520,6 +520,27 @@ describe("runPurge", () => {
     expect((await reload(finished._id))?.status).toBe("completed");
   });
 
+  it("deletes start placeholders older than five minutes", async () => {
+    const placeholder = async (minutes: number) => {
+      const { user } = await createStudent();
+      return PracticeAttempt.create({
+        studentId: user._id,
+        skill: "pitching",
+        status: "starting",
+        startedAt: minutesAgo(minutes),
+        expiresAt: daysAhead(30),
+      });
+    };
+    const crashed = await placeholder(6);
+    const planning = await placeholder(4);
+
+    const result = await runPurge(NOW);
+
+    expect(result.placeholdersDeleted).toBe(1);
+    expect(await PracticeAttempt.findById(crashed._id)).toBeNull();
+    expect(await PracticeAttempt.findById(planning._id)).not.toBeNull();
+  });
+
   it("deletes an attempt that is both expired and stale instead of abandoning it", async () => {
     const { user } = await createStudent();
     const attempt = await createAttempt(user._id);
@@ -565,7 +586,13 @@ describe("runPurge", () => {
   });
 
   it("reports zero counts on an empty database and is safe to repeat", async () => {
-    const empty = { attemptsDeleted: 0, attemptsAbandoned: 0, tokensDeleted: 0, sharesCleared: 0 };
+    const empty = {
+      attemptsDeleted: 0,
+      attemptsAbandoned: 0,
+      tokensDeleted: 0,
+      sharesCleared: 0,
+      placeholdersDeleted: 0,
+    };
     expect(await runPurge(NOW)).toEqual(empty);
     expect(await runPurge(NOW)).toEqual(empty);
   });

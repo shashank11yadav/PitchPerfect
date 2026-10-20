@@ -11,17 +11,12 @@ import { ConflictError } from "../../errors.js";
 import { htmlToPlainText } from "../../services/html-sanitizer.js";
 import { isDuplicateKey } from "../auth/service.js";
 import { findListedJob } from "../jobs/service.js";
-import { assertCanStart, recordUsage } from "./quota.js";
+import { assertCanStart, recordUsage, STALE_START_MS } from "./quota.js";
 import { coachOf, sessionEndsAt, type PracticeDeps } from "./service.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Job text sent to the planner is clipped to this many characters. */
 const JOB_TEXT_MAX_CHARS = 4000;
-/**
- * A `starting` placeholder older than this belongs to a start that crashed (planning gives up
- * after 35 s), so the student's next start clears it.
- */
-const STALE_START_MS = 60_000;
 
 async function planRequest(studentId: string, input: StartPractice): Promise<CoachPlanRequest> {
   const listed = input.jobId ? await findListedJob({ _id: input.jobId }) : undefined;
@@ -75,7 +70,7 @@ export interface StartedSession {
 }
 
 /**
- * Starts a session: abandons the student's active one, checks quota and budget, claims a
+ * Starts a session: checks quota and budget, abandons the student's active one, claims a
  * `starting` placeholder (which counts toward the quota while planning), plans the scenario, and
  * activates it. A failed plan removes the placeholder, so it never counts.
  */
@@ -93,11 +88,13 @@ export async function startSession(
     status: "starting",
     startedAt: mongoose.trusted({ $lt: new Date(now.getTime() - STALE_START_MS) }),
   });
+  // Checked first, so a refused start leaves the current session untouched. That session already
+  // counts toward the quota.
+  await assertCanStart(deps.config, studentId, now);
   await PracticeAttempt.updateMany(
     { studentId, status: "active" },
     { $set: { status: "abandoned", endedAt: now, turnLockUntil: null } },
   );
-  await assertCanStart(deps.config, studentId, now);
   const placeholder = await claimStart(deps, studentId, input, now);
 
   let plan;

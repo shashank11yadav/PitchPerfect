@@ -67,7 +67,7 @@ Run the whole stack in containers instead: `docker compose --profile full up --b
 | `npm run dev`                     | Run web, api, and coach in watch mode                                                              |
 | `npm run dev:infra`               | Start MongoDB and Mailpit containers                                                               |
 | `npm run seed -- --demo`          | Load demo data and accounts (idempotent; needs `SEED_DEMO_PASSWORD`)                               |
-| `npm run purge`                   | Delete expired attempts and tokens, abandon stale sessions                                         |
+| `npm run purge`                   | Delete expired attempts and tokens, abandon stale sessions, clear unfinished starts                |
 | `npm run build`                   | Build every workspace                                                                              |
 | `npm run lint` / `npm run format` | ESLint / Prettier                                                                                  |
 | `npm run typecheck`               | TypeScript project-wide check                                                                      |

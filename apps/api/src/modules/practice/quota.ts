@@ -41,12 +41,25 @@ const dayKey = (now: Date) => now.toISOString().slice(0, 10);
 /** Seconds until the next UTC midnight; the `Retry-After` for anything that resets daily. */
 const secondsToMidnight = (now: Date) => secondsUntil(now, utcDay(now, 1));
 
-/** Sessions started in `[from, to)` that count: all but those abandoned before any student turn. */
-function countStarted(studentId: string, from: Date, to: Date): Promise<number> {
+/**
+ * A `starting` placeholder older than this belongs to a start that crashed (planning gives up
+ * after 35 s): it no longer counts, and the student's next start clears it.
+ */
+export const STALE_START_MS = 60_000;
+
+/**
+ * Sessions started in `[from, to)` that count: every attempt whose scenario was planned (all but
+ * `starting`, since a failed plan deletes its placeholder), plus a start that is still planning.
+ * Each plan costs tokens, so a session counts whether or not the student took a turn.
+ */
+function countStarted(studentId: string, from: Date, to: Date, now: Date): Promise<number> {
   return PracticeAttempt.countDocuments({
     studentId,
     startedAt: mongoose.trusted({ $gte: from, $lt: to }),
-    $or: [{ status: mongoose.trusted({ $ne: "abandoned" }) }, { "transcript.role": "student" }],
+    $or: [
+      { status: mongoose.trusted({ $ne: "starting" }) },
+      { startedAt: mongoose.trusted({ $gte: new Date(now.getTime() - STALE_START_MS) }) },
+    ],
   });
 }
 
@@ -56,8 +69,8 @@ export async function getQuota(
   now: Date,
 ): Promise<QuotaView> {
   const [dailyUsed, monthlyUsed] = await Promise.all([
-    countStarted(studentId, utcDay(now), utcDay(now, 1)),
-    countStarted(studentId, utcMonth(now), utcMonth(now, 1)),
+    countStarted(studentId, utcDay(now), utcDay(now, 1), now),
+    countStarted(studentId, utcMonth(now), utcMonth(now, 1), now),
   ]);
   const dailyLimit = config.PRACTICE_DAILY_LIMIT;
   const monthlyLimit = config.PRACTICE_MONTHLY_LIMIT;

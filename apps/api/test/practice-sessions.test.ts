@@ -230,6 +230,31 @@ describe("POST /api/practice/sessions", () => {
     expect(untouched?.status).toBe("active");
   });
 
+  it("leaves the active session alone when the quota refuses a new one", async () => {
+    const { session, user } = await practiceStudent(harness.app);
+    for (let index = 0; index < 4; index += 1) await createAttempt(user._id);
+    const current = await startPractice(session);
+    expect(current.res.status).toBe(201);
+
+    const { res } = await startPractice(session);
+
+    expect(res.status).toBe(429);
+    expect(errorOf(res).code).toBe("quota_exceeded");
+    expect((await PracticeAttempt.findById(current.attemptId).lean())?.status).toBe("active");
+  });
+
+  it("leaves the active session alone when the budget refuses a new one", async () => {
+    const { session } = await practiceStudent(harness.app);
+    const current = await startPractice(session);
+    const day = new Date().toISOString().slice(0, 10);
+    await UsageDay.updateOne({ day }, { $set: { inputTokens: 2_000_000 } });
+
+    const { res } = await startPractice(session);
+
+    expect(errorOf(res).code).toBe("budget_exhausted");
+    expect((await PracticeAttempt.findById(current.attemptId).lean())?.status).toBe("active");
+  });
+
   it("leaves no attempt behind when planning fails", async () => {
     const { session, user } = await practiceStudent(harness.app);
     const first = await startPractice(session);
@@ -243,8 +268,9 @@ describe("POST /api/practice/sessions", () => {
     expect(attempts.map((attempt) => [attempt._id.toString(), attempt.status])).toEqual([
       [first.attemptId, "abandoned"],
     ]);
+    // The abandoned session was planned, so it counts; the failed start does not.
     const quota = await session.agent.get("/api/practice/quota");
-    expect((quota.body as { dailyUsed: number }).dailyUsed).toBe(0);
+    expect((quota.body as { dailyUsed: number }).dailyUsed).toBe(1);
   });
 
   it("lets only one of many parallel starts through at a time", async () => {
@@ -329,9 +355,13 @@ describe("POST /api/practice/sessions", () => {
 
   it("limits a student to 10 session starts an hour", async () => {
     const { session } = await practiceStudent(harness.app);
+    // Starts refused by the daily quota still count against the limiter.
+    const statuses: number[] = [];
     for (let index = 0; index < 10; index += 1) {
-      expect((await startPractice(session)).res.status).toBe(201);
+      statuses.push((await startPractice(session)).res.status);
     }
+    expect(statuses).toEqual([201, 201, 201, 201, 201, 429, 429, 429, 429, 429]);
+
     const { res } = await startPractice(session);
     expect(res.status).toBe(429);
     expect(errorOf(res).code).toBe("rate_limited");

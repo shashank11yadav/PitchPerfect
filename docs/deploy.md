@@ -28,7 +28,7 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
    - Run `npx playwright test --config e2e/playwright.smoke.config.ts` with `BASE_URL` set to the deployed URL. It runs a read-only smoke test of the public pages, `/api/health`, and the headers.
    - Run Lighthouse on `/`, `/jobs` and one job page.
    - Run the [security checklist](security.md#pre-release-security-checklist).
-7. **Schedule the purge job:** run `npm run purge -w apps/api` daily. It removes expired tokens and attempts as a backstop for the TTL indexes, and marks sessions that were left `active` long past the 20-minute limit as abandoned.
+7. **Schedule the purge job:** run `npm run purge -w apps/api` daily. It removes expired tokens and attempts as a backstop for the TTL indexes, marks sessions that were left `active` long past the 20-minute limit as abandoned, and removes `starting` placeholders of session starts that never finished (older than 5 minutes).
 
 ## Environment variables
 
