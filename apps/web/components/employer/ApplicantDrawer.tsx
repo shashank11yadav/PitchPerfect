@@ -7,7 +7,7 @@ import {
   type ApplicationStatus,
   type EmployerApplicationView,
 } from "@pitchperfect/shared";
-import { Bookmark, Download, X } from "lucide-react";
+import { Bookmark, Download } from "lucide-react";
 import { useState } from "react";
 import { InterviewSlot } from "@/components/jobs/InterviewSlot";
 import { ScorecardDetails } from "@/components/practice/ScorecardDetails";
@@ -102,19 +102,13 @@ interface ApplicantDrawerProps {
   jobTitle: string;
   /** The application after a change the api has accepted. */
   onChange: (application: EmployerApplicationView) => void;
-  onClose: () => void;
 }
 
 /**
  * One applicant, beside the list: what they shared, and the moves the shared transition table
  * allows from where the application is now.
  */
-export function ApplicantDrawer({
-  application,
-  jobTitle,
-  onChange,
-  onClose,
-}: ApplicantDrawerProps) {
+export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDrawerProps) {
   const { id, status, student, interview } = application;
   const name = `${student.firstName} ${student.lastName}`;
   const [busy, setBusy] = useState<string | null>(null);
@@ -187,14 +181,6 @@ export function ApplicantDrawer({
             />
             Save
           </Button>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close applicant"
-            className="rounded-control p-2 text-muted hover:bg-surface-2 hover:text-ink"
-          >
-            <X aria-hidden="true" className="size-5" />
-          </button>
         </div>
       </header>
 

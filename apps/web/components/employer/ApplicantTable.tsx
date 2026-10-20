@@ -93,15 +93,7 @@ export function ApplicantTable({ jobId, jobTitle, initialId }: ApplicantTablePro
           <ArrowLeft aria-hidden="true" className="size-4" />
           All applicants
         </button>
-        <ApplicantDrawer
-          application={selected}
-          jobTitle={jobTitle}
-          onChange={replace}
-          onClose={() => {
-            returnTo.current = selected.id;
-            setSelectedId(undefined);
-          }}
-        />
+        <ApplicantDrawer application={selected} jobTitle={jobTitle} onChange={replace} />
       </div>
     );
   }

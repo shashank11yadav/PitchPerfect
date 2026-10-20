@@ -43,7 +43,6 @@ function setup(view = applicant(), routes: Record<string, Route> = {}) {
       application={view}
       jobTitle="Sales development representative"
       onChange={onChange}
-      onClose={vi.fn()}
     />,
   );
   return { fetchMock, onChange };

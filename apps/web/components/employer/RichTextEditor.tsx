@@ -164,7 +164,7 @@ function ToolButton({ label, hint, icon: Icon, pressed, disabled, onPress }: Too
       }}
       onClick={onPress}
       className={cn(
-        "flex size-9 items-center justify-center rounded-control text-ink hover:bg-primary-soft",
+        "flex size-8 items-center justify-center rounded-control text-ink hover:bg-primary-soft sm:size-9",
         "aria-pressed:bg-primary-soft aria-pressed:text-primary disabled:opacity-50",
       )}
     >
@@ -403,7 +403,7 @@ export function RichTextEditor({
           aria-label="Formatting"
           aria-controls={id}
           onKeyDown={moveFocus}
-          className="flex flex-wrap gap-0.5 border-b border-border bg-surface-2 p-1"
+          className="flex flex-wrap border-b sm:gap-0.5 border-border bg-surface-2 p-1"
         >
           {TOOLS.map((tool) => (
             <ToolButton

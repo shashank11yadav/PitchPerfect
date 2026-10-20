@@ -281,13 +281,16 @@ export function JobEditor({ id, created }: JobEditorProps) {
             ) : (
               <span>Not published yet</span>
             )}
-            {current.status !== "draft" && (
-              <Link href={`/employer/jobs/${current.id}/applicants`} className={TEXT_LINK}>
-                {current.applicantCount === 1
-                  ? "1 applicant"
-                  : `${String(current.applicantCount)} applicants`}
-              </Link>
-            )}
+            {current.status !== "draft" &&
+              (current.applicantCount > 0 ? (
+                <Link href={`/employer/jobs/${current.id}/applicants`} className={TEXT_LINK}>
+                  {current.applicantCount === 1
+                    ? "1 applicant"
+                    : `${String(current.applicantCount)} applicants`}
+                </Link>
+              ) : (
+                <span className="text-muted">No applicants yet</span>
+              ))}
             {current.status === "active" && (
               <Link href={`/jobs/${current.slug}`} className={TEXT_LINK}>
                 See it on the job board
