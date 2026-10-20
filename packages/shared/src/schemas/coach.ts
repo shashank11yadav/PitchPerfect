@@ -7,6 +7,8 @@ import { turnText } from "./common.js";
 
 export const skillSlug = () => z.enum(SKILL_SLUGS);
 
+const StageSchema = z.enum(STAGES);
+
 export const UsageSchema = z.strictObject({
   provider: z.enum(LLM_PROVIDERS),
   model: z.string().min(1).max(LIMITS.modelNameMaxLength),
@@ -79,6 +81,8 @@ export const CoachTurnRequestSchema = z.strictObject({
   ...scenarioContext,
   transcript: transcript(),
   studentText: turnText(),
+  /** The stage the api has stored for the attempt; the coach never moves backwards from it. */
+  currentStage: StageSchema.optional(),
 });
 export type CoachTurnRequest = z.infer<typeof CoachTurnRequestSchema>;
 
@@ -99,7 +103,7 @@ export const CoachTurnEvent = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("delta"), text: z.string() }),
   z.strictObject({
     type: z.literal("done"),
-    stage: z.enum(STAGES),
+    stage: StageSchema,
     finalText: z.string(),
     usage: UsageSchema,
   }),

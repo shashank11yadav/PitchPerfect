@@ -1,7 +1,6 @@
 import {
   CoachTurnRequestSchema,
   LIMITS,
-  STAGES,
   type CoachTurnRequest,
   type Stage,
 } from "@pitchperfect/shared";
@@ -9,18 +8,13 @@ import type { FastifyInstance } from "fastify";
 import { validationFailed } from "../errors.js";
 import { ruleCheck } from "../guardrails/guard-rules.js";
 import { InputError, sanitizeInput } from "../guardrails/input.js";
-import { checkOutput, type OutputCheck } from "../guardrails/output.js";
-import { withTimeout } from "../guardrails/circuit-breaker.js";
-import { FALLBACK_LINE, redirectLine } from "../prompts/fixed-lines.js";
+import { redirectLine } from "../prompts/fixed-lines.js";
 import { buildGuardPrompt, GuardSchema, type GuardCategory } from "../prompts/guard.js";
-import { buildTurnPrompt, studentTurnNumber } from "../prompts/persona-turn.js";
+import { studentTurnNumber } from "../prompts/persona-turn.js";
 import { createUsageMeter, ProviderError } from "../providers/index.js";
-import type { ChatStreamInput } from "../providers/provider.js";
-import { ReplyFilter, splitStageTag } from "./reply-filter.js";
-import { openSse, type SseStream } from "./sse.js";
+import { personaReply, type TurnContext } from "./persona-reply.js";
+import { openSse } from "./sse.js";
 import { clientSignal, parseBody, reliably, usageOf, type PracticeDeps } from "./support.js";
-
-const REPLY_TEMPERATURE = 0.8;
 
 type Outcome = "done" | "fallback" | "redirect" | "error" | "aborted";
 
@@ -29,17 +23,10 @@ interface TurnResult {
   stage?: Stage;
 }
 
-interface TurnContext {
-  deps: PracticeDeps;
-  sse: SseStream;
-  signal: AbortSignal;
-  meter: ReturnType<typeof createUsageMeter>;
-}
-
-/** Without a stage tag the coach cannot know the previous stage, so it estimates one from the turn. */
-const estimatedStage = (turn: number): Stage =>
-  STAGES[Math.min(STAGES.length - 1, Math.floor((turn - 1) / 2))] ?? "opening";
-
+/**
+ * The model guard. An unparseable verdict gets one cheap retry; any other failure, or a second
+ * bad verdict, propagates so the turn fails closed.
+ */
 async function classify(text: string, ctx: TurnContext): Promise<GuardCategory> {
   const { deps, signal, meter } = ctx;
   const input = {
@@ -48,67 +35,18 @@ async function classify(text: string, ctx: TurnContext): Promise<GuardCategory> 
     schema: GuardSchema,
     schemaName: "guard",
   };
-  const verdict = await reliably(deps, signal, (attemptSignal) =>
-    deps.provider.structured(input, attemptSignal, meter),
-  );
-  return verdict.category;
-}
-
-/**
- * Streams one reply. Only reaching the first chunk is retried; after that a failure propagates.
- * `emit` receives the text that is safe to show (no stage tag, no possible canary).
- */
-async function streamOnce(
-  input: ChatStreamInput,
-  ctx: TurnContext,
-  emit?: (text: string) => Promise<void>,
-): Promise<{ text: string; stage: Stage | undefined }> {
-  const { deps, signal, meter } = ctx;
-  const { iterator, first } = await reliably(deps, signal, async (attemptSignal) => {
-    const iterator = deps.provider.chatStream(input, attemptSignal, meter)[Symbol.asyncIterator]();
-    return { iterator, first: await iterator.next() };
-  });
-  const filter = new ReplyFilter();
-  for (let step = first; step.done !== true; step = await iterator.next()) {
-    const safe = filter.push(step.value);
-    if (emit && safe !== "") await emit(safe);
+  const ask = () =>
+    reliably(deps, signal, (attemptSignal) =>
+      deps.provider.structured(input, attemptSignal, meter),
+    );
+  try {
+    return (await ask()).category;
+  } catch (error) {
+    if (!(error instanceof ProviderError) || error.code !== "invalid_structured_output") {
+      throw error;
+    }
+    return (await ask()).category;
   }
-  return splitStageTag(filter.text);
-}
-
-const check = (text: string, ctx: TurnContext): Promise<OutputCheck> =>
-  checkOutput(
-    text,
-    ctx.deps.provider,
-    withTimeout(ctx.deps.config.COACH_TIMEOUT_MS, ctx.signal),
-    ctx.meter,
-  );
-
-/**
- * Streams the persona's reply, then checks the whole text. A canary leak is regenerated once
- * (without streaming); any other failed check, or a second leak, becomes the fallback line.
- */
-async function personaReply(turn: CoachTurnRequest, ctx: TurnContext) {
-  const input = {
-    ...buildTurnPrompt(turn),
-    maxTokens: LIMITS.maxTokensReply,
-    temperature: REPLY_TEMPERATURE,
-  };
-  const sendDelta = (text: string) => ctx.sse.send({ type: "delta", text });
-
-  const first = await streamOnce(input, ctx, sendDelta);
-  let stage = first.stage;
-  let checked = await check(first.text, ctx);
-  if (!checked.ok && checked.reason === "canary") {
-    const second = await streamOnce(input, ctx);
-    stage = second.stage ?? stage;
-    checked = await check(second.text, ctx);
-    if (checked.ok) await sendDelta(checked.text);
-  }
-  stage ??= estimatedStage(studentTurnNumber(turn.transcript));
-  if (checked.ok) return { outcome: "done" as const, stage, text: checked.text };
-  await sendDelta(FALLBACK_LINE);
-  return { outcome: "fallback" as const, stage, text: FALLBACK_LINE };
 }
 
 async function runTurn(turn: CoachTurnRequest, ctx: TurnContext): Promise<TurnResult> {

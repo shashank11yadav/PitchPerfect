@@ -144,12 +144,12 @@ Base: `COACH_URL` (e.g. `http://coach:4100`). Every request carries:
 - `x-pp-signature`: hex HMAC-SHA256 of `${timestamp}.${METHOD}.${path}.${rawBody}` with `COACH_SHARED_SECRET`, where `METHOD` is the uppercase HTTP method and `path` is the request path exactly as sent, without the query string (e.g. `/v1/plan`). An empty body signs as an empty string.
   Coach rejects if the signature is wrong or `|now − timestamp| > 60`.
 
-| Method | Path        | Body (shared schema)                                                                               | Response                                                                                        |
-| ------ | ----------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| GET    | `/healthz`  | — (unsigned allowed)                                                                               | `{ status: "ok", provider }`                                                                    |
-| POST   | `/v1/plan`  | `CoachPlanRequest` `{ skill, targetRole?, industry?, job?: { title, descriptionText, skills[] } }` | `CoachPlanResponse` `{ scenarioPublic, scenarioPrivate, usage }`                                |
-| POST   | `/v1/turn`  | `CoachTurnRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[], studentText }`         | SSE: `delta {text}`, `done {stage, finalText, usage}`, `redirect {text, usage}`, `error {code}` |
-| POST   | `/v1/score` | `CoachScoreRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[] }`                     | `CoachScoreResponse` `{ scorecard: Scorecard, usage }`                                          |
+| Method | Path        | Body (shared schema)                                                                                      | Response                                                                                        |
+| ------ | ----------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| GET    | `/healthz`  | — (unsigned allowed)                                                                                      | `{ status: "ok", provider }`                                                                    |
+| POST   | `/v1/plan`  | `CoachPlanRequest` `{ skill, targetRole?, industry?, job?: { title, descriptionText, skills[] } }`        | `CoachPlanResponse` `{ scenarioPublic, scenarioPrivate, usage }`                                |
+| POST   | `/v1/turn`  | `CoachTurnRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[], studentText, currentStage? }` | SSE: `delta {text}`, `done {stage, finalText, usage}`, `redirect {text, usage}`, `error {code}` |
+| POST   | `/v1/score` | `CoachScoreRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[] }`                            | `CoachScoreResponse` `{ scorecard: Scorecard, usage }`                                          |
 
 `usage` = `{ provider, model, inputTokens, outputTokens }`; api adds it to the attempt and to `usagedays`.
 

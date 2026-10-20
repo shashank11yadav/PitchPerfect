@@ -102,6 +102,16 @@ describe("CoachTurnRequestSchema", () => {
   it("rejects unknown keys", () => {
     expect(CoachTurnRequestSchema.safeParse({ ...turnRequest(), model: "x" }).success).toBe(false);
   });
+
+  it("takes an optional current stage", () => {
+    expect(CoachTurnRequestSchema.safeParse(turnRequest()).success).toBe(true);
+    expect(
+      CoachTurnRequestSchema.safeParse({ ...turnRequest(), currentStage: "objection" }).success,
+    ).toBe(true);
+    expect(
+      CoachTurnRequestSchema.safeParse({ ...turnRequest(), currentStage: "lunch" }).success,
+    ).toBe(false);
+  });
 });
 
 describe("plan and score contracts", () => {

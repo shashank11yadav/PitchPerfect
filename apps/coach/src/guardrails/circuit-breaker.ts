@@ -1,5 +1,8 @@
 import { ProviderError } from "../providers/index.js";
 
+/** Only retryable provider errors (429, 5xx, connection errors, timeouts) say the upstream is unwell. */
+const isOutage = (error: unknown) => error instanceof ProviderError && error.retryable;
+
 export interface CircuitBreakerOptions {
   failures: number;
   windowMs: number;
@@ -29,11 +32,19 @@ export class CircuitBreaker {
       if (trial) this.#close();
       return result;
     } catch (error) {
-      if (error instanceof ProviderError && error.retryable) this.#recordFailure(trial);
+      if (isOutage(error)) this.#recordFailure(trial);
       throw error;
     } finally {
       if (trial) this.#trialInFlight = false;
     }
+  }
+
+  /**
+   * Counts a failure that happened outside `exec`, such as a stream that broke after its first
+   * chunk or a moderation call. Only retryable provider errors count, as in `exec`.
+   */
+  recordFailure(error: unknown): void {
+    if (isOutage(error)) this.#recordFailure(false);
   }
 
   /** Throws while open; returns true when this call is the half-open trial. */

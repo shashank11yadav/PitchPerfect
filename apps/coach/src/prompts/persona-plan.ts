@@ -45,7 +45,8 @@ function systemFor(req: CoachPlanRequest): string {
       `Each text field is at most ${String(LIMITS.personaTextMaxLength)} characters.`,
     ]),
     section("The hidden part (scenarioPrivate)", [
-      `hiddenObjections: ${String(LIMITS.hiddenObjectionsMin)}–${String(LIMITS.hiddenObjectionsMax)} specific objections this persona will raise after the student pitches (price, timing, an incumbent, risk, adoption, or approval), each one sentence in the persona's terms, such as 'We renewed with our current vendor in March and switching mid-contract costs us a penalty.'`,
+      `hiddenObjections: ${String(LIMITS.hiddenObjectionsMin)}–${String(LIMITS.hiddenObjectionsMax)} specific objections this persona will raise after the student pitches, each one sentence in the persona's own terms. They must fit the skill and the situation. For this skill: ${SKILL_GUIDES[req.skill].objections}`,
+      "A hiring manager or recruiter objects to fit, experience, or timing (for example 'We're not hiring for that right now'); a contact asked for a referral objects to trust or effort (for example 'I don't know you well enough to refer you yet'); a buyer objects to price, timing, an incumbent, risk, adoption, or approval.",
       `winConditions: ${String(LIMITS.winConditionsMin)}–${String(LIMITS.winConditionsMax)} observable things the student could do that would make this persona warm up, each one sentence, tied to the skill.`,
       `Each item is at most ${String(LIMITS.scenarioListMaxItemLength)} characters.`,
     ]),

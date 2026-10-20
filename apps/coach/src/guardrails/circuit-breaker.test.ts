@@ -32,6 +32,17 @@ describe("CircuitBreaker", () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
+  it("counts failures recorded outside exec (mid-stream errors), retryable ones only", async () => {
+    const b = breaker();
+    for (let i = 0; i < 6; i += 1) b.recordFailure(rejected());
+    for (let i = 0; i < 4; i += 1) b.recordFailure(upstream());
+    await expect(b.exec(() => Promise.resolve("ok"))).resolves.toBe("ok");
+    b.recordFailure(upstream());
+    await expect(b.exec(() => Promise.resolve(1))).rejects.toMatchObject({
+      code: "practice_unavailable",
+    });
+  });
+
   it("does not open when failures are spread beyond the window", async () => {
     const b = breaker();
     for (let i = 0; i < 4; i += 1) await fail(b);

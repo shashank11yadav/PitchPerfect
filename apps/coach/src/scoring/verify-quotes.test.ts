@@ -52,9 +52,32 @@ describe("verifyQuotes", () => {
     expect(card.dimensions.slice(0, 3).map((d) => d.evidence)).toEqual([null, null, null]);
   });
 
-  it("reads escaped angle brackets in a quote as the characters the student typed", () => {
-    const card = verifyQuotes(scorecard(["costs &lt; 5 minutes"], "x"), ["It costs < 5 minutes."]);
+  it("reads escaped characters in a quote as the characters the student typed", () => {
+    const card = verifyQuotes(
+      scorecard(["costs &lt; 5 minutes", "R&amp;D writes &amp;lt; literally"], "x"),
+      ["It costs < 5 minutes.", "Our R&D writes &lt; literally."],
+    );
     expect(card.dimensions[0]?.evidence).toBe("costs < 5 minutes");
+    expect(card.dimensions[1]?.evidence).toBe("R&D writes &lt; literally");
+  });
+
+  it("needs at least three words and whole-word boundaries", () => {
+    const card = verifyQuotes(
+      scorecard(
+        ["empty appointment", "help clinics fill empty appoint", "elp clinics fill empty"],
+        "fill empty",
+      ),
+      TURNS,
+    );
+    expect(card.dimensions.slice(0, 3).map((d) => d.evidence)).toEqual([null, null, null]);
+    expect(card.strongerLine.original).toBe("What happens today when a patient cancels late?");
+  });
+
+  it("matches the same words at a later whole-word position", () => {
+    const card = verifyQuotes(scorecard(["an apple a day"], "x"), [
+      "Pan apple a day, an apple a day.",
+    ]);
+    expect(card.dimensions[0]?.evidence).toBe("an apple a day");
   });
 
   it("replaces a fabricated strongerLine original with the longest student sentence", () => {
