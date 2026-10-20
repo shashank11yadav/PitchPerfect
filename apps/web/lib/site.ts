@@ -1,6 +1,9 @@
 export const SITE_NAME = "PitchPerfect";
 export const TAGLINE = "Practice your pitch. Get hired.";
 
+/** The api's session cookie. The web app only checks that it exists; it can't read it. */
+export const SESSION_COOKIE = "pp.sid";
+
 /** Canonical origin for metadata, sitemaps and JSON-LD. Read on the server only. */
 export const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 

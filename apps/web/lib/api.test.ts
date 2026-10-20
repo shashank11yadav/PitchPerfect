@@ -135,6 +135,21 @@ describe("apiFetch", () => {
     });
   });
 
+  it("reads Retry-After in seconds, and ignores it when absent or malformed", async () => {
+    const limited = (retryAfter?: string) =>
+      new Response(
+        JSON.stringify({ error: { code: "rate_limited", message: "Slow down", requestId: "r" } }),
+        { status: 429, headers: retryAfter === undefined ? {} : { "retry-after": retryAfter } },
+      );
+    fetchMock
+      .mockResolvedValueOnce(limited("90"))
+      .mockResolvedValueOnce(limited())
+      .mockResolvedValueOnce(limited("soon"));
+    await expect(apiFetch("/jobs")).rejects.toMatchObject({ retryAfterSec: 90 });
+    await expect(apiFetch("/jobs")).rejects.toMatchObject({ retryAfterSec: undefined });
+    await expect(apiFetch("/jobs")).rejects.toMatchObject({ retryAfterSec: undefined });
+  });
+
   it("maps a body that is not an error envelope to internal_error", async () => {
     fetchMock.mockResolvedValueOnce(new Response("<html>Bad gateway</html>", { status: 502 }));
     await expect(apiFetch("/jobs")).rejects.toMatchObject({ status: 502, code: "internal_error" });

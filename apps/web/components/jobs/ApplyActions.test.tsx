@@ -2,8 +2,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetCsrf } from "@/lib/api";
+import { SessionProvider } from "@/lib/session";
 import { ApplyActions } from "./ApplyActions";
 import { jobSummary, json } from "./test-fixtures";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 const JOB_ID = "65f1c0ffee0000000000abcd";
 const SLUG = "sales-development-representative-a1b2c3";
@@ -53,7 +56,12 @@ const student = (extra: Record<string, Route> = {}, saved: string[] = []) => ({
   ...extra,
 });
 
-const renderActions = () => render(<ApplyActions jobId={JOB_ID} slug={SLUG} />);
+const renderActions = () =>
+  render(
+    <SessionProvider initialStatus="loading">
+      <ApplyActions jobId={JOB_ID} slug={SLUG} />
+    </SessionProvider>,
+  );
 
 beforeEach(() => {
   resetCsrf();

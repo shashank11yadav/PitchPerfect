@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Poppins } from "next/font/google";
+import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { SkipLink } from "@/components/layout/SkipLink";
-import { SITE_NAME, SITE_URL, TAGLINE } from "@/lib/site";
+import { SessionProvider } from "@/lib/session";
+import { SESSION_COOKIE, SITE_NAME, SITE_URL, TAGLINE } from "@/lib/site";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -39,11 +41,16 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // Render every page per request so Next can stamp proxy.ts's CSP nonce on its scripts.
   await connection();
+  // Without the session cookie nobody is signed in, so the page renders signed-out on the server
+  // and never asks the api. With it, the session may still be valid: `/auth/me` decides.
+  const hasSession = (await cookies()).has(SESSION_COOKIE);
   return (
     <html lang="en" className={`${poppins.variable} ${manrope.variable}`}>
       <body className="min-h-dvh antialiased">
         <SkipLink />
-        {children}
+        <SessionProvider initialStatus={hasSession ? "loading" : "signed_out"}>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );

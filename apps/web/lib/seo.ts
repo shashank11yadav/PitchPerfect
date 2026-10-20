@@ -73,6 +73,65 @@ export const PUBLIC_PAGES = {
   },
 } as const satisfies Record<string, PageSeo>;
 
+/** Sign-in, sign-up and the emailed-link pages. All `noindex`; none are in the sitemap. */
+export const AUTH_PAGES = {
+  signin: {
+    title: "Sign in",
+    path: "/signin",
+    description:
+      "Sign in to PitchPerfect to practice sales conversations with the AI practice partner, read your scorecards, or review applicants for your open roles.",
+  },
+  signup: {
+    title: "Sign up",
+    path: "/signup",
+    description:
+      "Create a PitchPerfect account: students practice sales conversations and apply to entry-level jobs, employers post roles and meet applicants who have practiced.",
+  },
+  signupStudent: {
+    title: "Sign up as a student",
+    path: "/signup/student",
+    description:
+      "Create a free student account on PitchPerfect to practice sales conversations with an AI practice partner and apply to entry-level sales roles.",
+  },
+  signupEmployer: {
+    title: "Sign up as an employer",
+    path: "/signup/employer",
+    description:
+      "Create an employer account on PitchPerfect to post entry-level sales roles and review applicants who share scorecards from practice calls.",
+  },
+  verifyEmail: {
+    title: "Confirm your email",
+    path: "/verify-email",
+    description:
+      "Confirm the email address on your PitchPerfect account with the link we sent you, so you can practice, apply to jobs and post roles.",
+  },
+  forgotPassword: {
+    title: "Reset your password",
+    path: "/forgot-password",
+    description:
+      "Forgot your PitchPerfect password? Enter the email you signed up with and we will send you a link to choose a new one.",
+  },
+  resetPassword: {
+    title: "Choose a new password",
+    path: "/reset-password",
+    description:
+      "Choose a new password for your PitchPerfect account using the reset link from your email. Links work once and expire after a short time.",
+  },
+} as const satisfies Record<string, PageSeo>;
+
+/** Metadata for an auth page: never indexed. */
+export const authPageMetadata = (page: PageSeo): Metadata =>
+  pageMetadata({ ...page, noindex: true });
+
+/**
+ * For pages opened from an emailed link with a token in the URL: no `Referer` leaves the page,
+ * so the token can't reach another site even before the address bar is cleaned.
+ */
+export const tokenPageMetadata = (page: PageSeo): Metadata => ({
+  ...authPageMetadata(page),
+  referrer: "no-referrer",
+});
+
 /**
  * The share card from `app/opengraph-image.tsx`. Listed explicitly because a page's own
  * `openGraph` replaces the inherited one, image included.

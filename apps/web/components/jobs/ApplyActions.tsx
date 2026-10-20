@@ -1,6 +1,6 @@
 "use client";
 
-import { PublicJobSummaryPageSchema, type Role } from "@pitchperfect/shared";
+import { PublicJobSummaryPageSchema } from "@pitchperfect/shared";
 import { ArrowRight, Bookmark, BookmarkCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
@@ -8,18 +8,10 @@ import { buttonClasses } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { ApiError, apiFetch, type Parser } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { useSession } from "@/lib/session";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-/** The viewer's role from `GET /api/auth/me`; that is all this island needs to know. */
-const MeRole: Parser<Role> = {
-  parse(data) {
-    const role = isObject(data) && isObject(data.user) ? data.user.role : undefined;
-    if (role === "student" || role === "employer") return role;
-    throw new Error("Unexpected /auth/me response");
-  },
-};
 
 /** The job ids in a page of `GET /api/me/applications`. */
 const AppliedJobIds: Parser<string[]> = {
@@ -40,7 +32,6 @@ const AppliedJobIds: Parser<string[]> = {
  */
 const STATE_PAGE_SIZE = 50;
 
-type Viewer = "loading" | "signed-out" | Role;
 type Busy = "apply" | "save" | null;
 
 interface Notice {
@@ -75,11 +66,17 @@ interface ApplyActionsProps {
 }
 
 /**
- * Apply and save for a job page. The page is the same for everyone, so this island asks the api
- * who is looking: visitors get a sign-in link, students get apply and save, employers a note.
+ * Apply and save for a job page. The page is the same for everyone, so this island reads the
+ * session: visitors get a sign-in link, students get apply and save, employers a note.
  */
 export function ApplyActions({ jobId, slug, dark = false }: ApplyActionsProps) {
-  const [viewer, setViewer] = useState<Viewer>("loading");
+  const session = useSession();
+  const viewer =
+    session.status === "signed_in" && session.user
+      ? session.user.role
+      : session.status === "loading"
+        ? "loading"
+        : "signed-out";
   const [saved, setSaved] = useState(false);
   const [applied, setApplied] = useState(false);
   const [busy, setBusy] = useState<Busy>(null);
@@ -88,18 +85,10 @@ export function ApplyActions({ jobId, slug, dark = false }: ApplyActionsProps) {
   const [saveNews, setSaveNews] = useState("");
 
   useEffect(() => {
+    if (viewer !== "student") return;
     const controller = new AbortController();
     const { signal } = controller;
     void (async () => {
-      let role: Role;
-      try {
-        role = await apiFetch("/auth/me", { schema: MeRole, signal });
-      } catch {
-        if (!signal.aborted) setViewer("signed-out");
-        return;
-      }
-      setViewer(role);
-      if (role !== "student") return;
       const [savedJobs, applications] = await Promise.allSettled([
         apiFetch(`/me/saved-jobs?pageSize=${String(STATE_PAGE_SIZE)}`, {
           schema: PublicJobSummaryPageSchema,
@@ -122,7 +111,7 @@ export function ApplyActions({ jobId, slug, dark = false }: ApplyActionsProps) {
     return () => {
       controller.abort();
     };
-  }, [jobId, dark]);
+  }, [viewer, jobId, dark]);
 
   const text = dark ? "text-white" : "text-ink";
   const placeholder = cn(

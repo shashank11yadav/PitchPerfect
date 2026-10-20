@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE } from "@/lib/site";
 
-const SESSION_COOKIE = "pp.sid";
 const PROTECTED_PREFIXES = ["/app", "/employer"];
 
 const startsWithSegment = (pathname: string, prefix: string) =>

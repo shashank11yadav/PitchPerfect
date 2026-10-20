@@ -5,13 +5,22 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly fields: Record<string, string>;
+  /** Seconds from a `Retry-After` header (429s), when the api sent one. */
+  readonly retryAfterSec: number | undefined;
 
-  constructor(status: number, code: string, message: string, fields: Record<string, string> = {}) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    fields: Record<string, string> = {},
+    retryAfterSec?: number,
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.fields = fields;
+    this.retryAfterSec = retryAfterSec;
   }
 }
 
@@ -61,13 +70,25 @@ function stringFields(value: unknown): Record<string, string> {
   );
 }
 
+/** `Retry-After` in delta-seconds (the only form the api sends). */
+function retryAfterOf(res: Response): number | undefined {
+  const value = res.headers.get("retry-after")?.trim() ?? "";
+  return /^\d+$/.test(value) ? Number(value) : undefined;
+}
+
 /** Reads the api's `{ error: { code, message, fields? } }` envelope; anything else is internal. */
 export async function toApiError(res: Response): Promise<ApiError> {
   const body: unknown = await res.json().catch(() => undefined);
   const error = isRecord(body) ? body.error : undefined;
   if (isRecord(error) && typeof error.code === "string") {
     const message = typeof error.message === "string" ? error.message : FALLBACK_MESSAGE;
-    return new ApiError(res.status, error.code, message, stringFields(error.fields));
+    return new ApiError(
+      res.status,
+      error.code,
+      message,
+      stringFields(error.fields),
+      retryAfterOf(res),
+    );
   }
   return new ApiError(res.status, "internal_error", FALLBACK_MESSAGE);
 }

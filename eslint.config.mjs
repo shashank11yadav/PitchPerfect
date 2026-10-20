@@ -52,6 +52,9 @@ export default tseslint.config(
       next: { rootDir: "apps/web/" },
     },
     rules: {
+      // `role` on our own components (e.g. `<RequireRole role="student">`) is an account role, not
+      // ARIA; DOM elements are still checked.
+      "jsx-a11y/aria-role": ["error", { ignoreNonDOM: true }],
       // Scrollable regions (DataTable) must be focusable so keyboard users can scroll them.
       "jsx-a11y/no-noninteractive-tabindex": ["error", { roles: ["tabpanel", "region"], tags: [] }],
     },
