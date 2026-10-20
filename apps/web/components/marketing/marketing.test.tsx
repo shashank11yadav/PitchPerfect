@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 import { Faq } from "./Faq";
 import { LegalNotice } from "./LegalNotice";
 import { PracticeRoomPreview } from "./PracticeRoomPreview";
-import { SAMPLE_SCORECARD, SAMPLE_WEIGHTED } from "./sample-session";
+import { DISCOVERY_MOMENT, SAMPLE_SCORECARD, SAMPLE_WEIGHTED } from "./sample-session";
+import { StageShowcase } from "./SessionStages";
 import { ScorecardPreview } from "./ScorecardPreview";
 
 const items = [
@@ -81,5 +82,29 @@ describe("PracticeRoomPreview", () => {
     expect(screen.getByText("AI practice partner")).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "Conversation stages" })).toBeInTheDocument();
     expect(screen.getByText("Objection").closest("li")).toHaveAttribute("aria-current", "step");
+  });
+});
+
+describe("PracticeRoomPreview moments", () => {
+  it("shows the buyer, stage and turns of the moment it is given", () => {
+    render(<PracticeRoomPreview moment={DISCOVERY_MOMENT} />);
+    expect(screen.getByRole("region", { name: "Daniel Brooks" })).toBeInTheDocument();
+    expect(screen.getByText("Discovery").closest("li")).toHaveAttribute("aria-current", "step");
+    expect(screen.getByText("18 turns left")).toBeInTheDocument();
+    expect(screen.queryByText(/Maya/)).not.toBeInTheDocument();
+  });
+});
+
+describe("StageShowcase", () => {
+  it("puts its heading before the stage list, so the outline reads in order", () => {
+    render(
+      <StageShowcase title="A call that moves like a real one" moment={DISCOVERY_MOMENT}>
+        <p>Facts</p>
+      </StageShowcase>,
+    );
+    const heading = screen.getByRole("heading", { level: 2 });
+    const stages = screen.getByRole("list", { name: "The five stages of a call" });
+    expect(heading.compareDocumentPosition(stages) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(stages).getByText("Discovery")).toHaveAttribute("aria-current", "step");
   });
 });

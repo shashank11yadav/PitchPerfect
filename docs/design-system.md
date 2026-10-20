@@ -49,33 +49,38 @@ icon-card grids.
 - **The idea:** the scorecard's evidence. Every score quotes words the student actually said, so the
   page keeps putting a sentence next to its proof. The home page's live piece, the evidence explorer,
   lets a visitor pick a rubric line and see the exact words it's based on marked in the transcript.
-- **Signature details:** the voice strip set inside the headline where the pitch would be (the
-  practice room's mic and level meter on a slow grain shader), the highlighter mark on quoted words,
-  and the verbs Learn / Practice / Get hired set at poster size as the headings of how it works.
-- **Composition:** one 12-column grid. Section headings sit on the left; their lead sentence sits at
-  the opposite end of the same baseline. Neighbouring sections never share a layout or a ground
-  (white, soft blue, navy, and brand blue only for the closing call to action). Sections are told
-  apart by ground, never by rules or shadows.
+- **Signature details:** a word-sized voice pill (the practice room's mic and level meter on a
+  slow grain shader) set just after "Get hired.", the highlighter mark on quoted words, the five
+  call stages stacked in display type on the students page, and the staircase of verification
+  steps on the employers page.
+- **Pictures don't repeat:** each page shows its own moment of the product. Home has Maya's
+  objection call, how it works the same call two minutes in, students a different buyer in
+  discovery, and employers a different job's applicants.
+- **Composition:** one 12-column grid, with the structure varied section by section: stacked
+  heading and lead over a full-width piece, a two-column with the visual first, a pinned list, a
+  compact two-column list, a full-width statement. Only the major beats of a page get a title-size
+  heading; the rest use the section step. Neighbouring sections never share a ground (white, soft
+  blue, navy, and brand blue only for the closing call to action), and sections are told apart by
+  ground, never by rules or shadows.
 - **House rules:** no labels above headings, no index numbers (order is shown by position or a real
   `<ol>`), no gradients except the shader and its fallback, no glass, no emoji, headings at most two
   lines at every width, running text in full ink at 16 px or more, one primary button per screen with
   the second action as a plain text link.
-- **Footer:** the wordmark's letters run across the full width, cropped by the bottom edge.
 
 ## Typography
 
 - **Poppins** (600/700) for headings, **Manrope** (400/500/600/700) for body and UI, both loaded with `next/font/google` (self-hosted at build, `display: swap`). There is no runtime request to Google.
 - **Scale (app):** display 56/64, h1 40/48, h2 32/40, h3 24/32, h4 20/28, body 16/26, small 14/22, caption 12/18. Mobile display is 40/48.
-- **Scale (public pages):** a few steps far apart, all fluid: `hero` clamp(32px, 7.4vw, 112px), `poster` clamp(44px, 11vw, 160px) for the how-it-works verbs, `title` clamp(34px, 5vw, 72px) for page and section titles, `section` clamp(30px, 3.6vw, 52px), `statement` clamp(19px, 1.6vw, 24px) and `lede` 18/28, plus body and small. Display steps use tight tracking (-0.03 to -0.045em) and leading near 1. Captions at 12 px appear only inside product fragments.
+- **Scale (public pages):** a few steps far apart, all fluid: `hero` clamp(32px, 7.4vw, 112px), `title` clamp(34px, 5vw, 72px) for page and section titles, `section` clamp(30px, 3.6vw, 52px), `statement` clamp(19px, 1.6vw, 24px) and `lede` 18/28, plus body and small. Display steps use tight tracking (-0.03 to -0.045em) and leading near 1. Captions at 12 px appear only inside product fragments.
 - **Line length:** 60–75 characters for prose (lessons, legal pages).
 
 ## Layout and patterns
 
 - **Public pages:**
   - Sticky plain white bar: logo, Students, Employers, How it works, Jobs, then Sign in and a primary "Sign up".
-  - Home hero: flat navy, the tagline at hero size with the voice strip in its second line, one lead sentence, "Start practicing" plus an "I'm hiring" text link, and the practice room rising out of the navy into the white section below.
+  - Home hero: flat navy, the tagline at hero size with the word-sized voice pill after "Get hired.", one lead sentence, "Start practicing" plus an "I'm hiring" text link, and the practice room rising out of the navy into the white section below.
   - Inner page heroes: flat navy, the title on the left and the lead at the opposite end of its baseline.
-  - The close of every page is a brand-blue band; the footer is navy with the cropped wordmark.
+  - The close of every page is a brand-blue band; the footer is navy with the logo, links and legal line.
 - **App (student and employer):**
   - Desktop: left sidebar with icon + label, a top bar with page title and account menu, and content in cards.
   - Mobile: a bottom tab bar (max 5 items) and a top bar.
@@ -101,7 +106,7 @@ Each component is implemented once:
 
 ## Motion
 
-- **Hero shader:** Paper Shaders' grain gradient in the brand blues, loaded with `React.lazy` after the text renders. Under reduced motion, without WebGL 2, on the server and while it loads, the same strip is a static CSS gradient (`.pp-shader-fallback`). The library pauses it off screen and in hidden tabs. It needs no workers, blobs or eval, so the CSP is unchanged.
+- **Hero shader:** Paper Shaders' grain gradient in the brand blues, loaded with `React.lazy` after the text renders, through `components/marketing/grain-gradient.ts` so the chunk carries only that shader. The WebGL 2 support probe releases its context straight away. Under reduced motion, without WebGL 2, on the server and while it loads, the same strip is a static CSS gradient (`.pp-shader-fallback`). The library pauses it off screen and in hidden tabs. It needs no workers, blobs or eval, so the CSP is unchanged.
 - **Entrances:** `components/motion/in-view.tsx` (adapted from Motion Primitives) staggers a section's parts in as it first scrolls into view: 24 px rise with opacity, 700 ms, ease-out `cubic-bezier(.22,1,.36,1)`. Server HTML and anything already on screen render finished, so nothing waits for scripts and nothing flickers; `useEntryReveal` decides.
 - **Streamed reply:** the practice room's last partner reply arrives letter by letter (`text-effect.tsx`), over a transparent copy that keeps its space and gives screen readers the sentence once.
 - **Feedback:** buttons scale to 0.97 on press (`.pp-press`); text links show their underline on hover (`.pp-link`); the voice meters breathe.

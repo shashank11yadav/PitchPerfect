@@ -3,15 +3,7 @@ import { Clock, MessagesSquare, Mic, Send } from "lucide-react";
 import { PersonaCard } from "@/components/practice/PersonaCard";
 import { TranscriptBubble } from "@/components/practice/TranscriptBubble";
 import { cn } from "@/lib/cn";
-import {
-  SAMPLE_PERSONA,
-  SAMPLE_SKILL_TITLE,
-  SAMPLE_STAGE,
-  SAMPLE_STREAMED_REPLY,
-  SAMPLE_TIME_LEFT,
-  SAMPLE_TRANSCRIPT,
-  SAMPLE_TURNS_LEFT,
-} from "./sample-session";
+import { OBJECTION_MOMENT, turnsLeft, type RoomMoment } from "./sample-session";
 
 export const STAGE_LABELS = {
   opening: "Opening",
@@ -24,6 +16,8 @@ export const STAGE_LABELS = {
 const LEVELS = ["h-2", "h-4", "h-6", "h-3", "h-5"];
 
 interface PracticeRoomPreviewProps {
+  /** Which call, and which point in it, the room shows. */
+  moment?: RoomMoment;
   /** Lifted with a shadow, for when the window overlaps the edge between two sections. */
   floating?: boolean;
   className?: string;
@@ -34,8 +28,13 @@ interface PracticeRoomPreviewProps {
  * the persona sits beside the transcript, as in the app on desktop. The partner's last reply
  * streams in the first time it scrolls into view.
  */
-export function PracticeRoomPreview({ floating = false, className }: PracticeRoomPreviewProps) {
-  const current = STAGES.indexOf(SAMPLE_STAGE);
+export function PracticeRoomPreview({
+  moment = OBJECTION_MOMENT,
+  floating = false,
+  className,
+}: PracticeRoomPreviewProps) {
+  const { persona, skillTitle, stage, timeLeft, transcript, streamedReply } = moment;
+  const current = STAGES.indexOf(stage);
   return (
     <figure
       data-ui
@@ -46,22 +45,22 @@ export function PracticeRoomPreview({ floating = false, className }: PracticeRoo
       )}
     >
       <figcaption className="sr-only">
-        A sample practice session: a student practicing objection handling with an AI practice
-        partner.
+        A sample practice session: a student practicing {skillTitle.toLowerCase()} with an AI
+        practice partner.
       </figcaption>
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 @2xl:px-6">
         <div>
           <p className="text-caption text-muted">Practice</p>
-          <p className="text-small font-bold text-ink">{SAMPLE_SKILL_TITLE}</p>
+          <p className="text-small font-bold text-ink">{skillTitle}</p>
         </div>
         <div className="flex gap-3 text-caption font-semibold text-ink">
           <span className="inline-flex items-center gap-1">
             <MessagesSquare aria-hidden="true" className="size-3.5 text-primary" />
-            {SAMPLE_TURNS_LEFT} turns left
+            {turnsLeft(moment)} turns left
           </span>
           <span className="inline-flex items-center gap-1">
             <Clock aria-hidden="true" className="size-3.5 text-primary" />
-            {SAMPLE_TIME_LEFT} left
+            {timeLeft} left
           </span>
         </div>
       </div>
@@ -93,20 +92,20 @@ export function PracticeRoomPreview({ floating = false, className }: PracticeRoo
       </ol>
 
       <div className="grid gap-4 bg-surface-2 p-4 @2xl:grid-cols-[15rem_1fr] @2xl:gap-6 @2xl:p-6">
-        <PersonaCard persona={SAMPLE_PERSONA} titleAs="p" className="self-start" />
+        <PersonaCard persona={persona} titleAs="p" className="self-start" />
         <ul aria-label="Transcript" className="flex flex-col gap-2.5">
-          {SAMPLE_TRANSCRIPT.map((entry) => (
+          {transcript.map((entry) => (
             <TranscriptBubble
               key={entry.text}
               from={entry.role}
-              speaker={entry.role === "student" ? "You" : SAMPLE_PERSONA.personaName}
+              speaker={entry.role === "student" ? "You" : persona.personaName}
               text={entry.text}
             />
           ))}
           <TranscriptBubble
             from="partner"
-            speaker={SAMPLE_PERSONA.personaName}
-            text={SAMPLE_STREAMED_REPLY}
+            speaker={persona.personaName}
+            text={streamedReply}
             streaming
           />
         </ul>

@@ -28,14 +28,14 @@ export default function HomePage() {
       />
 
       <Section labelledBy="evidence-heading" className="pt-8 md:pt-12">
-        <InView className="grid gap-y-6 lg:grid-cols-12 lg:items-end lg:gap-x-6">
-          <InViewItem className="lg:col-span-7">
+        <InView className="max-w-3xl">
+          <InViewItem>
             <SectionTitle id="evidence-heading" size="title" className="max-w-[15ch]">
               Every score points at a line you said
             </SectionTitle>
           </InViewItem>
-          <InViewItem className="lg:col-span-4 lg:col-start-9">
-            <p className="max-w-[42ch] text-lede text-ink">
+          <InViewItem>
+            <p className="mt-6 max-w-[52ch] text-statement text-ink">
               The call ends with a score out of 100 and seven rubric scores, each with a reason.
               Pick one to see the words it&apos;s based on. Quotes are checked against your
               transcript, so none are made up.
@@ -46,8 +46,7 @@ export default function HomePage() {
           <EvidenceExplorer />
         </div>
         <p className="mt-6 text-small text-ink">
-          A fictional session with Maya Chen, an invented VP of operations. The rubric is the real
-          one.
+          A sample call with a made-up buyer, Maya Chen. The rubric is the real one.
         </p>
       </Section>
 

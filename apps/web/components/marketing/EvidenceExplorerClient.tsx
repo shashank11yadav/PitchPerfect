@@ -36,13 +36,23 @@ function marked(text: string, quote: string | null): ReactNode {
   );
 }
 
-function Pips({ score }: { score: number }) {
+/** Five pips for a 1–5 score; on the selected (navy) chip they turn white so they stay visible. */
+function Pips({ score, active }: { score: number; active: boolean }) {
   return (
     <span aria-hidden="true" className="flex gap-0.5">
       {Array.from({ length: MAX_SCORE }, (_, index) => (
         <span
           key={index}
-          className={cn("h-1.5 w-3 rounded-pill", index < score ? "bg-primary" : "bg-border")}
+          className={cn(
+            "h-1.5 w-3 rounded-pill",
+            active
+              ? index < score
+                ? "bg-white"
+                : "bg-white/30"
+              : index < score
+                ? "bg-primary"
+                : "bg-border",
+          )}
         />
       ))}
     </span>
@@ -95,7 +105,7 @@ export function EvidenceExplorerClient({
                 >
                   <span className="flex-1">{row.name}</span>
                   <span className="hidden lg:block">
-                    <Pips score={row.score} />
+                    <Pips score={row.score} active={active} />
                   </span>
                   <span className="tabular-nums">
                     {row.score}/{MAX_SCORE}

@@ -1,5 +1,5 @@
 import { InView, InViewItem } from "@/components/motion/in-view";
-import { ApplicantsPreview } from "@/components/marketing/ApplicantsPreview";
+import { AE_PIPELINE, ApplicantsPreview } from "@/components/marketing/ApplicantsPreview";
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { CtaLinks } from "@/components/marketing/CtaLinks";
 import {
@@ -73,13 +73,13 @@ export default function EmployersPage() {
         <div className="grid items-center gap-y-14 lg:grid-cols-12 lg:gap-x-6">
           <InView className="min-w-0 lg:col-span-6">
             <InViewItem>
-              <ApplicantsPreview />
+              <ApplicantsPreview pipeline={AE_PIPELINE} />
             </InViewItem>
           </InView>
           <InView className="lg:col-span-5 lg:col-start-8">
             <InViewItem>
               <SectionTitle id="review-heading" size="title">
-                Hear how they handle a buyer
+                Read how they handle a buyer
               </SectionTitle>
             </InViewItem>
             <InViewItem>
@@ -94,42 +94,30 @@ export default function EmployersPage() {
       </Section>
 
       <Section ground="soft" labelledBy="features-heading">
-        <div className="grid items-start gap-y-12 lg:grid-cols-12 lg:gap-x-6">
-          <div className="lg:sticky lg:top-28 lg:col-span-5">
-            <SectionTitle id="features-heading" size="title">
-              From posting to interview
-            </SectionTitle>
-            <p className="mt-6 max-w-[34ch] text-lede text-ink">
-              What you need for an entry-level sales hire, without a separate tracker.
-            </p>
-            <InView className="mt-10 grid max-w-md gap-4">
-              <InViewItem>
-                <JobPostFragment />
-              </InViewItem>
-              <InViewItem>
-                <InviteFragment />
-              </InViewItem>
-            </InView>
-          </div>
-          <StatementRows
-            items={FEATURES}
-            layout="pinned"
-            className="lg:col-span-6 lg:col-start-7"
-          />
+        <SectionTitle id="features-heading">From posting to interview</SectionTitle>
+        <p className="mt-4 max-w-[52ch] text-lede text-ink">
+          What you need for an entry-level sales hire, without a separate tracker.
+        </p>
+        <div className="mt-12 grid items-start gap-y-12 md:mt-16 lg:grid-cols-12 lg:gap-x-6">
+          <StatementRows items={FEATURES} layout="pinned" className="lg:col-span-6" />
+          <InView className="grid max-w-md gap-4 lg:sticky lg:top-28 lg:col-span-5 lg:col-start-8">
+            <InViewItem>
+              <JobPostFragment />
+            </InViewItem>
+            <InViewItem>
+              <InviteFragment />
+            </InViewItem>
+          </InView>
         </div>
       </Section>
 
       <Section labelledBy="verify-heading">
-        <div className="grid gap-y-6 lg:grid-cols-12 lg:items-end lg:gap-x-6">
-          <SectionTitle id="verify-heading" size="title" className="max-w-[14ch] lg:col-span-7">
-            How verification works
-          </SectionTitle>
-          <p className="max-w-[40ch] text-lede text-ink lg:col-span-4 lg:col-start-9">
-            It&apos;s an automatic domain check. It tells candidates the person posting really has a
-            company email. It doesn&apos;t mean we vouch for the job.
-          </p>
-        </div>
-        <div className="mt-14 grid items-end gap-y-12 md:mt-20 lg:grid-cols-12 lg:gap-x-6">
+        <SectionTitle id="verify-heading">How verification works</SectionTitle>
+        <p className="mt-4 max-w-[52ch] text-lede text-ink">
+          It&apos;s an automatic domain check. It tells candidates the person posting really has a
+          company email. It doesn&apos;t mean we vouch for the job.
+        </p>
+        <div className="mt-12 grid items-end gap-y-12 md:mt-16 lg:grid-cols-12 lg:gap-x-6">
           <InView as="ol" className="flex flex-col gap-4 lg:col-span-7">
             {VERIFY_STEPS.map((step, index) => (
               <InViewItem

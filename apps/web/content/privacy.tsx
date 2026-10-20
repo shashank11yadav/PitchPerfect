@@ -17,7 +17,9 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
           Transcripts are deleted after {L.retentionDays} days.
         </li>
         <li>
-          We never get your audio. Your browser turns speech into text before anything is sent.
+          We never get your audio. Your browser turns speech into text, and only the text reaches
+          us. Some browsers send the audio to their own speech service (Google, Apple, or Microsoft)
+          to do that.
         </li>
         <li>An employer sees only what you send with an application to their job.</li>
         <li>

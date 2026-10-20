@@ -28,7 +28,7 @@ export function EmployerField() {
         <InViewItem className="lg:col-span-5 lg:col-start-8 lg:row-start-2">
           <p className="max-w-[38ch] text-lede text-white">
             Post entry-level sales roles for free. Applicants can attach a scorecard from a practice
-            call, so you can hear how they handle a buyer before you book an interview.
+            call, so you can see how they handled a buyer before you book an interview.
           </p>
           <ul className="mt-8 flex flex-col gap-3 text-white">
             {POINTS.map((point) => (

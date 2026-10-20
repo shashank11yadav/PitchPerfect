@@ -1,9 +1,10 @@
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { CtaLinks } from "@/components/marketing/CtaLinks";
 import { Faq } from "@/components/marketing/Faq";
+import { RedactionFragment } from "@/components/marketing/fragments";
 import { PageHero } from "@/components/marketing/Hero";
-import { HowItWorks } from "@/components/marketing/HowItWorks";
-import { SAMPLE_SCORECARD } from "@/components/marketing/sample-session";
+import { StepsInBrief } from "@/components/marketing/HowItWorks";
+import { EARLY_MOMENT, SAMPLE_SCORECARD } from "@/components/marketing/sample-session";
 import { ScorecardPreview } from "@/components/marketing/ScorecardPreview";
 import { Section, SectionTitle } from "@/components/marketing/Section";
 import { ScoreBands, StageStory } from "@/components/marketing/SessionStages";
@@ -24,12 +25,12 @@ const SAFEGUARDS: Statement[] = [
     body: "It keeps to the sales scenario and never asks for personal information.",
   },
   {
-    title: "Your details stripped",
+    title: "Contact details removed",
     body: "Email addresses, phone numbers and card-like numbers are removed from your text before it's stored or sent to our AI provider.",
   },
   {
-    title: "Limits for everyone",
-    body: "Daily and monthly session limits keep the partner quick for everyone using it.",
+    title: "Session limits",
+    body: "Daily and monthly limits on new sessions keep the partner quick for everyone.",
   },
 ];
 
@@ -47,9 +48,10 @@ export default function HowItWorksPage() {
         actions={<CtaLinks />}
       />
 
-      <HowItWorks />
+      <StepsInBrief />
 
       <StageStory
+        moment={EARLY_MOMENT}
         intro={
           <p>
             Each call starts from a scenario: a buyer with a name, a role, a personality and a few
@@ -65,16 +67,14 @@ export default function HowItWorksPage() {
       />
 
       <Section ground="soft" labelledBy="scoring-heading">
-        <div className="grid gap-y-6 lg:grid-cols-12 lg:items-end lg:gap-x-6">
-          <SectionTitle id="scoring-heading" size="title" className="max-w-[12ch] lg:col-span-6">
-            How scoring works
-          </SectionTitle>
-          <p className="max-w-[46ch] text-lede text-ink lg:col-span-5 lg:col-start-8">
-            When the call ends, your transcript is scored from 1 to 5 on seven rubric lines. The
-            overall score is built from those, with the practiced skill&apos;s line counted twice,
-            and scaled to 0 to 100.
-          </p>
-        </div>
+        <SectionTitle id="scoring-heading" size="title">
+          How scoring works
+        </SectionTitle>
+        <p className="mt-6 max-w-[58ch] text-statement text-ink">
+          When the call ends, your transcript is scored from 1 to 5 on seven rubric lines. The
+          overall score is built from those, with the practiced skill&apos;s line counted twice, and
+          scaled to 0 to 100.
+        </p>
         <div className="mt-14 grid gap-y-8 md:mt-20 lg:grid-cols-12 lg:gap-x-6">
           <div className="lg:col-span-7">
             <ScoreBands sample={SAMPLE_SCORECARD.overall} />
@@ -92,12 +92,15 @@ export default function HowItWorksPage() {
       <Section ground="navy" labelledBy="safeguards-heading">
         <div className="grid items-start gap-y-12 lg:grid-cols-12 lg:gap-x-6">
           <div className="lg:col-span-4">
-            <SectionTitle id="safeguards-heading" size="title" dark>
+            <SectionTitle id="safeguards-heading" dark>
               The guardrails
             </SectionTitle>
             <p className="mt-6 max-w-[32ch] text-lede text-white">
               The practice partner is useful because it&apos;s honest about what it is.
             </p>
+            <div className="mt-10 max-w-md">
+              <RedactionFragment />
+            </div>
           </div>
           <StatementRows
             items={SAFEGUARDS}

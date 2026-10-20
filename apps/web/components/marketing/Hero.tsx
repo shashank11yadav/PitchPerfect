@@ -9,24 +9,25 @@ import { ShaderField } from "./ShaderField";
 const LEVELS = [0.55, 0.9, 0.7, 1, 0.6, 0.8];
 
 /**
- * The practice room's voice control, drawn at the size of a word: it sits in the headline where
- * the pitch itself would be. Sized in em, so it scales with the type. Decorative.
+ * The practice room's voice control drawn at the size of a word, set just after "Get hired.".
+ * It sits outside the h1 (the shader mounts block elements) and is placed in em, so it follows
+ * the type at every width. Decorative.
  */
 function VoiceStrip() {
   return (
     <ShaderField
       aria-hidden="true"
-      className="order-first my-3 h-16 w-full rounded-pill sm:order-none sm:my-0 sm:ml-[0.22em] sm:h-[0.74em] sm:w-auto sm:min-w-[2.4em] sm:flex-1 sm:translate-y-[0.04em]"
+      className="absolute top-[1.15em] left-[4.82em] h-[0.72em] w-[2.9em] rounded-pill"
     >
-      <span className="flex h-full items-center gap-4 px-2 sm:gap-[0.16em] sm:px-[0.1em]">
-        <span className="flex aspect-square h-12 items-center justify-center rounded-pill bg-white text-navy sm:h-[0.56em]">
-          <Mic className="size-6 sm:size-[0.26em]" strokeWidth={2.5} />
+      <span className="flex h-full items-center gap-[0.16em] px-[0.09em]">
+        <span className="flex aspect-square h-[0.54em] items-center justify-center rounded-pill bg-white text-navy">
+          <Mic className="size-[0.26em]" strokeWidth={2.5} />
         </span>
-        <span className="pp-level flex h-6 items-end gap-1 sm:h-[0.3em] sm:gap-[0.06em]">
+        <span className="pp-level flex h-[0.3em] items-end gap-[0.07em]">
           {LEVELS.map((level, index) => (
             <span
               key={index}
-              className="w-1 rounded-pill bg-white sm:w-[0.07em]"
+              className="w-[0.07em] min-w-[2px] rounded-pill bg-white"
               style={{ height: `${String(level * 100)}%`, ["--i" as string]: index }}
             />
           ))}
@@ -37,21 +38,21 @@ function VoiceStrip() {
 }
 
 /**
- * The home page's first screen: the tagline set as large as the page allows, the voice strip in
- * its second line, and the practice room rising out of the navy into the section below.
+ * The home page's first screen: the tagline set as large as the page allows, the voice strip
+ * after its last word, and the practice room rising out of the navy into the section below.
  */
 export function HomeHero({ lead }: { lead: ReactNode }) {
   return (
     <div>
       <div className="pp-on-dark bg-navy text-white">
         <div className={cn(WRAP, "pt-12 md:pt-20")}>
-          <h1 className="text-hero font-bold text-white">
-            <span className="block">Practice your pitch.</span>{" "}
-            <span className="flex flex-wrap items-center sm:flex-nowrap">
-              <span>Get hired.</span>
-              <VoiceStrip />
-            </span>
-          </h1>
+          <div className="relative text-hero">
+            <h1 className="text-hero font-bold text-white">
+              <span className="block">Practice your pitch.</span>{" "}
+              <span className="block">Get hired.</span>
+            </h1>
+            <VoiceStrip />
+          </div>
           <div className="mt-10 grid gap-y-12 md:mt-14 lg:grid-cols-12 lg:gap-x-6">
             <div className="lg:col-span-4">
               <div className="max-w-[36ch] text-statement text-white">{lead}</div>

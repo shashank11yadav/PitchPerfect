@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { InView, InViewItem } from "@/components/motion/in-view";
 import { cn } from "@/lib/cn";
 import { PracticeRoomPreview, STAGE_LABELS } from "./PracticeRoomPreview";
-import { SAMPLE_STAGE } from "./sample-session";
+import type { RoomMoment } from "./sample-session";
 import { Section, SectionTitle } from "./Section";
 
 const STAGE_NOTES: Record<Stage, string> = {
@@ -16,43 +16,40 @@ const STAGE_NOTES: Record<Stage, string> = {
 
 interface StageShowcaseProps {
   title: string;
+  moment: RoomMoment;
   children: ReactNode;
 }
 
 /**
- * The five stages of a call stacked in display type, the stage the sample call is in at full
- * strength, with the facts under them and the practice room beside them.
+ * The heading, then the five stages of a call stacked in display type with the stage the sample
+ * call is in at full strength, then the facts; the practice room sits beside them.
  */
-export function StageShowcase({ title, children }: StageShowcaseProps) {
+export function StageShowcase({ title, moment, children }: StageShowcaseProps) {
   return (
     <Section labelledBy="stages-heading">
       <div className="grid items-start gap-y-14 lg:grid-cols-12 lg:gap-x-6">
         <div className="lg:col-span-6">
-          <ol aria-label="The five stages of a call" className="font-display font-bold">
+          <SectionTitle id="stages-heading">{title}</SectionTitle>
+          <ol aria-label="The five stages of a call" className="mt-8 font-display font-bold">
             {STAGES.map((stage) => (
               <li
                 key={stage}
-                aria-current={stage === SAMPLE_STAGE ? "step" : undefined}
+                aria-current={stage === moment.stage ? "step" : undefined}
                 className={cn(
-                  "text-[clamp(2.75rem,7.4vw,7rem)] leading-[1.02] tracking-[-0.045em]",
-                  stage === SAMPLE_STAGE ? "text-navy" : "text-navy-300",
+                  "text-[clamp(2.75rem,7vw,6.5rem)] leading-[1.02] tracking-[-0.045em]",
+                  stage === moment.stage ? "text-navy" : "text-navy-300",
                 )}
               >
                 {STAGE_LABELS[stage]}
               </li>
             ))}
           </ol>
-          <InView className="mt-14 max-w-xl">
-            <InViewItem>
-              <SectionTitle id="stages-heading">{title}</SectionTitle>
-            </InViewItem>
-            <InViewItem className="mt-5 flex flex-col gap-4 text-lede text-ink">
-              {children}
-            </InViewItem>
+          <InView className="mt-10 flex max-w-xl flex-col gap-4 text-lede text-ink">
+            <InViewItem className="flex flex-col gap-4">{children}</InViewItem>
           </InView>
         </div>
         <div className="min-w-0 lg:sticky lg:top-24 lg:col-span-6 lg:col-start-7">
-          <PracticeRoomPreview floating />
+          <PracticeRoomPreview moment={moment} floating />
         </div>
       </div>
     </Section>
@@ -60,39 +57,38 @@ export function StageShowcase({ title, children }: StageShowcaseProps) {
 }
 
 interface StageStoryProps {
+  moment: RoomMoment;
   intro: ReactNode;
   footnote: ReactNode;
 }
 
 /** How-it-works: the stages as a list beside a pinned practice room. */
-export function StageStory({ intro, footnote }: StageStoryProps) {
+export function StageStory({ moment, intro, footnote }: StageStoryProps) {
   return (
     <Section ground="white" labelledBy="session-heading">
       <div className="grid items-start gap-y-14 lg:grid-cols-12 lg:gap-x-6">
         <div className="lg:col-span-5">
-          <SectionTitle id="session-heading" size="title">
-            Inside a practice call
-          </SectionTitle>
-          <div className="mt-6 max-w-[44ch] text-lede text-ink">{intro}</div>
-          <InView as="ol" className="mt-12 flex flex-col gap-8">
+          <SectionTitle id="session-heading">Inside a practice call</SectionTitle>
+          <div className="mt-5 max-w-[44ch] text-lede text-ink">{intro}</div>
+          <InView as="ol" className="mt-10 flex flex-col gap-7">
             {STAGES.map((stage) => (
               <InViewItem key={stage} as="li" className="max-w-[40ch]">
                 <span
                   aria-hidden="true"
                   className={cn(
                     "block h-1.5 w-14 rounded-pill",
-                    stage === SAMPLE_STAGE ? "bg-primary" : "bg-primary-tint",
+                    stage === moment.stage ? "bg-primary" : "bg-primary-tint",
                   )}
                 />
-                <h3 className="mt-3 text-h3 font-bold text-navy">{STAGE_LABELS[stage]}</h3>
-                <p className="mt-1 text-lede text-ink">{STAGE_NOTES[stage]}</p>
+                <h3 className="mt-3 text-h4 font-bold text-navy">{STAGE_LABELS[stage]}</h3>
+                <p className="mt-1 text-ink">{STAGE_NOTES[stage]}</p>
               </InViewItem>
             ))}
           </InView>
-          <div className="mt-12 max-w-[44ch] text-ink">{footnote}</div>
+          <div className="mt-10 max-w-[44ch] text-ink">{footnote}</div>
         </div>
-        <div className="lg:sticky lg:top-24 lg:col-span-7 lg:col-start-6">
-          <PracticeRoomPreview />
+        <div className="min-w-0 lg:sticky lg:top-24 lg:col-span-7 lg:col-start-6">
+          <PracticeRoomPreview moment={moment} />
         </div>
       </div>
     </Section>

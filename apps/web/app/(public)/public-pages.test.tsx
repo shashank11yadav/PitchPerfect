@@ -165,3 +165,38 @@ describe("numbers in the copy come from the shared limits", () => {
     expect(container).toHaveTextContent(`${String(LIMITS.attemptRetentionDays)} days`);
   });
 });
+
+describe("fix round 1", () => {
+  it("shows Maya's persona card once on the home page", () => {
+    render(<HomePage />);
+    expect(screen.getAllByRole("region", { name: "Maya Chen" })).toHaveLength(1);
+  });
+
+  it("gives the employers page its own applicants, not the home page's", () => {
+    const { container } = render(<EmployersPage />);
+    expect(container).not.toHaveTextContent("Jordan Ellis");
+    expect(screen.getByText("Account executive", { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("never suggests employers can listen to candidates", () => {
+    for (const Page of [HomePage, EmployersPage]) {
+      const { container, unmount } = render(<Page />);
+      expect(container).not.toHaveTextContent(/\bhear\b/i);
+      unmount();
+    }
+  });
+
+  it("states the session cap as 'up to … whichever comes first' on the students page", () => {
+    const { container } = render(<StudentsPage />);
+    expect(container).toHaveTextContent(
+      `up to ${String(LIMITS.maxStudentTurns)} turns or ${String(LIMITS.sessionSeconds / 60)} minutes, whichever comes first`,
+    );
+  });
+
+  it("keeps the browser speech caveat in the privacy summary", () => {
+    const { container } = render(<PrivacyPage />);
+    const summary = container.querySelector("#summary + div");
+    expect(summary).toHaveTextContent("only the text reaches us");
+    expect(summary).toHaveTextContent("(Google, Apple, or Microsoft)");
+  });
+});

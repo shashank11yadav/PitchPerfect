@@ -1,4 +1,12 @@
-import { computeOverall, type RubricKey, type Scorecard, type Stage } from "@pitchperfect/shared";
+import {
+  computeOverall,
+  LIMITS,
+  type RubricKey,
+  type ScenarioPublic,
+  type Scorecard,
+  type Stage,
+  type TranscriptRole,
+} from "@pitchperfect/shared";
 
 /**
  * One fictional practice session shown on the marketing pages: an objection-handling practice
@@ -13,9 +21,6 @@ export const SAMPLE_PERSONA = {
 
 export const SAMPLE_SKILL_TITLE = "Objection handling";
 export const SAMPLE_WEIGHTED: RubricKey = "objections";
-export const SAMPLE_STAGE: Stage = "objection";
-export const SAMPLE_TURNS_LEFT = 17;
-export const SAMPLE_TIME_LEFT = "14:20";
 
 export const SAMPLE_TRANSCRIPT = [
   {
@@ -44,9 +49,82 @@ export const SAMPLE_TRANSCRIPT = [
   },
 ] as const;
 
-/** The partner's answer to the last turn, shown arriving as a streamed reply. */
-export const SAMPLE_STREAMED_REPLY =
-  "One depot I could probably sell upstairs. Who on my side would have to set it up?";
+type Persona = Pick<ScenarioPublic, "personaName" | "personaTitle" | "companyType" | "personality">;
+
+interface TranscriptLine {
+  role: TranscriptRole;
+  text: string;
+}
+
+/** One moment in a practice room: who the buyer is, where the call is, and what was said. */
+export interface RoomMoment {
+  persona: Persona;
+  skillTitle: string;
+  stage: Stage;
+  timeLeft: string;
+  transcript: readonly TranscriptLine[];
+  /** The partner's next reply, shown arriving as a streamed reply. */
+  streamedReply: string;
+}
+
+/** Turns left, from the shared cap and the student's turns so far. */
+export const turnsLeft = ({ transcript }: Pick<RoomMoment, "transcript">) =>
+  LIMITS.maxStudentTurns - transcript.filter((line) => line.role === "student").length;
+
+const [opener, firstQuestion, firstAnswer] = SAMPLE_TRANSCRIPT;
+
+/** Late in Maya's call: her objection, and the pilot the student offers. Used on the home page. */
+export const OBJECTION_MOMENT: RoomMoment = {
+  persona: SAMPLE_PERSONA,
+  skillTitle: SAMPLE_SKILL_TITLE,
+  stage: "objection",
+  timeLeft: "14:20",
+  transcript: SAMPLE_TRANSCRIPT,
+  streamedReply:
+    "One depot I could probably sell upstairs. Who on my side would have to set it up?",
+};
+
+/** The same call two minutes in, at the first discovery question. Used on how it works. */
+export const EARLY_MOMENT: RoomMoment = {
+  persona: SAMPLE_PERSONA,
+  skillTitle: SAMPLE_SKILL_TITLE,
+  stage: "discovery",
+  timeLeft: "18:05",
+  transcript: [opener, firstQuestion],
+  streamedReply: firstAnswer.text,
+};
+
+/** A different buyer and skill: discovery with a vague, friendly owner. Used on the students page. */
+export const DISCOVERY_MOMENT: RoomMoment = {
+  persona: {
+    personaName: "Daniel Brooks",
+    personaTitle: "Operations manager",
+    companyType: "Family-owned heating and cooling company",
+    personality: "Friendly, vague, busy",
+  },
+  skillTitle: "Probing & discovery",
+  stage: "discovery",
+  timeLeft: "16:40",
+  transcript: [
+    {
+      role: "partner",
+      text: "We're doing fine, honestly. What did you want to talk about?",
+    },
+    {
+      role: "student",
+      text: "Thanks, Daniel. When a technician's job runs long, what happens to the rest of their day?",
+    },
+    {
+      role: "partner",
+      text: "The office calls the next customers and pushes them back. Some days that's the whole afternoon.",
+    },
+    {
+      role: "student",
+      text: "How often does that happen in a normal week?",
+    },
+  ],
+  streamedReply: "Most weeks? Three or four days. Fridays are the worst.",
+};
 
 const dimensions: Scorecard["dimensions"] = [
   {

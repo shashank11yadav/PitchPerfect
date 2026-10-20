@@ -83,9 +83,6 @@
   --text-hero: clamp(2rem, 7.4vw, 7rem);
   --text-hero--line-height: 0.98;
   --text-hero--letter-spacing: -0.04em;
-  --text-poster: clamp(3.5rem, 11vw, 10rem);
-  --text-poster--line-height: 0.9;
-  --text-poster--letter-spacing: -0.045em;
   --text-title: clamp(2.125rem, 5vw, 4.5rem);
   --text-title--line-height: 1.02;
   --text-title--letter-spacing: -0.035em;
@@ -227,6 +224,15 @@
     .pp-link:hover {
       text-decoration-color: currentColor;
     }
+  }
+}
+
+/* Printing never waits for a scroll: anything still waiting to be revealed prints as it is. */
+@media print {
+  [data-reveal],
+  [data-reveal] * {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

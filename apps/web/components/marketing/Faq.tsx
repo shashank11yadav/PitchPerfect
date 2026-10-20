@@ -20,11 +20,13 @@ export function Faq({ heading, lead, items, ground = "white" }: FaqProps) {
   const tile = ground === "soft" ? "open:bg-surface" : "open:bg-primary-soft";
   return (
     <Section ground={ground} labelledBy="faq-heading">
-      <SectionTitle id="faq-heading" size="title" className="max-w-[14ch]">
-        {heading}
-      </SectionTitle>
-      <div className="mt-12 grid gap-y-8 md:mt-20 lg:grid-cols-12 lg:gap-x-6">
-        {lead && <div className="text-ink lg:col-span-3">{lead}</div>}
+      <div className="grid gap-y-8 lg:grid-cols-12 lg:gap-x-6">
+        <div className="lg:col-span-4">
+          <SectionTitle id="faq-heading" className="max-w-[12ch]">
+            {heading}
+          </SectionTitle>
+          {lead && <div className="mt-4 text-ink">{lead}</div>}
+        </div>
         <div className="flex flex-col gap-2 lg:col-span-8 lg:col-start-5">
           {items.map(({ question, answer }) => (
             <details

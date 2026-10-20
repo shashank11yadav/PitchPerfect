@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubReducedMotion } from "@/components/motion/test-utils";
 
-vi.mock("@paper-design/shaders-react", () => ({
+vi.mock("./grain-gradient", () => ({
   GrainGradient: () => <canvas data-testid="shader-canvas" />,
 }));
 
@@ -43,11 +43,21 @@ describe("ShaderField", () => {
     expect(screen.queryByTestId("shader-canvas")).not.toBeInTheDocument();
   });
 
+  it("releases the WebGL context it opened to check for support", async () => {
+    stubReducedMotion(false);
+    const loseContext = vi.fn();
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      getExtension: (name: string) => (name === "WEBGL_lose_context" ? { loseContext } : null),
+    } as unknown as WebGL2RenderingContext);
+    await renderField();
+    expect(loseContext).toHaveBeenCalledTimes(1);
+  });
+
   it("loads the animated shader when motion is allowed and WebGL works", async () => {
     stubReducedMotion(false);
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
-      {} as WebGL2RenderingContext,
-    );
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      getExtension: () => null,
+    } as unknown as WebGL2RenderingContext);
     await renderField();
     expect(screen.getByTestId("field")).toHaveAttribute("data-shader", "live");
     expect(await screen.findByTestId("shader-canvas")).toBeInTheDocument();

@@ -1,19 +1,26 @@
-import { getSkill, RUBRIC_DIMENSIONS } from "@pitchperfect/shared";
-import { BadgeCheck, CalendarClock, CircleAlert, FileText, Link2, Mic } from "lucide-react";
+import { getSkill, redactPii, RUBRIC_DIMENSIONS, type SkillSlug } from "@pitchperfect/shared";
+import {
+  ArrowDown,
+  BadgeCheck,
+  CalendarClock,
+  CircleAlert,
+  FileText,
+  Link2,
+  Mic,
+} from "lucide-react";
 import { PersonaCard } from "@/components/practice/PersonaCard";
 import { Badge } from "@/components/ui/Badge";
-import { SAMPLE_PERSONA, SAMPLE_SCORECARD, SAMPLE_SKILL_TITLE } from "./sample-session";
+import { DISCOVERY_MOMENT, SAMPLE_SCORECARD, SAMPLE_SKILL_TITLE } from "./sample-session";
 
 /*
  * Small pieces of the real product's screens, filled with fictional sample data, used as the
  * pictures on the public pages. Companies come from the seed list; people are invented.
  */
 
-const skill = getSkill("objection-handling");
-const rubric = RUBRIC_DIMENSIONS.find((dimension) => dimension.key === skill.weighted);
-
 /** A lesson's opening card: the skill, its summary, and the two ends of its rubric line. */
-export function LessonFragment() {
+export function LessonFragment({ slug = "objection-handling" }: { slug?: SkillSlug }) {
+  const skill = getSkill(slug);
+  const rubric = RUBRIC_DIMENSIONS.find((dimension) => dimension.key === skill.weighted);
   return (
     <div data-ui className="rounded-[20px] bg-surface p-5 ring-1 ring-border md:p-6">
       <p className="text-caption font-semibold text-muted">Lesson</p>
@@ -35,11 +42,19 @@ export function LessonFragment() {
   );
 }
 
-/** Who you're talking to, and the control you talk with. */
+const PITCH_BUYER = {
+  personaName: "Tom Reyes",
+  personaTitle: "Head of facilities",
+  companyType: "Hospital group with four sites",
+  personality: "Polite, skeptical, short on time",
+};
+
+/** The start of a pitching call: who you're about to talk to, and the control you talk with. */
 export function PracticeFragment() {
   return (
     <div data-ui className="flex flex-col gap-3 rounded-[20px] bg-surface p-4 ring-1 ring-border">
-      <PersonaCard persona={SAMPLE_PERSONA} titleAs="p" />
+      <p className="px-1 text-caption font-semibold text-muted">Pitching: your buyer</p>
+      <PersonaCard persona={PITCH_BUYER} titleAs="p" />
       <div aria-hidden="true" className="flex items-center gap-3 rounded-card bg-surface-2 p-3">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-pill bg-primary text-white">
           <Mic className="size-5" />
@@ -172,5 +187,56 @@ export function ListingsFragment() {
         </li>
       ))}
     </ul>
+  );
+}
+
+const lastQuestion = DISCOVERY_MOMENT.transcript.findLast((line) => line.role === "student");
+
+/** The scorecard's "stronger version" for the discovery call on the students page. */
+export function StrongerLineFragment() {
+  return (
+    <div data-ui className="rounded-[20px] bg-surface p-5 ring-1 ring-border md:p-6">
+      <p className="text-caption font-semibold text-muted">Stronger version</p>
+      <p className="mt-2 text-small font-semibold text-ink">You said</p>
+      <p className="text-ink">{lastQuestion?.text}</p>
+      <ArrowDown aria-hidden="true" className="my-2 size-4 text-primary" />
+      <p className="text-small font-semibold text-primary">Try</p>
+      <p className="font-semibold text-ink">
+        How often does that happen, and what does a pushed-back afternoon cost you in overtime or
+        lost jobs?
+      </p>
+    </div>
+  );
+}
+
+/** A job listing with its "Practice for this job" action. */
+export function JobPracticeFragment() {
+  return (
+    <div data-ui className="rounded-[20px] bg-surface p-5 ring-1 ring-border md:p-6">
+      <p className="text-caption font-semibold text-muted">Job</p>
+      <p className="font-display text-lede font-semibold text-navy">Inside sales associate</p>
+      <p className="mt-1 text-small text-ink">Lumivale Learning Systems, remote</p>
+      <span className="mt-4 inline-flex h-10 items-center rounded-pill bg-primary px-4 text-small font-semibold text-white">
+        Practice for this job
+      </span>
+      <p className="mt-3 text-small text-ink">
+        The buyer and their objections are built from this listing.
+      </p>
+    </div>
+  );
+}
+
+const TYPED = "Sure, send the plan to dana.k@example.com or call me on 555-201-4477.";
+
+/** A practice turn before and after contact details are stripped, using the real redaction. */
+export function RedactionFragment() {
+  return (
+    <div data-ui className="rounded-[20px] bg-surface p-5 text-ink md:p-6">
+      <p className="text-caption font-semibold text-muted">One practice turn</p>
+      <p className="mt-3 text-small font-semibold">What you typed</p>
+      <p>{TYPED}</p>
+      <p className="mt-3 text-small font-semibold">What is stored and sent</p>
+      <p className="rounded-control bg-primary-soft px-3 py-2">{redactPii(TYPED)}</p>
+    </div>
   );
 }

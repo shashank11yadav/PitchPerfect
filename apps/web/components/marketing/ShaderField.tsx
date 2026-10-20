@@ -6,12 +6,17 @@ import { cn } from "@/lib/cn";
 
 // Loaded only in the browser, after the page's text has rendered; the static gradient shows first.
 const GrainGradient = lazy(() =>
-  import("@paper-design/shaders-react").then((module) => ({ default: module.GrainGradient })),
+  import("./grain-gradient").then((module) => ({ default: module.GrainGradient })),
 );
 
 let webGl: boolean | undefined;
 function hasWebGl(): boolean {
-  webGl ??= Boolean(document.createElement("canvas").getContext("webgl2"));
+  if (webGl === undefined) {
+    const probe = document.createElement("canvas").getContext("webgl2");
+    webGl = probe !== null;
+    // Give the probe's context back at once; browsers cap how many can be open.
+    probe?.getExtension("WEBGL_lose_context")?.loseContext();
+  }
   return webGl;
 }
 
@@ -34,7 +39,8 @@ const serverSnapshot = () => false;
 const COLORS = ["#3f56d2", "#6f82e6", "#1d275e"];
 
 /**
- * A slow grain gradient in the brand blues behind its children. Under reduced motion, without
+ * A slow grain gradient in the brand blues behind its children. The caller positions it (it is
+ * `relative` unless a class is passed), so it can also sit absolutely beside other content. Under reduced motion, without
  * WebGL, on the server and while the shader loads, the same field is a static CSS gradient
  * (`.pp-shader-fallback`). Paper Shaders pauses the animation itself while it is off screen or
  * the tab is hidden.
@@ -45,7 +51,7 @@ export function ShaderField({ className, children, ...props }: ComponentProps<"d
     <div
       {...props}
       data-shader={live ? "live" : "static"}
-      className={cn("pp-shader-fallback relative isolate overflow-hidden", className)}
+      className={cn("pp-shader-fallback isolate overflow-hidden", className ?? "relative")}
     >
       {live && (
         <Suspense fallback={null}>

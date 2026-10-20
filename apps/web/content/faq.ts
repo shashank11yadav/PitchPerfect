@@ -19,7 +19,7 @@ export const HOME_FAQ: readonly FaqItem[] = [
   {
     question: "What does the scorecard measure?",
     answer:
-      "Clarity, value and relevance, structure, discovery questions, objection handling, confidence and language, and the call to action. Each gets a score from 1 to 5, a reason, and a quote of what you said when there is one. The dimension tied to the skill you practiced counts double in the overall score.",
+      "Clarity, value and relevance, structure, discovery questions, objection handling, confidence and language, and the call to action. Each gets a score from 1 to 5, a reason, and a quote of what you said when there is one. The rubric line tied to the skill you practiced counts double in the overall score.",
   },
   {
     question: "Who can see my practice sessions?",
