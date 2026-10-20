@@ -51,3 +51,19 @@ export function formatResetTime(iso: string, now: Date = new Date()): string {
   }).format(reset);
   return `${day} at ${time}`;
 }
+
+/**
+ * When the monthly practice count starts over (the 1st of next month, UTC midnight), in the
+ * viewer's zone: "Saturday, October 31 at 8:00 PM EDT" in New York.
+ */
+export function formatMonthlyReset(now: Date = new Date()): string {
+  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return new Intl.DateTimeFormat(LOCALE, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(reset);
+}

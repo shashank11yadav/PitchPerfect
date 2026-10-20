@@ -3,6 +3,7 @@ import {
   type AttemptSummary,
   type Page,
   type PracticeQuota,
+  type ResumeInfo,
   type SkillSlug,
   type StudentApplicationView,
 } from "@pitchperfect/shared";
@@ -64,6 +65,16 @@ export const Quota: Parser<PracticeQuota> = {
       return data as unknown as PracticeQuota;
     }
     throw unexpected("/practice/quota");
+  },
+};
+
+/** `PUT /me/resume`: `{ resume: { uploadedAt, sizeBytes } }`. */
+export const ResumeUploaded: Parser<ResumeInfo> = {
+  parse(data) {
+    if (isObject(data) && isObject(data.resume) && typeof data.resume.uploadedAt === "string") {
+      return data.resume as unknown as ResumeInfo;
+    }
+    throw unexpected("/me/resume");
   },
 };
 

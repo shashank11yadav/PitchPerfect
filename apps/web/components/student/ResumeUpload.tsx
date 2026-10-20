@@ -11,15 +11,18 @@ import { Spinner } from "@/components/ui/Spinner";
 import { apiFetch } from "@/lib/api";
 import { formatLocalDate } from "@/lib/local-time";
 import { useSession } from "@/lib/session";
+import { ResumeUploaded } from "@/lib/student-api";
 import { formMessage } from "@/lib/use-form";
 
 const MB = 1024 * 1024;
 const LIMIT_MB = LIMITS.resumeMaxBytes / MB;
 const RESUME_PATH = "/me/resume";
 
-interface Uploaded {
-  resume: { uploadedAt: string; sizeBytes: number };
-}
+/** The api's answers for a file it won't take, in this form's words. */
+const UPLOAD_MESSAGES = {
+  file_too_large: `That file is over ${String(LIMIT_MB)} MB. Save a smaller PDF and try again.`,
+  unsupported_file: "Upload a PDF file.",
+};
 
 /** The same checks the api makes, so a wrong file is caught before it's sent. */
 function problemWith(file: File): string | null {
@@ -62,13 +65,13 @@ export function ResumeUpload() {
     body.append("file", file);
     setUploading(true);
     try {
-      const { resume } = await apiFetch<Uploaded>(RESUME_PATH, { method: "PUT", body });
+      const resume = await apiFetch(RESUME_PATH, { method: "PUT", body, schema: ResumeUploaded });
       setOnFile(true);
       setUploadedAt(resume.uploadedAt);
       setNews("Résumé uploaded. Employers see it when you apply to their jobs.");
       void refresh();
     } catch (failure) {
-      setError(formMessage(failure));
+      setError(formMessage(failure, UPLOAD_MESSAGES));
     } finally {
       setUploading(false);
       input.value = "";
@@ -144,7 +147,7 @@ export function ResumeUpload() {
           setConfirming(false);
         }}
         title="Delete your résumé?"
-        description="Employers will no longer be able to open it, including on applications you've already sent."
+        description="Employers will no longer be able to open it, including on applications you’ve already sent."
         confirmLabel="Delete it"
         cancelLabel="Keep it"
         onConfirm={remove}

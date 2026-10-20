@@ -143,6 +143,11 @@ describe("ApplicationList", () => {
     });
     expect(callsTo(fetchMock, `POST /api/applications/${ID}/withdraw`)).toBe(1);
     expect(within(item).queryByRole("button", { name: /withdraw/i })).not.toBeInTheDocument();
+    // Focus lands on the row's new status, not back on the page body.
+    await waitFor(() => {
+      expect(item).toContainElement(document.activeElement as HTMLElement);
+    });
+    expect(document.activeElement).toHaveTextContent("Withdrawn");
   });
 
   it("has a real empty state with somewhere to go", async () => {

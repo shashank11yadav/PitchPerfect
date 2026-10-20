@@ -80,4 +80,15 @@ describe("JobDetails", () => {
     );
     expect(screen.getByRole("button", { name: "Apply" })).toBeInTheDocument();
   });
+
+  it("steps every heading down one level inside the app, where the shell owns the h1", () => {
+    render(<JobDetails job={publicJob()} company={publicCompany()} titleAs="h2" />);
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Sales development representative" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 3, name: /about quarrow/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "About the role" })).toBeInTheDocument();
+  });
 });

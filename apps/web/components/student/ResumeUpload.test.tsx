@@ -64,7 +64,9 @@ describe("ResumeUpload", () => {
     await user().upload(input, pdf());
 
     await waitFor(() => {
-      expect(input).toHaveAccessibleDescription(/Résumés can be up to 2 MB/);
+      expect(input).toHaveAccessibleDescription(
+        /That file is over 2 MB\. Save a smaller PDF and try again\./,
+      );
     });
   });
 
@@ -76,7 +78,7 @@ describe("ResumeUpload", () => {
     await user().upload(input, pdf(16, "renamed.pdf"));
 
     await waitFor(() => {
-      expect(input).toHaveAccessibleDescription(/Upload a PDF file/);
+      expect(input).toHaveAccessibleDescription(/Upload a PDF file\./);
     });
   });
 
@@ -98,6 +100,16 @@ describe("ResumeUpload", () => {
       "/api/me/resume",
     );
     expect(screen.getByRole("button", { name: "Delete résumé" })).toBeInTheDocument();
+  });
+
+  it("treats an upload answer it can't read as a failure", async () => {
+    setup({ "PUT /api/me/resume": () => jsonResponse({ ok: true }) });
+    const input = await screen.findByLabelText("Upload a PDF");
+    await user().upload(input, pdf());
+    await waitFor(() => {
+      expect(input).toHaveAttribute("aria-invalid", "true");
+    });
+    expect(screen.queryByRole("link", { name: /download/i })).not.toBeInTheDocument();
   });
 
   it("deletes the résumé after confirming", async () => {

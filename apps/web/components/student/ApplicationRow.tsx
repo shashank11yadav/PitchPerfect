@@ -3,7 +3,7 @@
 import type { ApplicationClosedReason, StudentApplicationView } from "@pitchperfect/shared";
 import { ArrowUpRight, CalendarClock } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { apiFetch } from "@/lib/api";
@@ -31,12 +31,22 @@ interface ApplicationRowProps {
 export function ApplicationRow({ application, onChange }: ApplicationRowProps) {
   const { job, status, interview, closedReason } = application;
   const [confirming, setConfirming] = useState(false);
+  const statusRef = useRef<HTMLDivElement>(null);
+  /** Set by a withdrawal here, so focus follows it to the new status and not to the page. */
+  const withdrew = useRef(false);
+
+  useEffect(() => {
+    if (status !== "withdrawn" || !withdrew.current) return;
+    withdrew.current = false;
+    statusRef.current?.focus();
+  }, [status]);
 
   async function withdraw() {
     const updated = await apiFetch(`/applications/${application.id}/withdraw`, {
       method: "POST",
       schema: OneApplication,
     });
+    withdrew.current = true;
     onChange(updated);
   }
 
@@ -95,7 +105,10 @@ export function ApplicationRow({ application, onChange }: ApplicationRowProps) {
         )}
       </div>
       <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-start">
-        <StatusPill status={status} />
+        <div ref={statusRef} tabIndex={-1} className="rounded-pill">
+          <span className="sr-only">Status: </span>
+          <StatusPill status={status} />
+        </div>
         {WITHDRAWABLE.has(status) && (
           <Button
             variant="ghost"
