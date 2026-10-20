@@ -9,6 +9,7 @@ import {
 } from "../enums.js";
 import { LIMITS } from "../limits.js";
 import { pageQuery, pageSchema } from "./common.js";
+import { PublicCompanySchema } from "./employer.js";
 
 const money = () => z.number().positive().max(LIMITS.payMax);
 
@@ -87,7 +88,12 @@ export type PublicJobSummary = z.infer<typeof PublicJobSummarySchema>;
 /** Response of `GET /api/jobs`. */
 export const PublicJobSummaryPageSchema = pageSchema(PublicJobSummarySchema);
 
-export interface PublicJob extends PublicJobSummary {
-  /** Already sanitized by the api. */
-  descriptionHtml: string;
-}
+/** Response: one job's full listing. `descriptionHtml` was sanitized by the api. */
+const PublicJobSchema = PublicJobSummarySchema.extend({ descriptionHtml: z.string() });
+export type PublicJob = z.infer<typeof PublicJobSchema>;
+
+/** Response of `GET /api/jobs/:slug`. */
+export const PublicJobDetailResponseSchema = z.object({
+  job: PublicJobSchema,
+  company: PublicCompanySchema,
+});

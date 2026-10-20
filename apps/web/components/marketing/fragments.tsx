@@ -1,13 +1,6 @@
 import { getSkill, redactPii, RUBRIC_DIMENSIONS, type SkillSlug } from "@pitchperfect/shared";
-import {
-  ArrowDown,
-  BadgeCheck,
-  CalendarClock,
-  CircleAlert,
-  FileText,
-  Link2,
-  Mic,
-} from "lucide-react";
+import { ArrowDown, CalendarClock, FileText, Link2, Mic } from "lucide-react";
+import { CompanyBadge } from "@/components/jobs/CompanyBadge";
 import { PersonaCard } from "@/components/practice/PersonaCard";
 import { RubricBar } from "@/components/practice/RubricBar";
 import { Badge } from "@/components/ui/Badge";
@@ -76,10 +69,7 @@ export function ApplyFragment() {
       </p>
       <p className="mt-1 flex flex-wrap items-center gap-2 text-small text-ink">
         Quarrow Logistics Software
-        <Badge tone="success">
-          <BadgeCheck aria-hidden="true" className="size-3.5" />
-          Verified company
-        </Badge>
+        <CompanyBadge verification="verified" />
       </p>
       <ul className="mt-4 grid gap-2 text-small text-ink">
         <li className="flex items-center gap-2 rounded-control bg-surface-2 px-3 py-2">
@@ -174,17 +164,7 @@ export function ListingsFragment() {
           <p className="font-display text-lede font-semibold text-navy">{title}</p>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-small text-ink">
             {company}
-            {verified ? (
-              <Badge tone="success">
-                <BadgeCheck aria-hidden="true" className="size-3.5" />
-                Verified company
-              </Badge>
-            ) : (
-              <Badge tone="warning">
-                <CircleAlert aria-hidden="true" className="size-3.5" />
-                Unverified employer
-              </Badge>
-            )}
+            <CompanyBadge verification={verified ? "verified" : "unverified"} />
           </p>
         </li>
       ))}

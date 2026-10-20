@@ -17,7 +17,7 @@ export function StatusMessage({ title, description, children }: StatusMessagePro
     >
       <Logo />
       <h1 className="text-h2 md:text-h1">{title}</h1>
-      <p className="max-w-prose text-muted">{description}</p>
+      <p className="max-w-prose text-ink">{description}</p>
       <div className="flex flex-wrap justify-center gap-3">{children}</div>
     </main>
   );

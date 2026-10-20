@@ -1,5 +1,10 @@
 import { z } from "zod";
-import type { CompanyVerification, EmploymentType, JobStatus, Workplace } from "../enums.js";
+import {
+  COMPANY_VERIFICATION,
+  type EmploymentType,
+  type JobStatus,
+  type Workplace,
+} from "../enums.js";
 import { LIMITS } from "../limits.js";
 import type { EmployerRecentApplication } from "./applications.js";
 import { httpsUrl, shortText } from "./common.js";
@@ -21,16 +26,18 @@ export const CompanyUpdateSchema = z.strictObject({
 });
 export type CompanyUpdate = z.infer<typeof CompanyUpdateSchema>;
 
-export interface PublicCompany {
-  id: string;
-  name: string;
-  slug: string;
-  website: string;
-  linkedinUrl: string | null;
-  pitch: string;
-  logoUrl: string | null;
-  verification: CompanyVerification;
-}
+/** Response: a company as anyone may see it. Unknown keys are dropped, so the api can add fields. */
+export const PublicCompanySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  website: z.string(),
+  linkedinUrl: z.string().nullable(),
+  pitch: z.string(),
+  logoUrl: z.string().nullable(),
+  verification: z.enum(COMPANY_VERIFICATION),
+});
+export type PublicCompany = z.infer<typeof PublicCompanySchema>;
 
 export interface EmployerJobSummary {
   id: string;

@@ -5,6 +5,7 @@ import {
   JobListQuerySchema,
   JobStatusUpdateSchema,
   JobUpdateSchema,
+  PublicJobDetailResponseSchema,
   PublicJobSummaryPageSchema,
   type PublicJobSummary,
 } from "./jobs.js";
@@ -201,5 +202,59 @@ describe("PublicJobSummaryPageSchema", () => {
     };
     expect(PublicJobSummaryPageSchema.safeParse(page).success).toBe(false);
     expect(PublicJobSummaryPageSchema.safeParse({ items: "nope" }).success).toBe(false);
+  });
+});
+
+describe("PublicJobDetailResponseSchema", () => {
+  const detail = () => ({
+    job: {
+      id: "65f1c0ffee0000000000abcd",
+      slug: "sales-development-intern-a1b2",
+      title: "Sales development intern",
+      location: "Boston, MA",
+      workplace: "hybrid",
+      employmentType: "internship",
+      pay: job().pay,
+      skills: ["Communication"],
+      publishedAt: "2026-10-01T12:00:00.000Z",
+      descriptionHtml: "<p>Learn to sell.</p>",
+      company: {
+        name: "Quarrow Logistics Software",
+        slug: "quarrow-logistics-software",
+        logoUrl: null,
+        verification: "verified",
+      },
+    },
+    company: {
+      id: "65f1c0ffee0000000000beef",
+      name: "Quarrow Logistics Software",
+      slug: "quarrow-logistics-software",
+      website: "https://quarrow-logistics.example",
+      linkedinUrl: null,
+      pitch: "Route planning for regional carriers.",
+      logoUrl: null,
+      verification: "verified",
+    },
+  });
+
+  it("accepts the job and its company, keeping the description", () => {
+    const parsed = PublicJobDetailResponseSchema.parse({ ...detail(), extra: true });
+    expect(parsed.job.descriptionHtml).toBe("<p>Learn to sell.</p>");
+    expect(parsed.company.website).toBe("https://quarrow-logistics.example");
+  });
+
+  it("rejects a job without a description or a company without a verification state", () => {
+    const { job: jobPart, company } = detail();
+    const withoutDescription: Partial<typeof jobPart> = { ...jobPart };
+    delete withoutDescription.descriptionHtml;
+    expect(
+      PublicJobDetailResponseSchema.safeParse({ job: withoutDescription, company }).success,
+    ).toBe(false);
+    expect(
+      PublicJobDetailResponseSchema.safeParse({
+        job: jobPart,
+        company: { ...company, verification: "maybe" },
+      }).success,
+    ).toBe(false);
   });
 });
