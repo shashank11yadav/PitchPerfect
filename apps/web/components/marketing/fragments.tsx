@@ -9,6 +9,7 @@ import {
   Mic,
 } from "lucide-react";
 import { PersonaCard } from "@/components/practice/PersonaCard";
+import { RubricBar } from "@/components/practice/RubricBar";
 import { Badge } from "@/components/ui/Badge";
 import { DISCOVERY_MOMENT, SAMPLE_SCORECARD, SAMPLE_SKILL_TITLE } from "./sample-session";
 
@@ -138,7 +139,8 @@ export function InviteFragment() {
   return (
     <div data-ui className="rounded-[20px] bg-surface p-5 ring-1 ring-border md:p-6">
       <p className="text-caption font-semibold text-muted">Interview invite</p>
-      <p className="font-display text-lede font-semibold text-navy">Priya Raman</p>
+      <p className="font-display text-lede font-semibold text-navy">Hannah Lee</p>
+      <p className="text-small text-ink">Sales development representative</p>
       <ul className="mt-4 grid gap-2 text-small text-ink">
         <li className="flex items-center gap-2 rounded-control bg-surface-2 px-3 py-2">
           <CalendarClock aria-hidden="true" className="size-4 text-primary" />
@@ -156,7 +158,7 @@ export function InviteFragment() {
 
 const LISTINGS = [
   {
-    title: "Account executive",
+    title: "Sales development representative",
     company: "Quarrow Logistics Software",
     verified: true,
   },
@@ -226,17 +228,60 @@ export function JobPracticeFragment() {
   );
 }
 
-const TYPED = "Sure, send the plan to dana.k@example.com or call me on 555-201-4477.";
+/** A seller's turn with contact details in it; the email and number must never break. */
+const TYPED_PARTS = [
+  "I'll send the one-pager tonight. Reach me at ",
+  { keep: "dana.k@example.test" },
+  " or ",
+  { keep: "617-555-0142" },
+  ".",
+] as const;
+
+const typed = TYPED_PARTS.map((part) => (typeof part === "string" ? part : part.keep)).join("");
 
 /** A practice turn before and after contact details are stripped, using the real redaction. */
 export function RedactionFragment() {
   return (
     <div data-ui className="rounded-[20px] bg-surface p-5 text-ink md:p-6">
-      <p className="text-caption font-semibold text-muted">One practice turn</p>
+      <p className="text-caption font-semibold text-muted">Your turn, as a seller</p>
       <p className="mt-3 text-small font-semibold">What you typed</p>
-      <p>{TYPED}</p>
+      <p data-testid="typed-turn">
+        {TYPED_PARTS.map((part) =>
+          typeof part === "string" ? (
+            part
+          ) : (
+            <span key={part.keep} className="whitespace-nowrap">
+              {part.keep}
+            </span>
+          ),
+        )}
+      </p>
       <p className="mt-3 text-small font-semibold">What is stored and sent</p>
-      <p className="rounded-control bg-primary-soft px-3 py-2">{redactPii(TYPED)}</p>
+      <p data-testid="stored-turn" className="rounded-control bg-primary-soft px-3 py-2">
+        {redactPii(typed)}
+      </p>
+    </div>
+  );
+}
+
+const firstQuestion = DISCOVERY_MOMENT.transcript.find((line) => line.role === "student");
+const QUOTE = "what happens to the rest of their day?";
+
+/** One scored rubric line from Daniel's discovery call, the way the scorecard shows it. */
+export function ScoredLineFragment() {
+  return (
+    <div data-ui className="rounded-[20px] bg-surface p-5 ring-1 ring-border md:p-6">
+      <p className="mb-3 text-caption font-semibold text-muted">
+        From a scorecard: {DISCOVERY_MOMENT.skillTitle}
+      </p>
+      <RubricBar
+        name="Discovery questions"
+        score={4}
+        weighted
+        headingLevel="h3"
+        justification="Opened with a question about the cost of long jobs, then asked how often it happens."
+        evidence={firstQuestion?.text.includes(QUOTE) ? QUOTE : null}
+      />
     </div>
   );
 }

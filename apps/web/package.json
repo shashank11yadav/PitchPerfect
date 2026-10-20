@@ -13,7 +13,7 @@
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
-    "@paper-design/shaders-react": "0.0.81",
+    "@paper-design/shaders": "0.0.81",
     "@pitchperfect/shared": "0.0.0",
     "clsx": "2.1.1",
     "isomorphic-dompurify": "4.6.0",

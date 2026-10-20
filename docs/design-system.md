@@ -78,7 +78,7 @@ icon-card grids.
 
 - **Public pages:**
   - Sticky plain white bar: logo, Students, Employers, How it works, Jobs, then Sign in and a primary "Sign up".
-  - Home hero: flat navy, the tagline at hero size with the word-sized voice pill after "Get hired.", one lead sentence, "Start practicing" plus an "I'm hiring" text link, and the practice room rising out of the navy into the white section below.
+  - Home hero: flat navy, the tagline at hero size with the voice pill inline after "Get hired." (word-sized on desktop, at least 40 px tall on phones), one lead sentence, "Start practicing" plus an "I'm hiring" text link, and the practice room rising out of the navy into the white section below.
   - Inner page heroes: flat navy, the title on the left and the lead at the opposite end of its baseline.
   - The close of every page is a brand-blue band; the footer is navy with the logo, links and legal line.
 - **App (student and employer):**
@@ -106,7 +106,7 @@ Each component is implemented once:
 
 ## Motion
 
-- **Hero shader:** Paper Shaders' grain gradient in the brand blues, loaded with `React.lazy` after the text renders, through `components/marketing/grain-gradient.ts` so the chunk carries only that shader. The WebGL 2 support probe releases its context straight away. Under reduced motion, without WebGL 2, on the server and while it loads, the same strip is a static CSS gradient (`.pp-shader-fallback`). The library pauses it off screen and in hidden tabs. It needs no workers, blobs or eval, so the CSP is unchanged.
+- **Hero shader:** Paper Shaders' grain gradient in the brand blues, mounted with the core `ShaderMount` into a `<span>` (so the voice control can sit inline in the h1), loaded with a dynamic import after the text renders. `components/marketing/grain-gradient.ts` builds the uniforms, so the chunk carries only that shader. The WebGL 2 support probe releases its context straight away. Under reduced motion, without WebGL 2, on the server and while it loads, the same strip is a static CSS gradient (`.pp-shader-fallback`). The library pauses it off screen and in hidden tabs. It needs no workers, blobs or eval, so the CSP is unchanged.
 - **Entrances:** `components/motion/in-view.tsx` (adapted from Motion Primitives) staggers a section's parts in as it first scrolls into view: 24 px rise with opacity, 700 ms, ease-out `cubic-bezier(.22,1,.36,1)`. Server HTML and anything already on screen render finished, so nothing waits for scripts and nothing flickers; `useEntryReveal` decides.
 - **Streamed reply:** the practice room's last partner reply arrives letter by letter (`text-effect.tsx`), over a transparent copy that keeps its space and gives screen readers the sentence once.
 - **Feedback:** buttons scale to 0.97 on press (`.pp-press`); text links show their underline on hover (`.pp-link`); the voice meters breathe.

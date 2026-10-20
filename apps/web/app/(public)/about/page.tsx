@@ -106,14 +106,16 @@ export default function AboutPage() {
       </section>
 
       <Section labelledBy="project-heading" className="py-16 md:py-24">
-        <div className="max-w-[60ch]">
-          <SectionTitle id="project-heading">The project</SectionTitle>
-          <p className="mt-5 text-lede text-ink">
+        <div className="max-w-[64ch] text-lede text-ink">
+          <h2 id="project-heading" className="inline font-display font-bold text-navy">
+            The project.
+          </h2>{" "}
+          <p className="inline">
             PitchPerfect is open source. The practice partner runs as its own service, stores
             nothing, and can&apos;t be reached from the internet. The main app holds your account
             and decides who can see what.
           </p>
-          <p className="mt-4 text-lede text-ink">
+          <p className="mt-4">
             Questions, bug reports and security reports go to the maintainer listed on the
             project&apos;s GitHub page.
           </p>

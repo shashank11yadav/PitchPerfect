@@ -9,29 +9,28 @@ import { ShaderField } from "./ShaderField";
 const LEVELS = [0.55, 0.9, 0.7, 1, 0.6, 0.8];
 
 /**
- * The practice room's voice control drawn at the size of a word, set just after "Get hired.".
- * It sits outside the h1 (the shader mounts block elements) and is placed in em, so it follows
- * the type at every width. Decorative.
+ * The practice room's voice control, drawn at the size of a word right after "Get hired.". It is
+ * an inline span inside the h1, so it follows the words wherever they wrap; sizes are in em with a
+ * floor, so on a phone it is still a clear 40 px mic control. Decorative: hidden from assistive
+ * tech, and it adds no text to the heading.
  */
 function VoiceStrip() {
   return (
     <ShaderField
       aria-hidden="true"
-      className="absolute top-[1.15em] left-[4.82em] h-[0.72em] w-[2.9em] rounded-pill"
+      className="ml-[0.2em] inline-flex h-[max(0.72em,2.5rem)] w-[max(2.9em,6.75rem)] -translate-y-[0.08em] items-center gap-[max(0.16em,0.5rem)] rounded-pill px-[max(0.09em,0.25rem)] align-middle"
     >
-      <span className="flex h-full items-center gap-[0.16em] px-[0.09em]">
-        <span className="flex aspect-square h-[0.54em] items-center justify-center rounded-pill bg-white text-navy">
-          <Mic className="size-[0.26em]" strokeWidth={2.5} />
-        </span>
-        <span className="pp-level flex h-[0.3em] items-end gap-[0.07em]">
-          {LEVELS.map((level, index) => (
-            <span
-              key={index}
-              className="w-[0.07em] min-w-[2px] rounded-pill bg-white"
-              style={{ height: `${String(level * 100)}%`, ["--i" as string]: index }}
-            />
-          ))}
-        </span>
+      <span className="flex aspect-square h-[max(0.54em,2rem)] items-center justify-center rounded-pill bg-white text-navy">
+        <Mic className="size-[max(0.26em,1.125rem)]" strokeWidth={2.5} />
+      </span>
+      <span className="pp-level flex h-[max(0.3em,1.125rem)] items-end gap-[max(0.07em,3px)]">
+        {LEVELS.map((level, index) => (
+          <span
+            key={index}
+            className="w-[max(0.07em,3px)] rounded-pill bg-white"
+            style={{ height: `${String(level * 100)}%`, ["--i" as string]: index }}
+          />
+        ))}
       </span>
     </ShaderField>
   );
@@ -46,13 +45,13 @@ export function HomeHero({ lead }: { lead: ReactNode }) {
     <div>
       <div className="pp-on-dark bg-navy text-white">
         <div className={cn(WRAP, "pt-12 md:pt-20")}>
-          <div className="relative text-hero">
-            <h1 className="text-hero font-bold text-white">
-              <span className="block">Practice your pitch.</span>{" "}
-              <span className="block">Get hired.</span>
-            </h1>
-            <VoiceStrip />
-          </div>
+          <h1 className="text-hero font-bold text-white">
+            <span className="block">Practice your pitch.</span>{" "}
+            <span className="inline-block whitespace-nowrap">
+              Get hired.
+              <VoiceStrip />
+            </span>
+          </h1>
           <div className="mt-10 grid gap-y-12 md:mt-14 lg:grid-cols-12 lg:gap-x-6">
             <div className="lg:col-span-4">
               <div className="max-w-[36ch] text-statement text-white">{lead}</div>

@@ -15,6 +15,10 @@ import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.howItWorks);
 
+/** The quote behind the sample call's objection handling score. */
+const OBJECTION_QUOTE =
+  SAMPLE_SCORECARD.dimensions.find((dimension) => dimension.key === "objections")?.evidence ?? "";
+
 const SAFEGUARDS: Statement[] = [
   {
     title: "Always labelled as AI",
@@ -67,14 +71,25 @@ export default function HowItWorksPage() {
       />
 
       <Section ground="soft" labelledBy="scoring-heading">
-        <SectionTitle id="scoring-heading" size="title">
-          How scoring works
-        </SectionTitle>
-        <p className="mt-6 max-w-[58ch] text-statement text-ink">
-          When the call ends, your transcript is scored from 1 to 5 on seven rubric lines. The
-          overall score is built from those, with the practiced skill&apos;s line counted twice, and
-          scaled to 0 to 100.
-        </p>
+        <div className="grid items-end gap-y-10 lg:grid-cols-12 lg:gap-x-6">
+          <div className="lg:col-span-5 lg:col-start-8 lg:row-start-1">
+            <SectionTitle id="scoring-heading">How scoring works</SectionTitle>
+            <p className="mt-4 max-w-[46ch] text-lede text-ink">
+              When the call ends, your transcript is scored from 1 to 5 on seven rubric lines. The
+              overall score is built from those, with the practiced skill&apos;s line counted twice,
+              and scaled to 0 to 100.
+            </p>
+          </div>
+          <figure className="lg:col-span-6 lg:col-start-1 lg:row-start-1">
+            <blockquote className="max-w-[22ch] font-display text-[clamp(1.75rem,3vw,2.25rem)] leading-[1.2] font-semibold text-navy">
+              &ldquo;{OBJECTION_QUOTE}&rdquo;
+            </blockquote>
+            <figcaption className="mt-4 max-w-[44ch] text-ink">
+              The quote behind the objection handling score (4 out of 5) in the sample call. It is
+              checked word for word against the transcript before it is shown.
+            </figcaption>
+          </figure>
+        </div>
         <div className="mt-14 grid gap-y-8 md:mt-20 lg:grid-cols-12 lg:gap-x-6">
           <div className="lg:col-span-7">
             <ScoreBands sample={SAMPLE_SCORECARD.overall} />

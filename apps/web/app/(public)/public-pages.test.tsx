@@ -175,7 +175,11 @@ describe("fix round 1", () => {
   it("gives the employers page its own applicants, not the home page's", () => {
     const { container } = render(<EmployersPage />);
     expect(container).not.toHaveTextContent("Jordan Ellis");
-    expect(screen.getByText("Account executive", { selector: "span" })).toBeInTheDocument();
+    // One hiring story: the applicant list, the job post and the invite are all the SDR role.
+    expect(container).toHaveTextContent("Sample applicants");
+    const invitee = screen.getByText("Interview invite").parentElement;
+    const name = invitee?.querySelector("p.font-display")?.textContent ?? "";
+    expect(screen.getAllByText(name).length).toBeGreaterThan(1);
   });
 
   it("never suggests employers can listen to candidates", () => {

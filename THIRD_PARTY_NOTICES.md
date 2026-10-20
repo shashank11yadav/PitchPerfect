@@ -5,10 +5,10 @@ license, reproduced here.
 
 ## Paper Shaders
 
-- Packages: `@paper-design/shaders-react` and `@paper-design/shaders`, version 0.0.81
+- Package: `@paper-design/shaders`, version 0.0.81 (the core of Paper Shaders)
 - Source: https://github.com/paper-design/shaders
 - License: Apache License, Version 2.0
-- Used for: the animated grain gradient in the home page headline (`apps/web/components/marketing/ShaderField.tsx`). The package is installed from npm and not modified.
+- Used for: the animated grain gradient in the voice control in the home page headline (`apps/web/components/marketing/grain-gradient.ts`, mounted by `ShaderField.tsx`). The package is installed from npm and not modified.
 
 NOTICE file distributed with the package:
 

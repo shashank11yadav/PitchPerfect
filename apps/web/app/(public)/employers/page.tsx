@@ -1,5 +1,5 @@
 import { InView, InViewItem } from "@/components/motion/in-view";
-import { AE_PIPELINE, ApplicantsPreview } from "@/components/marketing/ApplicantsPreview";
+import { EMPLOYER_PIPELINE, ApplicantsPreview } from "@/components/marketing/ApplicantsPreview";
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { CtaLinks } from "@/components/marketing/CtaLinks";
 import {
@@ -73,7 +73,7 @@ export default function EmployersPage() {
         <div className="grid items-center gap-y-14 lg:grid-cols-12 lg:gap-x-6">
           <InView className="min-w-0 lg:col-span-6">
             <InViewItem>
-              <ApplicantsPreview pipeline={AE_PIPELINE} />
+              <ApplicantsPreview pipeline={EMPLOYER_PIPELINE} />
             </InViewItem>
           </InView>
           <InView className="lg:col-span-5 lg:col-start-8">
@@ -100,7 +100,7 @@ export default function EmployersPage() {
         </p>
         <div className="mt-12 grid items-start gap-y-12 md:mt-16 lg:grid-cols-12 lg:gap-x-6">
           <StatementRows items={FEATURES} layout="pinned" className="lg:col-span-6" />
-          <InView className="grid max-w-md gap-4 lg:sticky lg:top-28 lg:col-span-5 lg:col-start-8">
+          <InView className="order-first grid max-w-md gap-4 lg:sticky lg:top-28 lg:order-none lg:col-span-5 lg:col-start-8">
             <InViewItem>
               <JobPostFragment />
             </InViewItem>
@@ -112,24 +112,26 @@ export default function EmployersPage() {
       </Section>
 
       <Section labelledBy="verify-heading">
-        <SectionTitle id="verify-heading">How verification works</SectionTitle>
-        <p className="mt-4 max-w-[52ch] text-lede text-ink">
-          It&apos;s an automatic domain check. It tells candidates the person posting really has a
-          company email. It doesn&apos;t mean we vouch for the job.
-        </p>
-        <div className="mt-12 grid items-end gap-y-12 md:mt-16 lg:grid-cols-12 lg:gap-x-6">
-          <InView as="ol" className="flex flex-col gap-4 lg:col-span-7">
-            {VERIFY_STEPS.map((step, index) => (
-              <InViewItem
-                key={step}
-                as="li"
-                className={`max-w-xl rounded-[20px] bg-primary-soft p-6 text-statement text-navy md:p-8 ${STEP_INDENTS[index] ?? ""}`}
-              >
-                {step}
-              </InViewItem>
-            ))}
-          </InView>
-          <InView className="min-w-0 lg:col-span-4 lg:col-start-9">
+        <div className="grid items-start gap-y-12 lg:grid-cols-12 lg:gap-x-6">
+          <div className="lg:col-span-7">
+            <SectionTitle id="verify-heading">How verification works</SectionTitle>
+            <p className="mt-4 max-w-[52ch] text-lede text-ink">
+              It&apos;s an automatic domain check. It tells candidates the person posting really has
+              a company email. It doesn&apos;t mean we vouch for the job.
+            </p>
+            <InView as="ol" className="mt-10 flex flex-col gap-4">
+              {VERIFY_STEPS.map((step, index) => (
+                <InViewItem
+                  key={step}
+                  as="li"
+                  className={`max-w-xl rounded-[20px] bg-primary-soft p-6 text-statement text-navy md:p-8 ${STEP_INDENTS[index] ?? ""}`}
+                >
+                  {step}
+                </InViewItem>
+              ))}
+            </InView>
+          </div>
+          <InView className="min-w-0 lg:col-span-4 lg:col-start-9 lg:pt-3">
             <InViewItem>
               <p className="mb-4 text-small font-semibold text-ink">What candidates see</p>
               <ListingsFragment />

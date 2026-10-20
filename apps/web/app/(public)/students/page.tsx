@@ -3,7 +3,7 @@ import { CtaBand } from "@/components/marketing/CtaBand";
 import { CtaLinks } from "@/components/marketing/CtaLinks";
 import {
   JobPracticeFragment,
-  LessonFragment,
+  ScoredLineFragment,
   StrongerLineFragment,
 } from "@/components/marketing/fragments";
 import { PageHero } from "@/components/marketing/Hero";
@@ -90,69 +90,71 @@ export default function StudentsPage() {
         </div>
       </Section>
 
-      <SkillsList />
+      <SkillsList rubricHref="#rubric-heading" />
 
       <Section ground="soft" labelledBy="rubric-heading">
-        <div className="grid items-end gap-y-10 lg:grid-cols-12 lg:gap-x-6">
-          <div className="lg:col-span-6">
+        <div className="grid items-start gap-y-10 lg:grid-cols-12 lg:gap-x-6">
+          <div className="lg:sticky lg:top-28 lg:col-span-4">
             <SectionTitle id="rubric-heading">The rubric, in plain words</SectionTitle>
-            <p className="mt-4 max-w-[52ch] text-lede text-ink">
+            <p className="mt-4 max-w-[36ch] text-lede text-ink">
               Each line is scored from 1 to 5. Here is what each end of the scale sounds like.
             </p>
+            <div className="mt-8 max-w-sm">
+              <ScoredLineFragment />
+            </div>
           </div>
-          <div className="max-w-md lg:col-span-5 lg:col-start-8">
-            <LessonFragment slug="next-steps" />
-          </div>
-        </div>
-        {/* Phones get the same rubric as a list; the three-column table needs the width. */}
-        <ul className="mt-10 flex flex-col gap-3 md:hidden">
-          {RUBRIC_DIMENSIONS.map(({ key, name, low, high }) => (
-            <li key={key} className="rounded-[20px] bg-surface p-5">
-              <h3 className="font-display text-lede font-semibold text-navy">{name}</h3>
-              <dl className="mt-2 grid gap-2 text-ink">
-                <div>
-                  <dt className="text-small font-semibold">A 1 sounds like</dt>
-                  <dd>{low}</dd>
-                </div>
-                <div>
-                  <dt className="text-small font-semibold">A 5 sounds like</dt>
-                  <dd>{high}</dd>
-                </div>
-              </dl>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-12 hidden overflow-hidden rounded-[20px] bg-surface md:block">
-          <table className="w-full text-left">
-            <caption className="sr-only">Rubric lines and what a 1 and a 5 sound like</caption>
-            <thead className="text-small text-ink">
-              <tr>
-                <th scope="col" className="px-4 pt-6 pb-3 font-bold md:px-8">
-                  Line
-                </th>
-                <th scope="col" className="px-4 pt-6 pb-3 font-bold md:px-8">
-                  A 1 sounds like
-                </th>
-                <th scope="col" className="px-4 pt-6 pb-3 font-bold md:px-8">
-                  A 5 sounds like
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+          <div className="min-w-0 lg:col-span-8">
+            {/* Phones get the same rubric as a list; the three-column table needs the width. */}
+            <ul className="flex flex-col gap-3 md:hidden">
               {RUBRIC_DIMENSIONS.map(({ key, name, low, high }) => (
-                <tr key={key} className="align-baseline">
-                  <th
-                    scope="row"
-                    className="px-4 py-4 font-display text-lede font-semibold text-navy md:px-8"
-                  >
-                    {name}
-                  </th>
-                  <td className="px-4 py-4 text-ink md:px-8">{low}</td>
-                  <td className="px-4 py-4 text-ink md:px-8">{high}</td>
-                </tr>
+                <li key={key} className="rounded-[20px] bg-surface p-5">
+                  <h3 className="font-display text-lede font-semibold text-navy">{name}</h3>
+                  <dl className="mt-2 grid gap-2 text-ink">
+                    <div>
+                      <dt className="text-small font-semibold">A 1 sounds like</dt>
+                      <dd>{low}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-small font-semibold">A 5 sounds like</dt>
+                      <dd>{high}</dd>
+                    </div>
+                  </dl>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+            <div className="hidden overflow-hidden rounded-[20px] bg-surface md:block">
+              <table className="w-full text-left">
+                <caption className="sr-only">Rubric lines and what a 1 and a 5 sound like</caption>
+                <thead className="text-small text-ink">
+                  <tr>
+                    <th scope="col" className="px-4 pt-6 pb-3 font-bold md:px-8">
+                      Line
+                    </th>
+                    <th scope="col" className="px-4 pt-6 pb-3 font-bold md:px-8">
+                      A 1 sounds like
+                    </th>
+                    <th scope="col" className="px-4 pt-6 pb-3 font-bold md:px-8">
+                      A 5 sounds like
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {RUBRIC_DIMENSIONS.map(({ key, name, low, high }) => (
+                    <tr key={key} className="align-baseline">
+                      <th
+                        scope="row"
+                        className="px-4 py-4 font-display text-lede font-semibold text-navy md:px-8"
+                      >
+                        {name}
+                      </th>
+                      <td className="px-4 py-4 text-ink md:px-8">{low}</td>
+                      <td className="px-4 py-4 text-ink md:px-8">{high}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </Section>
 

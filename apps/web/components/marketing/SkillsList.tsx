@@ -1,7 +1,7 @@
 import { RUBRIC_DIMENSIONS, SKILLS } from "@pitchperfect/shared";
 import Link from "next/link";
 import { InView, InViewItem } from "@/components/motion/in-view";
-import { Section, SectionTitle } from "./Section";
+import { Section, SectionTitle, WRAP } from "./Section";
 
 const dimensionName = (key: string) =>
   RUBRIC_DIMENSIONS.find((dimension) => dimension.key === key)?.name ?? key;
@@ -40,5 +40,39 @@ export function SkillsList({ ground = "white", rubricHref }: SkillsListProps) {
         ))}
       </InView>
     </Section>
+  );
+}
+
+const skillNames = SKILLS.map((skill, index) => {
+  const name = index === 0 ? skill.title : skill.title.toLowerCase();
+  if (index === SKILLS.length - 1) return `and ${name}.`;
+  return `${name},`;
+});
+
+/**
+ * Home: the eight skills as one sentence with a run-in heading, pointing to the full list on the
+ * students page.
+ */
+export function SkillsLine() {
+  return (
+    <section aria-labelledby="skills-line-heading" className="bg-surface py-16 md:py-24">
+      <div className={WRAP}>
+        <div className="max-w-5xl text-[clamp(1.25rem,2.1vw,1.75rem)] leading-[1.45] text-ink">
+          <h2 id="skills-line-heading" className="inline font-display font-bold text-navy">
+            Eight skills to practice:
+          </h2>{" "}
+          <ul className="inline">
+            {skillNames.map((name) => (
+              <li key={name} className="inline">
+                {name}{" "}
+              </li>
+            ))}
+          </ul>
+          <Link href="/students#skills-heading" className="pp-link font-semibold text-primary">
+            What each one covers
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }

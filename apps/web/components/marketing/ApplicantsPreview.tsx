@@ -16,9 +16,9 @@ interface Pipeline {
   applicants: readonly Applicant[];
 }
 
-/** Fictional applicants for an SDR role, on the home page. */
-const SDR_PIPELINE: Pipeline = {
-  job: "Sales development representative",
+/** Fictional applicants for an account executive role, on the home page. */
+const HOME_PIPELINE: Pipeline = {
+  job: "Account executive",
   applicants: [
     {
       name: "Jordan Ellis",
@@ -31,9 +31,12 @@ const SDR_PIPELINE: Pipeline = {
   ],
 };
 
-/** Fictional applicants for an account executive role, on the employers page. */
-export const AE_PIPELINE: Pipeline = {
-  job: "Account executive",
+/**
+ * Fictional applicants for the employers page. It is the same SDR job as the job post and the
+ * interview invite on that page, so the page tells one hiring story.
+ */
+export const EMPLOYER_PIPELINE: Pipeline = {
+  job: "Sales development representative",
   applicants: [
     { name: "Hannah Lee", detail: "Economics, class of 2025", score: 91, status: "Interview" },
     { name: "Marcus Webb", detail: "Psychology, class of 2026", score: 72, status: "Shortlisted" },
@@ -44,7 +47,7 @@ export const AE_PIPELINE: Pipeline = {
 
 /** A static applicant list in the employer view, with sample data. */
 export function ApplicantsPreview({
-  pipeline = SDR_PIPELINE,
+  pipeline = HOME_PIPELINE,
   floating = false,
 }: {
   pipeline?: Pipeline;
