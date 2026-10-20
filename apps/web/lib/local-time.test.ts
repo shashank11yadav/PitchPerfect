@@ -1,5 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { formatInterviewTime, formatResetTime } from "./local-time";
+import {
+  formatInterviewTime,
+  formatResetTime,
+  isoToLocalInput,
+  localInputToIso,
+} from "./local-time";
 
 const zone = process.env.TZ;
 beforeAll(() => {
@@ -37,5 +42,31 @@ describe("local time", () => {
       "tomorrow at 2:00 AM GMT+2",
     );
     process.env.TZ = "America/New_York";
+  });
+
+  it("reads a datetime-local value in the viewer's zone and sends it as UTC", () => {
+    expect(localInputToIso("2026-11-02T15:00")).toBe("2026-11-02T20:00:00.000Z");
+    expect(localInputToIso("2026-10-21T09:30")).toBe("2026-10-21T13:30:00.000Z");
+    process.env.TZ = "Asia/Kolkata";
+    expect(localInputToIso("2026-11-02T15:00")).toBe("2026-11-02T09:30:00.000Z");
+    process.env.TZ = "America/New_York";
+  });
+
+  it("refuses anything that isn't a whole datetime-local value", () => {
+    for (const value of [
+      "",
+      "2026-11-02",
+      "15:00",
+      "2026-13-02T15:00",
+      "2026-02-30T15:00",
+      "soon",
+    ]) {
+      expect(localInputToIso(value)).toBeNull();
+    }
+  });
+
+  it("fills a datetime-local input from a UTC time, in the viewer's zone", () => {
+    expect(isoToLocalInput("2026-11-03T15:30:00.000Z")).toBe("2026-11-03T10:30");
+    expect(isoToLocalInput("2026-10-21T04:05:00.000Z")).toBe("2026-10-21T00:05");
   });
 });

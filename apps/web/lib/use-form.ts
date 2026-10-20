@@ -18,6 +18,7 @@ interface Issue {
   format?: string;
   minimum?: number | bigint;
   maximum?: number | bigint;
+  inclusive?: boolean;
 }
 
 /** Anything with zod's `safeParse`, so the shared schemas can be passed straight in. */
@@ -76,11 +77,18 @@ function messageFor(issue: Issue, path: string, required: Record<string, string>
     case "invalid_value":
       return missing;
     case "too_small":
+      if (issue.origin === "number") {
+        return issue.inclusive === false
+          ? `Enter a number above ${String(issue.minimum)}`
+          : `Enter ${String(issue.minimum)} or more`;
+      }
       if (issue.origin !== "string") return issue.message;
       return Number(issue.minimum) <= 1
         ? missing
         : `Use at least ${String(issue.minimum)} characters`;
     case "too_big":
+      if (issue.origin === "number")
+        return `Enter ${Number(issue.maximum).toLocaleString("en-US")} or less`;
       return issue.origin === "string"
         ? `Use ${String(issue.maximum)} characters or fewer`
         : issue.message;
@@ -147,17 +155,26 @@ function focusFirstError(form: HTMLFormElement | null, errors: FieldErrors) {
   }
 }
 
+/** The `value` of the button that submitted the form, e.g. "publish" beside "save". */
+function submitterValue(event: unknown): string | undefined {
+  if (typeof SubmitEvent === "undefined" || !(event instanceof SubmitEvent)) return undefined;
+  return event.submitter instanceof HTMLButtonElement && event.submitter.value !== ""
+    ? event.submitter.value
+    : undefined;
+}
+
 /**
  * The one form hook: values keyed by field path, validation with a shared zod schema, readable
  * per-field messages, server field errors, and a form-level message for everything else.
  *
- * `onSubmit` gets the parsed data. If it throws an `ApiError` with `fields` (`validation_failed`),
+ * `onSubmit` gets the parsed data, and the `value` of the submit button that was used (forms
+ * with two, like "Save draft" and "Publish"). If it throws an `ApiError` with `fields` (`validation_failed`),
  * those land on their fields; codes in `apiMessages` get the form's own wording; a `rate_limited`
  * one says how long to wait; any other error shows the api's message as `formError`.
  */
 export function useZodForm<T>(
   schema: FormSchema<T>,
-  onSubmit: (data: T) => Promise<void> | void,
+  onSubmit: (data: T, action?: string) => Promise<void> | void,
   { initial, required = {}, toInput = (input) => input, apiMessages = {} }: FormOptions,
 ) {
   const [values, setValues] = useState<FormValues>(initial);
@@ -200,10 +217,15 @@ export function useZodForm<T>(
     setErrors(fields);
   }
 
-  async function handleSubmit(event?: { preventDefault: () => void; currentTarget?: unknown }) {
+  async function handleSubmit(event?: {
+    preventDefault: () => void;
+    currentTarget?: unknown;
+    nativeEvent?: unknown;
+  }) {
     event?.preventDefault();
     if (busy.current) return;
     const form = event?.currentTarget instanceof HTMLFormElement ? event.currentTarget : null;
+    const action = submitterValue(event?.nativeEvent);
 
     const parsed = schema.safeParse(toInput(toNested(values)));
     if (!parsed.success) {
@@ -223,7 +245,7 @@ export function useZodForm<T>(
     setErrors({});
     setFormError(null);
     try {
-      await onSubmit(parsed.data);
+      await (action === undefined ? onSubmit(parsed.data) : onSubmit(parsed.data, action));
     } catch (error) {
       if (error instanceof ApiError && Object.keys(error.fields).length > 0) {
         const { known, others } = splitFields(error.fields, initial);

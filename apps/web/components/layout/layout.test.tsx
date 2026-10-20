@@ -218,6 +218,10 @@ describe("AppShell", () => {
     expect(labels.length).toBeLessThanOrEqual(5);
   });
 
+  it("keeps employer settings in the account menu, not the nav", () => {
+    expect(EMPLOYER_NAV.map((link) => link.label)).toEqual(["Dashboard", "Jobs", "Company"]);
+  });
+
   it("opens the full menu on mobile", async () => {
     render(
       <AppShell links={EMPLOYER_NAV} title="Jobs">

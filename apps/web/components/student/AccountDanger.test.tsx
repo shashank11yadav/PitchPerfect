@@ -101,4 +101,15 @@ describe("AccountDanger", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/password isn.t right/i);
     expect(router.push).not.toHaveBeenCalled();
   });
+
+  it("tells an employer what deleting does to their company, jobs and applicants", () => {
+    serveApi({ "GET /api/auth/me": () => jsonResponse(studentMe()) });
+    renderSignedIn(<AccountDanger role="employer" />);
+    expect(
+      screen.getByText(
+        /deletes your company and all of its jobs\. Every open application is closed, and each of those applicants gets an email/,
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/résumé/)).not.toBeInTheDocument();
+  });
 });

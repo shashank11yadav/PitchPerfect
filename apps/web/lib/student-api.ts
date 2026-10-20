@@ -2,44 +2,20 @@ import {
   isSkillSlug,
   type AttemptSummary,
   type AttemptView,
-  type Page,
   type PracticeQuota,
   type ResumeInfo,
   type SkillSlug,
   type StartedSession,
   type StudentApplicationView,
 } from "@pitchperfect/shared";
-import { ApiError, type Parser } from "./api";
+import type { Parser } from "./api";
+import { isObject, pageOf, unexpected } from "./parse";
 
 /**
  * Parsers for the student's own api answers. These responses have shared TypeScript types but no
  * zod schemas, so each parser checks the envelope the view depends on and trusts the api for the
  * rest; anything else is reported like any other bad answer.
  */
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const unexpected = (what: string) =>
-  new ApiError(502, "internal_error", `Unexpected ${what} response`);
-
-/** `{ items, page, pageSize, total }`. */
-function pageOf<T>(what: string): Parser<Page<T>> {
-  return {
-    parse(data) {
-      if (
-        isObject(data) &&
-        Array.isArray(data.items) &&
-        typeof data.page === "number" &&
-        typeof data.pageSize === "number" &&
-        typeof data.total === "number"
-      ) {
-        return data as unknown as Page<T>;
-      }
-      throw unexpected(what);
-    },
-  };
-}
 
 export const ApplicationsPage = pageOf<StudentApplicationView>("/me/applications");
 export const AttemptsPage = pageOf<AttemptSummary>("/practice/attempts");

@@ -1,4 +1,4 @@
-import type { EmploymentType, Workplace } from "@pitchperfect/shared";
+import type { EmploymentType, JobStatus, PayFrequency, Workplace } from "@pitchperfect/shared";
 
 export const WORKPLACE_LABELS: Record<Workplace, string> = {
   onsite: "On-site",
@@ -11,6 +11,19 @@ export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
   part_time: "Part-time",
   internship: "Internship",
   contract: "Contract",
+};
+
+export const PAY_FREQUENCY_LABELS: Record<PayFrequency, string> = {
+  hourly: "per hour",
+  weekly: "per week",
+  monthly: "per month",
+  annually: "per year",
+};
+
+export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
+  draft: "Draft",
+  active: "Active",
+  archived: "Archived",
 };
 
 const POSTED = new Intl.DateTimeFormat("en-US", {

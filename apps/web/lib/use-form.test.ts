@@ -1,4 +1,4 @@
-import { ForgotPasswordSchema, SignupSchema } from "@pitchperfect/shared";
+import { ForgotPasswordSchema, LIMITS, PaySchema, SignupSchema } from "@pitchperfect/shared";
 import { act, renderHook } from "@testing-library/react";
 import type { ChangeEvent } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -168,6 +168,40 @@ describe("useZodForm", () => {
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ gradYear: new Date().getUTCFullYear(), ageConfirmed: true }),
     );
+  });
+
+  it("says what's wrong with a number in words", async () => {
+    const asPay = (input: Record<string, unknown>) => ({
+      type: "exact",
+      amount: Number(input.amount),
+      currency: "USD",
+      frequency: "hourly",
+      commission: false,
+    });
+    const { result } = renderHook(() =>
+      useZodForm(PaySchema, vi.fn(), { initial: { amount: "0" }, toInput: asPay }),
+    );
+    await act(() => result.current.handleSubmit(fakeEvent()));
+    expect(result.current.errors.amount).toBe("Enter a number above 0");
+    act(() => {
+      result.current.register("amount").onChange(change(String(LIMITS.payMax + 1)));
+    });
+    await act(() => result.current.handleSubmit(fakeEvent()));
+    expect(result.current.errors.amount).toBe("Enter 10,000,000 or less");
+  });
+
+  it("passes on the value of the button that submitted the form", async () => {
+    const onSubmit = vi.fn();
+    const { result } = nameForm(onSubmit);
+    const form = document.createElement("form");
+    const publish = document.createElement("button");
+    publish.value = "publish";
+    form.append(publish);
+    const nativeEvent = new SubmitEvent("submit", { submitter: publish });
+    await act(() =>
+      result.current.handleSubmit({ ...fakeEvent(), currentTarget: form, nativeEvent }),
+    );
+    expect(onSubmit).toHaveBeenCalledWith({ email: "sam@example.test" }, "publish");
   });
 
   it("clears a field's error when it changes", async () => {

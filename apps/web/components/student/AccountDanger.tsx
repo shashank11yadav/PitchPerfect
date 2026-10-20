@@ -1,6 +1,6 @@
 "use client";
 
-import { DeleteAccountSchema } from "@pitchperfect/shared";
+import { DeleteAccountSchema, type Role } from "@pitchperfect/shared";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { FormAlert } from "@/components/auth/form-parts";
 import { Button } from "@/components/ui/Button";
@@ -17,11 +17,19 @@ const passwordOnly = (input: Record<string, unknown>) => ({
   currentPassword: input.currentPassword,
 });
 
+/** What goes with the account, per role (docs/api.md `DELETE /api/me`). */
+const WHAT_GOES: Record<Role, string> = {
+  student:
+    "This permanently deletes your profile, résumé, practice scorecards, saved jobs and applications. Employers you applied to will no longer see your applications. There’s no undo.",
+  employer:
+    "This permanently deletes your company and all of its jobs. Every open application is closed, and each of those applicants gets an email saying applications have closed. There’s no undo.",
+};
+
 /**
- * Deletes the student's account for good. The button stays disabled until they type DELETE and
+ * Deletes the signed-in account for good. The button stays disabled until they type DELETE and
  * their current password; afterwards the session is gone, so this signs out and goes home.
  */
-export function AccountDanger() {
+export function AccountDanger({ role = "student" }: { role?: Role }) {
   const { signOut } = useSession();
   const { values, register, errors, formError, submitting, handleSubmit } = useZodForm(
     DeleteAccountSchema,
@@ -42,11 +50,7 @@ export function AccountDanger() {
 
   return (
     <form noValidate onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-5">
-      <p className="max-w-[62ch] text-ink">
-        This permanently deletes your profile, résumé, practice scorecards, saved jobs and
-        applications. Employers you applied to will no longer see your applications. There&apos;s no
-        undo.
-      </p>
+      <p className="max-w-[62ch] text-ink">{WHAT_GOES[role]}</p>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label={`Type ${CONFIRM_WORD} to confirm`}>
           <Input

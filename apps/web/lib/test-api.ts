@@ -62,10 +62,20 @@ export function serveApi(routes: Record<string, Route>) {
   return fetchMock;
 }
 
-/** How many times `fetch` was called for `"METHOD /api/path"`. */
-export function callsTo(fetchMock: ReturnType<typeof serveApi>, key: string): number {
-  return fetchMock.mock.calls.filter(([input, init]) => {
+type FetchMock = ReturnType<typeof serveApi>;
+
+const callsFor = (fetchMock: FetchMock, key: string) =>
+  fetchMock.mock.calls.filter(([input, init]) => {
     const url = input instanceof Request ? input.url : input.toString();
     return `${init?.method ?? "GET"} ${url}` === key;
-  }).length;
+  });
+
+/** How many times `fetch` was called for `"METHOD /api/path"`. */
+export function callsTo(fetchMock: FetchMock, key: string): number {
+  return callsFor(fetchMock, key).length;
+}
+
+/** The parsed JSON body of the last `"METHOD /api/path"` request. */
+export function lastBody(fetchMock: FetchMock, key: string): unknown {
+  return bodyOf(callsFor(fetchMock, key).at(-1)?.[1]);
 }

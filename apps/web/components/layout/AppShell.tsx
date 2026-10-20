@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   Menu,
   Mic,
-  Settings,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -28,7 +27,6 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   jobs: Briefcase,
   applications: FileText,
   company: Building2,
-  settings: Settings,
 };
 
 const MAX_TABS = 5;

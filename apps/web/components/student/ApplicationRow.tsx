@@ -1,13 +1,13 @@
 "use client";
 
 import type { ApplicationClosedReason, StudentApplicationView } from "@pitchperfect/shared";
-import { ArrowUpRight, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { InterviewSlot } from "@/components/jobs/InterviewSlot";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { apiFetch } from "@/lib/api";
-import { formatInterviewTime, formatLocalDate } from "@/lib/local-time";
+import { formatLocalDate } from "@/lib/local-time";
 import { attemptPath } from "@/lib/practice/paths";
 import { OneApplication } from "@/lib/student-api";
 import { StatusPill } from "./StatusPill";
@@ -19,9 +19,6 @@ const CLOSED_BECAUSE: Record<ApplicationClosedReason, string> = {
   employer_left: "The employer left PitchPerfect, so this application was closed.",
   job_archived: "This job was archived, so the application was closed.",
 };
-
-/** Only ever link an https meeting room; the api enforces it too. */
-const isHttps = (value: string) => URL.canParse(value) && new URL(value).protocol === "https:";
 
 interface ApplicationRowProps {
   application: StudentApplicationView;
@@ -77,27 +74,7 @@ export function ApplicationRow({ application, onChange }: ApplicationRowProps) {
           <p className="mt-3 text-ink">{CLOSED_BECAUSE[closedReason]}</p>
         )}
         {status === "interview" && interview && (
-          <div className="mt-4 flex flex-col gap-2 rounded-control bg-primary-soft px-4 py-3 text-ink">
-            <p className="flex items-start gap-2 font-semibold">
-              <CalendarClock aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
-              <span>
-                <span className="sr-only">Interview: </span>
-                <time dateTime={interview.startsAt}>{formatInterviewTime(interview.startsAt)}</time>
-              </span>
-            </p>
-            {isHttps(interview.meetingUrl) && (
-              <a
-                href={interview.meetingUrl}
-                target="_blank"
-                rel="noopener noreferrer nofollow"
-                className="pp-link inline-flex items-center gap-1 self-start rounded-control pl-7 font-semibold text-primary"
-              >
-                Join the interview
-                <ArrowUpRight aria-hidden="true" className="size-4" />
-                <span className="sr-only">(opens in a new tab)</span>
-              </a>
-            )}
-          </div>
+          <InterviewSlot interview={interview} linkLabel="Join the interview" className="mt-4" />
         )}
         {application.sharedAttemptId && (
           <p className="mt-3 text-small text-muted">

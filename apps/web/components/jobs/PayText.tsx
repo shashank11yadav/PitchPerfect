@@ -1,11 +1,5 @@
-import type { JobPay, PayFrequency } from "@pitchperfect/shared";
-
-const PER: Record<PayFrequency, string> = {
-  hourly: "per hour",
-  weekly: "per week",
-  monthly: "per month",
-  annually: "per year",
-};
+import type { JobPay } from "@pitchperfect/shared";
+import { PAY_FREQUENCY_LABELS } from "@/lib/job-labels";
 
 /** "$22–$28 per hour + commission", "€45,000 per year", or "Unpaid". */
 export function formatPay(pay: JobPay): string {
@@ -20,7 +14,7 @@ export function formatPay(pay: JobPay): string {
     maximumFractionDigits: digits,
   });
   const amount = amounts.map((value) => money.format(value)).join("–");
-  return `${amount} ${PER[pay.frequency]}${pay.commission ? " + commission" : ""}`;
+  return `${amount} ${PAY_FREQUENCY_LABELS[pay.frequency]}${pay.commission ? " + commission" : ""}`;
 }
 
 interface PayTextProps {

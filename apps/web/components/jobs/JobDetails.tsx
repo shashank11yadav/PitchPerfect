@@ -39,6 +39,8 @@ const SHELL: Record<
 
 const LINK_REL = "noopener noreferrer nofollow";
 
+const SECTION_LEVEL = { h1: "h2", h2: "h3", h3: "h4" } as const;
+
 /** Only absolute https URLs are ever linked; anything else is left out. */
 function httpsHref(value: string | null): string | null {
   if (!value || !URL.canParse(value)) return null;
@@ -86,8 +88,11 @@ interface JobDetailsProps {
   /** A link back to the list this job came from. */
   back?: { href: string; label: string };
   variant?: Variant;
-  /** `h2` inside the app, where the shell's title is the page's `h1`; sections step down too. */
-  titleAs?: "h1" | "h2";
+  /**
+   * `h2` inside the app, where the shell's title is the page's `h1`; `h3` for a preview under a
+   * page's own `h2`. Sections step down too.
+   */
+  titleAs?: "h1" | "h2" | "h3";
 }
 
 /** One job, as students, employers and visitors all see it. The description goes through SafeHtml. */
@@ -100,7 +105,7 @@ export function JobDetails({
   titleAs: Title = "h1",
 }: JobDetailsProps) {
   const shell = SHELL[variant];
-  const Section = Title === "h1" ? "h2" : "h3";
+  const Section = SECTION_LEVEL[Title];
   const website = httpsHref(company.website);
   const linkedin = httpsHref(company.linkedinUrl);
   const facts: [string, string][] = [

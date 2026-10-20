@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/Button";
 
-/** A student page that crashed: keep the shell and offer the retry. */
-export default function StudentError({ retry }: { error: unknown; retry: () => void }) {
+/** A signed-in page (student or employer) that crashed: keep the shell and offer the retry. */
+export default function AppError({ retry }: { error: unknown; retry: () => void }) {
   return (
     <div className="flex flex-col items-start gap-4">
       <h2 className="text-h3">This page didn’t load</h2>

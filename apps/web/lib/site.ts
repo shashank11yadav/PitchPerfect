@@ -9,7 +9,7 @@ export const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replac
 
 /** Icon names `AppShell` knows how to draw; links stay plain data so server code can pass them. */
 export type NavIcon =
-  "dashboard" | "learn" | "practice" | "history" | "jobs" | "applications" | "company" | "settings";
+  "dashboard" | "learn" | "practice" | "history" | "jobs" | "applications" | "company";
 
 export interface NavLink {
   href: string;
@@ -37,11 +37,11 @@ export const STUDENT_NAV: readonly NavLink[] = [
   { href: "/app/applications", label: "Applications", icon: "applications", tab: true },
 ];
 
+/** Settings lives in the account menu, as for students. */
 export const EMPLOYER_NAV: readonly NavLink[] = [
   { href: "/employer", label: "Dashboard", icon: "dashboard", tab: true },
   { href: "/employer/jobs", label: "Jobs", icon: "jobs", tab: true },
   { href: "/employer/company", label: "Company", icon: "company", tab: true },
-  { href: "/employer/settings", label: "Settings", icon: "settings", tab: true },
 ];
 
 export const LEGAL_NAV: readonly NavLink[] = [

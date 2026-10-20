@@ -91,4 +91,13 @@ describe("JobDetails", () => {
     expect(screen.getByRole("heading", { level: 3, name: /about quarrow/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: "About the role" })).toBeInTheDocument();
   });
+
+  it("steps down two levels for a preview under a page's own h2", () => {
+    render(<JobDetails job={publicJob()} company={publicCompany()} titleAs="h3" />);
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Sales development representative" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 4, name: /about quarrow/i })).toBeInTheDocument();
+  });
 });

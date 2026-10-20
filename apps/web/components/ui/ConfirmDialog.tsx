@@ -14,6 +14,10 @@ interface ConfirmDialogProps {
   cancelLabel: string;
   /** Runs on confirm; the dialog closes when it resolves and says what went wrong if it throws. */
   onConfirm: () => Promise<void>;
+  /** "primary" for a final step that isn't destructive, like marking someone hired. */
+  tone?: "danger" | "primary";
+  /** Wording for api error codes, as in `useZodForm`. */
+  apiMessages?: Record<string, string>;
 }
 
 /** "Are you sure?" for actions that can't be undone. The safe choice gets focus first. */
@@ -25,6 +29,8 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   onConfirm,
+  tone = "danger",
+  apiMessages,
 }: ConfirmDialogProps) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -44,7 +50,7 @@ export function ConfirmDialog({
       onClose();
     } catch (error) {
       setBusy(false);
-      setProblem(formMessage(error));
+      setProblem(formMessage(error, apiMessages));
     }
   }
 
@@ -58,7 +64,7 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={close} disabled={busy}>
             {cancelLabel}
           </Button>
-          <Button variant="danger" loading={busy} onClick={() => void confirm()}>
+          <Button variant={tone} loading={busy} onClick={() => void confirm()}>
             {confirmLabel}
           </Button>
         </div>
