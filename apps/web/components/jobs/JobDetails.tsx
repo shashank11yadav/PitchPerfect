@@ -214,7 +214,8 @@ export function JobDetails({
             </div>
             {company.verification !== "verified" && website && (
               <p className="text-small">
-                Website they gave: <span className="font-semibold">{new URL(website).host}</span>
+                Website (not checked):{" "}
+                <span className="font-semibold">{new URL(website).host}</span>
               </p>
             )}
             {company.verification === "verified" && (website ?? linkedin) && (

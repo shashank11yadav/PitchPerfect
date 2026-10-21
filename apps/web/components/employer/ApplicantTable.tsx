@@ -5,8 +5,9 @@ import {
   type ApplicationStatus,
   type EmployerApplicationView,
 } from "@pitchperfect/shared";
-import { ArrowLeft, Bookmark, Users } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Bookmark, ChevronRight, Users } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EMPLOYER_STATUS_LABELS, StatusPill } from "@/components/student/StatusPill";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { DataTable, type Column } from "@/components/ui/DataTable";
@@ -43,6 +44,10 @@ const rowId = (id: string) => `applicant-${id}`;
 interface ApplicantTableProps {
   jobId: string;
   jobTitle: string;
+  /** The job's own page, the first step of the breadcrumb while an applicant is open. */
+  jobHref?: string;
+  /** Shown above the list, and replaced by the breadcrumb while an applicant is open. */
+  header?: ReactNode;
   /** An application to open straight away, e.g. from the dashboard's recent list. */
   initialId?: string | undefined;
 }
@@ -51,7 +56,13 @@ interface ApplicantTableProps {
  * A job's applicants, newest first, filtered by status and by the ones the employer saved.
  * Opening one shows its details in place of the list; closing goes back to the same row.
  */
-export function ApplicantTable({ jobId, jobTitle, initialId }: ApplicantTableProps) {
+export function ApplicantTable({
+  jobId,
+  jobTitle,
+  jobHref,
+  header,
+  initialId,
+}: ApplicantTableProps) {
   const [status, setStatus] = useState<StatusFilter>("all");
   const [saved, setSaved] = useState(false);
   const [page, setPage] = useState(1);
@@ -99,18 +110,36 @@ export function ApplicantTable({ jobId, jobTitle, initialId }: ApplicantTablePro
   };
 
   if (selected) {
+    const crumb = <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted" />;
     return (
       <div className="flex flex-col gap-4">
-        <button
-          type="button"
-          onClick={() => {
-            back(selected);
-          }}
-          className={`${TEXT_BUTTON} inline-flex items-center gap-1.5 self-start py-1`}
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" />
-          All applicants
-        </button>
+        <nav aria-label="Breadcrumb">
+          <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-small">
+            {jobHref && (
+              <li className="flex min-w-0 items-center gap-2">
+                <Link href={jobHref} className={`${TEXT_BUTTON} [overflow-wrap:anywhere]`}>
+                  {jobTitle}
+                </Link>
+                {crumb}
+              </li>
+            )}
+            <li className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  back(selected);
+                }}
+                className={`${TEXT_BUTTON} py-1`}
+              >
+                Applicants
+              </button>
+              {crumb}
+            </li>
+            <li aria-current="page" className="font-semibold text-ink">
+              {selected.student.firstName} {selected.student.lastName}
+            </li>
+          </ol>
+        </nav>
         <ApplicantDrawer application={selected} jobTitle={jobTitle} onChange={replace} />
       </div>
     );
@@ -172,72 +201,75 @@ export function ApplicantTable({ jobId, jobTitle, initialId }: ApplicantTablePro
   ];
 
   return (
-    <div className="flex flex-col gap-5">
-      <div
-        ref={filters}
-        className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-      >
-        <FilterTabs
-          label="Status"
-          options={STATUS_FILTERS}
-          value={status}
-          onChange={(next) => {
-            setStatus(next);
-            setPage(1);
-          }}
-        />
-        <Checkbox
-          label="Saved only"
-          checked={saved}
-          onChange={(event) => {
-            setSaved(event.target.checked);
-            setPage(1);
-          }}
-          className="shrink-0"
-        />
-      </div>
+    <div className="flex flex-col gap-6">
+      {header}
+      <div className="flex flex-col gap-5">
+        <div
+          ref={filters}
+          className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+        >
+          <FilterTabs
+            label="Status"
+            options={STATUS_FILTERS}
+            value={status}
+            onChange={(next) => {
+              setStatus(next);
+              setPage(1);
+            }}
+          />
+          <Checkbox
+            label="Saved only"
+            checked={saved}
+            onChange={(event) => {
+              setSaved(event.target.checked);
+              setPage(1);
+            }}
+            className="shrink-0"
+          />
+        </div>
 
-      {list.state === "loading" && <Loading label="Loading applicants" lines={4} />}
-      {list.state === "error" && <LoadError what="the applicants" onRetry={list.reload} />}
-      {list.state === "ready" &&
-        (list.data.total === 0 ? (
-          filtered ? (
-            <p className="text-ink">
-              No applicants match these filters.{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus("all");
-                  setSaved(false);
-                }}
-                className={TEXT_BUTTON}
-              >
-                Show everyone
-              </button>
-            </p>
+        {list.state === "loading" && <Loading label="Loading applicants" lines={4} />}
+        {list.state === "error" && <LoadError what="the applicants" onRetry={list.reload} />}
+        {list.state === "ready" &&
+          (list.data.total === 0 ? (
+            filtered ? (
+              <p className="text-ink">
+                No applicants match these filters.{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus("all");
+                    setSaved(false);
+                  }}
+                  className={TEXT_BUTTON}
+                >
+                  Show everyone
+                </button>
+              </p>
+            ) : (
+              <EmptyState
+                icon={<Users className="size-6" />}
+                title="No applicants yet"
+                description="When students apply, they show up here with their school and major, plus a résumé and practice scorecard if they attached them."
+              />
+            )
           ) : (
-            <EmptyState
-              icon={<Users className="size-6" />}
-              title="No applicants yet"
-              description="When students apply, they show up here with their school and major, plus a résumé and practice scorecard if they attached them."
-            />
-          )
-        ) : (
-          <>
-            <DataTable
-              caption={`Applicants for ${jobTitle}`}
-              columns={columns}
-              rows={list.data.items}
-              rowKey={(row) => row.id}
-            />
-            <Pagination
-              page={list.data.page}
-              pageSize={list.data.pageSize}
-              total={list.data.total}
-              onPageChange={setPage}
-            />
-          </>
-        ))}
+            <>
+              <DataTable
+                caption={`Applicants for ${jobTitle}`}
+                columns={columns}
+                rows={list.data.items}
+                rowKey={(row) => row.id}
+              />
+              <Pagination
+                page={list.data.page}
+                pageSize={list.data.pageSize}
+                total={list.data.total}
+                onPageChange={setPage}
+              />
+            </>
+          ))}
+      </div>
     </div>
   );
 }

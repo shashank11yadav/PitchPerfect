@@ -125,7 +125,7 @@ describe("ApplicantTable", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Save" })).toHaveAttribute("aria-pressed", "false");
     });
-    await userEvent.click(screen.getByRole("button", { name: "All applicants" }));
+    await userEvent.click(screen.getByRole("button", { name: "Applicants" }));
     expect(await screen.findByText(/No applicants match these filters/)).toBeVisible();
     expect(callsTo(fetchMock, `GET ${LIST}?page=1&saved=true`)).toBe(2);
   });

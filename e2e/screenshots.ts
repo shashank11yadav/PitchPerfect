@@ -1,9 +1,12 @@
 /**
- * The README screenshots, taken from a running stack with the demo data loaded:
+ * The README screenshots, taken from a running stack with the demo data loaded, for example the
+ * containers:
  *
  *   docker compose --profile full up --build -d
  *   docker compose exec -e SEED_DEMO_PASSWORD=… api node dist/scripts/seed.js --demo
  *   SEED_DEMO_PASSWORD=… npx tsx e2e/screenshots.ts
+ *
+ * Keep the product's default practice limits on that stack, so no raised test limit shows up.
  *
  * BASE_URL defaults to http://localhost:3000. Each run starts one practice call as the demo
  * student, so it uses one of that student's daily practice sessions.
@@ -17,10 +20,13 @@ const PASSWORD = process.env.SEED_DEMO_PASSWORD;
 const OUT_DIR = resolve(import.meta.dirname, "../docs/images");
 const VIEWPORT = { width: 1280, height: 800 };
 
-/** What the student says on the call: an opener and a first value line. */
+/**
+ * What the student says on the call: an opener and a first value line, written for the buyer the
+ * offline `fake` partner plays (an IT lead at a group of dental clinics).
+ */
 const LINES = [
-  "Hi Sam, thanks for making time. I work with operations teams that lose hours every week chasing late shipments. How do you find out about a delay today?",
-  "Got it, so someone checks the carrier sites by hand each morning. Teams like yours usually get most of that time back once delays alert the right person on their own. Who owns that check right now?",
+  "Hi Sam, thanks for making time. I work with clinic groups whose front desks spend hours a week on appointment reminders. How do your clinics handle reminders today?",
+  "Got it, so the front desk phones everyone the day before. Groups like yours usually get most of that time back once reminders go out on their own. Who owns that process right now?",
 ];
 
 async function signIn(browser: Browser, email: string, password: string): Promise<Page> {

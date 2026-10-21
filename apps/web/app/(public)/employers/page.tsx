@@ -100,11 +100,13 @@ export default function EmployersPage() {
         </p>
         <div className="mt-12 grid items-start gap-y-12 md:mt-16 lg:grid-cols-12 lg:gap-x-6">
           <StatementRows items={FEATURES} layout="pinned" className="lg:col-span-6" />
-          <InView className="order-first grid max-w-md gap-4 lg:sticky lg:top-28 lg:order-none lg:col-span-5 lg:col-start-8">
+          {/* The invite sits lower than the post, the order they happen in, so the two cards run
+              the length of the list beside them. */}
+          <InView className="order-first grid max-w-md gap-4 lg:order-none lg:col-span-5 lg:col-start-8 lg:gap-0">
             <InViewItem>
               <JobPostFragment />
             </InViewItem>
-            <InViewItem>
+            <InViewItem className="lg:mt-40 lg:ml-12">
               <InviteFragment />
             </InViewItem>
           </InView>

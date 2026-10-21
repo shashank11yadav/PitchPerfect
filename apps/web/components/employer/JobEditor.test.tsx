@@ -14,7 +14,7 @@ import {
 } from "@/lib/test-api";
 import { JobApplicants } from "./JobApplicants";
 import { JobEditor } from "./JobEditor";
-import { JOB_ID, company, employerJob } from "./test-fixtures";
+import { JOB_ID, company, applicant as employerApplication, employerJob } from "./test-fixtures";
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -148,5 +148,30 @@ describe("JobApplicants", () => {
     render(<JobApplicants id="a/b" />);
     expect(await screen.findByRole("heading", { name: "This job isn’t here" })).toBeVisible();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("shows one breadcrumb row instead of two back links while an applicant is open", async () => {
+    const applicant = employerApplication();
+    serveApi({
+      [`GET /api/employer/jobs/${JOB_ID}`]: () => jsonResponse({ job: employerJob() }),
+      [`GET /api/employer/jobs/${JOB_ID}/applications?page=1`]: () =>
+        jsonResponse({ items: [applicant], page: 1, pageSize: 20, total: 1 }),
+    });
+    render(<JobApplicants id={JOB_ID} />);
+    const name = `${applicant.student.firstName} ${applicant.student.lastName}`;
+    expect(await screen.findByRole("link", { name: "Back to the job" })).toBeVisible();
+    await userEvent.click(await screen.findByRole("button", { name }));
+
+    const trail = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(within(trail).getByRole("link", { name: employerJob().title })).toHaveAttribute(
+      "href",
+      `/employer/jobs/${JOB_ID}`,
+    );
+    expect(within(trail).getByText(name)).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("link", { name: "Back to the job" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "All applicants" })).not.toBeInTheDocument();
+
+    await userEvent.click(within(trail).getByRole("button", { name: "Applicants" }));
+    expect(await screen.findByRole("table", { name: /Applicants/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Back to the job" })).toBeVisible();
   });
 });

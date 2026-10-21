@@ -17,7 +17,7 @@ PitchPerfect is a practice and hiring site for entry-level sales jobs. A student
 
 ## Screenshots
 
-Taken from the containers with the demo data loaded (`npx tsx e2e/screenshots.ts`).
+Taken with `npx tsx e2e/screenshots.ts` from a local production build (`npm run build`, then `next start`) running the `fake` practice partner, the demo data, and the default practice limits.
 
 ![Home page: the headline "Practice your pitch. Get hired." beside a sample practice call](docs/images/home.png)
 

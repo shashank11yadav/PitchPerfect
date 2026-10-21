@@ -1,30 +1,10 @@
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { PageHero } from "@/components/marketing/Hero";
 import { Section, SectionTitle } from "@/components/marketing/Section";
-import { StatementRows } from "@/components/marketing/StatementRows";
 import { COPY_LIMITS as L } from "@/content/limits";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.about);
-
-const BELIEFS = [
-  {
-    title: "The partner says it’s AI",
-    body: "It plays a believable buyer, but it never claims to be a person, and it tells you what it is if you ask.",
-  },
-  {
-    title: "Every score has a reason",
-    body: "A number on its own teaches you nothing. Each rubric line comes with the reason for it, and quotes are checked against what you said.",
-  },
-  {
-    title: "Practice you can show",
-    body: "A résumé says where you studied. A shared scorecard shows how you handle a buyer, and you pick who sees it.",
-  },
-  {
-    title: "Private until you share",
-    body: `Employers see a scorecard only if you attach it to an application. Transcripts expire after ${L.retentionDays} days, and deleting your account deletes your data.`,
-  },
-] as const;
 
 export default function AboutPage() {
   return (
@@ -64,7 +44,25 @@ export default function AboutPage() {
         <SectionTitle id="beliefs-heading" size="title" className="max-w-[18ch]">
           What we hold to
         </SectionTitle>
-        <StatementRows items={BELIEFS} className="mt-12 md:mt-16" />
+        {/* Running prose in two columns, read down then across, like a printed page. */}
+        <div className="mt-10 flex flex-col gap-5 text-statement text-ink md:mt-14 lg:block lg:columns-2 lg:gap-x-16">
+          <p className="break-inside-avoid lg:mb-5">
+            The partner is an AI, and it says so. It plays a believable buyer, but it never claims
+            to be a person, and if you ask what it is, it tells you.
+          </p>
+          <p className="break-inside-avoid lg:mb-5">
+            A number on its own teaches you nothing. Every rubric line on a scorecard comes with the
+            reason for it, and every quote is checked against what you actually said.
+          </p>
+          <p className="break-inside-avoid lg:mb-5">
+            A résumé says where you studied. A shared scorecard shows how you handle a buyer, and
+            you choose who sees it: employers only get one when you attach it to an application.
+          </p>
+          <p className="break-inside-avoid lg:mb-5">
+            Transcripts expire after {L.retentionDays} days. Delete your account and your data goes
+            with it.
+          </p>
+        </div>
       </Section>
 
       <Section

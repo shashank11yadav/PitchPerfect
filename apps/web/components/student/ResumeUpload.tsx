@@ -79,7 +79,9 @@ export function ResumeUpload() {
         setNews("Résumé uploaded. Employers see it when you apply to their jobs.");
       } else {
         // Stored, but not in a shape we know: go back to what the account says.
-        setError("We couldn’t confirm the upload. Check the line above before trying again.");
+        setError(
+          "We couldn’t confirm the upload. If the line above says you have a résumé on file, it worked; if not, upload it again.",
+        );
         setOnFile(null);
         setUploadedAt(null);
       }

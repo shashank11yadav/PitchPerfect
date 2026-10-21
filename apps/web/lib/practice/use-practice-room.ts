@@ -165,6 +165,10 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
     }
   }, [skill, jobId, speakReply]);
 
+  /**
+   * Applies a stream event. Errors never get here: `send` handles them, since it knows whether
+   * the reply had started.
+   */
   const onEvent = useCallback(
     (event: PracticeEvent) => {
       switch (event.type) {
@@ -181,9 +185,6 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
           return;
         case "ended":
           dispatch(event);
-          return;
-        case "error":
-          dispatch({ type: "stream_error", code: event.code });
           return;
       }
     },

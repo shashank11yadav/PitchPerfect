@@ -3,8 +3,8 @@ import Link from "next/link";
 import { InView, InViewItem } from "@/components/motion/in-view";
 import { Section, SectionTitle, WRAP } from "./Section";
 
+/** One to twelve, as words. */
 const COUNT_WORDS = [
-  "No",
   "One",
   "Two",
   "Three",
@@ -20,7 +20,7 @@ const COUNT_WORDS = [
 ];
 
 /** The number of skills as a word ("Eight"), or digits past twelve. */
-const skillCount = COUNT_WORDS[SKILLS.length] ?? String(SKILLS.length);
+const skillCount = COUNT_WORDS[SKILLS.length - 1] ?? String(SKILLS.length);
 
 const dimensionName = (key: string) =>
   RUBRIC_DIMENSIONS.find((dimension) => dimension.key === key)?.name ?? key;
