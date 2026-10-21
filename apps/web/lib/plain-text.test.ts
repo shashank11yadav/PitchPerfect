@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { htmlToText, truncateText } from "./plain-text";
+import { curlyApostrophes, htmlToText, truncateText } from "./plain-text";
 
 describe("htmlToText", () => {
   it("drops tags, keeps the words apart, and decodes common entities", () => {
@@ -29,5 +29,13 @@ describe("truncateText", () => {
     const cut = truncateText(text, 155);
     expect(cut.length).toBeLessThanOrEqual(155);
     expect(cut.endsWith("word…")).toBe(true);
+  });
+});
+
+describe("curlyApostrophes", () => {
+  it("curls apostrophes inside words and leaves other quotes alone", () => {
+    expect(curlyApostrophes("That's fair, and I'd be skeptical 'too'.")).toBe(
+      "That’s fair, and I’d be skeptical 'too'.",
+    );
   });
 });

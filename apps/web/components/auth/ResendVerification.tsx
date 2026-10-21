@@ -45,7 +45,7 @@ export function ResendVerification({
       <Button size={size} variant={variant} loading={sending} onClick={() => void resend()}>
         Send a new link
       </Button>
-      <p role="status" className="text-body text-ink empty:hidden">
+      <p role="status" className="text-body text-ink empty:sr-only">
         {news}
       </p>
     </div>

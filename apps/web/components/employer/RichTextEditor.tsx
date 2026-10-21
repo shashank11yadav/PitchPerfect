@@ -443,7 +443,7 @@ export function RichTextEditor({
           />
         )}
         <EditorContent editor={editor} />
-        <p role="alert" className="px-3.5 pb-3 text-small text-danger empty:hidden">
+        <p role="alert" className="px-3.5 pb-3 text-small text-danger empty:sr-only">
           {pasteProblem}
         </p>
       </div>

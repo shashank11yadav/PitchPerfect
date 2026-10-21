@@ -1,36 +1,29 @@
-import { InView, InViewItem } from "@/components/motion/in-view";
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { PageHero } from "@/components/marketing/Hero";
-import { Section, SectionTitle, WRAP } from "@/components/marketing/Section";
+import { Section, SectionTitle } from "@/components/marketing/Section";
+import { StatementRows } from "@/components/marketing/StatementRows";
 import { COPY_LIMITS as L } from "@/content/limits";
-import { cn } from "@/lib/cn";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.about);
 
 const BELIEFS = [
   {
-    title: "Honest practice",
-    body: "The partner is an AI and says so. It plays a believable buyer, but it never pretends to be a person.",
+    title: "The partner says it’s AI",
+    body: "It plays a believable buyer, but it never claims to be a person, and it tells you what it is if you ask.",
   },
   {
-    title: "Specific feedback",
-    body: "A score is only useful if you can see why. Every rubric score has a reason, and quotes are checked against what you said.",
+    title: "Every score has a reason",
+    body: "A number on its own teaches you nothing. Each rubric line comes with the reason for it, and quotes are checked against what you said.",
   },
   {
-    title: "Visible skills",
-    body: "A résumé says where you studied. A shared scorecard shows how you handle a buyer, and you decide who sees it.",
+    title: "Practice you can show",
+    body: "A résumé says where you studied. A shared scorecard shows how you handle a buyer, and you pick who sees it.",
   },
   {
-    title: "Your data stays yours",
-    body: `Sessions are private by default, transcripts expire after ${L.retentionDays} days, and deleting your account deletes your data.`,
+    title: "Private until you share",
+    body: `Employers see a scorecard only if you attach it to an application. Transcripts expire after ${L.retentionDays} days, and deleting your account deletes your data.`,
   },
-] as const;
-
-/** Grounds alternate, and every other field mirrors its layout. */
-const FIELDS = [
-  { ground: "pp-on-dark bg-navy", heading: "text-white", body: "text-white", mirrored: false },
-  { ground: "bg-primary-soft", heading: "text-navy", body: "text-ink", mirrored: true },
 ] as const;
 
 export default function AboutPage() {
@@ -67,46 +60,19 @@ export default function AboutPage() {
         </div>
       </Section>
 
-      <section aria-labelledby="beliefs-heading">
-        <h2 id="beliefs-heading" className="sr-only">
-          What we believe
-        </h2>
-        <ul>
-          {BELIEFS.map(({ title, body }, index) => {
-            const field = FIELDS[index % 2] ?? FIELDS[0];
-            return (
-              <li key={title} className={field.ground}>
-                <InView
-                  className={cn(
-                    WRAP,
-                    "grid min-h-[44svh] content-between gap-y-12 py-16 md:min-h-[56svh] md:py-24 lg:grid-cols-12 lg:gap-x-6",
-                  )}
-                >
-                  <InViewItem
-                    className={cn(
-                      "lg:col-span-4",
-                      field.mirrored ? "lg:col-start-2" : "lg:col-start-8",
-                    )}
-                  >
-                    <p className={cn("max-w-[36ch] text-lede", field.body)}>{body}</p>
-                  </InViewItem>
-                  <InViewItem
-                    className={cn(
-                      "lg:col-span-7 lg:row-start-2",
-                      field.mirrored && "lg:col-start-6 lg:text-right",
-                    )}
-                  >
-                    <h3 className={cn("text-title font-bold", field.heading)}>{title}</h3>
-                  </InViewItem>
-                </InView>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      <Section ground="soft" labelledBy="beliefs-heading">
+        <SectionTitle id="beliefs-heading" size="title" className="max-w-[18ch]">
+          What we hold to
+        </SectionTitle>
+        <StatementRows items={BELIEFS} className="mt-12 md:mt-16" />
+      </Section>
 
-      <Section labelledBy="project-heading" className="py-16 md:py-24">
-        <div className="max-w-[64ch] text-lede text-ink">
+      <Section
+        labelledBy="project-heading"
+        className="py-16 md:py-24"
+        innerClassName="grid gap-y-6 lg:grid-cols-12 lg:items-baseline lg:gap-x-6"
+      >
+        <div className="max-w-[56ch] text-lede text-ink lg:col-span-7">
           <h2 id="project-heading" className="inline font-display font-bold text-navy">
             The project.
           </h2>{" "}
@@ -115,11 +81,11 @@ export default function AboutPage() {
             nothing, and can&apos;t be reached from the internet. The main app holds your account
             and decides who can see what.
           </p>
-          <p className="mt-4">
-            Questions, bug reports and security reports go to the maintainer listed on the
-            project&apos;s GitHub page.
-          </p>
         </div>
+        <p className="max-w-[36ch] text-ink lg:col-span-4 lg:col-start-9">
+          Questions, bug reports and security reports go to the maintainer listed on the
+          project&apos;s GitHub page.
+        </p>
       </Section>
 
       <CtaBand />

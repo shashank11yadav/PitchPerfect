@@ -6,6 +6,14 @@ export const WORKPLACE_LABELS: Record<Workplace, string> = {
   remote: "Remote",
 };
 
+/** "Boston, MA (hybrid)", or just "Remote, US" when the location already says so. */
+export function placeLabel({ location, workplace }: { location: string; workplace: Workplace }) {
+  const label = WORKPLACE_LABELS[workplace];
+  return location.toLowerCase().includes(label.toLowerCase())
+    ? location
+    : `${location} (${label.toLowerCase()})`;
+}
+
 export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
   full_time: "Full-time",
   part_time: "Part-time",

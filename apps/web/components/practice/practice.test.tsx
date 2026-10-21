@@ -163,7 +163,7 @@ describe("RubricBar", () => {
       />,
     );
     expect(container.querySelector("blockquote")).toBeNull();
-    expect(screen.getByText("No quote available")).toBeInTheDocument();
+    expect(screen.getByText("No single line to quote")).toBeInTheDocument();
     expect(screen.queryByText("Counts double")).not.toBeInTheDocument();
   });
 });

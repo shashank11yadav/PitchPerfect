@@ -19,12 +19,12 @@ const MIN = LIMITS.passwordMinLength;
 /** Length only: the api is the authority, and also checks the password against known breaches. */
 function lengthHint(length: number): string {
   if (length === 0) {
-    return `At least ${String(MIN)} characters. A short phrase is easier to remember than a jumble.`;
+    return `At least ${String(MIN)} characters. A few ordinary words are easier to remember than a jumble.`;
   }
   if (length < MIN) {
     return `At least ${String(MIN)} characters: ${String(MIN - length)} more to go.`;
   }
-  return "Long enough. A longer phrase is harder still to guess.";
+  return "That's long enough. Another word or two would make it harder to guess.";
 }
 
 /** A password input with a show/hide toggle (`aria-pressed`) and an optional length hint. */

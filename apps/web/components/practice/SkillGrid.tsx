@@ -49,7 +49,7 @@ function LessonState({ read, className }: { read: boolean; className: string }) 
   );
 }
 
-/** The eight skills as rows: whether the lesson is read and the last score. */
+/** The skills as rows: name and summary with whether the lesson is read, then the last score. */
 function SkillGrid({ done, scores, jobId }: SkillGridProps) {
   return (
     <ul className="divide-y divide-border border-y border-border">
@@ -60,7 +60,7 @@ function SkillGrid({ done, scores, jobId }: SkillGridProps) {
         return (
           <li
             key={slug}
-            className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 py-4 hover:bg-surface-2 sm:grid-cols-[minmax(0,1fr)_8rem_9rem_1.25rem] sm:px-3"
+            className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 py-4 hover:bg-surface-2 sm:grid-cols-[minmax(0,1fr)_9rem_1.25rem] sm:px-3"
           >
             <div className="min-w-0">
               <h3 className="text-body font-semibold">
@@ -72,9 +72,8 @@ function SkillGrid({ done, scores, jobId }: SkillGridProps) {
                 </Link>
               </h3>
               <p className="mt-0.5 text-small text-ink">{summary}</p>
-              <LessonState read={read} className="mt-1.5 flex sm:hidden" />
+              <LessonState read={read} className="mt-1.5 flex" />
             </div>
-            <LessonState read={read} className="hidden sm:flex" />
             {band && score !== undefined ? (
               <span className="flex items-center justify-end gap-2">
                 <span className="font-display text-h4 font-bold text-navy tabular-nums">
@@ -142,7 +141,7 @@ export function PracticeOverview({ jobId }: { jobId?: string | undefined }) {
 
       <Card as="aside" aria-labelledby="quota-title" className="flex flex-col gap-4">
         <h2 id="quota-title" className="text-h4">
-          Sessions left
+          Your sessions
         </h2>
         {quota.state === "loading" && <Loading label="Loading your sessions" lines={2} />}
         {quota.state === "error" && <LoadError what="your sessions" onRetry={quota.reload} />}

@@ -1,6 +1,6 @@
 "use client";
 
-import { LIMITS } from "@pitchperfect/shared";
+import { LIMITS, type ResumeInfo } from "@pitchperfect/shared";
 import { Download } from "lucide-react";
 import { useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
@@ -65,10 +65,24 @@ export function ResumeUpload() {
     body.append("file", file);
     setUploading(true);
     try {
-      const resume = await apiFetch(RESUME_PATH, { method: "PUT", body, schema: ResumeUploaded });
-      setOnFile(true);
-      setUploadedAt(resume.uploadedAt);
-      setNews("Résumé uploaded. Employers see it when you apply to their jobs.");
+      // A 2xx means the file is stored, whatever the body says, so the answer is read separately.
+      const answer = await apiFetch(RESUME_PATH, { method: "PUT", body });
+      let resume: ResumeInfo | null = null;
+      try {
+        resume = ResumeUploaded.parse(answer);
+      } catch {
+        // Handled below.
+      }
+      if (resume) {
+        setOnFile(true);
+        setUploadedAt(resume.uploadedAt);
+        setNews("Résumé uploaded. Employers see it when you apply to their jobs.");
+      } else {
+        // Stored, but not in a shape we know: go back to what the account says.
+        setError("We couldn’t confirm the upload. Check the line above before trying again.");
+        setOnFile(null);
+        setUploadedAt(null);
+      }
       void refresh();
     } catch (failure) {
       setError(formMessage(failure, UPLOAD_MESSAGES));
@@ -107,7 +121,6 @@ export function ResumeUpload() {
           <Button
             variant="danger-ghost"
             size="sm"
-
             onClick={() => {
               setConfirming(true);
             }}
@@ -137,7 +150,7 @@ export function ResumeUpload() {
           Uploading
         </p>
       )}
-      <p role="status" className="text-ink empty:hidden">
+      <p role="status" className="text-ink empty:sr-only">
         {news}
       </p>
 

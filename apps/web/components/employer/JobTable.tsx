@@ -11,7 +11,7 @@ import { FilterTabs } from "@/components/ui/FilterTabs";
 import { LoadError, Loading } from "@/components/ui/LoadState";
 import { Pagination } from "@/components/ui/Pagination";
 import { EmployerJobsPage } from "@/lib/employer-api";
-import { EMPLOYMENT_TYPE_LABELS, WORKPLACE_LABELS } from "@/lib/job-labels";
+import { EMPLOYMENT_TYPE_LABELS, placeLabel } from "@/lib/job-labels";
 import { formatLocalDate } from "@/lib/local-time";
 import { useApi } from "@/lib/use-api";
 
@@ -56,8 +56,7 @@ const COLUMNS: Column<EmployerJobSummary>[] = [
           {job.title}
         </Link>
         <span className="text-muted">
-          {job.location} · {WORKPLACE_LABELS[job.workplace]} ·{" "}
-          {EMPLOYMENT_TYPE_LABELS[job.employmentType]}
+          {placeLabel(job)} · {EMPLOYMENT_TYPE_LABELS[job.employmentType]}
         </span>
       </div>
     ),

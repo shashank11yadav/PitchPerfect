@@ -16,15 +16,16 @@ import { Spinner } from "@/components/ui/Spinner";
 import { ApiError, apiFetch, resetCsrf, type Parser } from "./api";
 import { roleHome, safeNext } from "./redirects";
 
-type SessionStatus = "loading" | "signed_in" | "signed_out";
+/** `unavailable`: the api didn't answer who this is (an outage), which isn't the same as signed out. */
+export type SessionStatus = "loading" | "signed_in" | "signed_out" | "unavailable";
 
 export interface Session {
   status: SessionStatus;
   user?: PublicUser;
   profile?: AuthMe["profile"];
   company?: AuthMe["company"];
-  /** Asks the api who is signed in. Call it after anything that changes the session. */
-  refresh: () => Promise<void>;
+  /** Asks the api who is signed in, and resolves to the answer. Call it after anything that changes the session. */
+  refresh: () => Promise<SessionStatus>;
   /** Signs out, forgets the CSRF token, refreshes, and goes to the home page. */
   signOut: () => Promise<void>;
   /**
@@ -55,13 +56,11 @@ const AuthMeParser: Parser<AuthMe> = {
   },
 };
 
-const noop = () => Promise.resolve();
-
 /** Without a provider (isolated component tests), everyone is signed out. */
 const SessionContext = createContext<Session>({
   status: "signed_out",
-  refresh: noop,
-  signOut: noop,
+  refresh: () => Promise.resolve("signed_out"),
+  signOut: () => Promise.resolve(),
   leaving: false,
 });
 
@@ -82,18 +81,20 @@ export function SessionProvider({ initialStatus, children }: SessionProviderProp
   const latest = useRef(0);
 
   /** Asks the api; `leaving` marks a signed-out answer as the end of a deliberate sign-out. */
-  const load = useCallback(async (leaving: boolean) => {
+  const load = useCallback(async (leaving: boolean): Promise<SessionStatus> => {
     const request = ++latest.current;
     let next: Snapshot;
     try {
       const me = await apiFetch("/auth/me", { schema: AuthMeParser });
       next = { status: "signed_in", user: me.user, profile: me.profile, company: me.company };
-    } catch {
-      // 401 is the ordinary signed-out answer. An outage also shows the signed-out links; the
-      // api still guards every signed-in route.
-      next = { status: "signed_out", leaving };
+    } catch (error) {
+      // 401 is the ordinary signed-out answer. Anything else is an outage: public pages still
+      // show the signed-out links, but signed-in pages offer a retry instead of the sign-in page.
+      const signedOut = error instanceof ApiError && (error.status === 401 || error.status === 403);
+      next = { status: signedOut ? "signed_out" : "unavailable", leaving };
     }
     if (request === latest.current) setSnapshot(next);
+    return next.status;
   }, []);
 
   const refresh = useCallback(() => load(false), [load]);
@@ -144,8 +145,9 @@ interface RequireRoleProps {
  * here after), and the other role goes to its own home. Only UX: the api is the real gate.
  */
 export function RequireRole({ role, children }: RequireRoleProps) {
-  const { status, user, leaving } = useSession();
+  const { status, user, leaving, refresh } = useSession();
   const router = useRouter();
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (status === "signed_out" && !leaving) {
@@ -157,6 +159,27 @@ export function RequireRole({ role, children }: RequireRoleProps) {
   }, [status, user, role, router, leaving]);
 
   if (status === "signed_in" && user?.role === role) return children;
+  if (status === "unavailable" && !leaving) {
+    return (
+      <div role="alert" className="flex flex-col items-start gap-4 py-10 text-ink">
+        <p>We can&apos;t reach your account right now. Your work is safe; try again in a moment.</p>
+        <button
+          type="button"
+          disabled={retrying}
+          aria-busy={retrying || undefined}
+          onClick={() => {
+            setRetrying(true);
+            void refresh().finally(() => {
+              setRetrying(false);
+            });
+          }}
+          className="pp-link font-semibold text-primary disabled:opacity-60"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
   return <Checking label={leaving ? "Signing you out" : "Loading your account"} />;
 }
 
@@ -179,7 +202,8 @@ export function SignedOutOnly({ next, children }: SignedOutOnlyProps) {
     if (status === "signed_in" && user) router.replace(safeNext(next, user.role));
   }, [status, user, next, router]);
 
-  if (status === "signed_out") return children;
+  // During an outage the form still shows; signing in reports the problem itself.
+  if (status === "signed_out" || status === "unavailable") return children;
   return (
     <Checking
       label={

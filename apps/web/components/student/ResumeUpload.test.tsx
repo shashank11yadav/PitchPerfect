@@ -102,14 +102,25 @@ describe("ResumeUpload", () => {
     expect(screen.getByRole("button", { name: "Delete résumé" })).toBeInTheDocument();
   });
 
-  it("treats an upload answer it can't read as a failure", async () => {
-    setup({ "PUT /api/me/resume": () => jsonResponse({ ok: true }) });
+  it("re-reads the account when the upload's answer can't be read, instead of guessing", async () => {
+    let stored = false;
+    const fetchMock = serveApi({
+      "GET /api/auth/me": () => jsonResponse(studentMe({ hasResume: stored })),
+      "GET /api/auth/csrf": csrf,
+      "PUT /api/me/resume": () => {
+        stored = true;
+        return jsonResponse({ ok: true });
+      },
+    });
+    renderSignedIn(<ResumeUpload />);
     const input = await screen.findByLabelText("Upload a PDF");
     await user().upload(input, pdf());
     await waitFor(() => {
-      expect(input).toHaveAttribute("aria-invalid", "true");
+      expect(input).toHaveAccessibleDescription(/couldn.t confirm/i);
     });
-    expect(screen.queryByRole("link", { name: /download/i })).not.toBeInTheDocument();
+    // The server kept the file, and the page now says so.
+    expect(await screen.findByRole("link", { name: /download/i })).toBeInTheDocument();
+    expect(callsTo(fetchMock, "GET /api/auth/me")).toBeGreaterThan(1);
   });
 
   it("deletes the résumé after confirming", async () => {

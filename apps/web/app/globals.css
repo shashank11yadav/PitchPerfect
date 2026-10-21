@@ -173,13 +173,11 @@
 @layer components {
   /* The static stand-in for the hero's grain shader: reduced motion, no WebGL, and first paint. */
   .pp-shader-fallback {
-    background-color: var(--pp-navy);
-    background-image:
-      radial-gradient(120% 160% at 0% 100%, var(--pp-blue) 0%, transparent 58%),
-      radial-gradient(90% 140% at 100% 0%, var(--pp-blue-300) 0%, transparent 52%);
+    background-color: var(--pp-blue);
+    background-image: radial-gradient(90% 140% at 100% 0%, var(--pp-blue-300) 0%, transparent 60%);
   }
 
-  /* A voice level meter: five bars that breathe while motion is allowed. */
+  /* A voice level meter: bars that breathe while motion is allowed. */
   .pp-level > span {
     transform-origin: bottom;
   }

@@ -40,12 +40,12 @@ export function QuotaMeter({ quota }: { quota: PracticeQuota }) {
   return (
     <div className="flex flex-col gap-4">
       <Bar
-        label={`${String(dailyUsed)} of ${String(dailyLimit)} today`}
+        label={`${String(dailyUsed)} of ${String(dailyLimit)} used today`}
         used={dailyUsed}
         limit={dailyLimit}
       />
       <Bar
-        label={`${String(monthlyUsed)} of ${String(monthlyLimit)} this month`}
+        label={`${String(monthlyUsed)} of ${String(monthlyLimit)} used this month`}
         used={monthlyUsed}
         limit={monthlyLimit}
       />

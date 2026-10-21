@@ -54,9 +54,16 @@ export function linkHref(input: string): { href: string } | { error: string } {
 /** Pasted and loaded links are held to the same rule as typed ones. */
 const isAllowedHref = (href: string) => "href" in linkHref(href) && SCHEME.test(href.trim());
 
-/** One word that is plainly meant as an address: it has a scheme, or is a bare email or domain. */
+/**
+ * A scheme someone means as an address: anything followed by `//`, or one of the schemes used
+ * without it. Plain words with a colon ("Note:", "Re:pricing") don't count.
+ */
+const LINK_SCHEME =
+  /^(?:[a-z][a-z0-9+.-]*:\/\/|(?:mailto|javascript|vbscript|data|tel|sms|file|blob):)/i;
+
+/** One word that is plainly meant as an address: it has a link scheme, or is a bare email or domain. */
 const looksLikeLink = (text: string) =>
-  /^\S+$/.test(text) && (SCHEME.test(text) || BARE_EMAIL.test(text) || BARE_DOMAIN.test(text));
+  /^\S+$/.test(text) && (LINK_SCHEME.test(text) || BARE_EMAIL.test(text) || BARE_DOMAIN.test(text));
 
 /**
  * Paste handling for the editor (`editorProps.handlePaste`): an address pasted over selected

@@ -26,14 +26,17 @@ export function RubricBar({
 }: RubricBarProps) {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <Heading className="text-small font-bold text-ink">{name}</Heading>
-        {weighted && (
-          <Badge tone="info" className="whitespace-nowrap">
-            Counts double
-          </Badge>
-        )}
-        <span className="ml-auto text-small font-bold text-navy tabular-nums">
+      {/* The score keeps the first line's right edge even when the badge wraps under the name. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <Heading className="text-small font-bold text-ink">{name}</Heading>
+          {weighted && (
+            <Badge tone="info" className="whitespace-nowrap">
+              Counts double
+            </Badge>
+          )}
+        </div>
+        <span className="text-small font-bold text-navy tabular-nums">
           {score}/{MAX_SCORE}
         </span>
       </div>
@@ -59,7 +62,9 @@ export function RubricBar({
           {evidence}
         </blockquote>
       ) : (
-        <p className="border-l-2 border-border pl-3 text-small text-muted">No quote available</p>
+        <p className="border-l-2 border-border pl-3 text-small text-muted">
+          No single line to quote
+        </p>
       )}
     </div>
   );

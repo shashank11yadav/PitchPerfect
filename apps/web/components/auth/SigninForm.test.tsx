@@ -145,6 +145,18 @@ describe("SigninForm", () => {
     });
   });
 
+  it("says so when the sign-in worked but the account can't be loaded", async () => {
+    serveApi({
+      ...signinAs("student"),
+      "GET /api/auth/me": () => errorResponse(503, "internal_error", "Down"),
+    });
+    renderForm();
+    await fillAndSubmit();
+    expect(await screen.findByRole("alert")).toHaveTextContent(/couldn.t load your account/i);
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
   it("links to the forgot-password page", () => {
     serveApi({});
     renderForm();

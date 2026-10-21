@@ -259,7 +259,7 @@ export function ScoredLineFragment() {
         score={4}
         weighted
         headingLevel="h3"
-        justification="Opened with a question about the cost of long jobs, then asked how often it happens."
+        justification="Opened by asking what a long job does to the rest of the day, then asked how often it happens."
         evidence={firstQuestion?.text.includes(QUOTE) ? QUOTE : null}
       />
     </div>

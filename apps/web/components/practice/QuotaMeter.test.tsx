@@ -28,7 +28,7 @@ const quota = (overrides: Partial<PracticeQuota> = {}): PracticeQuota => ({
 describe("QuotaMeter", () => {
   it("says when the daily count starts over, in local time", () => {
     render(<QuotaMeter quota={quota()} />);
-    expect(screen.getByText("2 of 5 today")).toBeInTheDocument();
+    expect(screen.getByText("2 of 5 used today")).toBeInTheDocument();
     expect(screen.getByText(/starts over today at 8:00 PM EDT/)).toBeInTheDocument();
   });
 

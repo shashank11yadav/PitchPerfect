@@ -26,7 +26,7 @@ const HOME_PIPELINE: Pipeline = {
       score: 84,
       status: "Shortlisted",
     },
-    { name: "Priya Raman", detail: "Business, class of 2025", score: 66, status: "Interview" },
+    { name: "Priya Raman", detail: "Business, class of 2025", score: 77, status: "Interview" },
     { name: "Sam Okafor", detail: "Marketing, class of 2026", score: null, status: "Applied" },
   ],
 };
@@ -83,8 +83,8 @@ export function ApplicantsPreview({
               <ScoreRing score={score} size="sm" className="shrink-0" />
             )}
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold text-ink">{name}</span>
-              <span className="block truncate text-small text-muted">{detail}</span>
+              <span className="block font-semibold text-ink">{name}</span>
+              <span className="block text-small text-muted">{detail}</span>
             </span>
             <Badge tone={status === "Applied" ? "neutral" : "info"}>{status}</Badge>
           </li>

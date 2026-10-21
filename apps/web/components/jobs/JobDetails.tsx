@@ -212,7 +212,12 @@ export function JobDetails({
                 <CompanyNote company={company} />
               </div>
             </div>
-            {(website ?? linkedin) && (
+            {company.verification !== "verified" && website && (
+              <p className="text-small">
+                Website they gave: <span className="font-semibold">{new URL(website).host}</span>
+              </p>
+            )}
+            {company.verification === "verified" && (website ?? linkedin) && (
               <ul className="flex flex-wrap gap-x-8 gap-y-3">
                 {website && (
                   <li>

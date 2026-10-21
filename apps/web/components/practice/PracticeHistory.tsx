@@ -178,11 +178,12 @@ export function PracticeHistory({ skill, page }: PracticeHistoryProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <p className="text-ink">
+      {/* The filter sits over the list it filters, with the count beside it. */}
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+        {filter}
+        <p className="text-ink sm:pb-2.5">
           {total === 1 ? "1 session" : `${String(total)} sessions`}, newest first.
         </p>
-        {filter}
       </div>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Card flush className="p-3">

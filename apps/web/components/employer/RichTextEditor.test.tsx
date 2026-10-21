@@ -163,11 +163,11 @@ describe("pasting a link over a selection", () => {
     );
   });
 
-  it("pastes ordinary words as words", () => {
+  it.each(["Send us a note", "Note:", "Re:pricing"])("pastes %j as words", (text) => {
     const { editor, refused } = pasteEditor();
-    pasteOverSelection(editor, "Send us a note");
+    pasteOverSelection(editor, text);
     expect(refused).not.toHaveBeenCalled();
-    expect(editor.getHTML()).toBe("<p>Send us a note</p>");
+    expect(editor.getHTML()).toBe(`<p>${text}</p>`);
   });
 });
 

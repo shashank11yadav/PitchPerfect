@@ -74,7 +74,7 @@ export function ConsentDialog({ open, onClose, onAccepted }: ConsentDialogProps)
           </Link>
           .
         </p>
-        <p role="alert" className="text-small text-danger empty:hidden">
+        <p role="alert" className="text-small text-danger empty:sr-only">
           {problem}
         </p>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

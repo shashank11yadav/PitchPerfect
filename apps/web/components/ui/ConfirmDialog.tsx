@@ -57,7 +57,7 @@ export function ConfirmDialog({
   return (
     <Modal open={open} onClose={close} title={title} description={description}>
       <div className="flex flex-col gap-4">
-        <p role="alert" className="text-danger empty:hidden">
+        <p role="alert" className="text-danger empty:sr-only">
           {problem}
         </p>
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

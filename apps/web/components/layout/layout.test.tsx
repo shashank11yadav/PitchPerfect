@@ -38,7 +38,7 @@ describe("SkipLink", () => {
 });
 
 describe("Navbar", () => {
-  it("shows the public links, sign in, and get started, marking the current page", () => {
+  it("shows the public links, sign in, and sign up, marking the current page", () => {
     pathname.current = "/jobs/some-job";
     render(<Navbar />);
     const nav = screen.getByRole("navigation", { name: "Main" });
@@ -49,6 +49,17 @@ describe("Navbar", () => {
     expect(within(nav).getByRole("link", { name: "Jobs" })).toHaveAttribute("aria-current", "page");
     expect(within(nav).getByRole("link", { name: "Students" })).not.toHaveAttribute("aria-current");
     expect(within(nav).getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/signup");
+  });
+
+  it("marks sign up as the current page on the sign-up pages", () => {
+    pathname.current = "/signup/student";
+    render(<Navbar />);
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    expect(within(nav).getByRole("link", { name: "Sign up" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(nav).getByRole("link", { name: "Sign in" })).not.toHaveAttribute("aria-current");
   });
 
   it("toggles the mobile menu", async () => {

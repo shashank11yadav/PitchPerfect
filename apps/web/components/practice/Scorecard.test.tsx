@@ -56,7 +56,7 @@ describe("Scorecard", () => {
   it("quotes the evidence, or says there's no quote", () => {
     show();
     expect(screen.getByText("I can save your dispatchers an hour a day.")).toBeInTheDocument();
-    expect(screen.getAllByText("No quote available")).toHaveLength(2);
+    expect(screen.getAllByText("No single line to quote")).toHaveLength(2);
   });
 
   it("lists strengths, improvements and the stronger version", () => {

@@ -164,7 +164,7 @@ export function RoomLobby({ skill, jobId, room }: RoomLobbyProps) {
 
       <Card as="aside" aria-labelledby="lobby-quota" className="flex flex-col gap-4">
         <h2 id="lobby-quota" className="text-h4">
-          Sessions left
+          Your sessions
         </h2>
         {quota.state === "loading" && <Loading label="Loading your sessions" lines={2} />}
         {quota.state === "error" && <LoadError what="your sessions" onRetry={quota.reload} />}

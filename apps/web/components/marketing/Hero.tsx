@@ -6,7 +6,7 @@ import { PracticeRoomPreview } from "./PracticeRoomPreview";
 import { WRAP } from "./Section";
 import { ShaderField } from "./ShaderField";
 
-const LEVELS = [0.55, 0.9, 0.7, 1, 0.6, 0.8];
+const LEVELS = [0.55, 0.9, 0.7, 1, 0.6, 0.8, 0.45];
 
 /**
  * The practice room's voice control, drawn at the size of a word right after "Get hired.". It is
@@ -18,7 +18,7 @@ function VoiceStrip() {
   return (
     <ShaderField
       aria-hidden="true"
-      className="ml-[0.2em] inline-flex h-[max(0.72em,2.5rem)] w-[max(2.9em,6.75rem)] -translate-y-[0.08em] items-center gap-[max(0.16em,0.5rem)] rounded-pill px-[max(0.09em,0.25rem)] align-middle"
+      className="ml-[0.2em] inline-flex h-[max(0.72em,2.5rem)] -translate-y-[0.08em] items-center gap-[max(0.16em,0.5rem)] rounded-pill pr-[max(0.24em,0.875rem)] pl-[max(0.09em,0.25rem)] align-middle outline-1 -outline-offset-1 outline-white/30"
     >
       <span className="flex aspect-square h-[max(0.54em,2rem)] items-center justify-center rounded-pill bg-white text-navy">
         <Mic className="size-[max(0.26em,1.125rem)]" strokeWidth={2.5} />

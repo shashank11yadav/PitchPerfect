@@ -82,14 +82,16 @@ describe("DashboardSummary", () => {
           ],
         }),
     });
-    expect(await within(await card("Next lesson")).findByText(/all eight/i)).toBeInTheDocument();
+    expect(
+      await within(await card("Next lesson")).findByText(/read every lesson/i),
+    ).toBeInTheDocument();
   });
 
   it("shows the practice quota and when the daily count resets, in local time", async () => {
     show();
     const quota = await card("Practice sessions");
-    expect(await within(quota).findByText("2 of 5 today")).toBeInTheDocument();
-    expect(within(quota).getByText("7 of 30 this month")).toBeInTheDocument();
+    expect(await within(quota).findByText("2 of 5 used today")).toBeInTheDocument();
+    expect(within(quota).getByText("7 of 30 used this month")).toBeInTheDocument();
     expect(within(quota).getByText(/today at 8:00 PM EDT/)).toBeInTheDocument();
   });
 

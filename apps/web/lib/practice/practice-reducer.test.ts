@@ -221,7 +221,10 @@ describe("practiceReducer: interrupted replies (review focus 2)", () => {
       status: "ready",
       streamingText: "",
       draft: "We plan loads overnight.",
-      error: { code: "upstream_error", message: "Reply interrupted — try again" },
+      error: {
+        code: "upstream_error",
+        message: "The reply cut off partway. Send your turn again.",
+      },
     });
     expect(state.transcript.at(-1)).toEqual({
       role: "student",

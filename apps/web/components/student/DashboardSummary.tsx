@@ -57,8 +57,7 @@ function NextLesson({ done }: { done: readonly string[] }) {
     return (
       <>
         <p className="text-ink">
-          You’ve read all eight lessons. Go back to any of them before a practice call on that
-          skill.
+          You’ve read every lesson. Go back to any of them before a practice call on that skill.
         </p>
         <Link href="/app/learn" className={TEXT_LINK}>
           Browse the lessons
@@ -183,31 +182,40 @@ export function DashboardSummary() {
   const applications = useApi(`/me/applications?pageSize=${String(COUNT_PAGE)}`, ApplicationsPage);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Panel title="Next lesson" what="your lessons" loaded={lessons}>
-        {(done) => <NextLesson done={done} />}
-      </Panel>
-      <Panel title="Practice sessions" what="your practice sessions" loaded={quota}>
-        {(data) => (
-          <>
-            <QuotaMeter quota={data} />
-            {data.available && (
-              <Link href="/app/practice" className={TEXT_LINK}>
-                Start a practice call
-                <ArrowRight aria-hidden="true" className="size-4" />
-              </Link>
-            )}
-          </>
-        )}
-      </Panel>
-      <Panel title="Recent scorecards" what="your scorecards" loaded={attempts}>
-        {(page) => <Scorecards attempts={page.items} />}
-      </Panel>
-      <Panel title="Applications" what="your applications" loaded={applications}>
-        {(page) => (
-          <ApplicationCounts statuses={page.items.map((item) => item.status)} total={page.total} />
-        )}
-      </Panel>
+    // Two columns of different widths, each card as tall as its content: what to do next on the
+    // left, the counts on the right.
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="flex flex-col gap-6">
+        <Panel title="Next lesson" what="your lessons" loaded={lessons}>
+          {(done) => <NextLesson done={done} />}
+        </Panel>
+        <Panel title="Recent scorecards" what="your scorecards" loaded={attempts}>
+          {(page) => <Scorecards attempts={page.items} />}
+        </Panel>
+      </div>
+      <div className="flex flex-col gap-6">
+        <Panel title="Practice sessions" what="your practice sessions" loaded={quota}>
+          {(data) => (
+            <>
+              <QuotaMeter quota={data} />
+              {data.available && (
+                <Link href="/app/practice" className={TEXT_LINK}>
+                  Start a practice call
+                  <ArrowRight aria-hidden="true" className="size-4" />
+                </Link>
+              )}
+            </>
+          )}
+        </Panel>
+        <Panel title="Applications" what="your applications" loaded={applications}>
+          {(page) => (
+            <ApplicationCounts
+              statuses={page.items.map((item) => item.status)}
+              total={page.total}
+            />
+          )}
+        </Panel>
+      </div>
     </div>
   );
 }

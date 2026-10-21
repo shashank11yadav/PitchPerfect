@@ -110,7 +110,6 @@ function StatusActions({ job, onChange }: StatusActionsProps) {
         {deletable && (
           <Button
             variant="danger-ghost"
-
             onClick={() => {
               setPending("delete");
             }}
@@ -125,7 +124,7 @@ function StatusActions({ job, onChange }: StatusActionsProps) {
           intact. Archive it instead.
         </p>
       )}
-      <p role="alert" className="text-danger empty:hidden">
+      <p role="alert" className="text-danger empty:sr-only">
         {problem}
       </p>
       <ConfirmDialog
@@ -302,7 +301,7 @@ export function JobEditor({ id, created }: JobEditorProps) {
               </Link>
             )}
           </p>
-          <p role="status" className="font-semibold text-success empty:hidden">
+          <p role="status" className="font-semibold text-success empty:sr-only">
             {news}
           </p>
         </div>

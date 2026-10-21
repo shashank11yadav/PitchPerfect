@@ -4,7 +4,7 @@ import { SigninSchema, type PublicUser } from "@pitchperfect/shared";
 import Link from "next/link";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
-import { apiFetch, resetCsrf } from "@/lib/api";
+import { ApiError, apiFetch, resetCsrf } from "@/lib/api";
 import { SignedOutOnly, useSession } from "@/lib/session";
 import { useZodForm } from "@/lib/use-form";
 import { AUTH_LINK } from "./AuthCard";
@@ -36,7 +36,13 @@ function Form() {
       // Signing in rotates the session ID, and the CSRF token was bound to the old one.
       resetCsrf();
       // Once the session says who this is, SignedOutOnly moves on to `next` or the role's home.
-      await refresh();
+      if ((await refresh()) === "unavailable") {
+        throw new ApiError(
+          503,
+          "session_unavailable",
+          "You're signed in, but we couldn't load your account. Try again in a moment.",
+        );
+      }
     },
     {
       initial: { email: "", password: "" },

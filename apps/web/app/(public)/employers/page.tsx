@@ -29,7 +29,7 @@ const FEATURES: Statement[] = [
   },
   {
     title: "A short pipeline",
-    body: "Move people from applied to shortlisted, interview, and hired or rejected. Save the ones you want to come back to.",
+    body: "Move people from applied to shortlisted, interview and hired, or mark them not a fit. Save the ones you want to come back to.",
   },
   {
     title: "Interview invites",
@@ -113,7 +113,7 @@ export default function EmployersPage() {
 
       <Section labelledBy="verify-heading">
         <div className="grid items-start gap-y-12 lg:grid-cols-12 lg:gap-x-6">
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 lg:col-start-6 lg:row-start-1">
             <SectionTitle id="verify-heading">How verification works</SectionTitle>
             <p className="mt-4 max-w-[52ch] text-lede text-ink">
               It&apos;s an automatic domain check. It tells candidates the person posting really has
@@ -131,7 +131,7 @@ export default function EmployersPage() {
               ))}
             </InView>
           </div>
-          <InView className="min-w-0 lg:col-span-4 lg:col-start-9 lg:pt-3">
+          <InView className="min-w-0 lg:col-span-4 lg:col-start-1 lg:row-start-1 lg:pt-3">
             <InViewItem>
               <p className="mb-4 text-small font-semibold text-ink">What candidates see</p>
               <ListingsFragment />

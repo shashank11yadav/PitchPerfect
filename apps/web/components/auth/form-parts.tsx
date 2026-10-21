@@ -113,7 +113,7 @@ export function DoneMessage({ title, children }: DoneMessageProps) {
   }, []);
   return (
     <div className="flex flex-col gap-5">
-      <h2 ref={heading} tabIndex={-1} className="text-section outline-none">
+      <h2 ref={heading} tabIndex={-1} className="text-h3 text-navy outline-none">
         {title}
       </h2>
       {children}

@@ -104,6 +104,8 @@ describe("ApplyActions", () => {
       "/app/applications",
     );
     expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
+    // The Apply button is gone, so focus moves to the result rather than dropping to the page.
+    expect(screen.getByText(/application is in/i).closest("p")).toHaveFocus();
   });
 
   it("tells a student who already applied, instead of failing", async () => {

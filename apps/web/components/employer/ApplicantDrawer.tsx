@@ -259,10 +259,10 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
             ))}
           </div>
         )}
-        <p role="status" className="font-semibold text-ink empty:hidden">
+        <p role="status" className="font-semibold text-ink empty:sr-only">
           {news}
         </p>
-        <p role="alert" className="text-danger empty:hidden">
+        <p role="alert" className="text-danger empty:sr-only">
           {problem}
         </p>
       </div>

@@ -220,6 +220,8 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
     turn.current = controller;
     const attemptId = current.attemptId;
     let settled = false;
+    /** Once the reply has started, the api counts the turn as used, even if it then breaks off. */
+    let replying = false;
     /** Frees the room for the next turn, unless a newer turn already owns it. */
     const release = () => {
       if (turn.current !== controller) return;
@@ -227,10 +229,15 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
       busy.current = null;
     };
     const handle = (event: PracticeEvent) => {
-      if (event.type !== "delta") {
+      if (event.type === "delta") replying = true;
+      else {
         settled = true;
         // The turn is decided; a Send or End right after this must not be dropped.
         release();
+      }
+      if (event.type === "error") {
+        dispatch({ type: "stream_error", code: event.code, counted: replying });
+        return;
       }
       onEvent(event);
     };
@@ -246,7 +253,7 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
             await settleConflict(attemptId);
             return;
           }
-          dispatch({ type: "stream_error", ...turnProblem(error) });
+          dispatch({ type: "stream_error", ...turnProblem(error), counted: replying });
         },
       )
       .finally(release);

@@ -101,7 +101,7 @@ export function ComposeBar({ room }: { room: PracticeRoomControls }) {
       </div>
 
       <div className="flex flex-col gap-3 bg-surface px-4 pb-4 md:px-6">
-        <p role="status" className="text-small text-ink empty:hidden">
+        <p role="status" className="text-small text-ink empty:sr-only">
           {state.notice}
         </p>
 

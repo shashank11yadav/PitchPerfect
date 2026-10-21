@@ -131,6 +131,44 @@ describe("PracticeRoom", () => {
     expect(screen.getByText("19 turns left")).toBeInTheDocument();
   });
 
+  it.each([
+    [
+      "an error event",
+      (turn: ReturnType<typeof controlStream>) => {
+        turn.emit({ type: "error", code: "upstream_error" });
+      },
+    ],
+    [
+      "a dropped connection",
+      (turn: ReturnType<typeof controlStream>) => {
+        act(() => {
+          turn.fail();
+        });
+      },
+    ],
+  ])(
+    "counts a turn that broke off with %s after the reply had started",
+    async (_name, breakOff) => {
+      const user = userEvent.setup();
+      const turn = controlStream();
+      render(<PracticeRoom attempt={activeAttempt()} />);
+      await user.type(screen.getByRole("textbox", { name: "Your turn" }), "Hello there.{Enter}");
+      turn.emit({ type: "delta", text: "Who is " });
+      breakOff(turn);
+      expect(await screen.findByText("19 turns left")).toBeInTheDocument();
+    },
+  );
+
+  it("doesn't count a turn that failed before any reply arrived", async () => {
+    const user = userEvent.setup();
+    const turn = controlStream();
+    render(<PracticeRoom attempt={activeAttempt()} />);
+    await user.type(screen.getByRole("textbox", { name: "Your turn" }), "Hello there.{Enter}");
+    turn.emit({ type: "error", code: "upstream_error" });
+    await screen.findByRole("alert");
+    expect(screen.getByText("20 turns left")).toBeInTheDocument();
+  });
+
   it("adds a line on Shift+Enter instead of sending", async () => {
     const user = userEvent.setup();
     render(<PracticeRoom attempt={activeAttempt()} />);
@@ -153,7 +191,9 @@ describe("PracticeRoom", () => {
       await Promise.resolve();
     });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Reply interrupted — try again");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The reply cut off partway. Send your turn again.",
+    );
     expect(box).toHaveValue("We plan loads overnight.");
     await user.click(screen.getByRole("button", { name: "Send" }));
     expect(stream).toHaveBeenCalledTimes(2);

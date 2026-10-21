@@ -22,7 +22,7 @@ export function LessonList() {
         {lessons.state === "ready" && (
           <span className="font-semibold">
             {done.length === SKILLS.length
-              ? "You’ve finished all eight."
+              ? "You’ve read every lesson."
               : `${String(done.length)} of ${String(SKILLS.length)} done.`}
           </span>
         )}

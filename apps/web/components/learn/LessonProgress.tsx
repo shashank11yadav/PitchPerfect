@@ -62,7 +62,7 @@ export function LessonProgress({ skill }: { skill: SkillSlug }) {
         </span>
         Mark as done
       </button>
-      <p role="status" className="text-small text-ink empty:hidden">
+      <p role="status" className="text-small text-ink empty:sr-only">
         {news}
       </p>
     </div>

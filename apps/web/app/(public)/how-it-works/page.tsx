@@ -11,6 +11,7 @@ import { ScoreBands, StageStory } from "@/components/marketing/SessionStages";
 import { StatementRows, type Statement } from "@/components/marketing/StatementRows";
 import { PRACTICE_FAQ } from "@/content/faq";
 import { SESSION_LENGTH } from "@/content/limits";
+import { curlyApostrophes } from "@/lib/plain-text";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.howItWorks);
@@ -82,11 +83,10 @@ export default function HowItWorksPage() {
           </div>
           <figure className="lg:col-span-6 lg:col-start-1 lg:row-start-1">
             <blockquote className="max-w-[22ch] font-display text-[clamp(1.75rem,3vw,2.25rem)] leading-[1.2] font-semibold text-navy">
-              &ldquo;{OBJECTION_QUOTE}&rdquo;
+              &ldquo;{curlyApostrophes(OBJECTION_QUOTE)}&rdquo;
             </blockquote>
             <figcaption className="mt-4 max-w-[44ch] text-ink">
-              The quote behind the objection handling score (4 out of 5) in the sample call. It is
-              checked word for word against the transcript before it is shown.
+              The line that earned the sample call its objection handling score, 4 out of 5.
             </figcaption>
           </figure>
         </div>
@@ -95,8 +95,8 @@ export default function HowItWorksPage() {
             <ScoreBands sample={SAMPLE_SCORECARD.overall} />
           </div>
           <p className="max-w-[40ch] text-ink lg:col-span-4 lg:col-start-9">
-            Every quote on a scorecard is checked word for word against what you said. If the scorer
-            suggests a line you never said, it&apos;s removed instead of shown.
+            Quotes are matched against your transcript before you see them. If the scorer offers a
+            line you never said, we drop it.
           </p>
         </div>
         <div className="mt-14 md:mt-20">
@@ -111,7 +111,7 @@ export default function HowItWorksPage() {
               The guardrails
             </SectionTitle>
             <p className="mt-6 max-w-[32ch] text-lede text-white">
-              The practice partner is useful because it&apos;s honest about what it is.
+              It plays the buyer and nothing else. These are the rules that keep it there.
             </p>
             <div className="mt-10 max-w-md">
               <RedactionFragment />

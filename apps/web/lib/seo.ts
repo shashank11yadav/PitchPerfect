@@ -57,7 +57,7 @@ export const PUBLIC_PAGES = {
     title: "About",
     path: "/about",
     description:
-      "PitchPerfect helps new sales talent practice the conversations that get them hired, with honest AI feedback and a job board for the employers who hire them.",
+      "Why PitchPerfect exists: people starting out in sales should get their first fumbled calls out of the way in practice, with feedback that quotes what they said.",
   },
   privacy: {
     title: "Privacy policy",

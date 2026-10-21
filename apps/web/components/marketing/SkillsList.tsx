@@ -3,6 +3,25 @@ import Link from "next/link";
 import { InView, InViewItem } from "@/components/motion/in-view";
 import { Section, SectionTitle, WRAP } from "./Section";
 
+const COUNT_WORDS = [
+  "No",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+  "Ten",
+  "Eleven",
+  "Twelve",
+];
+
+/** The number of skills as a word ("Eight"), or digits past twelve. */
+const skillCount = COUNT_WORDS[SKILLS.length] ?? String(SKILLS.length);
+
 const dimensionName = (key: string) =>
   RUBRIC_DIMENSIONS.find((dimension) => dimension.key === key)?.name ?? key;
 
@@ -12,12 +31,14 @@ interface SkillsListProps {
   rubricHref?: string;
 }
 
-/** The eight skills as a compact two-column list, each with the rubric line that counts double. */
+/** The skills as a compact two-column list, each with the rubric line that counts double. */
 export function SkillsList({ ground = "white", rubricHref }: SkillsListProps) {
   return (
     <Section ground={ground} labelledBy="skills-heading">
       <div className="max-w-2xl">
-        <SectionTitle id="skills-heading">Eight skills, each with its own buyer</SectionTitle>
+        <SectionTitle id="skills-heading">
+          {skillCount} skills, each with its own buyer
+        </SectionTitle>
         <p className="mt-4 text-lede text-ink">
           Every skill has a lesson and a practice call. The rubric line that matters most for the
           skill counts double in your score.{" "}
@@ -50,7 +71,7 @@ const skillNames = SKILLS.map((skill, index) => {
 });
 
 /**
- * Home: the eight skills as one sentence with a run-in heading, pointing to the full list on the
+ * Home: the skills as one sentence with a run-in heading, pointing to the full list on the
  * students page.
  */
 export function SkillsLine() {
@@ -59,7 +80,7 @@ export function SkillsLine() {
       <div className={WRAP}>
         <div className="max-w-5xl text-[clamp(1.25rem,2.1vw,1.75rem)] leading-[1.45] text-ink">
           <h2 id="skills-line-heading" className="inline font-display font-bold text-navy">
-            Eight skills to practice:
+            {skillCount} skills to practice:
           </h2>{" "}
           <ul className="inline">
             {skillNames.map((name) => (

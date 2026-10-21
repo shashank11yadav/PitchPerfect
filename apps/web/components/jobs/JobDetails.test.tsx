@@ -58,6 +58,9 @@ describe("JobDetails", () => {
     expect(screen.queryByText("Verified company")).not.toBeInTheDocument();
     expect(screen.getByText(/hasn.t confirmed an email/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /linkedin/i })).not.toBeInTheDocument();
+    // An unchecked employer's own website isn't linked; it's shown as text to look up.
+    expect(screen.queryByRole("link", { name: /website/i })).not.toBeInTheDocument();
+    expect(screen.getByText("orvexa-payments.example")).toBeInTheDocument();
   });
 
   it("never links a company URL that isn't https", () => {

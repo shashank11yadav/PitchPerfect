@@ -16,7 +16,7 @@ function setup(data = dashboard()) {
 describe("DashboardStats", () => {
   it("shows the four counts with their names", async () => {
     setup();
-    const counts = await screen.findByRole("list", { name: "Your hiring at a glance" });
+    const counts = await screen.findByRole("list", { name: "Your jobs and applicants in numbers" });
     const expected: [string, string][] = [
       ["Active jobs", "2"],
       ["Drafts", "1"],

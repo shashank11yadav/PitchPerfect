@@ -138,7 +138,7 @@ export function ShareScorecard({ attemptId }: { attemptId: string }) {
         )
       )}
 
-      <p role="alert" className="text-small text-danger empty:hidden">
+      <p role="alert" className="text-small text-danger empty:sr-only">
         {problem}
       </p>
       <p role="status" className="sr-only">

@@ -31,10 +31,10 @@ function Counts({ data }: { data: EmployerDashboard }) {
   return (
     <Card as="section" aria-labelledby="dash-counts" flush>
       <h2 id="dash-counts" className="sr-only">
-        Your hiring at a glance
+        Your jobs and applicants in numbers
       </h2>
       <ul
-        aria-label="Your hiring at a glance"
+        aria-label="Your jobs and applicants in numbers"
         className="grid grid-cols-2 divide-border md:grid-cols-4 md:divide-x"
       >
         {counts.map(([label, value]) => (

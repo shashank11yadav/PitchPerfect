@@ -103,7 +103,7 @@ export type RoomAction =
   | { type: "edit_draft"; text: string }
   | { type: "reset" };
 
-const INTERRUPTED_MESSAGE = "Reply interrupted — try again";
+const INTERRUPTED_MESSAGE = "The reply cut off partway. Send your turn again.";
 const BUSY_MESSAGE = "Still working on the last reply";
 
 const SPEECH_NOTICES: Record<SpeechErrorCode, string | undefined> = {

@@ -34,7 +34,7 @@ export function useCredentialChange() {
 /** The announced outcome under a settings form. */
 export function SettingsNews({ news }: { news: string }) {
   return (
-    <p role="status" className="text-ink empty:hidden">
+    <p role="status" className="text-ink empty:sr-only">
       {news}
     </p>
   );

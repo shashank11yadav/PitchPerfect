@@ -1,17 +1,9 @@
 import type { PublicJobSummary } from "@pitchperfect/shared";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
-import { EMPLOYMENT_TYPE_LABELS, WORKPLACE_LABELS } from "@/lib/job-labels";
+import { EMPLOYMENT_TYPE_LABELS, placeLabel } from "@/lib/job-labels";
 import { CompanyBadge } from "./CompanyBadge";
 import { PayText } from "./PayText";
-
-/** "Boston, MA (hybrid)", or just "Remote, US" when the location already says so. */
-function where({ location, workplace }: PublicJobSummary): string {
-  const label = WORKPLACE_LABELS[workplace];
-  return location.toLowerCase().includes(label.toLowerCase())
-    ? location
-    : `${location} (${label.toLowerCase()})`;
-}
 
 interface JobCardProps {
   job: PublicJobSummary;
@@ -70,7 +62,7 @@ export function JobCard({
           <PayText pay={job.pay} />
         </dd>
         <dt className="sr-only">Location</dt>
-        <dd className="text-ink">{where(job)}</dd>
+        <dd className="text-ink">{placeLabel(job)}</dd>
         <dt className="sr-only">Job type</dt>
         <dd className="text-ink">{EMPLOYMENT_TYPE_LABELS[job.employmentType]}</dd>
       </dl>

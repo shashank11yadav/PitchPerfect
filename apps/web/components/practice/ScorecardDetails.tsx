@@ -47,7 +47,7 @@ function weightNote(weightedName: string, skillTitle: string): string {
   if (weightedName === skillTitle) {
     return `${weightedName} counts double in this score, because it’s the skill being practiced.`;
   }
-  return `${weightedName} counts double in this score. It’s the heart of ${skillTitle.toLowerCase()}.`;
+  return `${weightedName} counts double in this score, since it’s what ${skillTitle.toLowerCase()} is scored on most.`;
 }
 
 interface ScorecardDetailsProps {

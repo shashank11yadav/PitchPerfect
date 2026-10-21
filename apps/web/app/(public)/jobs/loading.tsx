@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 
 const ROWS = 4;
 
-/** Shown while the board or a job loads: the page's grounds, with the list's rows sketched in. */
+/** Shown while the board loads: the page's grounds, with the list's rows sketched in. */
 export default function JobsLoading() {
   return (
     <div>

@@ -82,6 +82,16 @@ describe("SessionProvider", () => {
     expect(consoleWarn).not.toHaveBeenCalled();
   });
 
+  it("tells an api outage apart from being signed out", async () => {
+    serveApi({ "GET /api/auth/me": () => errorResponse(503, "internal_error", "Down") });
+    render(
+      <SessionProvider initialStatus="loading">
+        <Probe />
+      </SessionProvider>,
+    );
+    expect(await screen.findByText("status: unavailable")).toBeInTheDocument();
+  });
+
   it("refresh picks up a new sign-in", async () => {
     let me = signedOut;
     serveApi({ "GET /api/auth/me": (init) => me(init) });
@@ -146,6 +156,23 @@ describe("RequireRole", () => {
       );
     });
     expect(screen.queryByText("Practice room")).not.toBeInTheDocument();
+  });
+
+  it("keeps a signed-in user on the page with a retry when the api is down", async () => {
+    let me = () => errorResponse(503, "internal_error", "Down");
+    serveApi({ "GET /api/auth/me": () => me() });
+    render(
+      <SessionProvider initialStatus="loading">
+        <RequireRole role="student">
+          <p>Practice room</p>
+        </RequireRole>
+      </SessionProvider>,
+    );
+    expect(await screen.findByText(/can.t reach your account/i)).toBeInTheDocument();
+    expect(router.replace).not.toHaveBeenCalled();
+    me = () => jsonResponse(meBody("student"));
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Practice room")).toBeInTheDocument();
   });
 
   it("sends the wrong role to its own home", async () => {

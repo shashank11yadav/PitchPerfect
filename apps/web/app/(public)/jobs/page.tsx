@@ -19,14 +19,19 @@ const PAGE_SIZE = LIMITS.pageSizeDefault;
 const plural = (count: number, one: string, many: string) =>
   `${count.toLocaleString("en-US")} ${count === 1 ? one : many}`;
 
-/** A heading, a sentence and a way on, set where the list would be. */
+/**
+ * A heading, a sentence and a way on, set where the list would be: the heading on the left and
+ * the way on beside it, so a short note doesn't leave the right half of the page empty.
+ */
 function ListNote({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="max-w-[46ch] py-4">
-      <h2 id="results-heading" className="text-section text-navy">
+    <div className="grid gap-y-5 py-4 lg:grid-cols-12 lg:items-end lg:gap-x-6">
+      <h2 id="results-heading" className="max-w-[18ch] text-section text-navy lg:col-span-6">
         {title}
       </h2>
-      <div className="mt-5 flex flex-col items-start gap-5 text-lede text-ink">{children}</div>
+      <div className="flex max-w-[46ch] flex-col items-start gap-5 text-lede text-ink lg:col-span-5 lg:col-start-8">
+        {children}
+      </div>
     </div>
   );
 }

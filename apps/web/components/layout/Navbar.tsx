@@ -28,6 +28,8 @@ interface SessionActionsProps {
  */
 function SessionActions({ variant, onNavigate }: SessionActionsProps) {
   const { status, user, signOut } = useSession();
+  const pathname = usePathname();
+  const current = (href: string) => (isActive(pathname, href) ? "page" : undefined);
   const [leaving, setLeaving] = useState(false);
   const menu = variant === "menu";
   const quiet = buttonClasses({
@@ -60,13 +62,23 @@ function SessionActions({ variant, onNavigate }: SessionActionsProps) {
         </Link>
       </>
     );
-  } else if (status === "signed_out") {
+  } else if (status === "signed_out" || status === "unavailable") {
     actions = (
       <>
-        <Link href="/signin" onClick={onNavigate} className={quiet}>
+        <Link
+          href="/signin"
+          aria-current={current("/signin")}
+          onClick={onNavigate}
+          className={quiet}
+        >
           Sign in
         </Link>
-        <Link href="/signup" onClick={onNavigate} className={loud}>
+        <Link
+          href="/signup"
+          aria-current={current("/signup")}
+          onClick={onNavigate}
+          className={loud}
+        >
           Sign up
         </Link>
       </>

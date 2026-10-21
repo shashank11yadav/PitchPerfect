@@ -3,7 +3,7 @@
 import { PublicJobSummaryPageSchema } from "@pitchperfect/shared";
 import { ArrowRight, Bookmark, BookmarkCheck } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { buttonClasses } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { ApiError, apiFetch, type Parser } from "@/lib/api";
@@ -83,6 +83,15 @@ export function ApplyActions({ jobId, slug, dark = false }: ApplyActionsProps) {
   const [notice, setNotice] = useState<Notice | null>(null);
   /** Read out when saving changes the button's label under the screen reader's focus. */
   const [saveNews, setSaveNews] = useState("");
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+  /** Set when applying removes the focused Apply button, so focus lands on the result instead. */
+  const focusNotice = useRef(false);
+
+  useEffect(() => {
+    if (!focusNotice.current) return;
+    focusNotice.current = false;
+    noticeRef.current?.focus();
+  }, [notice]);
 
   useEffect(() => {
     if (viewer !== "student") return;
@@ -125,6 +134,7 @@ export function ApplyActions({ jobId, slug, dark = false }: ApplyActionsProps) {
     try {
       await apiFetch(`/jobs/${jobId}/apply`, { method: "POST", body: {} });
       setApplied(true);
+      focusNotice.current = true;
       setNotice({
         tone: "done",
         text: (
@@ -136,6 +146,7 @@ export function ApplyActions({ jobId, slug, dark = false }: ApplyActionsProps) {
     } catch (error) {
       if (error instanceof ApiError && error.code === "already_applied") {
         setApplied(true);
+        focusNotice.current = true;
         setNotice({ tone: "done", text: <AppliedNote dark={dark} /> });
       } else if (error instanceof ApiError && error.code === "email_not_verified") {
         setNotice({
@@ -239,9 +250,11 @@ export function ApplyActions({ jobId, slug, dark = false }: ApplyActionsProps) {
         {saveNews}
       </span>
       <p
+        ref={noticeRef}
         role="status"
+        tabIndex={-1}
         className={cn(
-          "max-w-[40ch] text-body empty:hidden",
+          "max-w-[40ch] rounded-control text-body empty:sr-only focus:outline-none",
           text,
           notice?.tone === "problem" && !dark && "text-danger",
         )}
