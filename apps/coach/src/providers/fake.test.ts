@@ -298,7 +298,7 @@ describe("FakeProvider", () => {
       [
         "an identity question",
         INTENT_LINES.identity,
-        /AI practice partner playing Maya/,
+        /scripted practice partner playing Maya/,
         "discovery",
       ],
       ["a meeting with a time", INTENT_LINES.meeting, /Thursday at 10am/i, "close"],
@@ -364,10 +364,14 @@ describe("FakeProvider", () => {
       ["how do you handle reminders today", PROCESS_ANSWER, "not-close"],
       ["walk me through your reminder process", PROCESS_ANSWER, "not-close"],
       ["What are you using today?", /booking system|practice software/i, "not-close"],
-      ["Is this a real person I'm talking to?", /AI practice partner,? playing Ruth/, "opening"],
-      ["Are you a person or a recording?", /AI practice partner,? playing Ruth/, "opening"],
-      ["are you real", /AI practice partner/, "opening"],
-      ["Am I talking to a bot?", /AI practice partner/, "opening"],
+      [
+        "Is this a real person I'm talking to?",
+        /scripted practice partner,? playing Ruth/,
+        "opening",
+      ],
+      ["Are you a person or a recording?", /scripted practice partner,? playing Ruth/, "opening"],
+      ["are you real", /scripted practice partner/, "opening"],
+      ["Am I talking to a bot?", /scripted practice partner/, "opening"],
       ["Sorry, I can't help but notice you sound busy.", null, "not-close"],
       ["Thanks, that helps.", null, "not-close"],
       [

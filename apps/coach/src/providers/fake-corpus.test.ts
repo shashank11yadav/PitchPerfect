@@ -349,17 +349,17 @@ const CORPUS: Row[] = [
 
   // Identity, sincerely asked.
   row("Sorry, quick question first: are you a real person?", "identity", {
-    reply: /AI practice partner/,
+    reply: /scripted practice partner/,
   }),
-  row("is this a bot", "identity", { reply: /AI practice partner/ }),
-  row("am I speaking with a real person", "identity", { reply: /AI practice partner/ }),
-  row("wait is this AI", "identity", { reply: /AI practice partner/ }),
+  row("is this a bot", "identity", { reply: /scripted practice partner/ }),
+  row("am I speaking with a real person", "identity", { reply: /scripted practice partner/ }),
+  row("wait is this AI", "identity", { reply: /scripted practice partner/ }),
   row("Are you a person or a recording?", "identity", {
     stage: "opening",
-    reply: /AI practice partner/,
+    reply: /scripted practice partner/,
     after: "opening",
   }),
-  row("are you real", "identity", { reply: /AI practice partner/ }),
+  row("are you real", "identity", { reply: /scripted practice partner/ }),
 
   // Proposals: a meeting being set up with this person, or their availability for a time.
   row("Could we do a 30-minute walkthrough next Wednesday at 11?", "proposal", {
@@ -2158,6 +2158,141 @@ const CORPUS: Row[] = [
   row("What's the biggest mistake new SDRs make?", "job_question", {
     voice: "hiring",
     reply: /hearing no|research|dial|take it personally/i,
+  }),
+  // Either day offered is a proposal: "how about", "what about", "we could meet", or the bare pair.
+  ...[
+    "How about Monday or Tuesday?",
+    "What about Monday or Tuesday?",
+    "How about Monday or Tuesday next week?",
+    "We could meet Monday or Tuesday.",
+    "Monday or Tuesday?",
+    "Monday or Tuesday at 10?",
+  ].map((line) => row(line, "proposal", { reply: /^Tuesday/, not: /packed/i, after: "close" })),
+  row("How about Monday or Tuesday at 10?", "proposal", {
+    stage: "objection",
+    before: OBJECTED,
+    reply: /^Tuesday at 10/,
+    after: "close",
+  }),
+  row("How about Monday or Tuesday?", "proposal", {
+    before: ["Maybe. What day were you thinking, and how long do you need?"],
+    reply: /^Tuesday/,
+    after: "close",
+  }),
+  row("Monday or Tuesday?", "proposal", {
+    before: ["Maybe. What day were you thinking, and how long do you need?"],
+    reply: /^Tuesday/,
+    after: "close",
+  }),
+  // A question about which day is busier for them is still a question, even with a day on the table.
+  row("Is Monday or Tuesday busier for the dispatch team?", "busiest_question", {
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  row("Are calls heavier Monday or Tuesday?", "yes_no_question", {
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  row("Is Monday or Tuesday quieter for you?", "busiest_question", {
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  row("Is Monday or Tuesday quieter for you?", "busiest_question", {
+    before: ["Maybe. What day were you thinking, and how long do you need?"],
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  // A bare "Understand" agrees the concern is fair; wanting to understand something asks about it.
+  ...[
+    "Understand.",
+    "Understand completely.",
+    "Understand, mid-quarter is a tough time to change anything.",
+    "Understand. Many of our clients said the same thing.",
+  ].map((line) =>
+    row(line, "acknowledgement", {
+      stage: "objection",
+      before: OBJECTED,
+      reply: /example|who else|appreciate|helps a little|see it work/i,
+      not: NOT_HEARD,
+    }),
+  ),
+  row("Understand.", "short_reply", { not: NOT_HEARD, after: "not-close" }),
+  row(
+    "Understand, and I ran outbound for my club's sponsorships, booking 12 meetings.",
+    "acknowledgement",
+    {
+      voice: "hiring",
+      stage: "objection",
+      before: HIRING_OBJECTED,
+      reply: /first month|learn something fast|example/i,
+    },
+  ),
+  row("I need to understand what's driving the timing.", "detail_question", {
+    stage: "objection",
+    before: OBJECTED,
+    not: /appreciate that|who else like us|say that again/i,
+    after: "not-close",
+  }),
+  row("I'd like to understand your concerns about the rollout.", "other_question", {
+    stage: "objection",
+    before: OBJECTED,
+    not: /appreciate that|who else like us|say that again/i,
+    after: "not-close",
+  }),
+  // Asking a contact to talk, say or speak about someone is a question, not a favour.
+  row("Can you talk me through how she hires?", "process_question", {
+    voice: "contact",
+    reply: /hire|referrals|talked shop/i,
+    after: "not-close",
+  }),
+  row("Could you talk a bit about the team she runs?", "process_question", {
+    voice: "contact",
+    not: /draft|forward|couple of lines/i,
+    after: "not-close",
+  }),
+  row("Can you speak to what the culture is like there?", "process_question", {
+    voice: "contact",
+    not: /draft|forward|couple of lines/i,
+    after: "not-close",
+  }),
+  row("Would you say she's approachable?", "target_question", {
+    voice: "contact",
+    reply: /I think so|not that I know/i,
+    after: "not-close",
+  }),
+  row("Can you say why she left her last job?", "yes_no_question", {
+    voice: "contact",
+    not: /draft|forward|couple of lines|still there/i,
+    after: "not-close",
+  }),
+  row("Would you recommend I reach out by email?", "yes_no_question", {
+    voice: "contact",
+    reply: /I think so|not that I know/i,
+    after: "not-close",
+  }),
+  row("Could you possibly introduce me to her?", "favour", {
+    voice: "contact",
+    reply: /send me|draft|couple of lines|forward/i,
+    after: "close",
+  }),
+  row("Could you pass my note to her?", "favour", {
+    voice: "contact",
+    reply: /send me|draft|couple of lines|forward/i,
+    after: "close",
+  }),
+  row("Do you know if he's still at Brightpath?", "target_question", {
+    voice: "contact",
+    reply: /still there|same team|as far as I know|nothing had changed/i,
+  }),
+  row("Is she the one who makes hiring decisions?", "target_question", {
+    voice: "contact",
+    reply: /right person|runs through|start there|make the call/i,
+  }),
+  // Who runs a team is an owner question, even asked as a yes-or-no about the person.
+  row("Is he the person who runs the SDR team?", "owner_question", {
+    voice: "contact",
+    reply: /sales director|head of sales/i,
+    after: "not-close",
   }),
 ];
 

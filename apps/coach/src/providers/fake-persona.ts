@@ -478,9 +478,10 @@ function replyFor(context: Context, line: string, next: Next): Reply {
     case "identity":
       return {
         stage: current ?? "opening",
+        // The scripted demo has no live model behind it, and must not claim to be one.
         lines: [
-          `I'm an AI practice partner playing ${scenario.firstName}, but go on. What were you saying?`,
-          `I'm an AI practice partner, playing ${scenario.firstName} for this call. Carry on.`,
+          `I'm PitchPerfect's scripted practice partner playing ${scenario.firstName}, a demo with no live model behind it. But go on, what were you saying?`,
+          `I'm PitchPerfect's scripted practice partner, playing ${scenario.firstName} for this call. There's no live model here, just a demo. Carry on.`,
         ],
       };
     case "name_check":

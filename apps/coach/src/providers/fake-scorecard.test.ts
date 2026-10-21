@@ -224,6 +224,9 @@ describe("heuristicScorecard", () => {
   it.each([
     "I understand.",
     "Totally understand.",
+    "Understand.",
+    "Understand completely.",
+    "Understand, mid-quarter is tough.",
     "Completely understand where you're coming from.",
     "That's fair.",
     "Makes sense.",

@@ -199,6 +199,8 @@ function stripFillers(sentence: string, firstName: string): string {
 const TIME =
   /\b(?:next\s+)?(?:monday|tuesday|wednesday|thursday|friday|tomorrow)\b(?:\s+(?:morning|afternoon|evening))?(?:\s+at\s+\d{1,2}(?::\d{2})?\s?(?:am|pm)?)?|\b\d{1,2}(?::\d{2})?\s?(?:am|pm)\b|\b(?:next|this) week\b/i;
 const T = `(?:${TIME.source})`;
+/** A time, or two days offered as alternatives: "Monday or Tuesday at 10". */
+const T_OR = `${T}(?:\\s+or\\s+${T})?`;
 const DAY_WORD = "(?:next\\s+)?(?:monday|tuesday|wednesday|thursday|friday|tomorrow)";
 
 /** The day or time in a sentence, with "next" dropped from a day ("next Tuesday" is "Tuesday"). */
@@ -209,8 +211,11 @@ export function timeIn(text: string): string | undefined {
   return /^next\s+week/i.test(found) ? found : found.replace(/^next\s+/i, "");
 }
 
-/** "Monday or Tuesday": the second day. */
-const EITHER_OR = new RegExp(`\\b${DAY_WORD}\\b\\s+or\\s+(${DAY_WORD})\\b`, "i");
+/** "Monday or Tuesday at 10": the second day, with its time of day if one follows it. */
+const EITHER_OR = new RegExp(
+  `\\b${DAY_WORD}\\b\\s+or\\s+(${DAY_WORD}\\b(?:\\s+(?:morning|afternoon|evening))?(?:\\s+at\\s+\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)?)?)`,
+  "i",
+);
 const orTimeIn = (text: string): string | undefined =>
   EITHER_OR.exec(text)?.[1]?.replace(/^next\s+/i, "");
 /**
@@ -281,15 +286,20 @@ const CONFIRM =
 const LEAD =
   "(?:(?:so|ok|okay|or|maybe|and|alternatively|great|perfect|sure|alright|hmm|well|um),?\\s+)*";
 const HOW_ABOUT = new RegExp(
-  `^${LEAD}(?:how|what) about ${T}(?:\\s+(?:instead|then))?(?:\\s+(?:with|for) [^?.!]+)?\\s*[?.!]*$`,
+  `^${LEAD}(?:how|what) about ${T_OR}(?:\\s+(?:next|this) week)?(?:\\s+(?:instead|then))?(?:\\s+(?:with|for) [^?.!]+)?\\s*[?.!]*$`,
   "i",
 );
 const BARE_TIME = new RegExp(
-  `^${LEAD}${T}(?:\\s+(?:then|instead|works|would work|is better|is fine|it is|maybe|perhaps|would be great|would be good|would work for me|works for me|is perfect|is great|would be perfect|sounds good|sounds great|is good))?\\s*[?.!]*$`,
+  `^${LEAD}${T_OR}(?:\\s+(?:then|instead|works|would work|is better|is fine|it is|maybe|perhaps|would be great|would be good|would work for me|works for me|is perfect|is great|would be perfect|sounds good|sounds great|is good))?\\s*[?.!]*$`,
   "i",
 );
 const WE_MEET = new RegExp(
   `\\b(?:could|can|shall|should|will|would|do) (?:we|you and i|you) (?:do|meet|chat|connect|speak|talk|catch up|get together|reconnect|continue|pick (?:this|it) up|go through (?:this|it))(?:\\s+(?:this|it|again|then|more|properly|live|in person|over coffee|by phone|on the phone))?(?:\\s+(?:on|at|for))?\\s+${T}`,
+  "i",
+);
+/** "We could meet Monday or Tuesday.", "we can talk Thursday": the same offer, said as a statement. */
+const WE_COULD = new RegExp(
+  `\\bwe (?:could|can|should) (?:do|meet|chat|connect|speak|talk|catch up|get together|reconnect)(?:\\s+(?:again|then|more|properly|in person))?(?:\\s+(?:on|at))?\\s+${T}`,
   "i",
 );
 const LETS = new RegExp(
@@ -363,8 +373,12 @@ const HYPOTHETICAL =
 
 // Favours, offers and small starts.
 
+/**
+ * What a contact can do for the student. Talking, saying, speaking and recommending are left out:
+ * "can you talk me through how she hires" asks a question, it doesn't ask for a favour.
+ */
 const FAVOUR_VERB =
-  "(?:send|forward|introduc|pass|make|mak|do|share|put|connect|mention|flag|vouch|reach|recommend|refer|email|ping|message|say|talk|speak|writ|drop)";
+  "(?:send|forward|introduc|pass|make|mak|do|share|put|connect|mention|flag|vouch|reach|refer|email|ping|writ|drop)";
 const FAVOUR = new RegExp(
   [
     `\\b(?:could|can|would|will) you (?:maybe |possibly |perhaps |please |just |quickly )?${FAVOUR_VERB}`,
@@ -567,7 +581,7 @@ const THANKS =
 const COMMON_WORDS = new Set(
   (
     "the a an is are was be been i you we it that this to of in on for and or but so ok okay yeah yes no sure right cool got hm hmm mm good great fine thanks thank hi hey hello bye what how who when why where k thx ty yep nice wow oh um uh well not do does did can could would will have has had my your our me us them they he she him her his hers their just like really very too also then there here with about from at by up down out over all any some more most one two three if as fair totally exactly agreed true makes sense ya yea nah alright perfect awesome brilliant lovely sweet " +
-    "gotcha interesting absolutely definitely certainly noted understood fantastic cheers mate man dude pal buddy folks worries problem stress sweat thing things stuff deal done love hate indeed roger copy wow super fab terrific splendid helpful helps help know knew think thought feel felt mean meant say said see saw seen hear heard tell told ask asked want wanted need needed get give take make made go going went come came back again still already yet now today tomorrow later soon never always often sometimes maybe perhaps probably honestly basically actually obviously clearly roughly around almost quite pretty rather fairly bit little lot much many few several each every both either neither other another same different new old long short big small high low first last next early late time times day days week weeks month months year years morning afternoon evening night minute minutes hour hours second seconds moment " +
+    "gotcha interesting absolutely definitely certainly noted understood understand fantastic cheers mate man dude pal buddy folks worries problem stress sweat thing things stuff deal done love hate indeed roger copy wow super fab terrific splendid helpful helps help know knew think thought feel felt mean meant say said see saw seen hear heard tell told ask asked want wanted need needed get give take make made go going went come came back again still already yet now today tomorrow later soon never always often sometimes maybe perhaps probably honestly basically actually obviously clearly roughly around almost quite pretty rather fairly bit little lot much many few several each every both either neither other another same different new old long short big small high low first last next early late time times day days week weeks month months year years morning afternoon evening night minute minutes hour hours second seconds moment " +
     "call calls calling meeting meet chat talk talking speak speaking email emails send sent note invite demo pilot trial price pricing cost costs budget money team teams people person staff boss manager director owner lead customer customers client clients patient patients driver drivers dispatcher dispatchers route routes order orders store stores clinic clinics shop shops company companies business job jobs role roles work working works tool tools system software app process setup plan plans schedule scheduling reminder reminders calendar spreadsheet phone phones text texts " +
     "sales selling sell sold pitch quota target targets result results number numbers percent half double week's way ways point points question questions answer answers reason reasons idea ideas sense worth value case example examples issue issues problem problems pain challenge challenges change changes better worse best worst easy easier hard harder quick quickly slow fast busy quiet free okay fine happy sorry please welcome glad awesome amazing wonderful excellent cool yes no"
   ).split(/\s+/),
@@ -683,6 +697,8 @@ const WH_QUESTION = new RegExp(
   `^${QUESTION_LEAD}(?:which|what|when|who|how|why|where|whose)\\b`,
   "i",
 );
+/** "How about Monday?" offers a day; it is the one wh-shape that doesn't ask about their week. */
+const HOW_ABOUT_LEAD = new RegExp(`^${QUESTION_LEAD}(?:how|what) about\\b`, "i");
 
 /** The frames in which a day or time is being proposed to this person. */
 function isProposal(sentence: string, dayAsked: boolean): boolean {
@@ -698,6 +714,7 @@ function isProposal(sentence: string, dayAsked: boolean): boolean {
     HOW_ABOUT.test(sentence) ||
     BARE_TIME.test(sentence) ||
     WE_MEET.test(sentence) ||
+    WE_COULD.test(sentence) ||
     LETS.test(sentence) ||
     WANT_TO.test(sentence) ||
     HAVE_TIME.test(sentence) ||
@@ -706,7 +723,9 @@ function isProposal(sentence: string, dayAsked: boolean): boolean {
     DOES_THAT_SUIT.test(sentence) ||
     WHAT_ABOUT_MEETING.test(sentence) ||
     (SAY_TIME.test(sentence) && asked) ||
+    // "Is Monday or Tuesday quieter for you?" asks about their week, not for a slot in it.
     (EITHER_OR.test(sentence) &&
+      !BUSIEST_QUESTION.test(sentence) &&
       (EITHER_OR_FRAME.test(sentence) || MEETING_NOUN_IN.test(sentence))) ||
     (THINKING.test(sentence) && (asked || /\bif that works\b/i.test(sentence))) ||
     (TO_MEET.test(sentence) && asked)
@@ -714,12 +733,12 @@ function isProposal(sentence: string, dayAsked: boolean): boolean {
     return true;
   }
   // A short answer with a day in it, right after a day came up: "Wednesday works, 3pm?". A question
-  // about their week ("which is busier, Monday or Friday?") is never one.
+  // about their week ("which is busier, Monday or Friday?") is never one; "how about" offers.
   return (
     dayAsked &&
     words(sentence) <= 8 &&
     !YES_NO_QUESTION.test(sentence) &&
-    !WH_QUESTION.test(sentence)
+    (!WH_QUESTION.test(sentence) || HOW_ABOUT_LEAD.test(sentence))
   );
 }
 
@@ -921,12 +940,15 @@ const DECISION_QUESTION =
 const TOOL_QUESTION =
   /\bwhat (?:are|is) (?:you|your [\w-]+(?: [\w-]+)?) (?:using|on|running)\b|\bwhat (?:tool|tools|system|software|platform|vendor|product)s?\b|\bwhat do you use\b|\bwhich (?:tool|system|software|platform|vendor)\b/i;
 const PROCESS_QUESTION =
-  /\bhow (?:do|does|did|are|is|you|your|would|has|have|u)\b|\bwalk me through\b|\btell me about\b|\btalk me through\b|\bwhat does [^?]* look like\b|\bwhat [^?]* is like\b|\bwhat happens\b|\bhow you\b|\bspend (?:most of )?(?:their|your|the|a) (?:day|time|week|morning)\b|\bspend (?:most of )?(?:their|your) \w+ on\b|\bwhat(?:'s| is) (?:the|your) (?:process|setup|routine|workflow)\b|\bwhat (?:do|does) (?:you|your \w+|the \w+) do (?:when|if|about|with|first|today|now)\b|\bgive me a sense of\b|\bhelp me understand\b|\bwhat(?:'s| is) (?:a |the )?(?:typical|normal|usual|average) (?:day|week|morning|afternoon|shift)\b|\bramp\b|\bfirst (?:month|week|day)\b|\bwhat'?s (?:it|that) like\b|\bhow are [\w ]+ (?:planned|handled|done|managed|booked|scheduled)\b|\bunderstand (?:your|the|how your|how the) (?:\w+ )?(?:process|setup|workflow|routine|day|week|operation|side|team|situation)\b/i;
+  /\bhow (?:do|does|did|are|is|you|your|would|has|have|u)\b|\bwalk me through\b|\btell me about\b|\btalk (?:me through|(?:a bit |a little |more )?about)\b|\bwhat does [^?]* look like\b|\bwhat [^?]* is like\b|\bwhat happens\b|\bhow you\b|\bspend (?:most of )?(?:their|your|the|a) (?:day|time|week|morning)\b|\bspend (?:most of )?(?:their|your) \w+ on\b|\bwhat(?:'s| is) (?:the|your) (?:process|setup|routine|workflow)\b|\bwhat (?:do|does) (?:you|your \w+|the \w+) do (?:when|if|about|with|first|today|now)\b|\bgive me a sense of\b|\bhelp me understand\b|\bwhat(?:'s| is) (?:a |the )?(?:typical|normal|usual|average) (?:day|week|morning|afternoon|shift)\b|\bramp\b|\bfirst (?:month|week|day)\b|\bwhat'?s (?:it|that) like\b|\bhow are [\w ]+ (?:planned|handled|done|managed|booked|scheduled)\b|\bunderstand (?:your|the|how your|how the) (?:\w+ )?(?:process|setup|workflow|routine|day|week|operation|side|team|situation)\b/i;
 
-/** A contact asked, yes or no, about the person the student wants to reach: "Is he still hiring?" */
+/**
+ * A contact asked, yes or no, about the person the student wants to reach: "Is he still hiring?"
+ * "Can you talk me through how she hires?" asks the contact to explain, so it isn't one.
+ */
 const TARGET_PRONOUN = /\b(?:he|she|they|him|her|them|his|hers|their)\b/i;
 const TARGET_YES_NO = new RegExp(
-  `^${QUESTION_LEAD}(?:is|are|does|do|did|has|have|was|were|would|will|can|could|should)\\b|\\bdo you know (?:if|whether)\\b|\\bany idea (?:if|whether)\\b`,
+  `^${QUESTION_LEAD}(?:is|are|does|do|did|has|have|was|were|would|will|can|could|should)\\b(?!\\s+you (?:talk|speak|tell|walk|explain|describe|say (?:more|why|what|how|a bit|a little|anything))\\b)|\\bdo you know (?:if|whether)\\b|\\bany idea (?:if|whether)\\b`,
   "i",
 );
 const TARGET_TOPICS: readonly { topic: TargetTopic; pattern: RegExp }[] = [
@@ -974,7 +996,10 @@ function questionIntent(
     voice === "contact" && isTargetQuestion(question) ? targetTopic(question) : undefined;
   const intent = ((): Intent => {
     if (voice === "contact" && RELATIONSHIP_QUESTION.test(question)) return "relationship_question";
-    if (about !== undefined && !detail) return "target_question";
+    // "Is he the person who runs the SDR team?" asks who runs it, in a yes-or-no shape.
+    if (about !== undefined && !detail) {
+      return OWNER_QUESTION.test(question) ? "owner_question" : "target_question";
+    }
     if (job) return "job_question";
     if (QUALITY_QUESTION.test(question)) return "quality_question";
     if (detail) return "detail_question";

@@ -19,11 +19,12 @@ export const ASK =
  * Agreeing a concern is fair before answering it: "I understand", "Totally understand", "That's
  * fair", "Makes sense", "I hear you". "I get that" only when it stands on its own ("I get that,
  * but…"), not "can I get that over to you". "Understand" only counts when the student says they
- * do ("I understand", "we fully understand", "that's understandable"), never "to understand" or
- * "understand how…" ("I want to understand your process" is a question, not an acknowledgement).
+ * do ("I understand", "we fully understand", "that's understandable", or a bare "Understand," at
+ * the start of a sentence), never "to understand" or "understand how…" ("I want to understand
+ * your process" is a question, not an acknowledgement).
  */
 export const ACKNOWLEDGE =
-  /\b(?:(?:i|we) (?:\w+ )?|totally |completely |fully |absolutely |that's )(?<!\bto )understand\b(?!\s+(?:how|what|why|when|who|whether|if)\b)(?!\s+where\s+(?!you))|\bunderstandable\b|\bunderstood\b|\bfair\b|\bmakes sense\b|\bhear you\b|\bgood question\b|\bgreat question\b|\bi see\b|\bi get (?:it|that)\b(?=\s*(?:[,.;!?]|$|but\b|and\b|though\b|so\b))/i;
+  /(?:\b(?:(?:i|we) (?:\w+ )?|totally |completely |fully |absolutely |that's )(?<!\bto )|^)understand\b(?!\s+(?:how|what|why|when|who|whether|if)\b)(?!\s+where\s+(?!you))|\bunderstandable\b|\bunderstood\b|\bfair\b|\bmakes sense\b|\bhear you\b|\bgood question\b|\bgreat question\b|\bi see\b|\bi get (?:it|that)\b(?=\s*(?:[,.;!?]|$|but\b|and\b|though\b|so\b))/i;
 
 /** Saying what changes for the buyer. */
 export const BENEFIT =
