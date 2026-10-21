@@ -2288,6 +2288,11 @@ const CORPUS: Row[] = [
     voice: "contact",
     reply: /right person|runs through|start there|make the call/i,
   }),
+  row("Could you tell me how you know her?", "relationship_question", {
+    voice: "contact",
+    reply: /lunch|worked together|coffee|few months|send an email/i,
+    after: "not-close",
+  }),
   // Who runs a team is an owner question, even asked as a yes-or-no about the person.
   row("Is he the person who runs the SDR team?", "owner_question", {
     voice: "contact",

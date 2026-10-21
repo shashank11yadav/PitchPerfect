@@ -753,7 +753,7 @@ const isOpenProposal = (sentence: string) =>
 // Kinds of question.
 
 const RELATIONSHIP_QUESTION =
-  /\bhow well do you know\b|\bin touch\b|\bin contact\b|\bdo you (?:still |two |guys )?(?:still )?(?:talk|speak|chat)\b|\bwhen did you last\b|\bhow do you know\b|\bhow close are you\b|\bare you (?:two |guys )?(?:close|friendly|tight)\b|\b(?:spoken|talked) to \w+ (?:recently|lately)\b|\bheard from \w+ (?:recently|lately)\b|\byou two\b/i;
+  /\bhow well do you know\b|\bin touch\b|\bin contact\b|\bdo you (?:still |two |guys )?(?:still )?(?:talk|speak|chat)\b|\bwhen did you last\b|\bhow (?:do |did )?you (?:two )?(?:know|met|meet)\b|\bhow close are you\b|\bare you (?:two |guys )?(?:close|friendly|tight)\b|\b(?:spoken|talked) to \w+ (?:recently|lately)\b|\bheard from \w+ (?:recently|lately)\b|\byou two\b/i;
 const JOB_QUESTIONS: readonly { topic: JobTopic; pattern: RegExp }[] = [
   {
     topic: "mix",
