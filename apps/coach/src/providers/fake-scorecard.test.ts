@@ -210,6 +210,17 @@ describe("heuristicScorecard", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
+  it("doesn't take wanting to understand their process as acknowledging pushback", () => {
+    const turns = [
+      "Hi, I'm Riley from Routewise. How do you plan routes today?",
+      "Our planner rebuilds routes in minutes, so your dispatchers stop redoing them.",
+      "I want to understand your process a bit better.",
+    ];
+    const objections = card(turns).dimensions.find((dimension) => dimension.key === "objections");
+    expect(objections?.score).toBe(1);
+    expect(objections?.justification).toMatch(/No line shows you acknowledging/);
+  });
+
   it.each([
     "I understand.",
     "Totally understand.",

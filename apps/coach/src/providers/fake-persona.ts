@@ -606,6 +606,11 @@ function replyFor(context: Context, line: string, next: Next): Reply {
       return { stage: at("discovery"), lines: voice.relationship };
     case "job_question":
       return { stage: at("discovery"), lines: voice.job[reading.job ?? "team"] };
+    case "target_question": {
+      // What the contact knows about the person; a hedged yes or no when it knows nothing fitting.
+      const known = voice.aboutTarget[reading.about ?? "other"];
+      return { stage: at("discovery"), lines: known.length > 0 ? known : voice.yesNo };
+    }
     case "detail_question": {
       const topic = reading.detail ?? "pain";
       if (topic === "worries") return worriesReply(context, voice);

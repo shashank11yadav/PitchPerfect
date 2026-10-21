@@ -4,6 +4,7 @@ import type {
   JobTopic,
   OfferTopic,
   SmallTalkTopic,
+  TargetTopic,
   Voice,
   QuantityKind,
 } from "./fake-intents.js";
@@ -118,6 +119,8 @@ export interface Lines {
   job: Record<JobTopic, readonly string[]>;
   /** Contact only: how well they know the person. */
   relationship: readonly string[];
+  /** Contact only: what they know about the person the student wants to reach, by question. */
+  aboutTarget: Record<TargetTopic, readonly string[]>;
   /** Who they'd bring to a meeting, as "my dispatch lead". */
   colleague: string;
   /** "my" for a buyer, "our" for a hiring manager. */
@@ -197,6 +200,17 @@ const NO_JOB: Record<JobTopic, readonly string[]> = {
   success: [],
   team: [],
   size: [],
+  timeline: [],
+  challenge: [],
+};
+
+/** Only a contact is asked about someone else; everyone else falls back to a hedged yes or no. */
+const NO_TARGET: Record<TargetTopic, readonly string[]> = {
+  hiring: [],
+  there: [],
+  rightPerson: [],
+  replies: [],
+  other: [],
 };
 
 /** Detail answers every buyer shares, whatever the trade. */
@@ -391,6 +405,7 @@ function buyer(colleague: string, lines: TradeLines): Lines {
     stages: BUYER_STAGES,
     job: NO_JOB,
     relationship: [],
+    aboutTarget: NO_TARGET,
     colleague,
     possessive: "my",
   };
@@ -1021,8 +1036,17 @@ export const VOICES: Record<Trade, Lines> = {
         "Five SDRs, two account executives, and me. Everyone hears everyone's calls.",
         "Small. Five reps and a team lead, which is why I'm careful who joins.",
       ],
+      timeline: [
+        "I'd like someone starting by the end of next month. We move quickly for the right person.",
+        "Soon. Two openings now, and I'd rather fill them before the quarter ends.",
+      ],
+      challenge: [
+        "Hearing no forty times a day and dialling again. The ones who last don't take it personally.",
+        "Doing the research before the call. New reps want to dial first and read later.",
+      ],
     },
     relationship: [],
+    aboutTarget: NO_TARGET,
     colleague: "our team lead",
     possessive: "our",
   },
@@ -1263,6 +1287,25 @@ export const VOICES: Record<Trade, Lines> = {
       "Well enough to send an email. We haven't talked in a few months, though.",
       "Pretty well. We worked together for two years, and we still grab coffee a couple of times a year.",
     ],
+    aboutTarget: {
+      hiring: [
+        "Still hiring, as far as I know. They were adding a couple of reps last I heard.",
+        "I think so. Last I heard there were two or three openings on that team.",
+      ],
+      there: [
+        "Still there, last I checked. Same team, I think.",
+        "As far as I know, yes. We spoke a few months back and nothing had changed.",
+      ],
+      rightPerson: [
+        "That's the right person, yes. Hiring on that team runs through them.",
+        "I'd start there, yes. They make the call on who joins.",
+      ],
+      replies: [
+        "Usually, if it's short. Give it a week before you chase.",
+        "To me, yes. Keep it to a few lines and you'll hear back.",
+      ],
+      other: ["I think so, yes. I can check.", "Not that I know of, no. I can ask."],
+    },
     colleague: "their sales director",
     possessive: "their",
   },

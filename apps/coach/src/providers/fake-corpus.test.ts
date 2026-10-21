@@ -160,6 +160,8 @@ function replyTo({
 
 const OPERATIONS = /front desk|spreadsheet|dispatcher|phones patients|skipped|depends who's on/i;
 const ACCEPT_OR_COUNTER = /works\.|is packed|I can do|should work|any better/i;
+/** The persona asking for a repeat: only right when the words were noise. */
+const NOT_HEARD = /say that again|once more|missed that/i;
 
 const OPENER_REPLY =
   /why|what's this about|what made you|reach out|calling|meet you|background|drew you|tell me|going on|what can I do/i;
@@ -2016,6 +2018,146 @@ const CORPUS: Row[] = [
     reply: /no-shows|what about|what do you want/i,
     not: ACCEPT_OR_COUNTER,
     after: "not-close",
+  }),
+  // Final review: short acknowledgements and sign-offs are turns, not noise.
+  ...[
+    "Gotcha.",
+    "Interesting.",
+    "Absolutely.",
+    "Yeah definitely.",
+    "No worries.",
+    "No problem.",
+    "Sure thing.",
+    "Cheers mate.",
+    "Noted.",
+    "Fantastic.",
+    "Definitely.",
+  ].map((line) => row(line, "short_reply", { not: NOT_HEARD, after: "discovery" })),
+  row("Noted.", "short_reply", { voice: "hiring", not: NOT_HEARD }),
+  row("Definitely.", "wrap_up", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /Thursday|bye|talk|see you|send/i,
+    not: NOT_HEARD,
+  }),
+  row("Awesome!", "wrap_up", { stage: "close", before: BOOKED_THURSDAY, not: NOT_HEARD }),
+  // "Understand" only acknowledges pushback when the student says they do; wanting to understand
+  // the buyer's process is a question about it.
+  row("I want to understand your process a bit better.", "process_question", {
+    stage: "objection",
+    before: OBJECTED,
+    not: /fair enough|appreciate that|say that again/i,
+    after: "not-close",
+  }),
+  row("I'd love to understand your setup better.", "process_question", {
+    stage: "objection",
+    before: OBJECTED,
+    not: /fair enough|appreciate that|say that again/i,
+    after: "not-close",
+  }),
+  // "Monday or Friday" is only a proposal inside a scheduling frame.
+  row("Which is busier, Monday or Friday?", "busiest_question", {
+    reply: /Monday|Friday|holiday|worst/i,
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  row("Is it usually Monday or Tuesday that's the worst?", "busiest_question", {
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  row("Is it worse on Monday or Friday?", "busiest_question", {
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  row("Do the reroutes pile up more on Monday or Friday?", "yes_no_question", {
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  // Checking it's a good time is never a meeting proposal.
+  ...[
+    "Do you have a minute?",
+    "Do you have a quick minute?",
+    "Have I called at a bad time?",
+    "Hi there, Leo from Stockwise, have I called at an ok time?",
+    "Hi Maya, it's Leo from Stockwise. Do you have a minute?",
+  ].map((line) =>
+    row(line, "small_talk", {
+      stage: "opening",
+      reply: /few minutes|go ahead|fine|what's this about/i,
+      not: ACCEPT_OR_COUNTER,
+      after: "opening",
+    }),
+  ),
+  // A contact hears a favour asked in any of the usual ways.
+  ...[
+    "Would you mind reaching out to him for me?",
+    "Would you feel comfortable vouching for me?",
+    "Could you maybe mention me to her?",
+    "Would you mind putting in a good word for me?",
+    "Any chance you could connect us?",
+    "Is there any way you could pass my name along?",
+  ].map((line) =>
+    row(line, "favour", {
+      voice: "contact",
+      reply: /send me|draft|few lines|couple of lines|forward|happy to|sure/i,
+      after: "close",
+    }),
+  ),
+  // Yes-or-no questions about the person the student wants to reach get what the contact knows.
+  row("Is he still hiring?", "target_question", {
+    voice: "contact",
+    reply: /hiring|roles|openings|reps|last I heard|as far as I know/i,
+    after: "not-close",
+  }),
+  row("Do you know if she's hiring?", "target_question", {
+    voice: "contact",
+    reply: /hiring|roles|openings|reps|last I heard|as far as I know/i,
+  }),
+  row("Is he the one doing the hiring?", "target_question", {
+    voice: "contact",
+    reply: /hiring|right person|runs through|start there|make the call/i,
+  }),
+  row("Does she still work there?", "target_question", {
+    voice: "contact",
+    reply: /still there|same team|as far as I know|nothing had changed/i,
+  }),
+  row("Is she still at Brightpath, do you know?", "target_question", {
+    voice: "contact",
+    reply: /still there|same team|as far as I know|nothing had changed/i,
+  }),
+  row("Is she the right person to talk to?", "target_question", {
+    voice: "contact",
+    reply: /right person|runs through|start there|make the call/i,
+  }),
+  row("Does he usually reply to emails?", "target_question", {
+    voice: "contact",
+    reply: /repl|respond|short|week|chase/i,
+  }),
+  // A hiring manager answers timeline and process questions in kind.
+  ...[
+    "When are you hoping to fill the role?",
+    "What's the timeline for hiring?",
+    "how soon are you hoping to have people start",
+  ].map((line) =>
+    row(line, "job_question", {
+      voice: "hiring",
+      reply: /start|month|quarter|soon|weeks|quickly|openings/i,
+      not: /ramp time|finding people/i,
+    }),
+  ),
+  row("What does the interview process look like?", "detail_question", {
+    voice: "hiring",
+    reply: /team lead|account executive|project|call with/i,
+    not: /outreach|afternoons are calls/i,
+  }),
+  row("What's the biggest challenge for new reps?", "job_question", {
+    voice: "hiring",
+    reply: /hearing no|research|dial|take it personally/i,
+    not: /tight-knit|small team|review calls/i,
+  }),
+  row("What's the biggest mistake new SDRs make?", "job_question", {
+    voice: "hiring",
+    reply: /hearing no|research|dial|take it personally/i,
   }),
 ];
 

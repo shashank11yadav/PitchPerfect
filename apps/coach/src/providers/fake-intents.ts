@@ -44,6 +44,7 @@ export type Intent =
   | "tool_question"
   | "relationship_question"
   | "job_question"
+  | "target_question"
   | "detail_question"
   | "yes_no_question"
   | "other_question"
@@ -57,7 +58,10 @@ export type Intent =
   | "unclear";
 
 export type SmallTalkTopic = "time" | "weekend" | "weather" | "game" | "general";
-export type JobTopic = "mix" | "best" | "fit" | "success" | "team" | "size";
+export type JobTopic =
+  "mix" | "best" | "fit" | "success" | "team" | "size" | "timeline" | "challenge";
+/** What a contact is asked about the person the student wants to reach. */
+export type TargetTopic = "hiring" | "there" | "rightPerson" | "replies" | "other";
 export type OfferTopic = "caseStudy" | "passAlong" | "generic";
 export type QuantityKind = "count" | "duration" | "frequency";
 /** A question about the person's situation that has its own short answer. */
@@ -131,6 +135,8 @@ export interface Reading {
   named: boolean;
   smallTalk: SmallTalkTopic | undefined;
   job: JobTopic | undefined;
+  /** Contact only: which fact about the referral target a yes-or-no question asks for. */
+  about: TargetTopic | undefined;
   offer: OfferTopic | undefined;
   detail: DetailTopic | undefined;
   quantity: QuantityKind | undefined;
@@ -207,11 +213,19 @@ export function timeIn(text: string): string | undefined {
 const EITHER_OR = new RegExp(`\\b${DAY_WORD}\\b\\s+or\\s+(${DAY_WORD})\\b`, "i");
 const orTimeIn = (text: string): string | undefined =>
   EITHER_OR.exec(text)?.[1]?.replace(/^next\s+/i, "");
+/**
+ * The frame that makes "Monday or Tuesday" an offer of either day: this person's fit ("better",
+ * "work for you", "suit", "free", "good for you") or a meeting noun. "Which is busier, Monday or
+ * Friday?" has neither and is a question about their week.
+ */
+const EITHER_OR_FRAME =
+  /\b(?:better|best|easier|works?|suits?|free|available|convenient|prefer|good|ok(?:ay)?|fine)\b(?:\s+(?:for|with) (?:you|everyone))?|\b(?:for|with) you\b/i;
 
 // Meeting proposals.
 
 const MEETING_NOUN =
   "(?:meeting|call|demo|chat|time|slot|session|invite|minutes?|mins?|coffee|walkthrough|walk-through|catch-up|catch up|conversation|zoom|video call|video chat|screen ?share|screen-share|google meet|teams meeting|sync|check-in|intro call|discovery call|appointment|sit-down|huddle)";
+const MEETING_NOUN_IN = new RegExp(`\\b${MEETING_NOUN}\\b`, "i");
 const SETUP_VERB =
   "(?:set up|setup|book|grab|schedule|get|find|put|send|have|hold|block|lock in|pencil in|do|did|run|hop on|jump on|get on|arrange|fix|make|squeeze in|carve out|spare|free up|take|open to|up for)";
 const MEASURE =
@@ -349,8 +363,24 @@ const HYPOTHETICAL =
 
 // Favours, offers and small starts.
 
-const FAVOUR =
-  /\b(?:could|can|would) you (?:send|forward|introduce|pass|make|do|share|put|connect|mention|flag|vouch)\b|\bwould you be (?:comfortable|willing|open to|happy to|okay|ok|up for) (?:introduc|send|forward|connect|pass|vouch|put|mak|flag)|\bwould you (?:mind|be willing to) (?:send|forward|introduc|pass|connect|mak)|\bcould i get an intro|\bput me in touch\b|\bput in a (?:good )?word\b/i;
+const FAVOUR_VERB =
+  "(?:send|forward|introduc|pass|make|mak|do|share|put|connect|mention|flag|vouch|reach|recommend|refer|email|ping|message|say|talk|speak|writ|drop)";
+const FAVOUR = new RegExp(
+  [
+    `\\b(?:could|can|would|will) you (?:maybe |possibly |perhaps |please |just |quickly )?${FAVOUR_VERB}`,
+    `\\bwould you (?:mind|be (?:comfortable|willing|open to|happy to|okay|ok|up for|able to)|feel (?:comfortable|okay|ok|able))(?: (?:to|with))? (?:maybe |possibly |perhaps |just |quickly )?${FAVOUR_VERB}`,
+    `\\b(?:any chance|is there any way|is there a chance|do you think|would it be possible|would it be ok(?:ay)?|would you say) (?:that )?you(?:'d| would| could| can| might)? (?:maybe |possibly |perhaps |be (?:able|willing|happy) to )?${FAVOUR_VERB}`,
+    `\\bcould i get an intro\\b`,
+    `\\bput(?:ting)? me in touch\\b`,
+    `\\bput(?:ting)? in a (?:good |quick |kind )?word\\b`,
+    `\\bvouch(?:ing)? for me\\b`,
+    `\\bmention(?:ing)? me\\b`,
+    `\\bconnect(?:ing)? us\\b`,
+    `\\bmak(?:e|ing) (?:an |the )?intro(?:duction)?\\b`,
+    `\\bpass(?:ing)? my name\\b`,
+  ].join("|"),
+  "i",
+);
 
 const MATERIAL =
   "(?:case stud(?:y|ies)|summary|one-pager|one pager|one-page|page|deck|resume|résumé|cv|draft|intro(?:duction)?|note|email|details|info(?:rmation)?|numbers|proposal|pricing|examples?|references?|portfolio|writing samples?|samples?|links?|overview|brochure|quote|figures|breakdown|comparison|calculator|video|recording|blurb|bio|paragraph|write-?up|it|that|something|a few lines|two lines|three lines|my [\\w-]+)";
@@ -387,7 +417,7 @@ const IDENTITY =
   /\b(?:are|r) (?:you|u) (?:a |an )?(?:real|actual|live)?\s*(?:person|human|bot|robot|ai|machine|recording|real)\b|\bis this (?:a |an )?(?:real |actual |live )?(?:person|human|bot|robot|ai|machine|recording)\b|\b(?:am i|are we) (?:talking|speaking) (?:to|with) (?:a |an )?(?:real |actual |live )?(?:person|human|bot|robot|ai|machine|recording)\b/i;
 
 const TIME_CHECK =
-  /\bis (?:now|this) (?:an? )?(?:ok(?:ay)?|good|bad|alright|decent) (?:time|moment)\b|\b(?:got|do you have|have you got|you have|have you) (?:a |two |2 |five |5 |a couple of |a few |a quick |a spare )?(?:minute|minutes|min|sec|second|moment)s?\b|\bcatch you at an? (?:good|bad|ok(?:ay)?|alright|decent) (?:time|moment)\b|\bcaught you (?:in the middle|at a bad)\b|\bin the middle of something\b|\binterrupting\b|\b(?:okay|good|bad) (?:moment|time) to (?:talk|chat|call)\b|\bis this a (?:terrible|awful|bad|good|okay|decent|convenient) (?:time|moment)\b|\bif (?:it'?s|its|this is) a bad (?:time|moment)\b/i;
+  /\bis (?:now|this) (?:an? )?(?:ok(?:ay)?|good|bad|alright|decent) (?:time|moment)\b|\b(?:got|do you have|have you got|you have|have you) (?:a |two |2 |five |5 |a couple of |a few |a quick |a spare )?(?:minute|minutes|min|sec|second|moment)s?\b|\bcatch you at an? (?:good|bad|ok(?:ay)?|alright|decent) (?:time|moment)\b|\bcaught you (?:in the middle|at a bad)\b|\bin the middle of something\b|\binterrupting\b|\b(?:okay|good|bad) (?:moment|time) to (?:talk|chat|call)\b|\bis this a (?:terrible|awful|bad|good|okay|decent|convenient) (?:time|moment)\b|\bif (?:it'?s|its|this is) a bad (?:time|moment)\b|\b(?:called|calling|ringing|rang|catching|caught|catch|reached|reaching|got) (?:you )?at (?:a |an )?(?:bad|good|ok(?:ay)?|alright|decent|terrible|awful|convenient|inconvenient|reasonable) (?:time|moment)\b/i;
 const SMALL_TALK: readonly { topic: SmallTalkTopic; pattern: RegExp }[] = [
   { topic: "time", pattern: TIME_CHECK },
   {
@@ -527,19 +557,27 @@ const SELF_PITCH =
 const GOODBYE =
   /\b(?:bye|goodbye|see you(?: then| there| soon)?|talk (?:soon|then|later|to you (?:then|soon|later))|speak (?:soon|then|later)|chat (?:soon|then|later)|take care|have a (?:good|great|nice|lovely) (?:rest of your )?(?:one|day|week|weekend|afternoon|evening)|enjoy (?:the rest of )?(?:your|the) (?:weekend|evening|day|week|afternoon)|give my best|say hi to|all the best|cheers|ciao|catch you later)\b/i;
 const SIGN_OFF =
-  /^(?:ok(?:ay)?|cool|great|perfect|awesome|amazing|yeah|yea|ya|right|fair|true|exactly|agreed|totally|sounds good|sounds great|alright|will do|thx|thanks|thank you|ty|cheers|nice|good|got it|sure|yep|yes|no problem|all good|k|fine|deal|done|love it|brilliant|lovely|wonderful|excellent|that works|works for me|sweet)\b[\w ,.!']{0,30}$/i;
+  /^(?:ok(?:ay)?|cool|great|perfect|awesome|amazing|yeah|yea|ya|right|fair|true|exactly|agreed|totally|sounds good|sounds great|alright|will do|thx|thanks|thank you|ty|cheers|nice|good|got it|gotcha|sure|yep|yes|no problem|no worries|no stress|no sweat|all good|k|fine|deal|done|love it|love that|brilliant|lovely|wonderful|excellent|fantastic|that works|works for me|sweet|interesting|absolutely|definitely|certainly|noted|understood|makes sense|fair enough|of course|for sure|good to know|that's helpful|helpful|good stuff|roger|copy that|wow|oh wow|right on|indeed|fab|super|splendid|terrific)\b[\w ,.!']{0,30}$/i;
 const THANKS =
   /\b(?:thanks?|thank you|thx|ty|appreciate (?:it|that|this|your time|you)|grateful|you'?re the best)\b/i;
-/** Everyday words; a short line with none of them is noise, not a turn. */
+/**
+ * Everyday words. A short line with none of them is noise, not a turn: "asdf qwerty" gets a
+ * "say that again", while "cheers mate" or "noted" is heard as the short reply it is.
+ */
 const COMMON_WORDS = new Set(
-  "the a an is are was be i you we it that this to of in on for and or but so ok okay yeah yes no sure right cool got hm hmm mm good great fine thanks thank hi hey hello bye what how who when why where k thx ty yep nice wow oh um uh well not do does did can could would will have has my your our me us them they he she just like really very too also then there here with about from at by up down out over all any some more most one two three if as fair totally exactly agreed true makes sense ya yea nah alright perfect awesome brilliant lovely sweet".split(
-    " ",
-  ),
+  (
+    "the a an is are was be been i you we it that this to of in on for and or but so ok okay yeah yes no sure right cool got hm hmm mm good great fine thanks thank hi hey hello bye what how who when why where k thx ty yep nice wow oh um uh well not do does did can could would will have has had my your our me us them they he she him her his hers their just like really very too also then there here with about from at by up down out over all any some more most one two three if as fair totally exactly agreed true makes sense ya yea nah alright perfect awesome brilliant lovely sweet " +
+    "gotcha interesting absolutely definitely certainly noted understood fantastic cheers mate man dude pal buddy folks worries problem stress sweat thing things stuff deal done love hate indeed roger copy wow super fab terrific splendid helpful helps help know knew think thought feel felt mean meant say said see saw seen hear heard tell told ask asked want wanted need needed get give take make made go going went come came back again still already yet now today tomorrow later soon never always often sometimes maybe perhaps probably honestly basically actually obviously clearly roughly around almost quite pretty rather fairly bit little lot much many few several each every both either neither other another same different new old long short big small high low first last next early late time times day days week weeks month months year years morning afternoon evening night minute minutes hour hours second seconds moment " +
+    "call calls calling meeting meet chat talk talking speak speaking email emails send sent note invite demo pilot trial price pricing cost costs budget money team teams people person staff boss manager director owner lead customer customers client clients patient patients driver drivers dispatcher dispatchers route routes order orders store stores clinic clinics shop shops company companies business job jobs role roles work working works tool tools system software app process setup plan plans schedule scheduling reminder reminders calendar spreadsheet phone phones text texts " +
+    "sales selling sell sold pitch quota target targets result results number numbers percent half double week's way ways point points question questions answer answers reason reasons idea ideas sense worth value case example examples issue issues problem problems pain challenge challenges change changes better worse best worst easy easier hard harder quick quickly slow fast busy quiet free okay fine happy sorry please welcome glad awesome amazing wonderful excellent cool yes no"
+  ).split(/\s+/),
 );
 const isNonsense = (text: string) => {
   const tokens = text.toLowerCase().match(/[a-z']+/g) ?? [];
   return (
-    tokens.length > 0 && tokens.length <= 3 && tokens.every((token) => !COMMON_WORDS.has(token))
+    tokens.length > 0 &&
+    tokens.length <= 3 &&
+    tokens.every((token) => !COMMON_WORDS.has(token.replace(/'s$/, "")))
   );
 };
 const VAGUE = /\b(?:kind of|sort of|a bunch of|stuff|i guess|whatever you think|you know)\b/i;
@@ -555,6 +593,7 @@ const QUESTION_SHAPE = new RegExp(
     `^${QUESTION_LEAD}(?:can you |could you |would you |will you |please )?(?:walk me through|tell me (?:more )?about|talk me through|give me a sense of|help me understand|remind me)\\b`,
     `^${QUESTION_LEAD}(?:do|does|did|is|are|can|could|would|should|will|have|has|was|were|am)\\s+(?:you|your|we|i|it|this|that|the|they|there|anyone|anybody|someone|somebody|\\w+day)\\b`,
     `\\b(?:want to|like to|love to|need to|trying to|curious|wondering|help me|let me|can i|could i|may i) (?:learn|know|understand|hear|ask|find out|about) (?:about )?(?:how|what|why|who|when|where|which)\\b`,
+    `\\b(?:want to|like to|love to|need to|trying to|help me|let me) understand (?:your|the) \\w+`,
     `\\b(?:can|could|may) i ask\\b`,
     `\\bi'?d (?:love|like) to (?:learn|know|hear|understand|ask)\\b`,
   ].join("|"),
@@ -639,6 +678,12 @@ const YES_NO_QUESTION = new RegExp(
   "i",
 );
 
+/** "Which is busier…", "what about Mondays…": a question that wants an answer, not a yes. */
+const WH_QUESTION = new RegExp(
+  `^${QUESTION_LEAD}(?:which|what|when|who|how|why|where|whose)\\b`,
+  "i",
+);
+
 /** The frames in which a day or time is being proposed to this person. */
 function isProposal(sentence: string, dayAsked: boolean): boolean {
   if (!timeIn(sentence)) return false;
@@ -661,21 +706,30 @@ function isProposal(sentence: string, dayAsked: boolean): boolean {
     DOES_THAT_SUIT.test(sentence) ||
     WHAT_ABOUT_MEETING.test(sentence) ||
     (SAY_TIME.test(sentence) && asked) ||
-    EITHER_OR.test(sentence) ||
+    (EITHER_OR.test(sentence) &&
+      (EITHER_OR_FRAME.test(sentence) || MEETING_NOUN_IN.test(sentence))) ||
     (THINKING.test(sentence) && (asked || /\bif that works\b/i.test(sentence))) ||
     (TO_MEET.test(sentence) && asked)
   ) {
     return true;
   }
-  // A short answer with a day in it, right after a day came up: "Wednesday works, 3pm?"
-  return dayAsked && words(sentence) <= 8 && !YES_NO_QUESTION.test(sentence);
+  // A short answer with a day in it, right after a day came up: "Wednesday works, 3pm?". A question
+  // about their week ("which is busier, Monday or Friday?") is never one.
+  return (
+    dayAsked &&
+    words(sentence) <= 8 &&
+    !YES_NO_QUESTION.test(sentence) &&
+    !WH_QUESTION.test(sentence)
+  );
 }
 
+/** "Do you have a minute?" checks the time; it never sets a meeting up. */
 const isOpenProposal = (sentence: string) =>
-  OPEN_PROPOSAL.test(sentence) ||
-  (!timeIn(sentence) &&
-    (MEETING_SETUP.test(sentence) || FREE_YOU.test(sentence)) &&
-    isQuestion(sentence));
+  !TIME_CHECK.test(sentence) &&
+  (OPEN_PROPOSAL.test(sentence) ||
+    (!timeIn(sentence) &&
+      (MEETING_SETUP.test(sentence) || FREE_YOU.test(sentence)) &&
+      isQuestion(sentence)));
 
 // Kinds of question.
 
@@ -708,9 +762,19 @@ const JOB_QUESTIONS: readonly { topic: JobTopic; pattern: RegExp }[] = [
       /\bhow big\b|\bhow many (?:people|reps|sdrs|folks)\b(?! (?:are you|do you|will you) (?:looking|planning|going|hiring|adding|bring|take))|\bteam size\b|\bheadcount\b/i,
   },
   {
+    topic: "timeline",
+    pattern:
+      /\btimeline\b|\btime ?frame\b|\bwhen are you (?:hoping|looking|planning|aiming|trying|wanting) to (?:fill|hire|have|bring|start|make)\b|\bhow soon\b|\bhow quickly (?:are you|do you|would you|will you)\b|\bfill (?:the|this|that) (?:role|position|seat|opening)\b|\bstart date\b|\bwhen would (?:someone|i|the role|this|they) start\b|\bwhen (?:do|would|will) you (?:want|need) (?:someone|them|people|me) (?:to start|in|starting|on board|in the seat)\b/i,
+  },
+  {
+    topic: "challenge",
+    pattern:
+      /\bbiggest (?:challenge|struggle|hurdle|mistake|problem)\b|\bhardest (?:part|thing|bit)\b|\bstruggle (?:with|most)\b|\btrips? (?:people|reps|them) up\b|\bwhere do (?:new )?(?:reps|people|sdrs|hires) (?:struggle|fail|go wrong|slip)\b|\bcommon mistakes?\b/i,
+  },
+  {
     topic: "team",
     pattern:
-      /\bculture\b|\bhow (?:is|are) the team (?:structured|organi[sz]ed|set up)\b|\bbiggest challenge\b|\bteam like\b/i,
+      /\bculture\b|\bhow (?:is|are) the team (?:structured|organi[sz]ed|set up)\b|\bteam like\b/i,
   },
 ];
 const DETAIL_QUESTIONS: readonly { topic: DetailTopic; pattern: RegExp; voice?: Voice }[] = [
@@ -812,7 +876,7 @@ const DETAIL_QUESTIONS: readonly { topic: DetailTopic; pattern: RegExp; voice?: 
     topic: "nextStep",
     voice: "hiring",
     pattern:
-      /\bnext steps? (?:in|of|for) (?:your|the) process\b|\bwhat happens next\b|\bwhat are the next steps\b|\bhow does the process work\b|\bwhat(?:'s| is) (?:your|the) (?:interview |hiring )?process\b|\bwhat(?:'s| is) the next step\b/i,
+      /\bnext steps? (?:in|of|for) (?:your|the) process\b|\bwhat happens next\b|\bwhat are the next steps\b|\bhow does the process work\b|\bwhat(?:'s| is) (?:your|the) (?:interview |hiring )?process\b|\bwhat(?:'s| is) the next step\b|\b(?:interview|hiring|interviewing) process\b|\bhow many (?:rounds|interviews|stages|steps)\b|\bsteps? from here\b/i,
   },
   {
     topic: "wants",
@@ -840,7 +904,7 @@ const quantityKind = (question: string): QuantityKind =>
 const TIMING_QUESTION =
   /\bwhat time\b|\bwhen do (?:they|you|your \w+|the \w+)\b|\bhow early\b|\bhow late\b/i;
 const BUSIEST_QUESTION =
-  /\b(?:worst|worse|busiest|hardest|toughest|slowest|quietest|peak)\b|\bcertain days\b/i;
+  /\b(?:worst|worse|busiest|busier|hardest|toughest|slowest|slower|quietest|quieter|peak)\b|\bcertain days\b/i;
 const STAFF_QUESTION = /\bwho (?:works|staffs|covers|is on|answers|mans|sits at)\b/i;
 const COST_SUBJECT =
   /\b(?:tool|system|setup|software|subscription|vendor|licen[cs]e|platform|current|existing|today|now|salary|budget|pay|price|pricing|charge|invoice|contract|plan|service|compensation|range)\b/i;
@@ -857,19 +921,60 @@ const DECISION_QUESTION =
 const TOOL_QUESTION =
   /\bwhat (?:are|is) (?:you|your [\w-]+(?: [\w-]+)?) (?:using|on|running)\b|\bwhat (?:tool|tools|system|software|platform|vendor|product)s?\b|\bwhat do you use\b|\bwhich (?:tool|system|software|platform|vendor)\b/i;
 const PROCESS_QUESTION =
-  /\bhow (?:do|does|did|are|is|you|your|would|has|have|u)\b|\bwalk me through\b|\btell me about\b|\btalk me through\b|\bwhat does [^?]* look like\b|\bwhat [^?]* is like\b|\bwhat happens\b|\bhow you\b|\bspend (?:most of )?(?:their|your|the|a) (?:day|time|week|morning)\b|\bspend (?:most of )?(?:their|your) \w+ on\b|\bwhat(?:'s| is) (?:the|your) (?:process|setup|routine|workflow)\b|\bwhat (?:do|does) (?:you|your \w+|the \w+) do (?:when|if|about|with|first|today|now)\b|\bgive me a sense of\b|\bhelp me understand\b|\bwhat(?:'s| is) (?:a |the )?(?:typical|normal|usual|average) (?:day|week|morning|afternoon|shift)\b|\bramp\b|\bfirst (?:month|week|day)\b|\bwhat'?s (?:it|that) like\b|\bhow are [\w ]+ (?:planned|handled|done|managed|booked|scheduled)\b/i;
+  /\bhow (?:do|does|did|are|is|you|your|would|has|have|u)\b|\bwalk me through\b|\btell me about\b|\btalk me through\b|\bwhat does [^?]* look like\b|\bwhat [^?]* is like\b|\bwhat happens\b|\bhow you\b|\bspend (?:most of )?(?:their|your|the|a) (?:day|time|week|morning)\b|\bspend (?:most of )?(?:their|your) \w+ on\b|\bwhat(?:'s| is) (?:the|your) (?:process|setup|routine|workflow)\b|\bwhat (?:do|does) (?:you|your \w+|the \w+) do (?:when|if|about|with|first|today|now)\b|\bgive me a sense of\b|\bhelp me understand\b|\bwhat(?:'s| is) (?:a |the )?(?:typical|normal|usual|average) (?:day|week|morning|afternoon|shift)\b|\bramp\b|\bfirst (?:month|week|day)\b|\bwhat'?s (?:it|that) like\b|\bhow are [\w ]+ (?:planned|handled|done|managed|booked|scheduled)\b|\bunderstand (?:your|the|how your|how the) (?:\w+ )?(?:process|setup|workflow|routine|day|week|operation|side|team|situation)\b/i;
+
+/** A contact asked, yes or no, about the person the student wants to reach: "Is he still hiring?" */
+const TARGET_PRONOUN = /\b(?:he|she|they|him|her|them|his|hers|their)\b/i;
+const TARGET_YES_NO = new RegExp(
+  `^${QUESTION_LEAD}(?:is|are|does|do|did|has|have|was|were|would|will|can|could|should)\\b|\\bdo you know (?:if|whether)\\b|\\bany idea (?:if|whether)\\b`,
+  "i",
+);
+const TARGET_TOPICS: readonly { topic: TargetTopic; pattern: RegExp }[] = [
+  {
+    topic: "replies",
+    pattern:
+      /\brepl(?:y|ies|ied)\b|\brespond|\banswer|\bget back\b|\bread (?:their|his|her) email/i,
+  },
+  {
+    topic: "rightPerson",
+    pattern:
+      /\bright person\b|\bbest person\b|\bthe one (?:to|who|doing|i should|in charge|making|running|hiring)\b|\bin charge\b|\bdecid|\bwho i should\b|\bworth (?:talking|reaching)\b/i,
+  },
+  {
+    topic: "hiring",
+    pattern:
+      /\bhiring\b|\bhires?\b|\bopenings?\b|\btaking (?:people )?on\b|\blooking for (?:people|reps|anyone)\b|\bopen roles?\b/i,
+  },
+  {
+    topic: "there",
+    pattern:
+      /\bstill (?:work|there|at|with|around|run|running|head|heading|lead|leading|in|on)\b|\bmoved on\b|\bleft\b|\bwork(?:s|ing)? (?:there|at)\b/i,
+  },
+];
+const targetTopic = (question: string): TargetTopic =>
+  TARGET_TOPICS.find(({ pattern }) => pattern.test(question))?.topic ?? "other";
+const isTargetQuestion = (question: string) =>
+  TARGET_PRONOUN.test(question) && TARGET_YES_NO.test(question);
 
 function questionIntent(
   question: string,
   voice: Voice,
-): { intent: Intent; job: JobTopic | undefined; detail: DetailTopic | undefined } {
+): {
+  intent: Intent;
+  job: JobTopic | undefined;
+  detail: DetailTopic | undefined;
+  about: TargetTopic | undefined;
+} {
   const job =
     voice === "hiring" ? JOB_QUESTIONS.find(({ pattern }) => pattern.test(question)) : undefined;
   const detail = DETAIL_QUESTIONS.find(
     (entry) => (entry.voice === undefined || entry.voice === voice) && entry.pattern.test(question),
   );
+  const about =
+    voice === "contact" && isTargetQuestion(question) ? targetTopic(question) : undefined;
   const intent = ((): Intent => {
     if (voice === "contact" && RELATIONSHIP_QUESTION.test(question)) return "relationship_question";
+    if (about !== undefined && !detail) return "target_question";
     if (job) return "job_question";
     if (QUALITY_QUESTION.test(question)) return "quality_question";
     if (detail) return "detail_question";
@@ -887,7 +992,7 @@ function questionIntent(
     if (YES_NO_QUESTION.test(question)) return "yes_no_question";
     return "other_question";
   })();
-  return { intent, job: job?.topic, detail: detail?.topic };
+  return { intent, job: job?.topic, detail: detail?.topic, about };
 }
 
 const offerTopic = (text: string): OfferTopic =>
@@ -922,6 +1027,7 @@ export function readTurn(line: string, context: TurnContext): Reading {
     named: false,
     smallTalk: undefined,
     job: undefined,
+    about: undefined,
     offer: undefined,
     detail: undefined,
     quantity: undefined,
@@ -964,7 +1070,10 @@ export function readTurn(line: string, context: TurnContext): Reading {
   if (OFFER_TO_SEND.test(core)) return reading("offer_to_send", line, { offer: offerTopic(core) });
   const hypothetical = find((sentence) => HYPOTHETICAL.test(sentence));
   if (hypothetical) return reading("hypothetical", hypothetical);
-  if (voice === "contact" && TARGET.test(core)) return reading("target");
+  // "Do you know if she's hiring?" asks about the person; "I think she's hiring" names them.
+  if (voice === "contact" && TARGET.test(core) && !sentences.some(isTargetQuestion)) {
+    return reading("target");
+  }
 
   // Questions: small talk and "is this Maya?" only count when nothing substantive was asked.
   const questions = sentences.filter(
@@ -999,8 +1108,8 @@ export function readTurn(line: string, context: TurnContext): Reading {
   if (substantive.length === 0 && TOPIC_ASK.test(core)) return reading("topic");
   const question = substantive.at(-1);
   if (question) {
-    const { intent, job, detail } = questionIntent(question, voice);
-    return reading(intent, question, { job, detail, quantity: quantityKind(question) });
+    const { intent, job, detail, about } = questionIntent(question, voice);
+    return reading(intent, question, { job, detail, about, quantity: quantityKind(question) });
   }
 
   // Statements.
@@ -1015,7 +1124,8 @@ export function readTurn(line: string, context: TurnContext): Reading {
     return reading("target", line, { motivation: MOTIVATION.test(core) });
   }
   if (TOPIC.test(core)) return reading("topic");
-  const acknowledging = ACKNOWLEDGE.test(core) && objectionRaised;
+  // "Totally understand": the lead-in is a filler word, so the unstripped line is checked too.
+  const acknowledging = (ACKNOWLEDGE.test(core) || ACKNOWLEDGE.test(line)) && objectionRaised;
   if (voice !== "buyer") {
     if (acknowledging) return reading("acknowledgement");
     if (SELF_PITCH.test(core)) return reading("pitch");
@@ -1025,8 +1135,10 @@ export function readTurn(line: string, context: TurnContext): Reading {
   if (isBenefitClaim(core) || MONEY.test(core)) return reading("pitch");
   if (GREETING.test(line)) return reading("greeting");
   if (THANKS.test(core)) return reading("thanks");
+  // A short "gotcha" or "cheers mate" is a turn; only words the persona can't place are noise.
+  if (SIGN_OFF.test(line) || SIGN_OFF.test(core)) return reading("short_reply");
   if (isNonsense(core)) return reading("unclear", line, { nonsense: true });
-  if (SIGN_OFF.test(line) || words(core) <= 4) return reading("short_reply");
+  if (words(core) <= 4) return reading("short_reply");
   if (VAGUE.test(core)) return reading("vague");
   return reading("unclear");
 }
