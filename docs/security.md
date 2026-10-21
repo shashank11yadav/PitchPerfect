@@ -1,6 +1,6 @@
 # Security
 
-Security is a first-class requirement. This document is the threat model, the required controls, and how to verify them. Any change that touches auth, data access, uploads, HTML rendering, or the practice partner must keep every control here intact and tested.
+This is the threat model, the controls we require, and how to check them. Any change that touches auth, data access, uploads, HTML rendering, or the practice partner must keep every control here intact and tested.
 
 ## Assets
 

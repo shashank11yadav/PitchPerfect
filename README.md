@@ -1,10 +1,10 @@
 # PitchPerfect
 
-Practice your sales pitch out loud, get scored, get hired.
+Practice the sales call out loud before the real one, then apply with the scorecard.
 
-PitchPerfect is a training and hiring platform for tech-sales roles. Students learn the core sales skills, practice pitching by voice to an AI practice partner that plays a realistic buyer, and get a scorecard with specific, quoted feedback. Employers post roles, review applicants, and see the practice scorecards that candidates choose to share.
+PitchPerfect is a practice and hiring site for entry-level sales jobs. A student reads a short lesson on one skill, then runs the call by voice or text with an AI practice partner that plays the buyer. When the call ends they get a scorecard that quotes what they actually said. Employers post roles and, if a candidate chooses to share one, read that scorecard next to the application.
 
-> Status: portfolio project. Fully working locally with seeded demo data; deployment steps are documented in [docs/deploy.md](docs/deploy.md).
+> Status: portfolio project. It runs end to end on your machine with seeded demo data; deployment steps are in [docs/deploy.md](docs/deploy.md).
 
 ## What's inside
 
@@ -13,7 +13,7 @@ PitchPerfect is a training and hiring platform for tech-sales roles. Students le
 | **Learn**     | Eight short lessons, one per core skill: introducing yourself, pitching, objection handling, probing and discovery, referrals and networking, next steps, asking for the business, interpersonal skills.  |
 | **Practice**  | Pick a skill (or a real job posting), pitch by voice or text to an AI buyer persona with hidden objections, then get a 7-dimension scorecard with strengths, improvements, and a rewritten stronger line. |
 | **Jobs**      | Public job board. Students save, apply, optionally share a scorecard, and track status.                                                                                                                   |
-| **Employers** | Company profile, job posting with a safe rich-text editor, applicant pipeline (shortlist, interview, hire, reject), interview scheduling, dashboard.                                                      |
+| **Employers** | Company profile, job posting with a safe rich-text editor, applicant pipeline (shortlist, interview, hire, not a fit), interview scheduling, dashboard.                                                   |
 
 ## Screenshots
 
@@ -23,9 +23,9 @@ Taken from the containers with the demo data loaded (`npx tsx e2e/screenshots.ts
 
 ![Practice room two turns into a pitching call, with the buyer's profile, the stage tracker, and the reply box](docs/images/practice-room.png)
 
-![Scorecard for a pitching call: 72 out of 100, with a score and a quoted line for each skill](docs/images/scorecard.png)
+![Scorecard for a pitching call: 72 out of 100, with a 1 to 5 score, a reason and a quoted line for each of the seven rubric lines](docs/images/scorecard.png)
 
-![Employer view of an applicant: status, shortlist and reject buttons, and the practice scorecard they attached](docs/images/employer-pipeline.png)
+![Employer view of one applicant: their school, status, the Shortlist and Not a fit buttons, and the practice scorecard they attached, scored on seven rubric lines](docs/images/employer-pipeline.png)
 
 ## Architecture at a glance
 

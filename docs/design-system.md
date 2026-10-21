@@ -1,6 +1,6 @@
 # Design system
 
-PitchPerfect is clean, airy, and confident: a light canvas, one strong blue, deep navy for weight, generous whitespace, and type that feels friendly but professional. It keeps the palette and typography of the original project so it is recognizably the same product, with a new name and mark.
+PitchPerfect uses a light canvas, one strong blue, deep navy for weight, plenty of space, and type that is friendly without being cute. It keeps the original project's palette and typography, so it reads as the same product under a new name and mark.
 
 ## Brand
 

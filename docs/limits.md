@@ -1,6 +1,6 @@
 # Known limits (intentional for v1)
 
-PitchPerfect is a portfolio-grade product. These are deliberate scope limits, each with the path forward.
+PitchPerfect is a portfolio project. Each limit below is on purpose, and each has a way forward.
 
 | Limit                                       | Why                                                                                            | Path forward                                                                        |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |

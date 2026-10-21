@@ -1,6 +1,6 @@
 # AI practice partner (`apps/coach`)
 
-The practice partner is an independent service that plays a realistic buyer for a student to pitch to, then scores the conversation. It is the core of PitchPerfect, so it is built to be **useful, safe, cheap, and testable**.
+The practice partner is an independent service that plays a realistic buyer for a student to pitch to, then scores the conversation. Most of PitchPerfect's value and most of its risk sit here, so the service is kept small: it plays the buyer, scores the call, checks its own output, and stores nothing.
 
 ## Responsibilities and boundaries
 
