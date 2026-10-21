@@ -1,0 +1,50 @@
+# Build context for apps/*/Dockerfile. Each image copies only what it needs; this keeps local
+# installs, build output, secrets, and working files out of the context entirely.
+
+# Dependencies and build output (rebuilt inside the image)
+**/node_modules
+**/dist
+**/.next
+**/out
+**/build
+**/coverage
+**/*.tsbuildinfo
+**/.turbo
+**/.eslintcache
+
+# Version control, CI, and editor files
+.git
+.github
+.vscode
+.idea
+**/.DS_Store
+
+# Environment files and keys: only the committed examples may enter the context
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+
+# Local-only notes and working files
+.private
+OneDrive*
+**/*.docx
+**/*.doc
+**/*.pdf
+
+# Tests, end-to-end and audit artifacts, screenshots
+**/*.test.ts
+**/*.test.tsx
+**/test
+e2e
+playwright-report
+test-results
+blob-report
+.lighthouseci
+docs
+*.md
+apps/coach/evals
+
+# Logs
+**/*.log

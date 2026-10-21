@@ -65,7 +65,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/*/src/scripts/**", "apps/web/scripts/**", "scripts/**"],
+    files: ["apps/*/src/scripts/**", "apps/web/scripts/**", "scripts/**", "e2e/screenshots.ts"],
     rules: {
       "no-console": "off",
     },

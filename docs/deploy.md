@@ -18,17 +18,34 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
 2. **Generate secrets:**
    - `SESSION_SECRET` and `CSRF_SECRET`: 64 random bytes each (`openssl rand -base64 64`).
    - `COACH_SHARED_SECRET`: 48 random bytes (`openssl rand -base64 48`).
-3. **Deploy coach:** set every variable from `apps/coach/.env.example`, then check that `/healthz` returns `ok` from inside the private network.
+3. **Deploy coach:** from the `apps/coach/Dockerfile` image. Set every variable from `apps/coach/.env.example` (the image already sets `HOST=0.0.0.0` and `PORT=4100`), then check that `/healthz` returns `ok` from inside the private network.
 4. **Deploy api:**
-   - Set every variable from `apps/api/.env.example`, with `NODE_ENV=production`, `APP_URL=https://<web domain>` and `COACH_URL=<private coach URL>`.
-   - Run `npm run admin -w apps/api -- migrate` (builds indexes) once.
-   - Run `npm run seed -w apps/api -- --demo` only for a demo environment, with `SEED_DEMO_PASSWORD` (12 or more characters) set in that shell. The password is never printed, and re-running the seed never changes an existing account's password.
-5. **Deploy web:** set `API_ORIGIN`, `SITE_URL`, and `PROXY_SHARED_SECRET` if used. `API_ORIGIN` must be set when the app is **built**, because Next.js compiles the `/api` rewrite into the build. Build shared first, since web imports its compiled output: `npm run build -w packages/shared && npm run build -w apps/web` (the root `npm run build` does both in that order). See [The web proxy](#the-web-proxy) below.
+   - Deploy the `apps/api/Dockerfile` image. Set every variable from `apps/api/.env.example`, with `APP_URL=https://<web domain>` and `COACH_URL=<private coach URL>`. The image sets `NODE_ENV=production`.
+   - Run `node dist/scripts/admin.js migrate` (builds indexes) once, in a one-off container from the api image (for example a Render shell or `fly ssh console`). The scripts are compiled into the image; `tsx` and the `npm run admin`/`seed`/`purge` scripts are for development only. Outside a container, `npm run admin:prod -w apps/api -- migrate` runs the same build after `npm run build`.
+   - Run `node dist/scripts/seed.js --demo` only for a demo environment, with `SEED_DEMO_PASSWORD` (12 or more characters) set for that command. The password is never printed, and re-running the seed never changes an existing account's password.
+5. **Deploy web:** set `API_ORIGIN`, `SITE_URL`, and `PROXY_SHARED_SECRET` if used. `API_ORIGIN` must be set when the app is **built**, because Next.js compiles the `/api` rewrite into the build. For the container image that means a build argument, `--build-arg API_ORIGIN=<api URL>`; set the same value at run time too, since server-rendered pages read it then. Build shared first, since web imports its compiled output: `npm run build -w packages/shared && npm run build -w apps/web` (the root `npm run build` does both in that order). See [The web proxy](#the-web-proxy) below.
 6. **Verify:**
    - Run `npx playwright test --config e2e/playwright.smoke.config.ts` with `BASE_URL` set to the deployed URL. It runs a read-only smoke test of the public pages, `/api/health`, and the headers.
    - Run Lighthouse on `/`, `/jobs` and one job page.
    - Run the [security checklist](security.md#pre-release-security-checklist).
-7. **Schedule the purge job:** run `npm run purge -w apps/api` daily. It removes expired tokens and attempts as a backstop for the TTL indexes, marks sessions that were left `active` long past the 20-minute limit as abandoned, and removes `starting` placeholders of session starts that never finished (older than 5 minutes).
+7. **Schedule the purge job:** run `node dist/scripts/purge-expired.js` daily from the api image (a cron job on the host with the api's environment; `npm run purge:prod -w apps/api` outside a container). It removes expired tokens and attempts as a backstop for the TTL indexes, marks sessions that were left `active` long past the 20-minute limit as abandoned, and removes `starting` placeholders of session starts that never finished (older than 5 minutes).
+
+## Container images
+
+Each service has a multi-stage image built from the repository root:
+
+```bash
+docker build -f apps/coach/Dockerfile -t pitchperfect-coach .
+docker build -f apps/api/Dockerfile -t pitchperfect-api .
+docker build -f apps/web/Dockerfile --build-arg API_ORIGIN=https://api.example.test -t pitchperfect-web .
+```
+
+- The base is `node:22.23.3-alpine3.23`. The build stage installs only the image's own workspace and `packages/shared`, builds shared, then the app.
+- The runtime stage holds production dependencies and the compiled output, runs as the non-root `node` user with `NODE_ENV=production`, and can't write to its own files (web's Next.js cache directory is the one exception).
+- Each image has a `HEALTHCHECK`: api `GET /api/health`, coach `GET /healthz`, web `GET /`.
+- web is the Next.js standalone server (`NEXT_OUTPUT=standalone` at build time). Other builds, including Vercel's and the one `next start` uses in CI, keep the normal output.
+
+`docker compose --profile full up --build -d` runs all three locally with MongoDB and Mailpit. That stack is a demo over plain http: it overrides `NODE_ENV` to `development` and uses `dev-only-` placeholder secrets, which the services refuse in production. Don't deploy it as it is.
 
 ## The web proxy
 

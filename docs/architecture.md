@@ -2,14 +2,14 @@
 
 ## Services
 
-| Service | Path                     | Runtime                                   | Port               | Exposed publicly                    | Owns                                                         |
-| ------- | ------------------------ | ----------------------------------------- | ------------------ | ----------------------------------- | ------------------------------------------------------------ |
-| web     | `apps/web`               | Next.js (App Router), React, Tailwind CSS | 3000               | Yes                                 | Pages, UI, SEO, proxying `/api/*`                            |
-| api     | `apps/api`               | Express 5, Mongoose, MongoDB              | 4000               | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas   |
-| coach   | `apps/coach`             | Fastify                                   | 4100               | **Never**                           | Personas, conversation turns, scoring, guardrails, LLM calls |
-| shared  | `packages/shared`        | TypeScript library                        | n/a                | n/a                                 | zod schemas, types, constants                                |
-| mongo   | Docker `mongo:8`         |                                           | 27017              | No                                  | Data                                                         |
-| mailpit | Docker `axllent/mailpit` |                                           | 1025 SMTP, 8025 UI | Dev only                            | Catches outgoing email locally                               |
+| Service | Path                             | Runtime                                   | Port               | Exposed publicly                    | Owns                                                         |
+| ------- | -------------------------------- | ----------------------------------------- | ------------------ | ----------------------------------- | ------------------------------------------------------------ |
+| web     | `apps/web`                       | Next.js (App Router), React, Tailwind CSS | 3000               | Yes                                 | Pages, UI, SEO, proxying `/api/*`                            |
+| api     | `apps/api`                       | Express 5, Mongoose, MongoDB              | 4000               | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas   |
+| coach   | `apps/coach`                     | Fastify                                   | 4100               | **Never**                           | Personas, conversation turns, scoring, guardrails, LLM calls |
+| shared  | `packages/shared`                | TypeScript library                        | n/a                | n/a                                 | zod schemas, types, constants                                |
+| mongo   | Docker `mongo:8`                 |                                           | 27017              | No                                  | Data                                                         |
+| mailpit | Docker `axllent/mailpit:v1.31.6` |                                           | 1025 SMTP, 8025 UI | Dev only                            | Catches outgoing email locally                               |
 
 ### Why three services
 
@@ -27,6 +27,7 @@ apps/
     content/lessons/        8 MDX lessons, one per skill slug
     lib/                    api client, auth helpers, speech helpers, seo helpers
     public/                 logo, favicons, og image
+    Dockerfile              standalone Next.js server image
   api/
     src/
       app.ts                express app factory (no listen), used by tests
@@ -45,6 +46,7 @@ apps/
       services/             mailer, password-policy, html-sanitizer, coach-client, files (GridFS)
       scripts/              CLI entries (seed, admin, purge-expired), their run-*.ts logic, seed and demo data
     test/                   integration tests (supertest + mongodb-memory-server)
+    Dockerfile              api image; also runs the compiled scripts
   coach/
     src/
       app.ts, server.ts, config.ts
@@ -55,6 +57,7 @@ apps/
       routes/               plan.ts, turn.ts, score.ts, health.ts
     evals/                  scripted transcripts + runner
     test/
+    Dockerfile              practice partner image (never given a public port)
 packages/
   shared/
     src/
@@ -63,9 +66,9 @@ packages/
       schemas/              request/response zod schemas per api module + coach contract
       enums.ts              roles, job status, application status, etc.
       index.ts
-e2e/                        Playwright tests
-docs/
-docker-compose.yml
+e2e/                        Playwright tests, plus screenshots.ts for the README images
+docs/                       docs, and images/ for the README screenshots
+docker-compose.yml          MongoDB and Mailpit; the `full` profile adds web, api and coach
 ```
 
 ## Data model (MongoDB via Mongoose)

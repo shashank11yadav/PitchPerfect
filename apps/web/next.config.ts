@@ -19,6 +19,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The container image (apps/web/Dockerfile) builds a self-contained server. Other builds keep the
+  // normal output, which `next start` (e2e, Lighthouse) and Vercel expect.
+  ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),
   poweredByHeader: false,
   reactStrictMode: true,
   // The monorepo root, so the build traces workspace packages and the single lockfile.

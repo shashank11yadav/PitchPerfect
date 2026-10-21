@@ -12,7 +12,10 @@
     "start": "node dist/server.js",
     "seed": "tsx --env-file-if-exists=.env src/scripts/seed.ts",
     "admin": "tsx --env-file-if-exists=.env src/scripts/admin.ts",
-    "purge": "tsx --env-file-if-exists=.env src/scripts/purge-expired.ts"
+    "purge": "tsx --env-file-if-exists=.env src/scripts/purge-expired.ts",
+    "seed:prod": "node dist/scripts/seed.js",
+    "admin:prod": "node dist/scripts/admin.js",
+    "purge:prod": "node dist/scripts/purge-expired.js"
   },
   "dependencies": {
     "@pitchperfect/shared": "0.0.0",

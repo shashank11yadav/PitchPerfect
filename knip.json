@@ -2,7 +2,12 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.mjs", "e2e/global-setup.ts", "e2e/{tests,smoke}/**/*.spec.ts"],
+      "entry": [
+        "scripts/*.mjs",
+        "e2e/global-setup.ts",
+        "e2e/screenshots.ts",
+        "e2e/{tests,smoke}/**/*.spec.ts"
+      ],
       "playwright": false
     },
     "packages/shared": {},

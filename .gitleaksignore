@@ -1,0 +1,8 @@
+# Reviewed false positives: made-up passwords in the api's own tests, never used anywhere else.
+# One fingerprint per finding (commit:file:rule:line). Add new ones only after checking the value.
+17a37f7190fdb00531166b89863dba1c6b1629a4:apps/api/test/scripts.test.ts:generic-api-key:29
+17a37f7190fdb00531166b89863dba1c6b1629a4:apps/api/test/scripts.test.ts:generic-api-key:30
+248386eceb3c4ae77cbe5b417e2599a5cd0f6bd5:apps/api/test/account-credentials.test.ts:generic-api-key:20
+248386eceb3c4ae77cbe5b417e2599a5cd0f6bd5:apps/api/test/account-credentials.test.ts:generic-api-key:54
+c1fedbc53aa4b5c41c8981a43eddf38bf5e036b4:apps/api/test/auth.test.ts:generic-api-key:29
+c1fedbc53aa4b5c41c8981a43eddf38bf5e036b4:apps/api/test/helpers/factories.ts:generic-api-key:8

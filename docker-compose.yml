@@ -1,3 +1,14 @@
+# Local infrastructure (`npm run dev:infra`), plus the whole stack in containers under the `full`
+# profile: `docker compose --profile full up --build -d`, then open http://localhost:3000.
+#
+# The `full` profile is a local demo over plain http. It runs the production images with
+# NODE_ENV=development and `dev-only-` placeholder secrets, which the services refuse in production.
+# apps/api/.env and apps/coach/.env are read when they exist (COACH_PROVIDER, model keys, limits),
+# but the values below win, because they wire the containers to each other.
+# WEB_PORT moves the published port when 3000 is taken: `WEB_PORT=3300 docker compose ...`.
+
+x-dev-coach-secret: &dev-coach-secret dev-only-compose-coach-shared-secret-0000000000
+
 services:
   mongo:
     image: mongo:8
@@ -6,13 +17,15 @@ services:
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
+      start_interval: 2s
 
   mailpit:
-    image: axllent/mailpit
+    image: axllent/mailpit:v1.31.6
     ports:
       - "1025:1025"
       - "8025:8025"
@@ -22,37 +35,64 @@ services:
     build:
       context: .
       dockerfile: apps/coach/Dockerfile
-    env_file: apps/coach/.env
+    env_file:
+      - path: apps/coach/.env
+        required: false
     environment:
+      NODE_ENV: development
       HOST: 0.0.0.0
+      PORT: "4100"
+      COACH_SHARED_SECRET: *dev-coach-secret
+    # No published port: only the api reaches it, over the compose network.
+    restart: unless-stopped
 
   api:
     profiles: ["full"]
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    env_file: apps/api/.env
+    env_file:
+      - path: apps/api/.env
+        required: false
     environment:
+      NODE_ENV: development
+      PORT: "4000"
+      APP_URL: http://localhost:${WEB_PORT:-3000}
+      # One proxy hop (web) in front of the api; see docs/deploy.md.
+      TRUST_PROXY: "1"
       MONGODB_URI: mongodb://mongo:27017/pitchperfect
+      SESSION_SECRET: dev-only-compose-session-secret-0000000000000
+      CSRF_SECRET: dev-only-compose-csrf-secret-000000000000000000
       COACH_URL: http://coach:4100
+      COACH_SHARED_SECRET: *dev-coach-secret
       SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
     depends_on:
       mongo:
         condition: service_healthy
-      coach:
+      mailpit:
         condition: service_started
+      coach:
+        condition: service_healthy
+    restart: unless-stopped
 
   web:
     profiles: ["full"]
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        # Compiled into the `/api` rewrite at build time.
+        API_ORIGIN: http://api:4000
     environment:
       API_ORIGIN: http://api:4000
+      SITE_URL: http://localhost:${WEB_PORT:-3000}
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3000}:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   mongo-data:
