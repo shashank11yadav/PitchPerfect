@@ -192,6 +192,24 @@ describe("heuristicScorecard", () => {
     expect(strong?.score).toBeGreaterThanOrEqual(4);
   });
 
+  it("doesn't take 'can I get that over to you' as acknowledging pushback", () => {
+    const turns = [
+      "Hi, I'm Riley from Routewise. How do you plan routes today?",
+      "Our planner rebuilds routes in minutes, so your dispatchers stop redoing them.",
+      "Can I get that over to you by Friday? I want to understand how your week looks.",
+    ];
+    const objections = card(turns).dimensions.find((dimension) => dimension.key === "objections");
+    expect(objections?.score).toBe(1);
+    expect(objections?.justification).toMatch(/No line shows you acknowledging/);
+    const owned = card([
+      ...turns.slice(0, 2),
+      "I get that, and one carrier your size cut overtime by $3,000.",
+    ]);
+    expect(
+      owned.dimensions.find((dimension) => dimension.key === "objections")?.score,
+    ).toBeGreaterThanOrEqual(3);
+  });
+
   it("credits proof in the same sentence as the acknowledgement", () => {
     const turns = [
       "Hi, I'm Riley from Routewise. How do you plan routes today?",

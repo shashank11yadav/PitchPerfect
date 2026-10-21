@@ -1,7 +1,7 @@
 /**
  * Shared by the fake provider's parts: what it listens for in a student's words, and its number
- * generator. The scorer and the demo buyer use the same patterns, so a line the buyer treats as a
- * meeting request is one the scorecard credits as an ask.
+ * generator. The scorer and the demo persona use the same patterns, so a line the persona treats
+ * as acknowledging pushback is one the scorecard credits for it.
  */
 
 /** A day or a time: "Thursday at 10am", "2pm", "next week". */
@@ -15,9 +15,13 @@ export const TIME_PHRASE =
 export const ASK =
   /\b(?:could|can|shall|should) we\b|\blet'?s\b|\bwould you be (?:open|up) to\b|\b(?:next step|follow up|schedule|book|introduce|introduction|trial|pilot)\b/i;
 
-/** Agreeing a concern is fair before answering it. */
+/**
+ * Agreeing a concern is fair before answering it. "I get that" only when it stands on its own
+ * ("I get that, but…"), not "can I get that over to you"; "understand" only when it isn't the
+ * start of a question ("I want to understand how…").
+ */
 export const ACKNOWLEDGE =
-  /\b(understand|fair|makes sense|hear you|good question|great question|i see|i get (?:it|that))\b/i;
+  /\bi (?:\w+ )?understand\b(?!\s+(?:how|what|why|when|where|who|whether|if)\b)|\bunderstood\b|\bfair\b|\bmakes sense\b|\bhear you\b|\bgood question\b|\bgreat question\b|\bi see\b|\bi get (?:it|that)\b(?=\s*(?:[,.;!?]|$|but\b|and\b|though\b|so\b))/i;
 
 /** Saying what changes for the buyer. */
 export const BENEFIT =
