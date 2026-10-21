@@ -12,8 +12,9 @@ x-dev-coach-secret: &dev-coach-secret dev-only-compose-coach-shared-secret-00000
 services:
   mongo:
     image: mongo:8
+    # Published on this machine only, never on the network.
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
@@ -27,8 +28,8 @@ services:
   mailpit:
     image: axllent/mailpit:v1.31.6
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
 
   coach:
     profiles: ["full"]
@@ -44,7 +45,6 @@ services:
       PORT: "4100"
       COACH_SHARED_SECRET: *dev-coach-secret
     # No published port: only the api reaches it, over the compose network.
-    restart: unless-stopped
 
   api:
     profiles: ["full"]
@@ -67,6 +67,10 @@ services:
       COACH_SHARED_SECRET: *dev-coach-secret
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
+      # Blank means unset: a developer's apps/api/.env may hold these for another setup, and here
+      # web sends no proxy secret and there is no Redis.
+      PROXY_SHARED_SECRET: ""
+      REDIS_URL: ""
     depends_on:
       mongo:
         condition: service_healthy
@@ -74,7 +78,6 @@ services:
         condition: service_started
       coach:
         condition: service_healthy
-    restart: unless-stopped
 
   web:
     profiles: ["full"]
@@ -88,11 +91,10 @@ services:
       API_ORIGIN: http://api:4000
       SITE_URL: http://localhost:${WEB_PORT:-3000}
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
     depends_on:
       api:
         condition: service_healthy
-    restart: unless-stopped
 
 volumes:
   mongo-data:

@@ -34,7 +34,10 @@ async function watchCsp(context: BrowserContext, violations: string[]): Promise<
 interface Fixtures {
   /** CSP violations seen in any page of the test; the test fails if there are any. */
   cspViolations: string[];
-  /** Opens another browser context (a second user), guarded the same way and closed afterwards. */
+  /**
+   * Opens another browser context (a second user) with the project's locale, time zone and
+   * viewport, guarded the same way and closed afterwards.
+   */
   openContext: (options?: BrowserContextOptions) => Promise<BrowserContext>;
 }
 
@@ -53,10 +56,17 @@ export const test = base.extend<Fixtures>({
     await watchCsp(context, cspViolations);
     await use(context);
   },
-  openContext: async ({ browser, cspViolations }, use) => {
+  openContext: async ({ browser, cspViolations, baseURL, locale, timezoneId, viewport }, use) => {
     const opened: BrowserContext[] = [];
     await use(async (options = {}) => {
-      const context = await browser.newContext({ baseURL: WEB_URL, ...options });
+      // The project's settings first, so a second user sees the same site as the first.
+      const context = await browser.newContext({
+        baseURL: baseURL ?? WEB_URL,
+        locale,
+        timezoneId,
+        viewport,
+        ...options,
+      });
       await watchCsp(context, cspViolations);
       opened.push(context);
       return context;
