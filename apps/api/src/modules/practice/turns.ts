@@ -236,7 +236,9 @@ export async function runTurn(ctx: TurnContext, lock: TurnLock, text: string): P
     const charged = (aborted || progress.started) && !progress.stored;
     const usage = charged ? await chargeUnanswered(lock, request) : undefined;
     result = { ...result, outcome: code, usage };
-    if (!aborted) ctx.stream.send({ type: "error", code });
+    // A turn the coach had started is counted (charged here, or already stored); a refusal before
+    // it started is not, and the browser keeps its turn.
+    if (!aborted) ctx.stream.send({ type: "error", code, counted: progress.started });
   } finally {
     await releaseTurnLock(lock);
   }

@@ -96,6 +96,34 @@ describe("Toast", () => {
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
   });
 
+  it("keeps holding when the pointer leaves while focus is still inside", () => {
+    vi.useFakeTimers();
+    render(
+      <ToastProvider>
+        <SaveButton />
+      </ToastProvider>,
+    );
+    act(() => {
+      screen.getByRole("button", { name: "Save" }).click();
+    });
+    const message = screen.getByText("Saved").closest("[data-toast]");
+    if (!message) throw new Error("toast not rendered");
+
+    act(() => {
+      screen.getByRole("button", { name: "Dismiss" }).focus();
+      fireEvent.mouseEnter(message);
+      fireEvent.mouseLeave(message);
+      vi.advanceTimersByTime(20_000);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Saved");
+
+    act(() => {
+      screen.getByRole("button", { name: "Save" }).focus();
+      vi.advanceTimersByTime(8000);
+    });
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
   it("can be dismissed by its button", () => {
     render(
       <ToastProvider>

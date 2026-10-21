@@ -302,7 +302,7 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     const { events } = await sendTurn(session, attemptId, "Hello there");
 
     expect(events.map((event) => event.event)).toEqual(["delta", "error"]);
-    expect(events[1]?.data).toEqual({ code: "upstream_error" });
+    expect(events[1]?.data).toEqual({ code: "upstream_error", counted: true });
     const stored = await attemptOf(attemptId);
     expect(stored?.transcript).toMatchObject([
       { role: "student", text: "Hello there", flagged: true },
@@ -357,14 +357,16 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     expect(stored?.turnLockUntil).toBeNull();
   });
 
-  it("stores nothing when the coach refuses the turn before streaming", async () => {
+  it("stores nothing, and says the turn wasn't counted, when the coach refuses it before streaming", async () => {
     const { session, attemptId } = await activeAttempt();
     harness.stub.fail("/v1/turn", { status: 503, code: "practice_unavailable" });
 
     const { res, events } = await sendTurn(session, attemptId, "Hello there");
 
     expect(res.status).toBe(200);
-    expect(events).toEqual([{ event: "error", data: { code: "practice_unavailable" } }]);
+    expect(events).toEqual([
+      { event: "error", data: { code: "practice_unavailable", counted: false } },
+    ]);
     const stored = await attemptOf(attemptId);
     expect(stored?.transcript).toEqual([]);
     expect(stored?.turnLockUntil).toBeNull();

@@ -93,15 +93,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map(({ id, title, description, tone = "info" }) => {
           const Icon = ICONS[tone];
           return (
-            // Hovering or focusing the message holds it (WCAG 2.2.1); leaving restarts the clock.
+            // Hovering or focusing the message holds it (WCAG 2.2.1); leaving restarts the clock,
+            // unless the other hold (focus inside, or the pointer still over it) is still on.
             <div
               key={id}
               data-toast=""
               onMouseEnter={() => {
                 pause(id);
               }}
-              onMouseLeave={() => {
-                start(id);
+              onMouseLeave={(event) => {
+                if (!event.currentTarget.contains(document.activeElement)) start(id);
               }}
               onFocus={() => {
                 pause(id);

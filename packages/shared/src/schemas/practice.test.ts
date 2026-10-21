@@ -77,9 +77,14 @@ describe("PracticeEvent", () => {
       { type: "ended", reason: "guard_limit" },
       { type: "ended", reason: "turn_limit" },
       { type: "ended", reason: "expired" },
-      { type: "error", code: "upstream_error" },
+      { type: "error", code: "upstream_error", counted: true },
+      { type: "error", code: "practice_unavailable", counted: false },
     ];
     for (const event of events) expect(PracticeEvent.parse(event)).toEqual(event);
+  });
+
+  it("requires an error event to say whether the turn was counted", () => {
+    expect(PracticeEvent.safeParse({ type: "error", code: "upstream_error" }).success).toBe(false);
   });
 
   it("rejects unknown reasons, out-of-range turn counts, coach usage, and extra keys", () => {

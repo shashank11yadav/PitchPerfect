@@ -92,6 +92,27 @@ describe("ApplicationList", () => {
     expect(within(gone).getByText("Fenwick")).toBeInTheDocument();
   });
 
+  it("names the shared scorecard only while that session still exists", async () => {
+    const sharedAttemptId = "65f1c0ffee00000000000b01";
+    show([
+      application({ id: "a".repeat(24), sharedAttemptId, hasSharedScorecard: true }),
+      application({
+        id: "b".repeat(24),
+        job: { id: "c".repeat(24), slug: null, title: "Account executive", companyName: "Fenwick" },
+        sharedAttemptId,
+        hasSharedScorecard: false,
+      }),
+    ]);
+    const shared = await row("Sales development representative");
+    expect(within(shared).getByRole("link", { name: "a practice scorecard" })).toHaveAttribute(
+      "href",
+      `/app/practice/attempt/${sharedAttemptId}`,
+    );
+    // The session was deleted after its retention period, so there is nothing to show.
+    const gone = await row("Account executive");
+    expect(gone).not.toHaveTextContent(/You shared/);
+  });
+
   it("only offers withdraw while the application is open", async () => {
     show(
       (

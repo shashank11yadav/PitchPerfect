@@ -102,14 +102,33 @@ describe("usePracticeRoom", () => {
     act(() => {
       result.current.send();
     });
-    // The api charges the turn whenever it sends any event, an error included.
+    // The api says whether it charged the turn; it did here, since the coach had started.
     act(() => {
-      turn.emit({ type: "error", code: "upstream_error" });
+      turn.emit({ type: "error", code: "upstream_error", counted: true });
     });
     expect(result.current.state).toMatchObject({
       status: "ready",
       turnsLeft: 19,
       error: { code: "upstream_error" },
+    });
+  });
+
+  it("leaves the turn count alone when the api's error event says it wasn't counted", () => {
+    const turn = pendingTurn();
+    const { result } = room();
+    act(() => {
+      result.current.editDraft("Hello");
+    });
+    act(() => {
+      result.current.send();
+    });
+    act(() => {
+      turn.emit({ type: "error", code: "practice_unavailable", counted: false });
+    });
+    expect(result.current.state).toMatchObject({
+      status: "ready",
+      turnsLeft: 20,
+      error: { code: "practice_unavailable" },
     });
   });
 

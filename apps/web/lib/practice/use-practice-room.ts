@@ -237,8 +237,9 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
         release();
       }
       if (event.type === "error") {
-        // The api charges the turn once it has sent anything, this error included.
-        dispatch({ type: "stream_error", code: event.code, counted: true });
+        // The api says whether it charged the turn: yes once the coach had started answering,
+        // no when it was refused outright.
+        dispatch({ type: "stream_error", code: event.code, counted: event.counted });
         return;
       }
       onEvent(event);

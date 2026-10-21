@@ -135,7 +135,7 @@ describe("PracticeRoom", () => {
     [
       "an error event",
       (turn: ReturnType<typeof controlStream>) => {
-        turn.emit({ type: "error", code: "upstream_error" });
+        turn.emit({ type: "error", code: "upstream_error", counted: true });
       },
     ],
     [
@@ -164,9 +164,19 @@ describe("PracticeRoom", () => {
     const turn = controlStream();
     render(<PracticeRoom attempt={activeAttempt()} />);
     await user.type(screen.getByRole("textbox", { name: "Your turn" }), "Hello there.{Enter}");
-    turn.emit({ type: "error", code: "upstream_error" });
+    turn.emit({ type: "error", code: "upstream_error", counted: true });
     await screen.findByRole("alert");
     expect(screen.getByText("19 turns left")).toBeInTheDocument();
+  });
+
+  it("doesn't count a turn the api's error event says it didn't charge", async () => {
+    const user = userEvent.setup();
+    const turn = controlStream();
+    render(<PracticeRoom attempt={activeAttempt()} />);
+    await user.type(screen.getByRole("textbox", { name: "Your turn" }), "Hello there.{Enter}");
+    turn.emit({ type: "error", code: "practice_unavailable", counted: false });
+    await screen.findByRole("alert");
+    expect(screen.getByText("20 turns left")).toBeInTheDocument();
   });
 
   it("doesn't count a turn the api refused before sending anything", async () => {
@@ -248,7 +258,7 @@ describe("PracticeRoom", () => {
 
   it("goes back to a fresh start screen on Practice again after scoring in place", async () => {
     const user = userEvent.setup();
-    serveApi({
+    const fetchMock = serveApi({
       "GET /api/auth/csrf": csrf,
       "POST /api/practice/sessions/65f1c0ffee00000000000b01/end": () =>
         jsonResponse({ attempt: completedAttempt() }),
@@ -273,6 +283,10 @@ describe("PracticeRoom", () => {
     expect(await screen.findByRole("button", { name: "Start the call" })).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: /^Overall score/ })).toBeNull();
     expect(window.location.pathname).toBe("/app/practice/pitching");
+    // The lobby's meter is fresh: the quota was asked again after the call, not kept from before.
+    await waitFor(() => {
+      expect(callsTo(fetchMock, "GET /api/practice/quota")).toBeGreaterThanOrEqual(2);
+    });
   });
 });
 

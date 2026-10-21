@@ -3,7 +3,7 @@
 import { getSkill, type AttemptView, type SkillSlug } from "@pitchperfect/shared";
 import { Clock, MessagesSquare } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/cn";
@@ -191,26 +191,38 @@ export function PracticeRoom(props: PracticeRoomProps) {
   const room = usePracticeRoom({ skill, jobId, resume: props.attempt });
   // One quota load for the lobby's meter and for naming the partner truthfully in both views.
   const quota = usePracticeQuota();
+  const { reload: reloadQuota } = quota;
   const { status, result } = room.state;
 
-  // The scorecard replaces a long transcript: start it at the top, ring first.
+  // The scorecard replaces a long transcript: start it at the top, ring first. The call just used
+  // a session, so the quota is asked again rather than kept from before the call.
   useEffect(() => {
-    if (status === "scored") window.scrollTo({ top: 0 });
-  }, [status]);
+    if (status !== "scored") return;
+    window.scrollTo({ top: 0 });
+    reloadQuota();
+  }, [status, reloadQuota]);
+
+  // Back to the lobby with a fresh meter: the quota may have moved since the lobby last loaded.
+  const { reset: resetRoom } = room;
+  const reset = useCallback(() => {
+    resetRoom();
+    reloadQuota();
+  }, [resetRoom, reloadQuota]);
+  const controls: PracticeRoomControls = { ...room, reset };
 
   switch (status) {
     case "idle":
     case "starting":
     case "error":
-      return <RoomLobby skill={skill} jobId={jobId} room={room} quota={quota} />;
+      return <RoomLobby skill={skill} jobId={jobId} room={controls} quota={quota} />;
     case "scored":
-      return result ? <Scorecard attempt={result} onPracticeAgain={room.reset} /> : null;
+      return result ? <Scorecard attempt={result} onPracticeAgain={reset} /> : null;
     case "ready":
     case "listening":
     case "sending":
     case "streaming":
     case "ending":
     case "ended":
-      return <Session room={room} skill={skill} partner={quota.partner} />;
+      return <Session room={controls} skill={skill} partner={quota.partner} />;
   }
 }

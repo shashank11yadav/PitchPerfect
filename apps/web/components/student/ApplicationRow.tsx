@@ -76,7 +76,8 @@ export function ApplicationRow({ application, onChange }: ApplicationRowProps) {
         {status === "interview" && interview && (
           <InterviewSlot interview={interview} linkLabel="Join the interview" className="mt-4" />
         )}
-        {application.sharedAttemptId && (
+        {/* The same flag the employer sees: the shared session still exists and was completed. */}
+        {application.sharedAttemptId && application.hasSharedScorecard && (
           <p className="mt-3 text-small text-muted">
             You shared{" "}
             <Link

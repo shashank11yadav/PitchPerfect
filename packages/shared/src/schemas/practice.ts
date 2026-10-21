@@ -98,6 +98,7 @@ export const PracticeEvent = z.discriminatedUnion("type", [
   }),
   z.strictObject({ type: z.literal("redirect"), text: z.string() }),
   z.strictObject({ type: z.literal("ended"), reason: z.enum(ENDED_REASONS) }),
-  z.strictObject({ type: z.literal("error"), code: z.string().min(1) }),
+  /** `counted`: the api charged this turn (the coach had started answering before it failed). */
+  z.strictObject({ type: z.literal("error"), code: z.string().min(1), counted: z.boolean() }),
 ]);
 export type PracticeEvent = z.infer<typeof PracticeEvent>;
