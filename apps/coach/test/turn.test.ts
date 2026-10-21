@@ -105,8 +105,8 @@ describe("POST /v1/turn", () => {
     expect(named(events, "delta").length).toBeGreaterThanOrEqual(1);
     expect(events.at(-1)?.event).toBe("done");
     const done = doneOf(events);
-    // The fake moves to stage n mod 5 on student turn n; this is turn 2.
-    expect(done?.stage).toBe("pitch");
+    // The student pitched, so the fake buyer answers with its first hidden objection.
+    expect(done?.stage).toBe("objection");
     expect(STAGES).toContain(done?.stage);
     expect(done?.finalText).not.toContain("[[");
     expect(streamed(events)).not.toContain("[");

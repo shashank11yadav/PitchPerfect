@@ -1,4 +1,6 @@
-import { SKILLS, STAGES, type ScenarioPrivate, type ScenarioPublic } from "@pitchperfect/shared";
+import { SKILLS, type ScenarioPrivate, type ScenarioPublic } from "@pitchperfect/shared";
+import { mulberry32 } from "./fake-patterns.js";
+import { personaReply } from "./fake-persona.js";
 import { heuristicScorecard } from "./fake-scorecard.js";
 import {
   type ChatMessage,
@@ -10,7 +12,6 @@ import {
   type UsageMeter,
   abortedBy,
   parseStructured,
-  stageTag,
   taskOf,
 } from "./provider.js";
 
@@ -26,17 +27,9 @@ export interface FakeProviderOptions {
 const DEFAULT_SEED = 1;
 const STREAM_CHUNKS = 4;
 
-/** Mulberry32, seeded from the provider seed and a per-call salt. */
-function random(seed: number, salt: number): () => number {
-  let state = (Math.imul(seed, 0x9e3779b1) ^ Math.imul(salt + 1, 0x85ebca6b)) >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
-  };
-}
+/** Seeded from the provider seed and a per-call salt. */
+const random = (seed: number, salt: number) =>
+  mulberry32(Math.imul(seed, 0x9e3779b1) ^ Math.imul(salt + 1, 0x85ebca6b));
 
 const pick = <T>(items: readonly T[], next: () => number): T =>
   items[Math.floor(next() * items.length)] as T;
@@ -84,29 +77,6 @@ const WIN_CONDITIONS = [
   "The student ties the offer to a problem the buyer mentioned.",
   "The student proposes a specific next meeting.",
 ] as const;
-
-const REPLIES: Record<(typeof STAGES)[number], readonly string[]> = {
-  opening: [
-    "Let's back up a little. Remind me who you are and why you reached out?",
-    "Sorry, I lost the thread there. What is this call about again?",
-  ],
-  discovery: [
-    "Fair enough. Honestly, things work fine as they are. What makes you think we need anything?",
-    "Okay. We're stretched thin this month, so what exactly do you want to know about how we work?",
-  ],
-  pitch: [
-    "Alright, I'm listening. What would this actually change for a team like mine?",
-    "That's a real headache for us, yes. So how would your offer help with it?",
-  ],
-  objection: [
-    "I'll be honest, the price worries me. We already pay for a tool that mostly works, so why switch?",
-    "My concern is timing. We're mid-quarter and my team can't take on a rollout. Why now?",
-  ],
-  close: [
-    "That's helpful, thank you. If we did move ahead, what would the next step look like?",
-    "You've made a decent case. What would you suggest we do from here?",
-  ],
-};
 
 const STUDENT_TURN = /<student_turn>([\s\S]*?)<\/student_turn>/g;
 
@@ -200,7 +170,7 @@ export class FakeProvider implements LlmProvider {
       case "plan":
         return this.#plan();
       case "turn":
-        return this.#reply(turns.length);
+        return personaReply(this.#seed, input);
       case "score": {
         const text = input.system + input.messages.map((m) => m.content).join(" ");
         const skill = SKILLS.find((candidate) => text.includes(candidate.slug));
@@ -230,11 +200,5 @@ export class FakeProvider implements LlmProvider {
         winConditions: WIN_CONDITIONS.slice(0, 1 + Math.floor(next() * WIN_CONDITIONS.length)),
       },
     };
-  }
-
-  /** Student turn n gets stage n mod 5, so turn 3 raises an objection. */
-  #reply(turnNumber: number): string {
-    const stage = STAGES[turnNumber % STAGES.length] ?? "opening";
-    return `${pick(REPLIES[stage], random(this.#seed, turnNumber))} ${stageTag(stage)}`;
   }
 }

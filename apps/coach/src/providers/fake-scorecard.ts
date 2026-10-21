@@ -5,6 +5,7 @@ import {
   type RubricKey,
   type Scorecard,
 } from "@pitchperfect/shared";
+import { ACKNOWLEDGE, ASK, BENEFIT, TIME_PHRASE } from "./fake-patterns.js";
 
 /**
  * The fake provider's scorer: simple text heuristics, written up the way a sales coach would say
@@ -53,19 +54,8 @@ const wordCount = (text: string) => text.split(/\s+/).filter(Boolean).length;
 /** A sentence without its closing punctuation, for building on. */
 const bare = (sentence: string) => sentence.replace(/[.!?]+$/, "");
 
-const TIME_PHRASE =
-  /\b(?:next\s+)?(?:monday|tuesday|wednesday|thursday|friday|tomorrow)(?:\s+at\s+\d{1,2}(?::\d{2})?\s?(?:am|pm)?)?|\b\d{1,2}(?::\d{2})?\s?(?:am|pm)\b|\b(?:next|this) week\b/i;
-/**
- * An ask for something next: a proposal ("could we", "let's") or a next-step word. A meeting word
- * on its own isn't one, so "thanks for taking the call" doesn't count.
- */
-const ASK =
-  /\b(?:could|can|shall|should) we\b|\blet'?s\b|\bwould you be (?:open|up) to\b|\b(?:next step|follow up|schedule|book|introduce|introduction|trial|pilot)\b/i;
 const OPEN_QUESTION = /^(what|how|why|which|where|who|tell me|walk me)\b/i;
-const ACKNOWLEDGE =
-  /\b(understand|fair|makes sense|hear you|good question|great question|i see|i get it)\b/i;
 const PROOF = /\b(\d+|for example|customers|teams like|case study|results)\b/i;
-const BENEFIT = /\b(save|saves|reduce|cut|cuts|grow|increase|faster|less|stops|help|helps)\b/i;
 const YOU = /\b(you|your|yours)\b/gi;
 const HEDGES = [
   "um",
@@ -162,7 +152,13 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
   const time = timed?.match(TIME_PHRASE)?.[0];
   const ask = timed ?? first(ASK);
   const acknowledged = first(ACKNOWLEDGE);
-  const proof = sentences.find((sentence) => PROOF.test(sentence) && sentence !== acknowledged);
+  // Proof answers the concern just acknowledged: a fact after it, not a time or a number in an ask.
+  const afterAcknowledging = acknowledged
+    ? sentences.slice(sentences.indexOf(acknowledged) + 1)
+    : [];
+  const proof = afterAcknowledging.find(
+    (sentence) => PROOF.test(sentence) && !ASK.test(sentence) && !TIME_PHRASE.test(sentence),
+  );
   const opener = OPENER.test(turns[0] ?? "") ? sentences[0] : undefined;
 
   // Structure first, so the opening line is its evidence and clarity quotes something else.

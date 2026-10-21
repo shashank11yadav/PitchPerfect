@@ -10,6 +10,7 @@ import {
   TASK_TAGS,
   type UsageMeter,
 } from "./index.js";
+import { dataBlock, scenarioBlock } from "../prompts/blocks.js";
 
 const PlanSchema = z.strictObject({
   scenarioPublic: ScenarioPublicSchema,
@@ -67,6 +68,79 @@ async function readThenAbort(
     received.push(chunk);
     if (received.length === abortAt) controller.abort(reason);
   }
+}
+
+const SCENARIO = {
+  scenarioPublic: {
+    personaName: "Maya Okonjo",
+    personaTitle: "Operations manager",
+    companyType: "A 40-person regional logistics firm",
+    personality: "Busy and direct",
+    openingLine: "Hi, this is Maya Okonjo. I have a few minutes. What can I do for you?",
+  },
+  scenarioPrivate: {
+    hiddenObjections: [
+      "The price is higher than what we pay today.",
+      "We are mid-quarter and cannot take on a rollout now.",
+      "I need sign-off from my manager before anything moves.",
+    ],
+    winConditions: ["The student proposes a specific next meeting."],
+  },
+};
+
+/** One line per kind of student turn the demo buyer tells apart. */
+const INTENT_LINES = {
+  identity: "Sorry, quick question first: are you a real person?",
+  meeting: "Could we set up 20 minutes on Thursday at 10am with you and your dispatch lead?",
+  process: "How do your dispatchers plan routes today?",
+  quantity: "How much time does that take each morning?",
+  cost: "What do you pay today, roughly?",
+  decision: "Who else would need to sign off?",
+  pitch:
+    "Our planner rebuilds routes in minutes when a driver calls in sick, so your team saves hours.",
+  acknowledge: "That's fair, I hear you.",
+};
+
+const TAG = /\s*\[\[stage:\w+\]\]$/;
+const stageOf = (reply: string) => /\[\[stage:(\w+)\]\]$/.exec(reply)?.[1] ?? "none";
+
+/** The buyer's reply, built the way the turn prompt sends it: the scenario, then the call. */
+async function buyer(
+  studentTurns: readonly string[],
+  {
+    stage,
+    replies = [],
+    lastTurn = false,
+    seed = 1,
+  }: { stage?: string; replies?: readonly string[]; lastTurn?: boolean; seed?: number } = {},
+): Promise<string> {
+  const messages: ChatMessage[] = [
+    {
+      role: "user",
+      content: `${scenarioBlock(SCENARIO.scenarioPublic, SCENARIO.scenarioPrivate)}\n\n(The call connects.)`,
+    },
+    { role: "assistant", content: SCENARIO.scenarioPublic.openingLine },
+  ];
+  studentTurns.forEach((text, index) => {
+    if (index > 0) {
+      messages.push({ role: "assistant", content: replies[index - 1] ?? "Go on." });
+    }
+    messages.push({ role: "user", content: dataBlock("student_turn", text) });
+  });
+  const system = [
+    `${TASK_TAGS.turn} You play the character.`,
+    lastTurn
+      ? "This is the student's final turn. Close the conversation naturally in this reply."
+      : "",
+    stage
+      ? `The conversation is currently at the ${stage} stage; don't go back to earlier stages.`
+      : "",
+  ].join("\n");
+  const stream = new FakeProvider({ seed }).chatStream(
+    { system, messages, maxTokens: 200, temperature: 0.7 },
+    signal(),
+  );
+  return (await collect(stream)).join("");
 }
 
 const plan = (provider: FakeProvider) =>
@@ -139,29 +213,110 @@ describe("FakeProvider", () => {
       expect(chunks.join("").endsWith(` ${stageTag("discovery")}`)).toBe(true);
     });
 
-    it("cycles through the stages and raises an objection at the third student turn", async () => {
-      const provider = new FakeProvider({ seed: 3 });
-      const stages: string[] = [];
-      for (let count = 1; count <= 5; count += 1) {
-        const text = (
-          await collect(
-            turn(
-              provider,
-              STUDENT_TURNS.slice(0, 1).concat(
-                Array.from({ length: count - 1 }, (_, i) => `Turn ${String(i + 2)}.`),
-              ),
-            ),
-          )
-        ).join("");
-        stages.push(/\[\[stage:(\w+)\]\]$/.exec(text)?.[1] ?? "none");
-      }
-      expect(stages).toEqual(["discovery", "pitch", "objection", "close", "opening"]);
+    it("same input gives same output", async () => {
+      const first = (await collect(turn(new FakeProvider({ seed: 9 }), ["One.", "Two."]))).join("");
+      const again = (await collect(turn(new FakeProvider({ seed: 9 }), ["One.", "Two."]))).join("");
+      expect(again).toBe(first);
     });
 
-    it("is deterministic per seed and turn index", async () => {
-      const first = (await collect(turn(new FakeProvider({ seed: 9 }), ["One.", "Two."]))).join("");
-      const again = (await collect(turn(new FakeProvider({ seed: 9 }), ["Uno.", "Dos."]))).join("");
-      expect(again).toBe(first);
+    it("stage never goes backwards", async () => {
+      const stages = ["opening", "discovery", "pitch", "objection", "close"];
+      for (const current of stages) {
+        for (const line of Object.values(INTENT_LINES)) {
+          const reply = await buyer([line], { stage: current });
+          expect(stages.indexOf(stageOf(reply)), `${current}: ${line}`).toBeGreaterThanOrEqual(
+            stages.indexOf(current),
+          );
+        }
+      }
+    });
+
+    it.each([
+      [
+        "an identity question",
+        INTENT_LINES.identity,
+        /AI practice partner playing Maya/,
+        "discovery",
+      ],
+      ["a meeting with a time", INTENT_LINES.meeting, /Thursday at 10am/i, "close"],
+      ["a process question", INTENT_LINES.process, /driver|route|spreadsheet/i, "discovery"],
+      [
+        "a quantity question",
+        INTENT_LINES.quantity,
+        /\b(two|three|four|five|six|seven|\d+)\b/i,
+        "discovery",
+      ],
+      ["a cost question", INTENT_LINES.cost, /\$\d/, "discovery"],
+      ["a decision question", INTENT_LINES.decision, /sign[- ]off|manager/i, "discovery"],
+      ["a pitch", INTENT_LINES.pitch, /price/i, "objection"],
+      [
+        "an acknowledgement",
+        INTENT_LINES.acknowledge,
+        /example|company like ours|someone like us/i,
+        "objection",
+      ],
+    ])("answers %s in kind", async (_name, line, expected, stage) => {
+      const reply = await buyer([line], { stage: "discovery" });
+      expect(reply).toMatch(expected);
+      expect(stageOf(reply)).toBe(stage);
+    });
+
+    it("answers the question the student asked, not a word from the line before it", async () => {
+      const reply = await buyer(
+        [
+          "I work with teams whose dispatchers spend hours a week on reroutes. How do your dispatchers plan routes today?",
+        ],
+        { stage: "discovery" },
+      );
+      expect(reply).not.toMatch(/\$\d/);
+      expect(reply).toMatch(/driver|route|spreadsheet/i);
+    });
+
+    it("tells what the problem costs apart from what it pays today", async () => {
+      const problem = await buyer(["What does one late delivery cost you?"], {
+        stage: "discovery",
+      });
+      expect(problem).not.toMatch(/a month for what we use|finance would know/);
+      expect(problem).toMatch(/\$\d|overtime|customer/i);
+    });
+
+    it("names who else is involved when asked who would want to see it", async () => {
+      const reply = await buyer(
+        [
+          "That makes sense. If reroutes took minutes, who on your side would want to see that first?",
+        ],
+        { stage: "discovery" },
+      );
+      expect(reply).toMatch(/dispatch lead|manager/i);
+    });
+
+    it("says who owns the process when asked", async () => {
+      const reply = await buyer(["Who owns that check right now?"], { stage: "discovery" });
+      expect(reply).toMatch(/dispatch lead|manager/i);
+    });
+
+    it("raises the next hidden objection it hasn't raised yet", async () => {
+      const first = await buyer([INTENT_LINES.pitch], { stage: "pitch" });
+      expect(first).toMatch(/price/i);
+      const second = await buyer(
+        [INTENT_LINES.pitch, "Our tool also cuts reporting time in half."],
+        {
+          stage: "objection",
+          replies: [first],
+        },
+      );
+      expect(second).toMatch(/mid-quarter|rollout/i);
+    });
+
+    it("never repeats a line it already said in this call", async () => {
+      const first = await buyer(["Okay."], { stage: "discovery" });
+      const again = await buyer(["Okay.", "Okay."], { stage: "discovery", replies: [first] });
+      expect(again.replace(TAG, "")).not.toBe(first.replace(TAG, ""));
+    });
+
+    it("closes the call on the student's last turn", async () => {
+      const reply = await buyer(["Thanks for your time."], { stage: "pitch", lastTurn: true });
+      expect(stageOf(reply)).toBe("close");
     });
 
     it("keeps replies within 80 words", async () => {

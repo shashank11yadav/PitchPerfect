@@ -47,6 +47,16 @@ const NO_ASK = [
   "Got it. What does a no-show cost you?",
 ];
 
+/** Says the price worry is fair, then never answers it: the 20 minutes in the ask isn't proof. */
+const UNANSWERED = [
+  "Hi Maya, I'm Riley from Routewise. Thanks for picking up. How do your dispatchers plan routes today?",
+  "How much time does that take each morning?",
+  "We help dispatch teams cut replanning time. Our planner rebuilds routes in minutes when a driver calls in sick.",
+  "That's fair. What do you pay today, roughly?",
+  "Could we set up 20 minutes on Thursday at 10am with you and your dispatch lead?",
+  "Who else would need to sign off?",
+];
+
 const card = (turns: readonly string[]) => heuristicScorecard(turns, "value");
 
 /** Every sentence the card says about the student. */
@@ -171,9 +181,14 @@ describe("heuristicScorecard", () => {
   it("quotes the call's last line when the call ended without an ask", () => {
     const structure = card(NO_ASK).dimensions.find((dimension) => dimension.key === "structure");
     expect(structure?.justification).toMatch(/without an ask/);
-    expect(
-      structure?.evidence === null || structure?.evidence === "What does a no-show cost you?",
-    ).toBe(true);
-    expect(structure?.evidence).not.toMatch(/^Hi Sam/);
+    expect(structure?.evidence).toBe("What does a no-show cost you?");
+  });
+
+  it("counts proof only when it answers an acknowledged concern, not a time in the ask", () => {
+    const unanswered = card(UNANSWERED);
+    const objections = unanswered.dimensions.find((dimension) => dimension.key === "objections");
+    expect(objections?.score).toBeLessThanOrEqual(3);
+    const strong = card(STRONG).dimensions.find((dimension) => dimension.key === "objections");
+    expect(strong?.score).toBeGreaterThanOrEqual(4);
   });
 });
