@@ -18,6 +18,23 @@ afterEach(() => {
 });
 
 describe("PersonaCard", () => {
+  it("labels a scripted demo partner as scripted, not as AI", () => {
+    render(
+      <PersonaCard
+        partner="scripted"
+        persona={{
+          personaName: "Maya Chen",
+          personaTitle: "VP Operations",
+          companyType: "Regional logistics company",
+          personality: "Direct",
+        }}
+      />,
+    );
+    const card = screen.getByRole("region", { name: "Maya Chen" });
+    expect(within(card).getByText("Scripted demo partner")).toBeInTheDocument();
+    expect(within(card).queryByText("AI practice partner")).toBeNull();
+  });
+
   it("labels the persona as AI and shows their role, company type and personality", () => {
     render(
       <PersonaCard

@@ -61,11 +61,12 @@ async function budgetSpent(config: QuotaConfig, now: Date): Promise<boolean> {
   return spent >= config.PRACTICE_DAILY_TOKEN_BUDGET;
 }
 
+/** The counts and limits; the handler adds which kind of partner answers. */
 export async function getQuota(
   config: QuotaConfig,
   studentId: string,
   now: Date,
-): Promise<PracticeQuota> {
+): Promise<Omit<PracticeQuota, "practicePartner">> {
   const [dailyUsed, monthlyUsed, budgetExhausted] = await Promise.all([
     countStarted(studentId, utcDay(now), utcDay(now, 1), now),
     countStarted(studentId, utcMonth(now), utcMonth(now, 1), now),

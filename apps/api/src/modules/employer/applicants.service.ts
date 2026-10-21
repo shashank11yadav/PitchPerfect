@@ -6,12 +6,13 @@ import type {
   Page,
   SharedScorecardView,
 } from "@pitchperfect/shared";
-import { toEmployerApplicationView } from "../../db/mappers.js";
+import { sharesScorecard, toEmployerApplicationView } from "../../db/mappers.js";
 import { Application, PracticeAttempt, StudentProfile, User } from "../../db/models/index.js";
 import { ConflictError, NotFoundError } from "../../errors.js";
 import * as emails from "../../services/email-templates.js";
 import { sendSafely, type MailFailureLog, type Mailer } from "../../services/mailer.js";
 import { anyOf } from "../applications/closing.js";
+import { completedAttemptIds } from "../applications/service.js";
 import { transitionApplication } from "../applications/transitions.js";
 import type { ApplicationDoc, CompanyDoc, JobDoc } from "./ownership.js";
 
@@ -20,18 +21,28 @@ export async function applicantViews(
   applications: ApplicationDoc[],
 ): Promise<EmployerApplicationView[]> {
   const studentIds = anyOf(applications.map((application) => application.studentId));
-  const [users, profiles] = await Promise.all([
+  const [users, profiles, completed] = await Promise.all([
     User.find({ _id: studentIds }).select("name").lean(),
     StudentProfile.find({ userId: studentIds })
       .select("userId school major gradYear resumeFileId")
       .lean(),
+    completedAttemptIds(applications),
   ]);
   const userOf = new Map(users.map((user) => [user._id.toString(), user]));
   const profileOf = new Map(profiles.map((profile) => [profile.userId.toString(), profile]));
   return applications.flatMap((application) => {
     const user = userOf.get(application.studentId.toString());
     const profile = profileOf.get(application.studentId.toString());
-    return user && profile ? [toEmployerApplicationView(application, user, profile)] : [];
+    return user && profile
+      ? [
+          toEmployerApplicationView(
+            application,
+            user,
+            profile,
+            sharesScorecard(application, completed),
+          ),
+        ]
+      : [];
   });
 }
 

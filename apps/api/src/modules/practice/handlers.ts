@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import type { AttemptListQuerySchema, StartPracticeSchema, TurnSchema } from "@pitchperfect/shared";
 import { userOf } from "../../middleware/auth.js";
 import { getInput, type IdParamSchema } from "../../middleware/validate.js";
+import { practicePartnerOf } from "../../services/coach-probe.js";
 import { getQuota } from "./quota.js";
 import {
   coachOf,
@@ -23,7 +24,11 @@ interface WithId {
 export function practiceHandlers(deps: PracticeDeps) {
   return {
     quota: (async (_req, res) => {
-      res.json(await getQuota(deps.config, userOf(res).id, new Date()));
+      const [quota, coach] = await Promise.all([
+        getQuota(deps.config, userOf(res).id, new Date()),
+        deps.coachProbe(),
+      ]);
+      res.json({ ...quota, practicePartner: practicePartnerOf(coach) });
     }) satisfies RequestHandler,
 
     start: (async (_req, res) => {

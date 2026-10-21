@@ -17,6 +17,7 @@ import { Application, PracticeAttempt } from "../../db/models/index.js";
 import type { PracticeAttemptAttrs } from "../../db/models/practice-attempt.js";
 import { ConflictError, NotFoundError, PracticeUnavailableError } from "../../errors.js";
 import { NotEnoughTurnsError, type CoachClient } from "../../services/coach-client.js";
+import type { CoachProbe } from "../../services/coach-probe.js";
 import { recordUsage } from "./quota.js";
 import {
   acquireTurnLock,
@@ -29,6 +30,8 @@ import {
 export interface PracticeDeps {
   config: Config;
   coach: CoachClient | undefined;
+  /** The cached coach health, for telling the student which kind of partner they get. */
+  coachProbe: CoachProbe;
 }
 
 const SESSION_MS = LIMITS.sessionSeconds * 1000;

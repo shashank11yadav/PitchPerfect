@@ -239,14 +239,25 @@ function baseSalary(pay: JobPay) {
 /** A job that may carry a closing date. */
 type PostedJob = PublicJob & { closesAt?: string | null };
 
+/** "US", "USA", "U.S.", "United States (of America)": the one country the job board serves. */
+const UNITED_STATES = /\b(?:USA?|U\.S\.(?:A\.?)?|United States(?: of America)?)(?![A-Za-z])/;
+
+/**
+ * The ISO country code a remote job's free-text location names, if any. `applicantLocationRequirements`
+ * must be a real country, so a location that names none is left out rather than guessed.
+ */
+const applicantCountryOf = (location: string): string | undefined =>
+  UNITED_STATES.test(location) ? "US" : undefined;
+
 /** `JobPosting` for a job page. Only call it for jobs of verified companies. */
 export function jobPostingJsonLd(job: PostedJob, company: PublicCompany) {
   const salary = baseSalary(job.pay);
+  const country = job.workplace === "remote" ? applicantCountryOf(job.location) : undefined;
   const location =
     job.workplace === "remote"
       ? {
           jobLocationType: "TELECOMMUTE",
-          applicantLocationRequirements: { "@type": "Country", name: job.location },
+          ...(country && { applicantLocationRequirements: { "@type": "Country", name: country } }),
         }
       : {
           jobLocation: {

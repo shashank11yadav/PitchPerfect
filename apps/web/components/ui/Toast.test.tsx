@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "./Button";
 import { ToastProvider, useToast } from "./Toast";
@@ -41,6 +41,59 @@ describe("Toast", () => {
       vi.advanceTimersByTime(8000);
     });
     expect(region).toBeEmptyDOMElement();
+  });
+
+  it("stops the clock while the pointer is over the message, and restarts it after", () => {
+    vi.useFakeTimers();
+    render(
+      <ToastProvider>
+        <SaveButton />
+      </ToastProvider>,
+    );
+    act(() => {
+      screen.getByRole("button", { name: "Save" }).click();
+    });
+    const message = screen.getByText("Saved").closest("[data-toast]");
+    if (!message) throw new Error("toast not rendered");
+
+    act(() => {
+      fireEvent.mouseEnter(message);
+      vi.advanceTimersByTime(20_000);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Saved");
+
+    act(() => {
+      fireEvent.mouseLeave(message);
+      vi.advanceTimersByTime(7_999);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Saved");
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  it("stops the clock while the message has keyboard focus", () => {
+    vi.useFakeTimers();
+    render(
+      <ToastProvider>
+        <SaveButton />
+      </ToastProvider>,
+    );
+    act(() => {
+      screen.getByRole("button", { name: "Save" }).click();
+    });
+    act(() => {
+      screen.getByRole("button", { name: "Dismiss" }).focus();
+      vi.advanceTimersByTime(20_000);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Saved");
+
+    act(() => {
+      screen.getByRole("button", { name: "Save" }).focus();
+      vi.advanceTimersByTime(8000);
+    });
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
   });
 
   it("can be dismissed by its button", () => {

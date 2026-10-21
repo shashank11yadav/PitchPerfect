@@ -7,7 +7,9 @@ import { useEffect, useRef } from "react";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/cn";
+import type { PracticePartnerKind } from "@pitchperfect/shared";
 import { canEnd, type RoomEntry, type RoomState } from "@/lib/practice/practice-reducer";
+import { usePracticeQuota } from "@/lib/practice/use-practice-partner";
 import { usePracticeRoom, type PracticeRoomControls } from "@/lib/practice/use-practice-room";
 import { ComposeBar } from "./ComposeBar";
 import { PersonaCard } from "./PersonaCard";
@@ -118,7 +120,13 @@ function Scoring() {
   );
 }
 
-function Session({ room, skill }: { room: PracticeRoomControls; skill: SkillSlug }) {
+interface SessionProps {
+  room: PracticeRoomControls;
+  skill: SkillSlug;
+  partner: PracticePartnerKind;
+}
+
+function Session({ room, skill, partner }: SessionProps) {
   const { state, timeLeftMs } = room;
   const scenario = state.scenario;
   if (!scenario) return null;
@@ -153,7 +161,12 @@ function Session({ room, skill }: { room: PracticeRoomControls; skill: SkillSlug
       <StageStepper stage={state.stage} className="border-b border-border px-4 py-3 md:px-6" />
 
       <div className="grid gap-4 bg-surface-2 p-4 md:p-6 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-6">
-        <PersonaCard persona={scenario} titleAs="h3" className="self-start lg:sticky lg:top-24" />
+        <PersonaCard
+          persona={scenario}
+          partner={partner}
+          titleAs="h3"
+          className="self-start lg:sticky lg:top-24"
+        />
         <Transcript state={state} persona={scenario.personaName} />
       </div>
 
@@ -176,6 +189,8 @@ export function PracticeRoom(props: PracticeRoomProps) {
   const skill = props.attempt ? props.attempt.skill : props.skill;
   const jobId = props.attempt ? (props.attempt.jobId ?? undefined) : props.jobId;
   const room = usePracticeRoom({ skill, jobId, resume: props.attempt });
+  // One quota load for the lobby's meter and for naming the partner truthfully in both views.
+  const quota = usePracticeQuota();
   const { status, result } = room.state;
 
   // The scorecard replaces a long transcript: start it at the top, ring first.
@@ -187,7 +202,7 @@ export function PracticeRoom(props: PracticeRoomProps) {
     case "idle":
     case "starting":
     case "error":
-      return <RoomLobby skill={skill} jobId={jobId} room={room} />;
+      return <RoomLobby skill={skill} jobId={jobId} room={room} quota={quota} />;
     case "scored":
       return result ? <Scorecard attempt={result} onPracticeAgain={room.reset} /> : null;
     case "ready":
@@ -196,6 +211,6 @@ export function PracticeRoom(props: PracticeRoomProps) {
     case "streaming":
     case "ending":
     case "ended":
-      return <Session room={room} skill={skill} />;
+      return <Session room={room} skill={skill} partner={quota.partner} />;
   }
 }

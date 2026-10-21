@@ -237,7 +237,8 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
         release();
       }
       if (event.type === "error") {
-        dispatch({ type: "stream_error", code: event.code, counted: replying });
+        // The api charges the turn once it has sent anything, this error included.
+        dispatch({ type: "stream_error", code: event.code, counted: true });
         return;
       }
       onEvent(event);

@@ -170,9 +170,26 @@ describe("jobPostingJsonLd", () => {
     );
     expect(data).toMatchObject({
       jobLocationType: "TELECOMMUTE",
-      applicantLocationRequirements: { "@type": "Country", name: "United States" },
+      applicantLocationRequirements: { "@type": "Country", name: "US" },
       validThrough: "2026-12-01T00:00:00.000Z",
     });
+    expect(data).not.toHaveProperty("jobLocation");
+  });
+
+  it.each(["US", "USA", "Remote (US)", "Anywhere in the United States", "U.S. only"])(
+    "reads %j as the US for a remote job's applicant location",
+    (location) => {
+      const data = seo.jobPostingJsonLd(job({ workplace: "remote", location }), company);
+      expect(data).toMatchObject({
+        applicantLocationRequirements: { "@type": "Country", name: "US" },
+      });
+    },
+  );
+
+  it("leaves applicantLocationRequirements out when the location names no country", () => {
+    const data = seo.jobPostingJsonLd(job({ workplace: "remote", location: "Anywhere" }), company);
+    expect(data).toMatchObject({ jobLocationType: "TELECOMMUTE" });
+    expect(data).not.toHaveProperty("applicantLocationRequirements");
     expect(data).not.toHaveProperty("jobLocation");
   });
 

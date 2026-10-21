@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Request, RequestHandler } from "express";
 import {
   ipKeyGenerator,
@@ -13,7 +14,15 @@ export interface RateLimitOptions {
   limit: number;
   /** What to count by, e.g. the client IP or a normalized email. */
   key: (req: Request) => string;
+  /**
+   * Where the counters live. `mongo` (the default) is shared by every api instance; `memory` is
+   * per instance and keeps working when the database is down, which only the health check needs.
+   * Either way only a hash of the key is kept, never the address itself.
+   */
+  store?: "mongo" | "memory";
 }
+
+const hashed = (key: string) => createHash("sha256").update(key).digest("hex");
 
 const IPV6_SUBNET = 64;
 
@@ -24,15 +33,18 @@ export const byIp = (req: Request): string => ipKeyGenerator(req.ip ?? "unknown"
 export const byUser = (req: Request): string => sessionUserId(req) ?? byIp(req);
 
 /**
- * Fixed-window limiter backed by Mongo. Over the limit it fails with `rate_limited` (429) and a
- * `Retry-After` header via the shared error handler. Create it once at route setup, not per request.
+ * Fixed-window limiter, backed by Mongo unless `store: "memory"`. Over the limit it fails with
+ * `rate_limited` (429) and a `Retry-After` header via the shared error handler. Create it once at
+ * route setup, not per request.
  */
 export function rateLimit(name: string, options: RateLimitOptions): RequestHandler {
   return expressRateLimit({
     windowMs: options.windowMs,
     limit: options.limit,
-    keyGenerator: options.key,
-    store: createRateLimitStore(name),
+    // express-rate-limit's own in-memory store when asked (the Mongo store hashes keys itself).
+    ...(options.store === "memory"
+      ? { keyGenerator: (req: Request) => hashed(options.key(req)) }
+      : { keyGenerator: options.key, store: createRateLimitStore(name) }),
     standardHeaders: "draft-8",
     legacyHeaders: false,
     handler: (req, _res, next) => {

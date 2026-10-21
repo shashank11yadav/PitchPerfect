@@ -1,11 +1,19 @@
+import type { PracticePartnerKind } from "@pitchperfect/shared";
 import type { LegalSection } from "@/components/marketing/LegalDocument";
 import { COPY_LIMITS as L } from "./limits";
 
 const AI_PROVIDER = "our AI provider (OpenAI or Anthropic, depending on configuration)";
 const CONTACT = "the maintainer listed on the project's GitHub page";
+/** What the scripted demo does with your words: nothing leaves the server. */
+const SCRIPTED_PARTNER =
+  "This demo uses a scripted practice partner that runs on our server. What you say isn’t sent to an AI provider.";
 
-/** The privacy policy template. It must match the data flows in docs/security.md. */
-export const PRIVACY_SECTIONS: readonly LegalSection[] = [
+/**
+ * The privacy policy template. It must match the data flows in docs/security.md, so the parts
+ * about the practice partner depend on which one is running: a live model behind an AI provider,
+ * or the scripted demo persona that never leaves our server.
+ */
+export const privacySections = (partner: PracticePartnerKind): readonly LegalSection[] => [
   {
     id: "summary",
     title: "The short version",
@@ -13,8 +21,9 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
       <ul>
         <li>We keep what you give us to run your account, your practice and your applications.</li>
         <li>
-          Your practice turns go to {AI_PROVIDER}, which plays the buyer and scores the session.
-          Transcripts are deleted after {L.retentionDays} days.
+          {partner === "scripted"
+            ? `${SCRIPTED_PARTNER} Transcripts are deleted after ${L.retentionDays} days.`
+            : `Your practice turns go to ${AI_PROVIDER}, which plays the buyer and scores the session. Transcripts are deleted after ${L.retentionDays} days.`}
         </li>
         <li>
           We never get your audio. Your browser turns speech into text, and only the text reaches
@@ -60,8 +69,9 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
         </li>
         <li>
           <strong>Practice sessions:</strong> the skill, the job if you practiced for one, the buyer
-          scenario, what you and the partner said, your scorecard, timestamps, and how much AI
-          processing the session used. We also record when you accepted the practice notice.
+          scenario, what you and the partner said, your scorecard, timestamps, and how much{" "}
+          {partner === "scripted" ? "partner" : "AI"} processing the session used. We also record
+          when you accepted the practice notice.
         </li>
         <li>
           <strong>Jobs and applications:</strong> jobs you save, jobs you apply to, the scorecard
@@ -124,13 +134,21 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
     title: "Who else processes your data",
     body: (
       <ul>
-        <li>
-          <strong>{AI_PROVIDER}</strong> receives the text of your practice turns, the scenario and,
-          if you practiced for a job, that job&apos;s title, description and skills. Before anything
-          is sent, email addresses, phone numbers and card-like numbers are replaced with
-          placeholders. We don&apos;t add your name or email address, but anything you say in a
-          session is sent as you said it.
-        </li>
+        {partner === "scripted" ? (
+          <li>
+            <strong>No AI provider.</strong> {SCRIPTED_PARTNER} Your practice turns are stored with
+            your session, with email addresses, phone numbers and card-like numbers replaced by
+            placeholders.
+          </li>
+        ) : (
+          <li>
+            <strong>{AI_PROVIDER}</strong> receives the text of your practice turns, the scenario
+            and, if you practiced for a job, that job&apos;s title, description and skills. Before
+            anything is sent, email addresses, phone numbers and card-like numbers are replaced with
+            placeholders. We don&apos;t add your name or email address, but anything you say in a
+            session is sent as you said it.
+          </li>
+        )}
         <li>
           <strong>An email delivery service</strong> sends account and interview emails, so it
           receives your email address and the message.

@@ -23,6 +23,7 @@ import { lessonRoutes } from "./modules/lessons/routes.js";
 import { practiceRoutes } from "./modules/practice/routes.js";
 import { profileRoutes } from "./modules/profile/routes.js";
 import type { CoachClient } from "./services/coach-client.js";
+import { createCoachProbe } from "./services/coach-probe.js";
 import type { Mailer } from "./services/mailer.js";
 
 const logLevelFor = (status: number) => (status >= 500 ? "error" : status >= 400 ? "warn" : "info");
@@ -98,15 +99,18 @@ export function createApp(
   app.use(originCheck(config));
   app.use(csrf.csrfProtection);
 
+  // One cached probe of the coach, shared by the health and quota routes.
+  const coachProbe = createCoachProbe(deps.coach);
+
   const api = express.Router();
   api.use(authRoutes({ config, mailer: deps.mailer, csrf }));
   api.use(profileRoutes({ config, mailer: deps.mailer }));
   api.use(lessonRoutes());
   api.use(jobRoutes());
   api.use(applicationRoutes());
-  api.use("/practice", practiceRoutes({ config, coach: deps.coach }));
+  api.use("/practice", practiceRoutes({ config, coach: deps.coach, coachProbe }));
   api.use("/employer", employerRoutes({ mailer: deps.mailer }));
-  api.use(healthRoutes(deps.coach));
+  api.use(healthRoutes(coachProbe));
   extraRoutes?.(api);
   app.use("/api", api);
 

@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { LoadError, Loading } from "@/components/ui/LoadState";
 import { attemptPath, practiceHref } from "@/lib/practice/paths";
+import type { PracticeQuotaLoad } from "@/lib/practice/use-practice-partner";
 import type { PracticeRoomControls } from "@/lib/practice/use-practice-room";
 import { useSession } from "@/lib/session";
-import { AttemptsPage, Quota } from "@/lib/student-api";
+import { AttemptsPage } from "@/lib/student-api";
 import { useApi } from "@/lib/use-api";
 import { VOICE_DISCLOSURE } from "./ComposeBar";
 import { ConsentDialog } from "./ConsentDialog";
@@ -56,15 +57,16 @@ interface RoomLobbyProps {
   skill: SkillSlug;
   jobId?: string | undefined;
   room: PracticeRoomControls;
+  /** The student's sessions left, and which kind of partner the api says is answering. */
+  quota: PracticeQuotaLoad;
 }
 
 /**
  * Before the call: what it is, how many sessions are left, and the Start button. Nothing starts
  * until the student clicks it, because every start uses a session.
  */
-export function RoomLobby({ skill, jobId, room }: RoomLobbyProps) {
+export function RoomLobby({ skill, jobId, room, quota }: RoomLobbyProps) {
   const { user, refresh } = useSession();
-  const quota = useApi("/practice/quota", Quota);
   const needsConsent = user?.practiceConsentAt == null;
   // The notice opens by itself while it's needed; after "Not now", Start opens it again.
   const [consentWanted, setConsentOpen] = useState(true);
@@ -155,7 +157,10 @@ export function RoomLobby({ skill, jobId, room }: RoomLobbyProps) {
           </Link>
         </div>
         <p className="max-w-prose text-small text-muted">
-          Starting uses one of today’s sessions. {VOICE_DISCLOSURE}{" "}
+          Starting uses one of today’s sessions.{" "}
+          {quota.partner === "scripted" &&
+            "Your partner in this demo is scripted and runs on our server; what you say isn’t sent to an AI provider. "}
+          {VOICE_DISCLOSURE}{" "}
           <Link href="/privacy" className={TEXT_LINK}>
             Privacy
           </Link>
@@ -175,6 +180,7 @@ export function RoomLobby({ skill, jobId, room }: RoomLobbyProps) {
       </Card>
 
       <ConsentDialog
+        partner={quota.partner}
         open={consentOpen}
         onClose={() => {
           setConsentOpen(false);

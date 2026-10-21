@@ -143,6 +143,18 @@ describe("PUT /api/me/resume", () => {
   });
 });
 
+describe("PUT /api/me/resume rate limit", () => {
+  it("answers 429 after 20 uploads an hour by one student", async () => {
+    const { session } = await studentSession();
+    const statuses: number[] = [];
+    for (let i = 0; i < 21; i += 1) statuses.push((await upload(session, tinyPdf())).status);
+
+    expect(statuses.slice(0, 20).every((status) => status === 200)).toBe(true);
+    expect(statuses[20]).toBe(429);
+    expect(await files().countDocuments()).toBe(1);
+  });
+});
+
 describe("GET /api/me/resume", () => {
   it("streams the PDF as an attachment with safe headers", async () => {
     const { session } = await studentSession();

@@ -1,5 +1,5 @@
-import type { ScenarioPublic } from "@pitchperfect/shared";
-import { Sparkles } from "lucide-react";
+import type { PracticePartnerKind, ScenarioPublic } from "@pitchperfect/shared";
+import { ScrollText, Sparkles } from "lucide-react";
 import { useId } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
@@ -8,6 +8,8 @@ type Persona = Pick<ScenarioPublic, "personaName" | "personaTitle" | "companyTyp
 
 interface PersonaCardProps {
   persona: Persona;
+  /** What is really answering: a live model (the default) or the scripted demo persona. */
+  partner?: PracticePartnerKind;
   /** The name's element; a plain paragraph where a heading would break the page outline. */
   titleAs?: "h2" | "h3" | "p";
   className?: string;
@@ -28,9 +30,18 @@ const traits = (personality: string) =>
     .filter(Boolean)
     .map((trait) => trait.charAt(0).toUpperCase() + trait.slice(1));
 
-/** Who the student is talking to. The persona has a human name but is always labelled as AI. */
-export function PersonaCard({ persona, titleAs: Title = "h2", className }: PersonaCardProps) {
+/**
+ * Who the student is talking to. The persona has a human name but is always labelled for what it
+ * is: an AI model, or the scripted demo partner when that is what the coach runs.
+ */
+export function PersonaCard({
+  persona,
+  partner = "live",
+  titleAs: Title = "h2",
+  className,
+}: PersonaCardProps) {
   const id = useId();
+  const BadgeIcon = partner === "scripted" ? ScrollText : Sparkles;
   return (
     <section
       aria-labelledby={id}
@@ -49,8 +60,8 @@ export function PersonaCard({ persona, titleAs: Title = "h2", className }: Perso
               {persona.personaName}
             </Title>
             <Badge tone="info">
-              <Sparkles aria-hidden="true" className="size-3" />
-              AI practice partner
+              <BadgeIcon aria-hidden="true" className="size-3" />
+              {partner === "scripted" ? "Scripted demo partner" : "AI practice partner"}
             </Badge>
           </div>
           <p className="text-small text-ink">{persona.personaTitle}</p>

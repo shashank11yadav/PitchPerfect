@@ -1,17 +1,14 @@
+import type { HealthResponse } from "@pitchperfect/shared";
 import { isDbConnected } from "../../db/connect.js";
-import type { CoachClient, HealthStatus } from "../../services/coach-client.js";
-
-export interface Health {
-  status: "ok";
-  db: HealthStatus;
-  coach: HealthStatus;
-}
+import { practicePartnerOf, type CoachProbe } from "../../services/coach-probe.js";
 
 /** Reports dependency status. It never fails: a down dependency is data, not an error. */
-export async function getHealth(coach: CoachClient | undefined): Promise<Health> {
+export async function getHealth(probe: CoachProbe): Promise<HealthResponse> {
+  const coach = await probe();
   return {
     status: "ok",
     db: isDbConnected() ? "ok" : "down",
-    coach: (await coach?.health()) ?? "down",
+    coach: coach.status,
+    practicePartner: practicePartnerOf(coach),
   };
 }

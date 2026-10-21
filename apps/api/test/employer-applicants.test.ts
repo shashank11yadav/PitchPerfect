@@ -103,6 +103,22 @@ describe("GET /api/employer/jobs/:id/applications", () => {
     expect(pageOf(res).items[0]).toMatchObject({ hasResume: true, hasSharedScorecard: true });
   });
 
+  it("reports no shared scorecard once the attempt behind it is gone", async () => {
+    const { session, job } = await setup();
+    const student = await studentSession(app);
+    const attempt = await createAttempt(student.user._id);
+    await createApplication({
+      jobId: job._id,
+      studentId: student.user._id,
+      sharedAttemptId: attempt._id,
+    });
+    await PracticeAttempt.deleteOne({ _id: attempt._id });
+
+    const res = await session.agent.get(`/api/employer/jobs/${job.id}/applications`);
+
+    expect(pageOf(res).items[0]).toMatchObject({ hasSharedScorecard: false });
+  });
+
   it("filters by status and by saved, and paginates", async () => {
     const { session, job, apply } = await setup();
     const first = await apply("applied");

@@ -41,14 +41,14 @@ This is the threat model, the controls we require, and how to check them. Any ch
 
 - Students confirm they are 18 or older at sign-up (`ageConfirmed: true` is required and stored as `ageConfirmedAt`).
 - Before the first practice session, students accept the practice notice. It says three things:
-  - The partner is an AI.
-  - Transcripts are processed by the configured LLM provider and kept for 180 days.
+  - The partner is an AI. When the coach runs `COACH_PROVIDER=fake`, the api reports `practicePartner: "scripted"` on `/api/health` and `/api/practice/quota`, and the notice, the persona badge, and the privacy and terms pages say instead that the partner is a scripted demo running on our server and that nothing is sent to an AI provider. A coach that is down or unknown is disclosed as live.
+  - Transcripts are processed by the configured LLM provider and kept for 180 days (`PRACTICE_RETENTION_DAYS`; the copy reads the shared default, see docs/deploy.md).
   - The browser's speech recognition may send audio to the browser vendor (Google, Apple or Microsoft). PitchPerfect never receives or stores audio.
 - Acceptance is stored as `practiceConsentAt`.
 
 ## Logging
 
-- Use structured JSON logs (`pino`) with fields: `requestId`, `route`, `method`, `status`, `durationMs`, `userId?`, `attemptId?`, `outcome`.
+- Use structured JSON logs (`pino`). Request lines come from `pino-http` and carry `requestId`, `route` (the matched pattern, never the raw URL), `req.method`, `res.statusCode` and `responseTime` (ms). Practice lines add `attemptId`, `stage`, token counts and `outcome`.
 - Never log bodies, headers containing cookies or authorization, transcripts, tokens, or file contents.
 - `pino` redaction paths cover `req.headers.cookie`, `req.headers.authorization`, `*.password`, `*.token`, `*.text`.
 
@@ -62,6 +62,6 @@ Found a vulnerability? Please open a private security advisory on the GitHub rep
 - [ ] gitleaks reports no findings across the full history
 - [ ] Every api route has unauthenticated, wrong-role, and not-owner tests
 - [ ] All XSS and NoSQL-injection payload tests pass
-- [ ] Coach adversarial evals are 100% handled (manual run with a real provider)
+- [ ] With a real `COACH_PROVIDER`: `npm run eval -w apps/coach` run once against the production model ids, pass rate recorded, every adversarial case handled (docs/deploy.md step 6). Not applicable to a `fake` (scripted) deployment
 - [ ] Response headers are verified on the deployed preview (CSP, HSTS, nosniff, frame-ancestors)
 - [ ] `.env.example` files contain no real values

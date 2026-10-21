@@ -159,12 +159,25 @@ describe("PracticeRoom", () => {
     },
   );
 
-  it("doesn't count a turn that failed before any reply arrived", async () => {
+  it("counts a turn the api answered with an error event, since the api charges it", async () => {
     const user = userEvent.setup();
     const turn = controlStream();
     render(<PracticeRoom attempt={activeAttempt()} />);
     await user.type(screen.getByRole("textbox", { name: "Your turn" }), "Hello there.{Enter}");
     turn.emit({ type: "error", code: "upstream_error" });
+    await screen.findByRole("alert");
+    expect(screen.getByText("19 turns left")).toBeInTheDocument();
+  });
+
+  it("doesn't count a turn the api refused before sending anything", async () => {
+    const user = userEvent.setup();
+    const turn = controlStream();
+    render(<PracticeRoom attempt={activeAttempt()} />);
+    await user.type(screen.getByRole("textbox", { name: "Your turn" }), "Hello there.{Enter}");
+    await act(async () => {
+      turn.fail();
+      await Promise.resolve();
+    });
     await screen.findByRole("alert");
     expect(screen.getByText("20 turns left")).toBeInTheDocument();
   });
@@ -291,6 +304,41 @@ describe("PracticeRoom before the call", () => {
     renderSignedIn(<PracticeRoom skill="objection-handling" {...props} />);
     return fetchMock;
   }
+
+  it("tells the student the partner is scripted when the quota answer says so", async () => {
+    const user = userEvent.setup();
+    serveApi({
+      "GET /api/auth/csrf": csrf,
+      "GET /api/auth/me": () => jsonResponse(studentMe()),
+      "GET /api/practice/quota": () => jsonResponse({ ...quota, practicePartner: "scripted" }),
+      "GET /api/practice/attempts?pageSize=1": () => jsonResponse(pageOf([])),
+      "POST /api/me/practice-consent": () =>
+        jsonResponse({ practiceConsentAt: "2026-10-20T16:00:00.000Z" }),
+    });
+    renderSignedIn(<PracticeRoom skill="pitching" />);
+
+    const dialog = await screen.findByRole("dialog", { name: "Before your first practice call" });
+    await waitFor(() => {
+      expect(dialog).toHaveTextContent(/scripted practice partner that runs on our server/);
+    });
+    expect(dialog).not.toHaveTextContent(/partner is an AI/);
+    await user.click(within(dialog).getByRole("button", { name: "Not now" }));
+    expect(await screen.findByText(/partner in this demo is scripted/)).toBeInTheDocument();
+  });
+
+  it("labels the partner as scripted in the room when the quota answer says so", async () => {
+    serveApi({
+      "GET /api/auth/csrf": csrf,
+      "GET /api/practice/quota": () => jsonResponse({ ...quota, practicePartner: "scripted" }),
+    });
+    render(<PracticeRoom attempt={activeAttempt()} />);
+    const card = screen.getByRole("region", { name: "Dana Ruiz" });
+    expect(card).toHaveTextContent("AI practice partner");
+    await waitFor(() => {
+      expect(card).toHaveTextContent("Scripted demo partner");
+    });
+    expect(card).not.toHaveTextContent("AI practice partner");
+  });
 
   it("never starts on its own: the student clicks Start", async () => {
     const fetchMock = showLobby({});

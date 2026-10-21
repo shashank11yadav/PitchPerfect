@@ -1,6 +1,6 @@
 "use client";
 
-import { LIMITS } from "@pitchperfect/shared";
+import { LIMITS, type PracticePartnerKind } from "@pitchperfect/shared";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -14,13 +14,20 @@ interface ConsentDialogProps {
   onClose: () => void;
   /** Called once the api has stored the acceptance and the session shows it. */
   onAccepted: () => void;
+  /** What answers the call: a live model (the default) or the scripted demo partner. */
+  partner?: PracticePartnerKind;
 }
 
+/** The scripted partner never leaves the server; the notice must not say otherwise. */
+const SCRIPTED_PARTNER_NOTICE =
+  "This demo uses a scripted practice partner that runs on our server. What you say isn’t sent to an AI provider.";
+
 /**
- * The one-time practice notice (docs/security.md, Age and consent): the partner is an AI, where
- * transcripts go and how long they're kept, and what the browser does with your voice.
+ * The one-time practice notice (docs/security.md, Age and consent): who the partner really is
+ * (an AI model, or the scripted demo), where transcripts go and how long they're kept, and what
+ * the browser does with your voice.
  */
-export function ConsentDialog({ open, onClose, onAccepted }: ConsentDialogProps) {
+export function ConsentDialog({ open, onClose, onAccepted, partner = "live" }: ConsentDialogProps) {
   const { refresh } = useSession();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -50,15 +57,35 @@ export function ConsentDialog({ open, onClose, onAccepted }: ConsentDialogProps)
     >
       <div className="flex flex-col gap-5">
         <ul className="flex flex-col gap-4 text-ink">
-          <li>
-            <strong className="font-semibold">Your practice partner is an AI.</strong> It plays a
-            buyer with a made-up name and job, and it scores the call when you end it.
-          </li>
-          <li>
-            <strong className="font-semibold">What you say goes to an AI provider as text.</strong>{" "}
-            We send your turns to the provider that runs the partner. Transcripts and scorecards are
-            kept for {LIMITS.attemptRetentionDays} days, and you can delete any of them sooner.
-          </li>
+          {partner === "scripted" ? (
+            <>
+              <li>
+                <strong className="font-semibold">Your practice partner is scripted.</strong> It
+                plays a buyer with a made-up name and job from a fixed set of lines, and it scores
+                the call when you end it.
+              </li>
+              <li>
+                <strong className="font-semibold">What you say stays with us.</strong>{" "}
+                {SCRIPTED_PARTNER_NOTICE} Transcripts and scorecards are kept for{" "}
+                {LIMITS.attemptRetentionDays} days, and you can delete any of them sooner.
+              </li>
+            </>
+          ) : (
+            <>
+              <li>
+                <strong className="font-semibold">Your practice partner is an AI.</strong> It plays
+                a buyer with a made-up name and job, and it scores the call when you end it.
+              </li>
+              <li>
+                <strong className="font-semibold">
+                  What you say goes to an AI provider as text.
+                </strong>{" "}
+                We send your turns to the provider that runs the partner. Transcripts and scorecards
+                are kept for {LIMITS.attemptRetentionDays} days, and you can delete any of them
+                sooner.
+              </li>
+            </>
+          )}
           <li>
             <strong className="font-semibold">
               Talking uses your browser’s speech recognition.

@@ -92,6 +92,27 @@ describe("usePracticeRoom", () => {
     expect(stream).toHaveBeenCalledTimes(2);
   });
 
+  it("counts the turn as used when the api answers with an error event", () => {
+    const turn = pendingTurn();
+    const { result } = room();
+    expect(result.current.state.turnsLeft).toBe(20);
+    act(() => {
+      result.current.editDraft("Hello");
+    });
+    act(() => {
+      result.current.send();
+    });
+    // The api charges the turn whenever it sends any event, an error included.
+    act(() => {
+      turn.emit({ type: "error", code: "upstream_error" });
+    });
+    expect(result.current.state).toMatchObject({
+      status: "ready",
+      turnsLeft: 19,
+      error: { code: "upstream_error" },
+    });
+  });
+
   it("aborts the reply in flight when the room goes away", () => {
     const turn = pendingTurn();
     const { result, unmount } = room();

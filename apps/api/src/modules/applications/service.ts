@@ -5,7 +5,8 @@ import type {
   PageQuery,
   StudentApplicationView,
 } from "@pitchperfect/shared";
-import { toStudentApplicationView } from "../../db/mappers.js";
+import { sharesScorecard, toStudentApplicationView } from "../../db/mappers.js";
+import type { ApplicationAttrs } from "../../db/models/application.js";
 import { Application, Company, Job, PracticeAttempt } from "../../db/models/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../errors.js";
 import { isDuplicateKey } from "../auth/service.js";
@@ -36,15 +37,39 @@ async function listedSlugs(jobIds: mongoose.Types.ObjectId[]): Promise<Map<strin
   );
 }
 
-async function listedSlug(jobId: mongoose.Types.ObjectId): Promise<string | null> {
-  return (await listedSlugs([jobId])).get(jobId.toString()) ?? null;
+/** Ids of the shared attempts that still exist and are completed (a TTL delete shares nothing). */
+export async function completedAttemptIds(
+  applications: readonly Pick<ApplicationAttrs, "sharedAttemptId">[],
+): Promise<Set<string>> {
+  const ids = applications.flatMap((application) => application.sharedAttemptId ?? []);
+  if (ids.length === 0) return new Set();
+  const attempts = await PracticeAttempt.find({
+    _id: mongoose.trusted({ $in: ids }),
+    status: "completed",
+  })
+    .select("_id")
+    .lean();
+  return new Set(attempts.map((attempt) => attempt._id.toString()));
 }
 
 async function viewsOf(applications: ApplicationDoc[]): Promise<StudentApplicationView[]> {
-  const slugs = await listedSlugs(applications.map((application) => application.jobId));
+  const [slugs, completed] = await Promise.all([
+    listedSlugs(applications.map((application) => application.jobId)),
+    completedAttemptIds(applications),
+  ]);
   return applications.map((application) =>
-    toStudentApplicationView(application, slugs.get(application.jobId.toString()) ?? null),
+    toStudentApplicationView(
+      application,
+      slugs.get(application.jobId.toString()) ?? null,
+      sharesScorecard(application, completed),
+    ),
   );
+}
+
+async function viewOf(application: ApplicationDoc): Promise<StudentApplicationView> {
+  const [view] = await viewsOf([application]);
+  if (!view) throw new NotFoundError();
+  return view;
 }
 
 /**
@@ -98,10 +123,7 @@ export async function applyToJob(
       { upsert: true, returnDocument: "after", includeResultMetadata: true, timestamps: false },
     );
     if (result.lastErrorObject?.updatedExisting || !result.value) return { created: false };
-    return {
-      created: true,
-      application: toStudentApplicationView(result.value, job.slug),
-    };
+    return { created: true, application: await viewOf(result.value) };
   } catch (error) {
     // A parallel request inserted between our match and our insert.
     if (isDuplicateKey(error, "jobId")) return { created: false };
@@ -142,7 +164,7 @@ export async function withdrawApplication(
   ).lean();
   if (!updated)
     throw new ConflictError("conflict", "That application just changed. Refresh and try again");
-  return toStudentApplicationView(updated, await listedSlug(updated.jobId));
+  return viewOf(updated);
 }
 
 /** A withdrawn or closed application is over; it no longer shares anything with the employer. */
@@ -180,5 +202,5 @@ export async function shareScorecard(
     { returnDocument: "after" },
   ).lean();
   if (!updated) throw notOpen();
-  return toStudentApplicationView(updated, await listedSlug(updated.jobId));
+  return viewOf(updated);
 }

@@ -12,6 +12,7 @@ export * from "./schemas/auth.js";
 export * from "./schemas/coach.js";
 export * from "./schemas/common.js";
 export * from "./schemas/employer.js";
+export * from "./schemas/health.js";
 export * from "./schemas/jobs.js";
 export * from "./schemas/practice.js";
 export * from "./schemas/profile.js";

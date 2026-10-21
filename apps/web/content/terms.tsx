@@ -1,10 +1,11 @@
+import type { PracticePartnerKind } from "@pitchperfect/shared";
 import type { LegalSection } from "@/components/marketing/LegalDocument";
 import { COPY_LIMITS as L } from "./limits";
 
 const CONTACT = "the maintainer listed on the project's GitHub page";
 
-/** The terms of use template. */
-export const TERMS_SECTIONS: readonly LegalSection[] = [
+/** The terms of use template; the partner section matches whichever partner is running. */
+export const termsSections = (partner: PracticePartnerKind): readonly LegalSection[] => [
   {
     id: "about",
     title: "About these terms",
@@ -23,22 +24,25 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
         <li>You must be 18 or older.</li>
         <li>An account is for one person. Keep your details accurate and your password private.</li>
         <li>
-          Employers must be allowed to hire on behalf of the company they list, and sign up with an
-          email address at that company.
+          Employers must be allowed to hire on behalf of the company they list, and should use an
+          address at that company; otherwise the company shows as unverified until we approve it.
         </li>
       </ul>
     ),
   },
   {
     id: "practice-partner",
-    title: "The AI practice partner",
+    title: partner === "scripted" ? "The practice partner" : "The AI practice partner",
     body: (
       <>
         <p>
-          The practice partner is an AI, not a person. The buyers it plays, and the companies they
-          work for, are invented. Its replies and scorecards are generated automatically and can be
-          wrong. Treat them as practice feedback, not as professional, legal or career advice, and
-          not as a prediction of any hiring decision.
+          {partner === "scripted"
+            ? "The practice partner is scripted, not a person. It runs on our server and picks its lines from a fixed set."
+            : "The practice partner is an AI, not a person."}{" "}
+          The buyers it plays, and the companies they work for, are invented. Its replies and
+          scorecards are generated automatically and can be wrong. Treat them as practice feedback,
+          not as professional, legal or career advice, and not as a prediction of any hiring
+          decision.
         </p>
         <p>
           Each session is capped at {L.turns} of your turns, {L.minutes} minutes, and {L.characters}{" "}
@@ -56,9 +60,10 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
     body: (
       <p>
         You keep ownership of what you add: your profile, résumé, practice turns, job posts and
-        company details. You allow us to store and process it to run the service, including sending
-        practice text to our AI provider, and to show it to the people you choose: employers you
-        apply to, or, for job posts and company profiles, the public.
+        company details. You allow us to store and process it to run the service
+        {partner === "scripted" ? "" : ", including sending practice text to our AI provider"}, and
+        to show it to the people you choose: employers you apply to, or, for job posts and company
+        profiles, the public.
       </p>
     ),
   },

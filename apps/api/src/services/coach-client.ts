@@ -15,6 +15,13 @@ import { AppError, PracticeUnavailableError, UpstreamError } from "../errors.js"
 
 export type HealthStatus = "ok" | "down";
 
+/** What the coach's unsigned `GET /healthz` says: up or not, and which provider it runs. */
+export interface CoachHealth {
+  status: HealthStatus;
+  /** The coach's `COACH_PROVIDER` (`fake`, `openai`, `anthropic`); unknown when it is down. */
+  provider: string | undefined;
+}
+
 /** The coach found no student text worth scoring (`400 not_enough_turns`). */
 export class NotEnoughTurnsError extends Error {
   constructor() {
@@ -29,7 +36,7 @@ export class NotEnoughTurnsError extends Error {
  * or, when the caller's signal aborts, with that signal's reason.
  */
 export interface CoachClient {
-  health(): Promise<HealthStatus>;
+  health(): Promise<CoachHealth>;
   plan(req: CoachPlanRequest, signal?: AbortSignal): Promise<CoachPlanResponse>;
   turn(req: CoachTurnRequest, signal: AbortSignal): AsyncIterable<CoachTurnEvent>;
   score(req: CoachScoreRequest, signal?: AbortSignal): Promise<CoachScoreResponse>;
@@ -38,6 +45,13 @@ export interface CoachClient {
 const HEALTH_TIMEOUT_MS = 2000;
 /** Above the coach's own 30 s provider timeout, so the coach reports its failures itself. */
 const CALL_TIMEOUT_MS = 35_000;
+
+const DOWN: CoachHealth = { status: "down", provider: undefined };
+
+function providerOf(body: unknown): string | undefined {
+  if (typeof body !== "object" || body === null || !("provider" in body)) return undefined;
+  return typeof body.provider === "string" ? body.provider : undefined;
+}
 
 function errorCodeOf(body: unknown): string | undefined {
   if (typeof body !== "object" || body === null || !("error" in body)) return undefined;
@@ -151,9 +165,10 @@ export function createHttpCoachClient(
         const res = await fetch(new URL("/healthz", config.COACH_URL), {
           signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
         });
-        return res.ok ? "ok" : "down";
+        if (!res.ok) return DOWN;
+        return { status: "ok", provider: providerOf(await res.json().catch(() => null)) };
       } catch {
-        return "down";
+        return DOWN;
       }
     },
     plan: (req, signal) => postJson("/v1/plan", req, CoachPlanResponseSchema, signal),

@@ -48,6 +48,8 @@ describe("GET /api/practice/quota", () => {
       available: true,
       budgetExhausted: false,
       resetsAt: "2026-03-11T00:00:00.000Z",
+      // The test coach runs the fake provider, so the partner is the scripted one.
+      practicePartner: "scripted",
     });
   });
 

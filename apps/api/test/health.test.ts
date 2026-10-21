@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { COACH_PROBE_TTL_MS } from "../src/services/coach-probe.js";
 import { makeTestApp } from "./helpers/app.js";
 import { useTestDb } from "./helpers/db.js";
 import { prodEnv } from "./helpers/env.js";
@@ -10,23 +11,57 @@ useTestDb();
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("GET /api/health", () => {
-  it("reports ok for the api, database, and coach", async () => {
+  it("reports ok for the api, database, and coach, and the scripted demo partner", async () => {
     const { app } = makeTestApp();
     const res = await request(app).get("/api/health");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok", db: "ok", coach: "ok" });
+    expect(res.body).toEqual({ status: "ok", db: "ok", coach: "ok", practicePartner: "scripted" });
   });
 
-  it("reports the coach as down without failing the request", async () => {
+  it("reports a live partner when the coach runs a real provider", async () => {
+    const { app } = makeTestApp({ coach: new FakeCoachClient("ok", "openai") });
+    const res = await request(app).get("/api/health");
+
+    expect(res.body).toMatchObject({ coach: "ok", practicePartner: "live" });
+  });
+
+  it("reports the coach as down without failing the request, and the partner as live", async () => {
     const { app } = makeTestApp({ coach: new FakeCoachClient("down") });
     const res = await request(app).get("/api/health");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok", db: "ok", coach: "down" });
+    expect(res.body).toEqual({ status: "ok", db: "ok", coach: "down", practicePartner: "live" });
+  });
+
+  it("asks the coach once per 30 s, however often health is checked", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const coach = new FakeCoachClient();
+    const health = vi.spyOn(coach, "health");
+    const { app } = makeTestApp({ coach });
+
+    await request(app).get("/api/health");
+    await request(app).get("/api/health");
+    expect(health).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(Date.now() + COACH_PROBE_TTL_MS + 1);
+    coach.healthStatus = "down";
+    const res = await request(app).get("/api/health");
+    expect(health).toHaveBeenCalledTimes(2);
+    expect(res.body).toMatchObject({ coach: "down", practicePartner: "live" });
+  });
+
+  it("answers 429 after 120 checks a minute from one address", async () => {
+    const { app } = makeTestApp();
+    const statuses: number[] = [];
+    for (let i = 0; i < 121; i += 1) statuses.push((await request(app).get("/api/health")).status);
+
+    expect(statuses.slice(0, 120).every((status) => status === 200)).toBe(true);
+    expect(statuses[120]).toBe(429);
   });
 
   it("reports the database as down when mongoose is not connected", async () => {
@@ -37,7 +72,12 @@ describe("GET /api/health", () => {
     const res = await request(app).get("/api/health");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok", db: "down", coach: "ok" });
+    expect(res.body).toEqual({
+      status: "ok",
+      db: "down",
+      coach: "ok",
+      practicePartner: "scripted",
+    });
   });
 
   it("sets a request id and security headers and hides the framework", async () => {

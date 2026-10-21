@@ -48,10 +48,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const show = useCallback(
-    (toast: ToastInput) => {
-      const id = nextId.current++;
-      setToasts((current) => [...current, { ...toast, id }]);
+  /** Starts (or restarts) a toast's clock; `pause` stops it while the reader is on the message. */
+  const start = useCallback(
+    (id: number) => {
+      clearTimeout(timers.current.get(id));
       timers.current.set(
         id,
         setTimeout(() => {
@@ -60,6 +60,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       );
     },
     [dismiss],
+  );
+  const pause = useCallback((id: number) => {
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+  }, []);
+
+  const show = useCallback(
+    (toast: ToastInput) => {
+      const id = nextId.current++;
+      setToasts((current) => [...current, { ...toast, id }]);
+      start(id);
+    },
+    [start],
   );
 
   useEffect(() => {
@@ -80,8 +93,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map(({ id, title, description, tone = "info" }) => {
           const Icon = ICONS[tone];
           return (
+            // Hovering or focusing the message holds it (WCAG 2.2.1); leaving restarts the clock.
             <div
               key={id}
+              data-toast=""
+              onMouseEnter={() => {
+                pause(id);
+              }}
+              onMouseLeave={() => {
+                start(id);
+              }}
+              onFocus={() => {
+                pause(id);
+              }}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) start(id);
+              }}
               className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-card border border-border bg-surface p-4 shadow-card-hover"
             >
               <Icon aria-hidden="true" className={cn("mt-0.5 size-5 shrink-0", ACCENTS[tone])} />

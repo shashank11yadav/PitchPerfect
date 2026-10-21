@@ -22,9 +22,18 @@ export function expectPageSecurityHeaders(response: APIResponse): void {
   expect(headers["x-powered-by"]).toBeUndefined();
 }
 
-/** `GET /api/health` through the web origin: the proxy reaches the api, and the api its deps. */
+/**
+ * `GET /api/health` through the web origin: the proxy reaches the api, and the api its deps. The
+ * partner kind depends on the deployment (`scripted` for the e2e stack's fake coach).
+ */
 export async function expectHealthy(response: APIResponse): Promise<void> {
   expect(response.status()).toBe(200);
   expect(response.headers()["x-powered-by"]).toBeUndefined();
-  expect(await response.json()).toEqual({ status: "ok", db: "ok", coach: "ok" });
+  const body = (await response.json()) as { practicePartner?: string };
+  expect(body).toEqual({
+    status: "ok",
+    db: "ok",
+    coach: "ok",
+    practicePartner: expect.stringMatching(/^(?:scripted|live)$/) as unknown,
+  });
 }

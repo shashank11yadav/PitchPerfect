@@ -1,8 +1,8 @@
 import { LIMITS } from "@pitchperfect/shared";
 import type { Metadata } from "next";
 import { render, screen, within } from "@testing-library/react";
-import type { ComponentType } from "react";
-import { describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AboutPage, { metadata as about } from "./about/page";
 import EmployersPage, { metadata as employers } from "./employers/page";
 import HowItWorksPage, { metadata as howItWorks } from "./how-it-works/page";
@@ -14,7 +14,28 @@ import TermsPage, { metadata as terms } from "./terms/page";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 
-const PAGES: [string, ComponentType, Metadata][] = [
+/** A page component: the legal pages are async server components that ask the api about the partner. */
+type PageComponent = () => ReactNode | Promise<ReactNode>;
+
+const fetchMock = vi.fn<typeof fetch>();
+const healthBody = (practicePartner: "scripted" | "live") =>
+  new Response(JSON.stringify({ status: "ok", db: "ok", coach: "ok", practicePartner }), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+
+beforeEach(() => {
+  // By default the api can't be reached, which the pages must read as a live partner.
+  fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+afterEach(() => {
+  fetchMock.mockReset();
+  vi.unstubAllGlobals();
+});
+
+const PAGES: [string, PageComponent, Metadata][] = [
   ["/", HomePage, home],
   ["/students", StudentsPage, students],
   ["/employers", EmployersPage, employers],
@@ -38,12 +59,8 @@ describe.each(PAGES)("%s", (path, Page, metadata) => {
     expect(metadata.description?.length).toBeLessThanOrEqual(160);
   });
 
-  it("renders one h1 inside the main landmark, between the navbar and footer", () => {
-    render(
-      <PublicLayout>
-        <Page />
-      </PublicLayout>,
-    );
+  it("renders one h1 inside the main landmark, between the navbar and footer", async () => {
+    render(<PublicLayout>{await Page()}</PublicLayout>);
     const main = screen.getByRole("main");
     expect(main).toHaveAttribute("id", "main");
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
@@ -97,15 +114,15 @@ describe.each([
   ["/privacy", PrivacyPage],
   ["/terms", TermsPage],
 ])("%s", (_path, Page) => {
-  it("shows the demo template notice", () => {
-    render(<Page />);
+  it("shows the demo template notice", async () => {
+    render(await Page());
     expect(screen.getByRole("note")).toHaveTextContent("Demo template — not legal advice.");
   });
 });
 
 describe("privacy page", () => {
-  it("describes the real data flows", () => {
-    const { container: main } = render(<PrivacyPage />);
+  it("describes the real data flows", async () => {
+    const { container: main } = render(await PrivacyPage());
     for (const fact of [
       "our AI provider (OpenAI or Anthropic, depending on configuration)",
       "180 days",
@@ -121,16 +138,16 @@ describe("privacy page", () => {
 });
 
 describe("privacy page, carried review fixes", () => {
-  it("says how long the rate-limit store keeps IP addresses and email-derived keys", () => {
-    const { container } = render(<PrivacyPage />);
+  it("says how long the rate-limit store keeps IP addresses and email-derived keys", async () => {
+    const { container } = render(await PrivacyPage());
     const retention = container.querySelector("#retention + div");
     expect(retention).toHaveTextContent(/IP address/);
     expect(retention).toHaveTextContent(/email/);
     expect(retention).toHaveTextContent(/an hour/);
   });
 
-  it("asks only students to confirm they are 18 or older", () => {
-    render(<PrivacyPage />);
+  it("asks only students to confirm they are 18 or older", async () => {
+    render(await PrivacyPage());
     const account = screen.getByText("Account:").closest("li");
     expect(account).toHaveTextContent("Students also confirm they are 18 or older");
     expect(account).not.toHaveTextContent(/employer, and the date you confirmed/);
@@ -144,8 +161,8 @@ describe("numbers in the copy come from the shared limits", () => {
   it.each([
     ["/how-it-works", HowItWorksPage],
     ["/terms", TermsPage],
-  ])("%s states the session limits", (_path, Page) => {
-    const { container } = render(<Page />);
+  ])("%s states the session limits", async (_path, Page) => {
+    const { container } = render(await Page());
     expect(container).toHaveTextContent(`${String(LIMITS.maxStudentTurns)} of your turns`);
     expect(container).toHaveTextContent(`${minutes} minutes`);
     expect(container).toHaveTextContent(`${chars} characters`);
@@ -160,8 +177,8 @@ describe("numbers in the copy come from the shared limits", () => {
     expect(answer).toHaveTextContent(/default/i);
   });
 
-  it("states transcript retention from the shared limit", () => {
-    const { container } = render(<PrivacyPage />);
+  it("states transcript retention from the shared limit", async () => {
+    const { container } = render(await PrivacyPage());
     expect(container).toHaveTextContent(`${String(LIMITS.attemptRetentionDays)} days`);
   });
 });
@@ -197,10 +214,53 @@ describe("fix round 1", () => {
     );
   });
 
-  it("keeps the browser speech caveat in the privacy summary", () => {
-    const { container } = render(<PrivacyPage />);
+  it("keeps the browser speech caveat in the privacy summary", async () => {
+    const { container } = render(await PrivacyPage());
     const summary = container.querySelector("#summary + div");
     expect(summary).toHaveTextContent("only the text reaches us");
     expect(summary).toHaveTextContent("(Google, Apple, or Microsoft)");
+  });
+});
+
+describe("final review: the legal pages describe the partner that is really running", () => {
+  const SCRIPTED =
+    "This demo uses a scripted practice partner that runs on our server. What you say isn’t sent to an AI provider.";
+
+  it("privacy keeps the AI provider wording when the api can't say otherwise", async () => {
+    const { container } = render(await PrivacyPage());
+    expect(container).toHaveTextContent(
+      "our AI provider (OpenAI or Anthropic, depending on configuration)",
+    );
+    expect(container).not.toHaveTextContent(SCRIPTED);
+  });
+
+  it("privacy says the scripted partner stays on our server when the coach runs the demo", async () => {
+    fetchMock.mockResolvedValue(healthBody("scripted"));
+    const { container } = render(await PrivacyPage());
+    expect(container).toHaveTextContent(SCRIPTED);
+    expect(container).not.toHaveTextContent(/our AI provider/);
+    expect(container.querySelector("#processors + div")).toHaveTextContent(/scripted/);
+    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/api\/health$/);
+  });
+
+  it("terms call the partner scripted when the coach runs the demo, and AI when it doesn't", async () => {
+    fetchMock.mockResolvedValue(healthBody("scripted"));
+    const scripted = render(await TermsPage());
+    expect(scripted.container).toHaveTextContent("The practice partner is scripted, not a person");
+    expect(scripted.container).not.toHaveTextContent(/AI provider|is an AI/);
+    scripted.unmount();
+
+    fetchMock.mockResolvedValue(healthBody("live"));
+    const live = render(await TermsPage());
+    expect(live.container).toHaveTextContent("The practice partner is an AI, not a person");
+    expect(live.container).toHaveTextContent(/our AI provider/);
+  });
+
+  it("terms don't claim every employer must sign up with a company address", async () => {
+    const { container } = render(await TermsPage());
+    expect(container).toHaveTextContent(
+      "should use an address at that company; otherwise the company shows as unverified until we approve it",
+    );
+    expect(container).not.toHaveTextContent(/and sign up with an email address at that company/);
   });
 });

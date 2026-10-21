@@ -22,6 +22,7 @@ const quota = (overrides: Partial<PracticeQuota> = {}): PracticeQuota => ({
   available: true,
   budgetExhausted: false,
   resetsAt: "2026-10-21T00:00:00.000Z",
+  practicePartner: "live",
   ...overrides,
 });
 

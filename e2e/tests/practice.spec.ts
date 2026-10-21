@@ -34,6 +34,14 @@ test.describe("with the microphone blocked", () => {
   });
 });
 
+test("the e2e stack's fake coach is disclosed as a scripted demo partner", async ({ page }) => {
+  await startCall(page);
+  await expect(page.getByText("Scripted demo partner")).toHaveCount(1);
+  await expect(page.getByText("AI practice partner")).toHaveCount(0);
+  const health = await page.request.get("/api/health");
+  expect(((await health.json()) as { practicePartner: string }).practicePartner).toBe("scripted");
+});
+
 test("an attempt to take over the partner gets a redirect, not a scored reply", async ({
   page,
 }) => {

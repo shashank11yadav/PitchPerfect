@@ -428,6 +428,18 @@ describe("PUT /api/applications/:id/scorecard", () => {
     expect((await Application.findById(application._id))?.sharedAttemptId).toBeUndefined();
   });
 
+  it("stops saying a scorecard is shared once the attempt itself is gone", async () => {
+    const { session, user, application } = await ownApplication();
+    const attempt = await createAttempt(user._id);
+    await session.put(sharePath(application._id)).send({ attemptId: attempt._id.toString() });
+
+    // The attempt reached its retention limit (or the student deleted it another way).
+    await PracticeAttempt.deleteOne({ _id: attempt._id });
+
+    const listed = pageOf(await session.agent.get("/api/me/applications")).items[0];
+    expect(listed).toMatchObject({ hasSharedScorecard: false });
+  });
+
   it("404s for another student's attempt and leaves the share alone", async () => {
     const { session, user, application } = await ownApplication();
     const mine = await createAttempt(user._id);

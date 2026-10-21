@@ -85,20 +85,25 @@ async function collect(events: AsyncIterable<CoachTurnEvent>): Promise<CoachTurn
 const usage = { provider: "fake", model: "fake", inputTokens: 3, outputTokens: 2 } as const;
 
 describe("createHttpCoachClient: health", () => {
-  it("reports ok when /healthz returns 200", async () => {
+  it("reports ok and the provider when /healthz returns 200", async () => {
+    const client = clientFor(await listen(respond(200, { status: "ok", provider: "fake" })));
+    expect(await client.health()).toEqual({ status: "ok", provider: "fake" });
+  });
+
+  it("reports ok with no provider when /healthz doesn't name one", async () => {
     const client = clientFor(await listen(respond(200, { status: "ok" })));
-    expect(await client.health()).toBe("ok");
+    expect(await client.health()).toEqual({ status: "ok", provider: undefined });
   });
 
   it("reports down when /healthz returns an error status", async () => {
-    const client = clientFor(await listen(respond(503, {})));
-    expect(await client.health()).toBe("down");
+    const client = clientFor(await listen(respond(503, { provider: "fake" })));
+    expect(await client.health()).toEqual({ status: "down", provider: undefined });
   });
 
   it("reports down when the coach is unreachable", async () => {
     const url = await listen(respond(200, {}));
     await closeServer();
-    expect(await clientFor(url).health()).toBe("down");
+    expect(await clientFor(url).health()).toEqual({ status: "down", provider: undefined });
   });
 });
 

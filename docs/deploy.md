@@ -27,6 +27,8 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
 6. **Verify:**
    - Run `npx playwright test --config e2e/playwright.smoke.config.ts` with `BASE_URL` set to the deployed URL. It runs a read-only smoke test of the public pages, `/api/health`, and the headers.
    - Run Lighthouse on `/`, `/jobs` and one job page.
+   - If `COACH_PROVIDER` is a real provider (`openai` or `anthropic`), run `npm run eval -w apps/coach` once with the production model ids (`COACH_MODEL`, `COACH_SCORING_MODEL`) and record the pass rate before go-live. The runner refuses `fake`; see `apps/coach/evals/README.md`.
+   - Check that `/api/health` reports the partner you meant to deploy: `practicePartner` is `scripted` only for `COACH_PROVIDER=fake`, and the web copy follows it.
    - Run the [security checklist](security.md#pre-release-security-checklist).
 7. **Schedule the purge job:** run `node dist/scripts/purge-expired.js` daily from the api image (a cron job on the host with the api's environment; `npm run purge:prod -w apps/api` outside a container). It removes expired tokens and attempts as a backstop for the TTL indexes, marks sessions that were left `active` long past the 20-minute limit as abandoned, and removes `starting` placeholders of session starts that never finished (older than 5 minutes).
 
@@ -70,6 +72,12 @@ Every page is rendered per request, because the CSP nonce is new on each request
 ## Environment variables
 
 Each app documents its variables, with defaults and purpose, in its `.env.example`. Production values live only in the hosting provider's secret store.
+
+Notes that don't fit in an `.env.example` line:
+
+- `PRACTICE_RETENTION_DAYS` (api) is how long practice attempts are kept before the TTL index removes them. It stays configurable, but the web app's privacy policy, practice notice and other copy read the shared default (`LIMITS.attemptRetentionDays`, 180). If you change it, update that constant, or the copy will promise the wrong retention.
+- `COACH_PROVIDER` (coach) decides what the web app tells users about the partner, through `practicePartner` on `/api/health` and `/api/practice/quota`: `fake` is disclosed as a scripted demo that sends nothing to an AI provider; anything else, and a coach that can't be reached, as a live AI model.
+- `GET /api/health` is limited to 120 requests a minute per address (counted in memory per instance, so it keeps answering when the database is down), with the coach probe cached for 30 s. Point platform health checks at it as often as every few seconds from a single prober; only a flood is refused.
 
 ## Rollback
 

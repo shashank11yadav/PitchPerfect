@@ -51,6 +51,18 @@ describe("ConsentDialog", () => {
     );
   });
 
+  it("says the partner is scripted and stays on our server when the coach runs the demo", () => {
+    render(<ConsentDialog open partner="scripted" onClose={vi.fn()} onAccepted={vi.fn()} />);
+    const dialog = screen.getByRole("dialog", { name: "Before your first practice call" });
+    expect(dialog).toHaveTextContent(
+      "This demo uses a scripted practice partner that runs on our server. What you say isn’t sent to an AI provider.",
+    );
+    expect(dialog).not.toHaveTextContent(/partner is an AI/);
+    expect(dialog).not.toHaveTextContent(/goes to an AI provider/);
+    expect(dialog).toHaveTextContent(/180 days/);
+    expect(dialog).toHaveTextContent(/never receives or stores audio/);
+  });
+
   it("records the acceptance and refreshes the session", async () => {
     const user = userEvent.setup();
     const onAccepted = vi.fn();

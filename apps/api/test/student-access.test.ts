@@ -6,6 +6,7 @@ import { jobRoutes } from "../src/modules/jobs/routes.js";
 import { lessonRoutes } from "../src/modules/lessons/routes.js";
 import { practiceRoutes } from "../src/modules/practice/routes.js";
 import { profileRoutes } from "../src/modules/profile/routes.js";
+import { createCoachProbe } from "../src/services/coach-probe.js";
 import { makeTestApp } from "./helpers/app.js";
 import { csrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
@@ -115,7 +116,10 @@ function url(route: RouteCase, ids: { job: string; attempt: string; application:
 describe("student route table", () => {
   it("lists every route of the student-facing routers as student-only, account, or public", () => {
     const routes = [
-      ...registered(practiceRoutes({ config, coach }), "/practice"),
+      ...registered(
+        practiceRoutes({ config, coach, coachProbe: createCoachProbe(coach) }),
+        "/practice",
+      ),
       ...registered(applicationRoutes()),
       ...registered(jobRoutes()),
       ...registered(lessonRoutes()),

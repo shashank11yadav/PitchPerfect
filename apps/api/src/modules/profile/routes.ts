@@ -33,6 +33,12 @@ export function profileRoutes(deps: AuthDeps): Router {
   const changeEmailLimit = limit("change-email");
   const changePasswordLimit = limit("change-password");
   const deleteAccountLimit = limit("delete-account");
+  // Each upload writes up to 2 MB to GridFS; nobody replaces their résumé more than a few times.
+  const resumeUploadLimit = rateLimit("resume-upload", {
+    windowMs: HOUR_MS,
+    limit: 20,
+    key: byUser,
+  });
 
   const router = Router();
   router.patch("/me/profile", requireAuth, validateProfileByRole(), handle.updateProfile);
@@ -57,7 +63,13 @@ export function profileRoutes(deps: AuthDeps): Router {
     validate({ body: DeleteAccountSchema }),
     handle.remove,
   );
-  router.put("/me/resume", requireRole("student"), uploadResume, handle.uploadResume);
+  router.put(
+    "/me/resume",
+    requireRole("student"),
+    resumeUploadLimit,
+    uploadResume,
+    handle.uploadResume,
+  );
   router.get("/me/resume", requireRole("student"), handle.downloadResume);
   router.delete("/me/resume", requireRole("student"), handle.deleteResume);
   router.post(

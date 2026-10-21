@@ -25,6 +25,14 @@ import type { UserAttrs } from "./models/user.js";
 /** Both hydrated documents and lean results satisfy this. */
 type Persisted<T> = T & { _id: Types.ObjectId };
 
+/** Whether `application` still shares a scorecard, given the completed attempts that exist. */
+export const sharesScorecard = (
+  application: Pick<ApplicationAttrs, "sharedAttemptId">,
+  completedAttemptIds: ReadonlySet<string>,
+): boolean =>
+  application.sharedAttemptId != null &&
+  completedAttemptIds.has(application.sharedAttemptId.toString());
+
 const iso = (date: Date | null | undefined): string | null => date?.toISOString() ?? null;
 
 export function toPublicUser(user: Persisted<UserAttrs>): PublicUser {
@@ -105,10 +113,15 @@ export function toPublicJob(job: Persisted<JobAttrs>, company: Persisted<Company
   return { ...toPublicJobSummary(job, company), descriptionHtml: job.descriptionHtml };
 }
 
-/** An application with the job fields recorded when it was made; `jobSlug` only while the job is listed. */
+/**
+ * An application with the job fields recorded when it was made; `jobSlug` only while the job is
+ * listed. `hasSharedScorecard` is whether the shared attempt still exists and is completed, which
+ * the caller looks up: a TTL-deleted attempt leaves `sharedAttemptId` behind but shares nothing.
+ */
 export function toStudentApplicationView(
   application: Persisted<ApplicationAttrs>,
   jobSlug: string | null,
+  hasSharedScorecard: boolean,
 ): StudentApplicationView {
   return {
     id: application._id.toString(),
@@ -128,7 +141,7 @@ export function toStudentApplicationView(
           meetingUrl: application.interview.meetingUrl,
         }
       : null,
-    hasSharedScorecard: application.sharedAttemptId != null,
+    hasSharedScorecard,
     sharedAttemptId: application.sharedAttemptId?.toString() ?? null,
   };
 }
@@ -195,11 +208,15 @@ export function toEmployerJob(job: Persisted<JobAttrs>, applicantCount: number):
   };
 }
 
-/** What an employer may know about an applicant. Copies named fields only: no email, no ids. */
+/**
+ * What an employer may know about an applicant. Copies named fields only: no email, no ids.
+ * `hasSharedScorecard` is whether the shared attempt still exists and is completed.
+ */
 export function toEmployerApplicationView(
   application: Persisted<ApplicationAttrs>,
   user: Pick<UserAttrs, "name">,
   profile: Pick<StudentProfileAttrs, "school" | "major" | "gradYear" | "resumeFileId">,
+  hasSharedScorecard: boolean,
 ): EmployerApplicationView {
   return {
     id: application._id.toString(),
@@ -214,7 +231,7 @@ export function toEmployerApplicationView(
       gradYear: profile.gradYear,
     },
     hasResume: profile.resumeFileId != null,
-    hasSharedScorecard: application.sharedAttemptId != null,
+    hasSharedScorecard,
     interview: application.interview
       ? {
           startsAt: application.interview.startsAt.toISOString(),
