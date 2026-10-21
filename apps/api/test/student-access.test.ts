@@ -68,13 +68,25 @@ const OWNED_ROUTES = STUDENT_ROUTES.filter(
   ({ path }) => path.startsWith("/practice/") && path.includes(":id"),
 ).concat(STUDENT_ROUTES.filter(({ path }) => path.startsWith("/applications/")));
 
+interface Layer {
+  route?: { path: string; methods: Record<string, boolean> };
+  handle?: { stack?: unknown };
+}
+
+/**
+ * The routes a router registers. A nested router (`router.use(sub)`) would hide its routes from
+ * this list, so finding one fails loudly instead of letting the table miss them.
+ */
 function registered(router: Router, prefix = ""): string[] {
-  const layers = router.stack as { route?: { path: string; methods: Record<string, boolean> } }[];
-  return layers.flatMap(({ route }) =>
-    route
+  const layers = router.stack as Layer[];
+  return layers.flatMap(({ route, handle }) => {
+    if (!route && Array.isArray(handle?.stack)) {
+      throw new Error(`A nested router under "${prefix || "/"}" needs listing here by hand.`);
+    }
+    return route
       ? Object.keys(route.methods).map((method) => `${method.toUpperCase()} ${prefix}${route.path}`)
-      : [],
-  );
+      : [];
+  });
 }
 
 async function world() {
@@ -87,7 +99,7 @@ async function world() {
     studentId: owner.user._id,
     status: "applied",
   });
-  return { employer, job, attempt, application };
+  return { employer, owner, job, attempt, application };
 }
 
 /** `route.path` with its ids filled in: the job for job routes, else the attempt or application. */
@@ -147,9 +159,18 @@ describe("access without a student session", () => {
 
 describe("another student's attempts and applications", () => {
   it("answers 404 not_found on every owned route and changes nothing", async () => {
-    const { job, attempt, application } = await world();
+    const { owner, job, attempt, application } = await world();
     const intruder = await studentSession(app);
     const ids = { job: job.id, attempt: attempt.id, application: application.id };
+
+    // A control: the same URLs work for their owner, so the 404s below are about ownership.
+    const ownRead = await call(owner.session, "get", `/api/practice/sessions/${attempt.id}`);
+    expect(ownRead.status).toBe(200);
+    const ownList = await call(owner.session, "get", "/api/me/applications");
+    expect(ownList.status).toBe(200);
+    expect((ownList.body as { items: { id: string }[] }).items.map((item) => item.id)).toContain(
+      application.id,
+    );
 
     expect(OWNED_ROUTES.map(key)).toEqual([
       "GET /practice/sessions/:id",

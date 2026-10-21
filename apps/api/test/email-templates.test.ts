@@ -63,7 +63,7 @@ describe("email templates", () => {
     const email = emailChanged();
 
     expect(email.subject).toMatch(/email.*changed/i);
-    expect(email.text).toMatch(/didn't make this change/i);
+    expect(email.text).toMatch(/If you didn't, someone else may have your password/);
     expect(email.text).not.toMatch(/https?:\/\//);
     expect(email.html).not.toContain("href=");
   });

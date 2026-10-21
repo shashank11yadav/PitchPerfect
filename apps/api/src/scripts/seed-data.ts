@@ -19,7 +19,7 @@ export const SEED_COMPANIES: readonly SeedCompany[] = [
     name: "Zentrova Analytics",
     host: "zentrova-analytics.example",
     pitch:
-      "We build dashboards that turn scattered operations data into one clear picture for mid-sized teams.",
+      "Dashboards for operations teams that still build their weekly numbers by hand from five spreadsheets.",
     verification: "verified",
     employer: { first: "Devon", last: "Marsh", jobTitle: "Head of talent" },
   },
@@ -111,6 +111,7 @@ export const SEED_JOBS: readonly SeedJob[] = [
         "Research accounts and write short, personal outreach",
         "Run first calls and book demos for our account executives",
         "Keep every conversation logged so the team can follow up",
+        "Sit in on the Friday pipeline review and say what you heard that week",
       ],
       "No experience needed beyond curiosity and a willingness to practice. We coach you weekly.",
     ),
@@ -148,9 +149,9 @@ export const SEED_JOBS: readonly SeedJob[] = [
       [
         "Reach out to clinic owners and practice managers",
         "Qualify interest and set up product walkthroughs",
-        "Share what you learn so we can sharpen our messaging",
+        "Tell us which objections keep coming up",
       ],
-      "You will work with a friendly team that celebrates every booked meeting.",
+      "There are four of us in sales, and the bell on the wall gets rung for every booked meeting.",
     ),
     skills: ["Outbound calling", "Listening", "Objection handling"],
     pay: salary(50_000, 58_000, true),
@@ -167,7 +168,6 @@ export const SEED_JOBS: readonly SeedJob[] = [
       [
         "Guide new customers through setup and training",
         "Check in on usage and spot customers who need help",
-        "Pass product ideas and problems to the product team",
       ],
       "Great for someone who likes teaching and solving problems one customer at a time.",
     ),
@@ -282,6 +282,7 @@ export const SEED_JOBS: readonly SeedJob[] = [
         "Maintain territories, quotas, and lead assignment rules",
         "Build reports the sales managers use every Monday",
         "Find and fix gaps between marketing and sales handoffs",
+        "Sit with a new rep for their first week and watch where the process trips them up",
       ],
       "You like spreadsheets, and you like helping people see what the numbers mean.",
     ),
@@ -315,7 +316,7 @@ export const SEED_JOBS: readonly SeedJob[] = [
     workplace: "hybrid",
     employmentType: "full_time",
     descriptionHtml: description(
-      "Look after a group of training teams and help them get real results.",
+      "Look after a group of training teams and help them finish the courses they start.",
       [
         "Run onboarding and quarterly reviews",
         "Spot risks early and plan a fix with the customer",
@@ -340,7 +341,7 @@ export const SEED_JOBS: readonly SeedJob[] = [
         "Listen for the problems that cost them time on the road",
         "Book site visits with our senior sales team",
       ],
-      "You will join a team that values straight talk and follow-through.",
+      "Most of the team drove trucks or ran dispatch before they sold software, so they will teach you the trade.",
     ),
     skills: ["Outbound calling", "Listening", "Persistence"],
     pay: salary(50_000, 60_000, true),
@@ -354,11 +355,7 @@ export const SEED_JOBS: readonly SeedJob[] = [
     employmentType: "contract",
     descriptionHtml: description(
       "Help us follow up with carriers who tried our route planner and went quiet.",
-      [
-        "Call trial users and ask what got in the way",
-        "Offer a short guided setup session",
-        "Report patterns so we can fix the product",
-      ],
+      ["Call trial users and ask what got in the way", "Report patterns so we can fix the product"],
       "A six-month contract with a clear path to full-time for strong performers.",
     ),
     skills: ["Follow-up", "Discovery questions", "Resilience"],

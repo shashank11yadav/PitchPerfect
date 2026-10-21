@@ -118,7 +118,7 @@ export function signupAttemptExistingAccount(signinLink: string, resetLink: stri
     ],
     action: { label: "Sign in", url: signinLink },
     secondary: { label: "Reset your password", url: resetLink },
-    footnotes: ["If it wasn't you, you can ignore this email. Your account is safe."],
+    footnotes: ["If it wasn't you, you can ignore this email."],
   });
 }
 
@@ -129,7 +129,7 @@ export function emailChanged(): EmailContent {
     paragraphs: [
       `The email address on your ${BRAND} account was just changed, so this address no longer receives account email.`,
       "If you made this change, you don't need to do anything.",
-      "If you didn't make this change, someone else may have your password. Contact the PitchPerfect team right away.",
+      `If you didn't, someone else may have your password. Contact the ${BRAND} team right away.`,
     ],
   });
 }
@@ -160,7 +160,7 @@ export function interviewScheduled(details: {
     ],
     action: { label: "Join the meeting", url: details.meetingUrl },
     footnotes: [
-      `Good luck! Practicing with the AI practice partner on ${BRAND} is a great warm-up.`,
+      `Want a warm-up? Open the job on ${BRAND} and run a practice call for it with the AI practice partner.`,
     ],
   });
 }
