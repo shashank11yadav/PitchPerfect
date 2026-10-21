@@ -15,6 +15,38 @@ const HEDGY = [
   "Do you use spreadsheets?",
 ];
 
+/** Long, winding turns with one sentence past the evidence limit. */
+const RAMBLING = [
+  "Hi, I'm Riley, and I wanted to reach out because we have been working with a lot of different logistics companies across the region on all kinds of planning problems and reporting problems and some driver communication problems too, and it has been going really well for most of them so far this year.",
+  "So what we do is we take the spreadsheets and the phone calls and the whiteboards that most dispatch teams use and we put all of it into one place where everybody can see it at the same time without having to ask around.",
+  "What does a normal morning look like for your dispatchers right now when someone calls in sick?",
+];
+
+/** Turns of a word or two. */
+const TERSE = ["Hi.", "Okay.", "Sure.", "Thanks."];
+
+/** Few sentences, no hedges: every quote has to be shared out carefully. */
+const SPARE = [
+  "Hi, I'm Riley from Routewise.",
+  "How do you plan routes today?",
+  "Our planner saves your team hours.",
+  "We work with dispatch teams in Ohio.",
+];
+
+/** A friendly call that never says what changes for the buyer. */
+const NO_BENEFIT = [
+  "Hi Sam, thanks for taking the call. I work with clinic groups whose front desks spend hours a week on appointment reminders. How do your clinics handle reminders today?",
+  "That makes sense. If the reminders ran on their own and no-shows dropped, who on your side would want to see that first?",
+  "Fair question on price. What does one empty chair cost a clinic for an afternoon? Could we go through your numbers together on Thursday at 2pm?",
+];
+
+/** Friendly and full of questions, but it never asks for anything. */
+const NO_ASK = [
+  "Hi Sam, thanks for taking the call. How do your clinics handle reminders today?",
+  "That makes sense. Who on your side looks after the front desk?",
+  "Got it. What does a no-show cost you?",
+];
+
 const card = (turns: readonly string[]) => heuristicScorecard(turns, "value");
 
 /** Every sentence the card says about the student. */
@@ -95,5 +127,53 @@ describe("heuristicScorecard", () => {
     expect(card(STRONG).overall).toBeGreaterThan(card(HEDGY).overall);
     const middling = card(STRONG.slice(0, 2));
     expect(new Set([card(STRONG).overall, middling.overall, card(HEDGY).overall]).size).toBe(3);
+  });
+
+  it("marks a rambling call down and quotes its longest sentence, cut at a word", () => {
+    const clarity = card(RAMBLING).dimensions.find((dimension) => dimension.key === "clarity");
+    expect(clarity?.score).toBeLessThanOrEqual(3);
+    const evidence = clarity?.evidence ?? "";
+    const source = RAMBLING[0] ?? "";
+    expect(source.startsWith(evidence)).toBe(true);
+    // The quote stops between words, not partway through one.
+    expect([" ", ",", undefined]).toContain(source[evidence.length]);
+  });
+
+  it("doesn't praise one-word turns as short and clear", () => {
+    const terse = card(TERSE);
+    expect(terse.strengths.join(" ")).not.toMatch(/about 1 word/);
+    const clarity = terse.dimensions.find((dimension) => dimension.key === "clarity");
+    expect(clarity?.score).toBeLessThanOrEqual(2);
+  });
+
+  it("gives confidence a quote before clarity when quotes run short", () => {
+    const confidence = card(SPARE).dimensions.find((dimension) => dimension.key === "confidence");
+    expect(confidence?.evidence).not.toBeNull();
+  });
+
+  it("aims the stronger line at the weakest score even when it has no quote", () => {
+    const scorecard = card(NO_BENEFIT);
+    const value = scorecard.dimensions.find((dimension) => dimension.key === "value");
+    expect(value?.evidence).toBeNull();
+    expect(Math.min(...scorecard.dimensions.map((dimension) => dimension.score))).toBe(
+      value?.score,
+    );
+    expect(scorecard.strongerLine.improved).toMatch(/worth to your team/);
+    expect(NO_BENEFIT.some((turn) => turn.includes(scorecard.strongerLine.original))).toBe(true);
+  });
+
+  it("doesn't take thanks for the call as an ask for a meeting", () => {
+    const cta = card(NO_ASK).dimensions.find((dimension) => dimension.key === "cta");
+    expect(cta?.score).toBe(1);
+    expect(cta?.evidence).toBeNull();
+  });
+
+  it("quotes the call's last line when the call ended without an ask", () => {
+    const structure = card(NO_ASK).dimensions.find((dimension) => dimension.key === "structure");
+    expect(structure?.justification).toMatch(/without an ask/);
+    expect(
+      structure?.evidence === null || structure?.evidence === "What does a no-show cost you?",
+    ).toBe(true);
+    expect(structure?.evidence).not.toMatch(/^Hi Sam/);
   });
 });

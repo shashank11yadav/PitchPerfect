@@ -39,7 +39,14 @@ const sentencesOf = (turn: string) =>
     .map((sentence) => sentence.trim())
     .filter(Boolean);
 
-const quote = (sentence: string) => sentence.slice(0, LIMITS.evidenceMaxLength).trimEnd();
+/** A sentence as a quote: whole if it fits, otherwise cut at the last word that fits. */
+function quote(sentence: string): string {
+  if (sentence.length <= LIMITS.evidenceMaxLength) return sentence;
+  const room = sentence.slice(0, LIMITS.evidenceMaxLength + 1);
+  const space = room.lastIndexOf(" ");
+  const cut = space > 0 ? room.slice(0, space) : room.slice(0, LIMITS.evidenceMaxLength);
+  return cut.replace(/[\s,;:]+$/, "");
+}
 
 const wordCount = (text: string) => text.split(/\s+/).filter(Boolean).length;
 
@@ -48,8 +55,12 @@ const bare = (sentence: string) => sentence.replace(/[.!?]+$/, "");
 
 const TIME_PHRASE =
   /\b(?:next\s+)?(?:monday|tuesday|wednesday|thursday|friday|tomorrow)(?:\s+at\s+\d{1,2}(?::\d{2})?\s?(?:am|pm)?)?|\b\d{1,2}(?::\d{2})?\s?(?:am|pm)\b|\b(?:next|this) week\b/i;
+/**
+ * An ask for something next: a proposal ("could we", "let's") or a next-step word. A meeting word
+ * on its own isn't one, so "thanks for taking the call" doesn't count.
+ */
 const ASK =
-  /\b(meet|meeting|call|demo|next step|follow up|schedule|book|introduce|introduction|trial|pilot)\b/i;
+  /\b(?:could|can|shall|should) we\b|\blet'?s\b|\bwould you be (?:open|up) to\b|\b(?:next step|follow up|schedule|book|introduce|introduction|trial|pilot)\b/i;
 const OPEN_QUESTION = /^(what|how|why|which|where|who|tell me|walk me)\b/i;
 const ACKNOWLEDGE =
   /\b(understand|fair|makes sense|hear you|good question|great question|i see|i get it)\b/i;
@@ -72,6 +83,11 @@ const HEDGE = new RegExp(`\\b(${HEDGES.join("|")})\\b`, "gi");
 /** The same words, for `test`: a global pattern would carry `lastIndex` between calls. */
 const HEDGE_ONE = new RegExp(HEDGE.source, "i");
 const OPENER = /\b(hi|hello|my name|i'm|i am|thanks for)\b/i;
+
+/** Below this many words a turn, the call was too terse to judge for clarity. */
+const TERSE_WORDS = 4;
+/** A single turn longer than this buries its point. */
+const LONG_TURN_WORDS = 45;
 
 const ASK_LINE = "Could we book 20 minutes on Thursday at 10am to go through it together?";
 const DISCOVERY_LINE = "How do you handle that today, and what happens when it goes wrong?";
@@ -164,49 +180,75 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
     },
     turns.length < 3 && {
       reason: `The call ended after ${plural(turns.length, "turn")}, before it could get anywhere.`,
+      quote: last,
       fix: "Stay in the call longer: answer what they say and move it toward a decision.",
       rewrite: (line: string) => `${bare(line)}. ${DISCOVERY_LINE}`,
     },
     !ask && {
       reason: "It ended without an ask, so there was nothing for them to agree to.",
+      // Where the ask should have been.
+      quote: last,
       fix: "Finish with a clear ask for the next meeting.",
       rewrite: (line: string) => `${bare(line)}. ${ASK_LINE}`,
     },
   ].filter((part) => part !== false);
   const structureScore = clamp(5 - missing.length);
 
-  // Quotes are handed out most telling first: a hedge, the ask, a question, the pushback answer.
+  const longestTurn = Math.max(0, ...turns.map(wordCount));
+  /** One long turn buries its point even when the others are short. */
+  const longNote =
+    longestTurn > LONG_TURN_WORDS ? `, and the longest ran to ${String(longestTurn)}` : "";
+  /** Turns of a word or two say too little to be clear or unclear. */
+  const terse = averageWords > 0 && averageWords < TERSE_WORDS;
+  const clarityScore: Score =
+    averageWords === 0
+      ? 1
+      : terse
+        ? 2
+        : clamp(
+            5 -
+              [25, 40, 60, 90].filter((limit) => averageWords > limit).length -
+              Number(longestTurn > LONG_TURN_WORDS),
+          );
+  /** A tidy sentence shows a clear call; the longest one shows a rambling call. */
+  const clarityPick = clarityScore >= 4 ? (tidiest ?? longest) : longest;
+
+  // Quotes are handed out most telling first: on a rambling call its longest line, then the
+  // ask, a question, the pushback answer, a benefit, the opening, a hedge or a steady line, and
+  // what's left for clarity.
+  const rambled = clarityScore <= 3 && !terse ? take(clarityPick) : null;
   const quotes = {
-    confidence: hedged ? take(hedged) : null,
     cta: take(ask),
     discovery: take(...open, ...questions),
     objections: take(acknowledged),
     value: take(...benefits),
-    structure: take(opener, sentences[0]),
+    structure: missing[0]?.quote ? take(missing[0].quote) : take(opener, sentences[0]),
+    confidence: null as string | null,
     clarity: null as string | null,
   };
-  quotes.clarity = take(tidiest, longest, ...sentences);
-  quotes.confidence ??= take(...sentences.filter((sentence) => !HEDGE_ONE.test(sentence)));
+  const steady = sentences.filter(
+    (sentence) => !HEDGE_ONE.test(sentence) && sentence !== clarityPick,
+  );
+  quotes.confidence = hedged ? take(hedged) : take(...steady, clarityPick);
+  quotes.clarity = rambled ?? take(clarityPick, ...sentences);
 
-  const clarityScore =
-    averageWords === 0
-      ? 1
-      : clamp(5 - [30, 50, 80, 120].filter((limit) => averageWords > limit).length);
   const clarity: Judgement = {
     score: clarityScore,
-    justification:
-      clarityScore >= 4
+    justification: terse
+      ? "Your turns were a word or two each, too short to carry a point. Say why you called in a full sentence."
+      : clarityScore >= 4
         ? `Your turns ran about ${plural(averageWords, "word")}, short enough that each one landed as one point.`
         : clarityScore === 3
-          ? `Your turns ran about ${plural(averageWords, "word")}. Cut each one down to a single point and it would land harder.`
-          : `Your turns ran about ${plural(averageWords, "word")}, so the main point got buried. Say the one thing you want remembered, then stop.`,
+          ? `Your turns ran about ${plural(averageWords, "word")}${longNote}. Cut each one down to a single point and it would land harder.`
+          : `Your turns ran about ${plural(averageWords, "word")}${longNote}, so the main point got buried. Say the one thing you want remembered, then stop.`,
     evidence: quotes.clarity,
     strength:
       clarityScore >= 4
         ? `Your turns stayed short, about ${plural(averageWords, "word")} each.`
         : null,
-    improvement:
-      clarityScore >= 4
+    improvement: terse
+      ? "Give every turn one full point: who you are, what you noticed, or a question."
+      : clarityScore >= 4
         ? "Keep your turns this short when the call gets harder."
         : `Keep each turn to one point. Yours ran about ${plural(averageWords, "word")}.`,
     fallback: longest,
@@ -227,7 +269,13 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
     evidence: quotes.value,
     strength: valueScore >= 4 ? "You framed it around what they'd get, not what you sell." : null,
     improvement: "Name one thing that gets better for them, in the words they used.",
-    fallback: sentences[0] ?? last,
+    // The line where they said what they do, which is where the benefit belongs.
+    fallback:
+      sentences.find(
+        (sentence) => !sentence.includes("?") && sentence !== opener && wordCount(sentence) >= 6,
+      ) ??
+      sentences[0] ??
+      last,
     rewrite: (line) => `${bare(line)}. What would that be worth to your team?`,
   };
 
@@ -380,10 +428,9 @@ export function heuristicScorecard(turns: readonly string[], weighted: RubricKey
     .filter((line, index, lines) => lines.indexOf(line) === index)
     .slice(0, LIMITS.scorecardListSize);
 
-  // The weakest dimension that has a quote, so the rewrite works on a line the student said and
-  // answers that score; with no quotes at all, the weakest one's fallback line.
-  const target =
-    judged[worst.find((key) => judged[key].evidence !== null) ?? worst[0] ?? "clarity"];
+  // The weakest dimension, so the rewrite answers the lowest score: its quote when it has one
+  // (equal scores put a quoted one first), otherwise its fallback line from the student's turns.
+  const target = judged[worst[0] ?? "clarity"];
   const original = target.evidence ?? quote(target.fallback || (turns[0] ?? ""));
   const rewritten = original ? target.rewrite(original) : "";
   const improved =
