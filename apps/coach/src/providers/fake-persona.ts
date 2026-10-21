@@ -1,13 +1,5 @@
 import { STAGES, type Stage } from "@pitchperfect/shared";
-import {
-  type Reading,
-  type Voice,
-  bookedTime,
-  counterOffered,
-  readTurn,
-  refusedDays,
-  timeIn,
-} from "./fake-intents.js";
+import { type Booking, type Reading, type Voice, readTurn, timeIn } from "./fake-intents.js";
 import { mulberry32 } from "./fake-patterns.js";
 import { type Lines, tradeOf, VOICES, voiceOf } from "./fake-voices.js";
 import { stageTag, type ChatMessage } from "./provider.js";
@@ -133,7 +125,7 @@ const OBJECTION_LEADS: readonly ((objection: string) => string)[] = [
 
 /** Money has come up, so a price objection fits. */
 const MONEY =
-  /\b(?:price|pricing|budget|expensive|cheap|afford|roi|subscription|fee)\b|\$\d|\b\d[\d,]* (?:dollars|a month|per month|a year)\b|\bcosts? (?:less|more|about|around|under)\b|\bpay (?:for|per|about|around|less|more)\b/i;
+  /\b(?:price|pricing|budget|expensive|cheap|afford|roi|subscription|fee)\b|\$\d|\b\d[\d,]* (?:dollars|a month|per month|a year)\b|\bcosts? (?:less|more|about|around|under)\b|\bpay (?:for|per|about|around|less|more)\b|\bwe charge\b/i;
 const PRICE_OBJECTION = /\b(?:price|cost|budget|expensive|afford)\b/i;
 
 /** Words worth repeating back from the student's line; anything else would read oddly. */
@@ -196,10 +188,15 @@ function nextObjection(context: Context): string | undefined {
 }
 
 const DAY = /\b(monday|tuesday|wednesday|thursday|friday)\b/i;
+/** "thursday at 9" as the persona would write it: "Thursday at 9". */
+const tidy = (when: string) =>
+  when.replace(/\b(monday|tuesday|wednesday|thursday|friday|tomorrow)\b/gi, (day) =>
+    capitalized(day.toLowerCase()),
+  );
+const dayOf = (when: string | undefined) => (when ? DAY.exec(when)?.[1] : undefined);
 /** A time inside a sentence: "next week" loses its capital, a day keeps it. */
 const midSentence = (when: string) =>
   /^(?:next|this) week|^tomorrow/i.test(when) ? when.toLowerCase() : when;
-const dayOf = (when: string | undefined) => (when ? DAY.exec(when)?.[1] : undefined);
 
 /** "%" in a line becomes ", Chris" when the student gave a name, or nothing. */
 const withName = (lines: readonly string[], name: string | undefined) =>
@@ -211,80 +208,209 @@ function guestFor(voice: Lines, line: string): string {
   return named ? `${voice.possessive} ${named.toLowerCase()}` : voice.colleague;
 }
 
-const accept = (When: string, day: string | undefined, guest: string) =>
-  day
-    ? `${When} works. Send the invite and I'll bring ${guest}.`
-    : `${When} works. Send me the details first.`;
+/**
+ * The lines that move a meeting along, each with the shape that reads it back. The booking state
+ * of a call is derived from these, so a line is never both said and misread.
+ */
+const BOOKING_LINES = {
+  accept: {
+    make: (When: string, guest: string) =>
+      `${When} works. Send the invite and I'll bring ${guest}.`,
+    shape: /^(.+?) works\. Send the invite/,
+  },
+  acceptPlain: {
+    make: (When: string) => `${When} works. Send me the details first.`,
+    shape: /^(.+?) works\. Send me the details first/,
+  },
+  acceptMaybe: {
+    make: (When: string, colleague: string) =>
+      `${When} should work. Send me the details and I'll check with ${colleague}.`,
+    shape: /^(.+?) should work\. Send me the details/,
+  },
+  acceptBetter: {
+    make: (When: string, guest: string) =>
+      `${When} works better for me. Send the invite and I'll bring ${guest}.`,
+    shape: /^(.+?) works better for me\./,
+  },
+  counter: {
+    make: (When: string, other: string) =>
+      `${When} is packed for me. Could we do ${other} at the same time instead?`,
+    shape: /^(.+?) is packed for me\. Could we do (\w+day)/,
+  },
+  refuseAgain: {
+    make: (Day: string, offered: string, time: string) =>
+      `Like I said, ${Day}'s no good for me. ${offered}${time} I can do.`,
+    shape: /^Like I said, (\w+day)'s no good for me\. (\w+day)/,
+  },
+  refuseShort: {
+    make: (Day: string, offered: string) => `${Day} still doesn't work. ${offered}?`,
+    shape: /^(\w+day) still doesn't work\. (\w+day)\?/,
+  },
+  forDay: {
+    make: (day: string) => `For ${day}, yes? Send it and I'll be there.`,
+    shape: /^For (\w+day), yes\?/,
+  },
+  forDayShort: {
+    make: (day: string) => `For ${day}, then. Send it over.`,
+    shape: /^For (\w+day), then\./,
+  },
+  followUp: {
+    make: (When: string) => `${When} works. Talk then.`,
+    shape: /^(.+?) works\. Talk then\./,
+  },
+  followUpSoft: {
+    make: (when: string) => `Sounds good. Talk ${when}.`,
+    shape: /^Sounds good\. Talk (.+?)\./,
+  },
+  same: {
+    make: (When: string) => `Yes, ${When}. See you then.`,
+    shape: /^Yes, (.+?)\. See you then/,
+  },
+  sameShort: {
+    make: (Day: string) => `That's the one. Talk ${Day}.`,
+    shape: /^That's the one\. Talk (\w+day)/,
+  },
+  switchTo: {
+    make: (When: string) => `${When} is fine too. Send the new invite.`,
+    shape: /^(.+?) is fine too\./,
+  },
+  switchShort: {
+    make: (when: string) => `Okay, ${when} it is. Update the invite.`,
+    shape: /^Okay, (.+?) it is\./,
+  },
+  keep: {
+    make: (booked: string) =>
+      `Let's keep it to ${midSentence(booked)}, if that's all the same to you. Send me the invite.`,
+    shape: /^Let's keep it to (.+?), if/,
+  },
+  keepShort: {
+    make: (booked: string) => `We've got ${midSentence(booked)} already. One meeting is plenty.`,
+    shape: /^We've got (.+?) already\./,
+  },
+  confirmTable: {
+    make: (When: string) => `${When} works, yes. Send the invite.`,
+    shape: /^(.+?) works, yes\./,
+  },
+  confirmSoft: {
+    make: (when: string) => `Yes, ${when} is fine. Send me the details.`,
+    shape: /^Yes, (.+?) is fine\. Send me the details/,
+  },
+} as const;
+
+const ACCEPTS = [
+  BOOKING_LINES.accept,
+  BOOKING_LINES.acceptPlain,
+  BOOKING_LINES.acceptMaybe,
+  BOOKING_LINES.acceptBetter,
+  BOOKING_LINES.forDay,
+  BOOKING_LINES.forDayShort,
+  BOOKING_LINES.followUp,
+  BOOKING_LINES.followUpSoft,
+  BOOKING_LINES.same,
+  BOOKING_LINES.sameShort,
+  BOOKING_LINES.switchTo,
+  BOOKING_LINES.switchShort,
+  BOOKING_LINES.keep,
+  BOOKING_LINES.keepShort,
+  BOOKING_LINES.confirmTable,
+  BOOKING_LINES.confirmSoft,
+];
+const COUNTERS = [BOOKING_LINES.counter, BOOKING_LINES.refuseAgain, BOOKING_LINES.refuseShort];
+
+/** Lines of the persona's that put a day on the table: its availability, or asking for a day. */
+const DAY_ASKED = new Set(
+  Object.values(VOICES).flatMap((voice) => [
+    ...voice.availability,
+    ...voice.openProposal,
+    ...voice.trial,
+    ...voice.confirmNothing,
+  ]),
+);
+
+/** Where the call stands on a meeting, from what the persona has said. */
+export function readBooking(said: readonly string[]): Booking {
+  let booked: string | undefined;
+  let countered: string | undefined;
+  const refused: string[] = [];
+  for (const line of said) {
+    const accepted = ACCEPTS.map((entry) => entry.shape.exec(line)?.[1]).find(Boolean);
+    if (accepted !== undefined) {
+      booked = /^\w+day|^next week|^tomorrow|^\d/i.test(accepted)
+        ? accepted
+        : (timeIn(accepted) ?? accepted);
+      countered = undefined;
+      continue;
+    }
+    const counter = COUNTERS.map((entry) => entry.shape.exec(line)).find(Boolean);
+    if (counter) {
+      const [, turnedDown = "", offered = ""] = counter;
+      const day = dayOf(turnedDown);
+      if (day) refused.push(day.toLowerCase());
+      countered = offered;
+      booked = undefined;
+    }
+  }
+  const last = said.at(-1) ?? "";
+  const dayAsked =
+    DAY_ASKED.has(last) ||
+    COUNTERS.some((entry) => entry.shape.test(last)) ||
+    ACCEPTS.some((entry) => entry.shape.test(last));
+  const offered = DAY_ASKED.has(last) ? dayOf(last) : undefined;
+  return { booked, countered, refused, offered, dayAsked };
+}
 
 /**
  * A meeting proposed with a day or time: yes, a counter, a reminder that the day was already
  * turned down, or, once something is booked, a nudge to keep it to one meeting.
  */
-function proposalReply(context: Context, voice: Lines, reading: Reading): Reply {
-  const { said } = context;
-  const when = reading.time ?? "";
+function proposalReply(voice: Lines, reading: Reading, booking: Booking): Reply {
+  const { booked, countered, refused, offered } = booking;
+  const when = tidy(reading.orTime ?? reading.time ?? "");
   const When = capitalized(when);
   const day = dayOf(when);
   const guest = guestFor(voice, reading.sentence);
-  const booked = bookedTime(said);
   const bookedDay = dayOf(booked);
-  const lastSaid = said.at(-1) ?? "";
-  const refused = refusedDays(said);
   const other = day && /thursday/i.test(day) ? "Friday" : "Thursday";
   const stage: Stage = "close";
+  const L = BOOKING_LINES;
 
   // A day after a vague "next week works" pins the meeting down rather than adding a second one.
   if (booked && !(day && !bookedDay)) {
-    if (day && day.toLowerCase() === bookedDay?.toLowerCase()) {
-      return {
-        stage,
-        lines: [`Yes, ${When}. See you then.`, `That's the one. Talk ${capitalized(day)}.`],
-      };
+    const sameDay = day !== undefined && day.toLowerCase() === bookedDay?.toLowerCase();
+    const sameTime = when.toLowerCase() === booked.toLowerCase() || !/\bat\b/i.test(when);
+    if (sameDay && sameTime) {
+      return { stage, lines: [L.same.make(When), L.sameShort.make(capitalized(day))] };
     }
     if (
-      /\b(?:instead|actually|rather|move|change|push|switch|make (?:it|that))\b/i.test(
+      sameDay ||
+      /\b(?:instead|actually|rather|move|change|push|switch|make (?:it|that)|it is|then)\b/i.test(
         reading.sentence,
       )
     ) {
-      return {
-        stage,
-        lines: [
-          `${When} is fine too. Send the new invite.`,
-          `Okay, ${when} it is. Update the invite.`,
-        ],
-      };
+      return { stage, lines: [L.switchTo.make(When), L.switchShort.make(when)] };
     }
-    return {
-      stage,
-      lines: [
-        `Let's keep it to ${midSentence(booked)}, if that's all the same to you. Send me the invite.`,
-        `We've got ${midSentence(booked)} already. One meeting is plenty.`,
-      ],
-    };
+    return { stage, lines: [L.keep.make(booked), L.keepShort.make(booked)] };
   }
-  if (day && refused.has(day.toLowerCase())) {
-    const offered = counterOffered(lastSaid) ?? other;
+  if (day && refused.includes(day.toLowerCase())) {
+    const offered = countered ?? other;
     const time = /\bat [\w:]+/i.exec(when)?.[0];
     return {
       stage,
       lines: [
-        `Like I said, ${capitalized(day)}'s no good for me. ${offered}${time ? ` ${time}` : ""} I can do.`,
-        `${capitalized(day)} still doesn't work. ${offered}?`,
+        L.refuseAgain.make(capitalized(day), offered, time ? ` ${time}` : ""),
+        L.refuseShort.make(capitalized(day), offered),
       ],
     };
   }
-  // Never turn down a day the person just offered.
-  const offeredByMe = day !== undefined && new RegExp(`\\b${day}\\b`, "i").test(lastSaid);
-  const yes = accept(When, day, guest);
-  if (offeredByMe) return { stage, lines: [yes] };
+  // "Monday or Tuesday?" picks one; a day the persona itself offered, or any day after it has
+  // already turned one down, is taken rather than haggled over.
+  if (reading.orTime) return { stage, lines: [L.acceptBetter.make(When, guest)] };
+  const yes = day ? L.accept.make(When, guest) : L.acceptPlain.make(When);
+  const offeredByMe = day !== undefined && day.toLowerCase() === offered?.toLowerCase();
+  if (offeredByMe || countered !== undefined || refused.length > 0) return { stage, lines: [yes] };
   return {
     stage,
-    lines: [
-      yes,
-      day
-        ? `${When} is packed for me. Could we do ${other} at the same time instead?`
-        : `${When} should work. Send me the details and I'll check with ${voice.colleague}.`,
-    ],
+    lines: [yes, day ? L.counter.make(When, other) : L.acceptMaybe.make(When, voice.colleague)],
   };
 }
 
@@ -302,6 +428,17 @@ function decisionReply(context: Context, voice: Lines): readonly string[] {
     : [spoken(signOff), `${spoken(signOff)} ${who} would want a say too.`];
 }
 
+/** "Is there anything about my background that worries you?": the next objection, said kindly. */
+function worriesReply(context: Context, voice: Lines): Reply {
+  const objection = nextObjection(context);
+  const here = context.current ?? byProgress(context.turns.length);
+  if (!objection) return { stage: here, lines: voice.doubt };
+  return {
+    stage: later("objection", context.current),
+    lines: [`Honestly? ${spoken(objection)}`, `Only the obvious one. ${spoken(objection)}`],
+  };
+}
+
 /** The reply to a turn, by what kind of turn it was. */
 function replyFor(context: Context, line: string, next: Next): Reply {
   const { scenario, current, said } = context;
@@ -313,6 +450,7 @@ function replyFor(context: Context, line: string, next: Next): Reply {
   const objectionRaised = scenario.objections.some((objection) =>
     alreadySaid(said, spoken(objection)),
   );
+  const booking = readBooking(said);
 
   if (context.lastTurn) {
     return {
@@ -328,12 +466,13 @@ function replyFor(context: Context, line: string, next: Next): Reply {
     voice: kind,
     stage: here,
     firstName: scenario.firstName,
-    said,
+    turn: context.turns.length,
+    booking,
     objectionRaised,
   });
-  const when = reading.time ?? "";
+  const when = tidy(reading.time ?? "");
   const When = capitalized(when);
-  const booked = bookedTime(said);
+  const L = BOOKING_LINES;
 
   switch (reading.intent) {
     case "identity":
@@ -366,40 +505,36 @@ function replyFor(context: Context, line: string, next: Next): Reply {
     case "busy_remark":
       return { stage: here, lines: voice.busy };
     case "proposal":
-      return proposalReply(context, voice, reading);
+      return proposalReply(voice, reading, booking);
     case "confirm": {
-      const onTheTable = dayOf(said.at(-1)) ?? timeIn(said.at(-1) ?? "");
+      const onTheTable = booking.countered ?? dayOf(said.at(-1)) ?? timeIn(said.at(-1) ?? "");
       return onTheTable
         ? {
             stage: at("close"),
-            lines: [
-              `${capitalized(onTheTable)} works, yes. Send the invite.`,
-              `Yes, ${onTheTable} is fine. Send me the details.`,
-            ],
+            lines: [L.confirmTable.make(capitalized(onTheTable)), L.confirmSoft.make(onTheTable)],
           }
         : { stage: at("close"), lines: voice.confirmNothing };
     }
-    case "follow_up":
+    case "follow_up": {
       // Once a meeting is booked, "talk Thursday" is a goodbye, not a new plan; the wrong day
       // gets a gentle correction.
-      if (booked) {
-        const bookedDay = dayOf(booked);
+      const settled = booking.booked ?? booking.countered;
+      if (settled) {
+        const settledDay = dayOf(settled);
         const day = dayOf(when);
-        const wrongDay = day && bookedDay && day.toLowerCase() !== bookedDay.toLowerCase();
+        const wrongDay = day && settledDay && day.toLowerCase() !== settledDay.toLowerCase();
         return {
           stage: at("close"),
           lines: wrongDay
             ? [
-                `${capitalized(bookedDay)}, you mean. Talk then.`,
-                `We said ${bookedDay}. Bye for now.`,
+                `${capitalized(settledDay)}, you mean. Talk then.`,
+                `We said ${capitalized(settledDay)}. Bye for now.`,
               ]
             : [`Talk ${when}.`, `See you ${when}.`, "Bye for now."],
         };
       }
-      return {
-        stage: at("close"),
-        lines: [`${When} works. Talk then.`, `Sounds good. Talk ${when}.`],
-      };
+      return { stage: at("close"), lines: [L.followUp.make(When), L.followUpSoft.make(when)] };
+    }
     case "open_proposal":
       return {
         stage: at("close"),
@@ -429,12 +564,19 @@ function replyFor(context: Context, line: string, next: Next): Reply {
       };
     case "small_start":
       return { stage: at("close"), lines: voice.smallStart };
+    case "hypothetical":
+      return { stage: here, lines: voice.hypothetical };
+    case "invite_guest":
+      return { stage: at("close"), lines: voice.inviteGuest };
     case "target":
-      return { stage: at("discovery"), lines: voice.target };
+      return {
+        stage: at("discovery"),
+        lines: reading.motivation && voice.motivation.length > 0 ? voice.motivation : voice.target,
+      };
     case "topic":
       return { stage: at("discovery"), lines: [...echoTopic(line), ...voice.topic] };
     case "quantity_question":
-      return { stage: at("discovery"), lines: voice.quantity };
+      return { stage: at("discovery"), lines: voice.quantity[reading.quantity ?? "count"] };
     case "quality_question":
       return { stage: here, lines: voice.quality };
     case "busiest_question":
@@ -464,12 +606,20 @@ function replyFor(context: Context, line: string, next: Next): Reply {
       return { stage: at("discovery"), lines: voice.relationship };
     case "job_question":
       return { stage: at("discovery"), lines: voice.job[reading.job ?? "team"] };
+    case "detail_question": {
+      const topic = reading.detail ?? "pain";
+      if (topic === "worries") return worriesReply(context, voice);
+      const lines = voice.detail[topic];
+      const fallback = topic === "picked" ? voice.detail.tried : voice.detail.pain;
+      return { stage: here, lines: lines.length > 0 ? lines : fallback };
+    }
     case "process_question":
       return { stage: at("discovery"), lines: voice.process, lead: echo(line, next) };
     case "yes_no_question":
       return { stage: at("discovery"), lines: voice.yesNo };
     case "other_question":
-      return { stage: here, lines: objectionRaised ? voice.behind : voice.unsure };
+      // A question the persona can't place still gets a plausible answer about its own situation.
+      return { stage: here, lines: voice.detail.pain };
     case "proof":
       return { stage: at(objectionRaised ? "objection" : "pitch"), lines: voice.proof };
     case "acknowledgement":
@@ -482,16 +632,18 @@ function replyFor(context: Context, line: string, next: Next): Reply {
       };
     }
     case "wrap_up": {
-      // "I'll send the invite" right after a counter-offer books the day the persona offered.
-      const countered = booked ? undefined : counterOffered(said.at(-1) ?? "");
-      if (reading.invite && countered) {
+      // "I'll send the invite" right after a counter-offer books the day the persona offered; a
+      // goodbye after one takes that day as settled.
+      const { booked, countered } = booking;
+      if (reading.invite && !booked && countered) {
         return {
           stage: at("close"),
           lines: voice.inviteForCounter.map((text) => text.replace("%", countered)),
         };
       }
-      const day = dayOf(booked) ?? booked ?? "then";
-      const goodbyes = voice.goodbye.map((text) => text.replace("%", day));
+      const settled = booked ?? countered;
+      const day = dayOf(settled) ?? settled ?? "then";
+      const goodbyes = voice.goodbye.map((text) => text.replace("%", tidy(day)));
       return {
         stage: at("close"),
         lines: reading.invite ? [...voice.inviteComing, ...goodbyes] : goodbyes,
@@ -512,7 +664,9 @@ function replyFor(context: Context, line: string, next: Next): Reply {
     case "vague":
       return { stage: here, lines: voice.vague };
     case "unclear":
-      return { stage: here, lines: [...echoTopic(line), ...voice.stages[here]] };
+      return reading.nonsense
+        ? { stage: here, lines: voice.clarify }
+        : { stage: here, lines: [...echoTopic(line), ...voice.stages[here]] };
   }
 }
 

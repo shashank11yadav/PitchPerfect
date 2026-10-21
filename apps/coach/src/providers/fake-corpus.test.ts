@@ -12,7 +12,7 @@ import { z } from "zod";
 import { buildPlanPrompt } from "../prompts/persona-plan.js";
 import { buildTurnPrompt } from "../prompts/persona-turn.js";
 import { type Intent, type Voice, readTurn } from "./fake-intents.js";
-import { personaReply } from "./fake-persona.js";
+import { personaReply, readBooking } from "./fake-persona.js";
 import { FakeProvider } from "./fake.js";
 
 /**
@@ -116,6 +116,8 @@ interface Row {
   not?: RegExp;
   /** The stage after the reply: exact, or anything but the close. */
   after?: Stage | "not-close";
+  /** A scenario other than the voice's usual one. */
+  scenario?: Scenario;
 }
 
 const row = (line: string, intent: Intent, rest: Omit<Row, "line" | "intent"> = {}): Row => ({
@@ -125,12 +127,18 @@ const row = (line: string, intent: Intent, rest: Omit<Row, "line" | "intent"> = 
 });
 
 /** The reviewer's probes open with a clinic buyer; everything else uses the voice's scenario. */
-const scenarioFor = (voice: Voice, stage: Stage): Scenario =>
-  voice === "buyer" && stage === "opening" ? CLINIC : SCENARIOS[voice];
+const scenarioFor = (voice: Voice, stage: Stage, own?: Scenario): Scenario =>
+  own ?? (voice === "buyer" && stage === "opening" ? CLINIC : SCENARIOS[voice]);
 
 /** The persona's reply to `line`, with the call so far as the turn prompt sends it. */
-function replyTo({ line, voice = "buyer", stage = "discovery", before = [] }: Row): string {
-  const scenario = scenarioFor(voice, stage);
+function replyTo({
+  line,
+  voice = "buyer",
+  stage = "discovery",
+  before = [],
+  scenario: own,
+}: Row): string {
+  const scenario = scenarioFor(voice, stage, own);
   const transcript: TranscriptEntry[] = [
     { role: "partner", text: scenario.scenarioPublic.openingLine },
   ];
@@ -157,6 +165,12 @@ const OPENER_REPLY =
   /why|what's this about|what made you|reach out|calling|meet you|background|drew you|tell me|going on|what can I do/i;
 const SMALL_TALK_REPLY =
   /thanks|busy|good|fine|not bad|quiet|highlights|weather|been a while|few minutes|go ahead|speaking/i;
+
+const OBJECTED = ["Maybe. But we're mid-quarter and can't take on a rollout now."];
+const HIRING_OBJECTED = [
+  "I'll be honest. We usually hire people with a year of quota-carrying experience.",
+];
+const BOOKED_THURSDAY = ["Thursday at 2 works. Send the invite and I'll bring my dispatch lead."];
 
 const CORPUS: Row[] = [
   // Openers: thanks plus who they are and where from. The persona asks why they called.
@@ -951,7 +965,7 @@ const CORPUS: Row[] = [
       reply: /proof|price|month|switch/i,
     },
   ),
-  row("Can I ask what's behind that?", "other_question", {
+  row("Can I ask what's behind that?", "detail_question", {
     stage: "objection",
     before: ["Maybe. But we're mid-quarter and can't take on a rollout now."],
     reply: /quarter|rollout|team|time|honestly/i,
@@ -1018,7 +1032,7 @@ const CORPUS: Row[] = [
     reply: /few minutes, Casey|go ahead/i,
   }),
   row("and roughly how many orders are we talking about a week", "quantity_question", {
-    reply: /\b(two|three|four|hours?|hundred|\d+)\b/i,
+    reply: /\b(two|three|four|forty|dozen|hundred|\d+)\b/i,
   }),
   row(
     "What does one of those late orders end up costing you, with the refund and all?",
@@ -1102,6 +1116,865 @@ const CORPUS: Row[] = [
     not: ACCEPT_OR_COUNTER,
   }),
 
+  // Round 5: the reviewer's fresh calls and single-line probes, every line quoted.
+  // Call A, a dispatch buyer.
+  row(
+    "Hi Maya, this is Jordan with Laneshift. Have I caught you in the middle of something?",
+    "small_talk",
+    {
+      stage: "opening",
+      reply: /few minutes|go ahead/i,
+      not: /think about that|not sure I follow/i,
+    },
+  ),
+  row("Thanks. I work with regional carriers on same-day route changes.", "opener", {
+    stage: "opening",
+    reply: /mean for us|in practice|who's this for/i,
+    not: /not following/i,
+  }),
+  row("Before I go on, how are routes planned at your place each morning?", "process_question", {
+    reply: /spreadsheet|dispatcher|route/i,
+  }),
+  row("And when a driver calls out, who ends up fixing the plan?", "owner_question", {
+    reply: /dispatch lead|dispatcher|manager/i,
+    not: /not sure I follow|think about that/i,
+  }),
+  row("How many times a week does that happen, roughly?", "quantity_question"),
+  row(
+    "Got it. Laneshift rebuilds the affected routes in a couple of minutes and pushes the new stops to each driver's phone.",
+    "pitch",
+    { after: "objection" },
+  ),
+  row(
+    "That's a fair point. Most teams keep their current fleet software and just plug us in on top.",
+    "acknowledgement",
+    {
+      stage: "objection",
+      before: OBJECTED,
+      reply: /example|who else|company like ours/i,
+    },
+  ),
+  row("It's $450 a month for a fleet your size.", "pitch", {
+    stage: "objection",
+    before: OBJECTED,
+    reply: /price|sign-off|manager|already use|rollout/i,
+    not: /talk to them|which company|real result/i,
+  }),
+  row("Would you be up for a 20 minute demo with your dispatch lead on Tuesday?", "proposal", {
+    reply: /Tuesday/,
+    after: "close",
+  }),
+  row("Wednesday at 10 then?", "proposal", {
+    stage: "close",
+    before: ["Tuesday is packed for me. Could we do Thursday at the same time instead?"],
+    reply: /^Wednesday at 10 works/,
+  }),
+  row("Brilliant, I'll send that over now. Have a good one.", "wrap_up", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /talk|bye|look out|see you/i,
+    not: /keep it short|read it/i,
+  }),
+  // Call B, a price-sensitive retail buyer.
+  row("Hi Daniel, Riya from Parcelwise. Thanks for picking up.", "opener", {
+    stage: "opening",
+    reply: /Riya|why|what made|this about/i,
+  }),
+  row("What's the current setup costing you each month?", "cost_question", { reply: /\$\d/ }),
+  row("Okay. And what do late deliveries cost you in refunds?", "problem_cost_question", {
+    reply: /\$\d|overtime|customer|refund/i,
+  }),
+  row(
+    "So for about $600 a month we'd catch most of those before the customer complains.",
+    "pitch",
+    {
+      after: "objection",
+    },
+  ),
+  row(
+    "I completely understand. If it paid for itself in the first two months, would that change things?",
+    "hypothetical",
+    {
+      stage: "objection",
+      before: OBJECTED,
+      reply: /help|show me|see it|maybe|would/i,
+      not: /burned before|not sure I follow/i,
+    },
+  ),
+  row("Who besides you would have to approve the spend?", "decision_question", {
+    reply: /sign|manager|dispatch lead|say/i,
+  }),
+  row(
+    "Makes sense. Would a two-week pilot on one product line help you make the case?",
+    "open_proposal",
+    {
+      reply: /trial|pilot|when|day/i,
+      after: "close",
+    },
+  ),
+  row("How does next Thursday look for you?", "availability_question", {
+    stage: "objection",
+    before: OBJECTED,
+    reply: /Thursday|open|Tuesday|morning/i,
+    not: /spreadsheet|phone calls/i,
+    after: "close",
+  }),
+  row("Let's say Thursday at 10 with your manager.", "proposal", {
+    reply: /Thursday at 10/,
+    after: "close",
+  }),
+  row("Perfect, cheers Daniel.", "wrap_up", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /talk|bye|see you/i,
+  }),
+  // Call C, discovery with a clinic IT lead.
+  row("Hello Sam, it's Priyanka from Seatfill.", "opener", {
+    stage: "opening",
+    reply: /Priyanka|why|what made|this about/i,
+  }),
+  row("Can I ask a few questions about how your clinics handle appointments?", "process_question"),
+  row("Walk me through what happens when a patient doesn't show up.", "process_question"),
+  row("How often would you say that happens across the group?", "quantity_question"),
+  row("Is that worse on certain days of the week?", "busiest_question", {
+    reply: /Mondays|Fridays|holiday|Saturdays|weeks|month/i,
+  }),
+  row("Interesting. What tool are you using for reminders right now?", "tool_question"),
+  row("And how well is it working for you?", "quality_question"),
+  row("If you could change one thing about it, what would it be?", "detail_question", {
+    reply: /I'd want|wish|minutes|reach|change|one thing/i,
+    not: /not sure I follow|think about that/i,
+  }),
+  row("What would it mean for the clinics if no-shows dropped by half?", "detail_question", {
+    reply: /fewer|calmer|money|hours|overtime|real|would/i,
+    not: /not sure I follow|think about that|behind the question/i,
+  }),
+  row(
+    "Would you be open to a follow-up call so I can show you what that could look like?",
+    "open_proposal",
+    {
+      after: "close",
+    },
+  ),
+  row("Friday morning?", "proposal", { reply: /Friday morning/, after: "close" }),
+  row("Great, thanks Sam. Talk Friday.", "follow_up", {
+    stage: "close",
+    before: ["Friday morning works. Send the invite and I'll bring our practice manager."],
+    reply: /Friday|bye/i,
+  }),
+  // Call D, a hiring manager.
+  row("Hi Elena, my name is Theo Park. I'm a senior at State studying economics.", "opener", {
+    voice: "hiring",
+    stage: "opening",
+    reply: /Theo/,
+  }),
+  row("I saw the SDR posting and I'd really like to be considered for it.", "target", {
+    voice: "hiring",
+    reply: /why sales|good at it|why here/i,
+    not: /what kind of conversations/i,
+  }),
+  row(
+    "Last year I led fundraising for our club and we brought in $12,000 from local businesses.",
+    "pitch",
+    {
+      voice: "hiring",
+      after: "objection",
+    },
+  ),
+  row(
+    "I get that. I don't have a quota yet, but I made about 300 cold calls for that fundraiser.",
+    "acknowledgement",
+    {
+      voice: "hiring",
+      stage: "objection",
+      before: HIRING_OBJECTED,
+      reply: /first month|learn something fast|example/i,
+    },
+  ),
+  row(
+    "Why sales over marketing? I like the conversations. I'd rather talk to people than write about them.",
+    "target",
+    {
+      voice: "hiring",
+      stage: "objection",
+      before: HIRING_OBJECTED,
+      reply: /what kind of conversations|conversation that went well/i,
+      not: /not personal|ramp time|why sales development/i,
+    },
+  ),
+  row("What does a great first quarter look like for a new SDR here?", "job_question", {
+    voice: "hiring",
+    reply: /meetings|pipeline|ramp/i,
+  }),
+  row("What's the team like day to day?", "job_question", {
+    voice: "hiring",
+    reply: /team|feedback|calls|Friday|tight/i,
+    not: /not sure I follow|ramp time/i,
+  }),
+  row("Is there anything about my background that worries you?", "detail_question", {
+    voice: "hiring",
+    reply: /honestly|quota|experience|only|worr/i,
+    not: /mostly, yes|depends on the week/i,
+  }),
+  row("Could we set up a time for me to meet the team lead?", "open_proposal", {
+    voice: "hiring",
+    after: "close",
+  }),
+  row("Thursday afternoon at 3 would work for me.", "proposal", {
+    voice: "hiring",
+    reply: /Thursday/,
+    after: "close",
+  }),
+  row("Thank you so much, Elena. Have a great week.", "wrap_up", {
+    voice: "hiring",
+    stage: "close",
+    before: [
+      "Thursday afternoon at 3 is packed for me. Could we do Friday at the same time instead?",
+    ],
+    reply: /Friday|talk|luck|bye/i,
+    not: /talk then/i,
+  }),
+  // Call E, a warm contact.
+  row("Hey Lena, it's Aisha! How's everything going?", "opener", {
+    voice: "contact",
+    stage: "opening",
+    reply: /Aisha|good|what's going on|what's up/i,
+  }),
+  row("Good! So I'm graduating in May and I'm looking at SDR roles.", "target", {
+    voice: "contact",
+  }),
+  row("My cousin mentioned Ravi at Northpay is building out his sales team.", "target", {
+    voice: "contact",
+    reply: /put in a word|hoping I can do/i,
+    not: /good to hear from you/i,
+  }),
+  row("Do you two still talk much?", "relationship_question", {
+    voice: "contact",
+    reply: /now and then|lunch|months|coffee|well enough|years|spring/i,
+    not: /not sure, honestly|I can ask/i,
+  }),
+  row(
+    "No pressure at all. I can write a short blurb about myself so you're not stuck writing it.",
+    "offer_to_send",
+    {
+      voice: "contact",
+      reply: /few lines|send|easy|help/i,
+    },
+  ),
+  row("Would you be comfortable sending him a quick intro?", "favour", {
+    voice: "contact",
+    reply: /send|draft|forward/i,
+  }),
+  row("Could you do it by Friday?", "favour", { voice: "contact", reply: /Friday/ }),
+  row("Amazing. I'll ping you Monday to see if he got back.", "follow_up", {
+    voice: "contact",
+    reply: /Monday/,
+    after: "close",
+  }),
+  row("Thanks Lena, you're the best.", "wrap_up", {
+    voice: "contact",
+    stage: "close",
+    before: ["Monday works. Talk then."],
+    reply: /anytime|course|talk Monday|keep me posted|let me know/i,
+  }),
+  // Call F, voice-style and adversarial.
+  row("hey uh is this maya", "name_check", {
+    stage: "opening",
+    scenario: BUYER,
+    reply: /speaking|it is/i,
+  }),
+  row("hi maya um so yeah my name is kevin im with routebird we do like routing stuff", "opener", {
+    stage: "opening",
+    reply: /Kevin|why|this about|made you/i,
+  }),
+  row(
+    "so how do u guys deal with it when a driver calls out sick in the morning",
+    "process_question",
+  ),
+  row("ok and how long does that usually take you", "quantity_question"),
+  row(
+    "right yeah so basically our app just does all that automatically and your drivers get the new route on there phone and you dont need the spreadsheet anymore and it works with whatever you have now",
+    "pitch",
+    { after: "objection" },
+  ),
+  row("yeah no totally i get it", "acknowledgement", {
+    stage: "objection",
+    before: OBJECTED,
+    reply: /example|who else|company like ours/i,
+  }),
+  row("oh by the way did you see the game last night", "small_talk", {
+    reply: /highlights|game|missed|didn't|no\b|busy/i,
+  }),
+  row("anyway um what does your boss care about most", "detail_question", {
+    reply: /cost|calls|deliver|numbers|budget|overtime|customers/i,
+    not: /have to do with us|not sure I follow/i,
+  }),
+  row("ok cool so like could we jump on a quick call thursday or something", "proposal", {
+    reply: /Thursday/,
+    after: "close",
+  }),
+  row("thursday works for me too then", "proposal", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /Thursday|see you|that's the one/i,
+  }),
+  row("ok sweet talk then bye", "wrap_up", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /talk|bye/i,
+  }),
+  // Single lines, opening.
+  row("Did I catch you at a bad time?", "small_talk", {
+    stage: "opening",
+    reply: /few minutes|go ahead|fine/i,
+  }),
+  row("Is now an okay moment to talk?", "small_talk", {
+    stage: "opening",
+    reply: /few minutes|go ahead|fine/i,
+  }),
+  row("Hey Maya, quick one, do you have two minutes?", "small_talk", {
+    stage: "opening",
+    reply: /few minutes|go ahead/i,
+  }),
+  row("Hi, it's Ben over at Cartwise, we spoke at the expo last month.", "opener", {
+    stage: "opening",
+    reply: /Ben/,
+  }),
+  row("Morning! Sorry for the cold call.", "unclear", {
+    stage: "opening",
+    reply: /who|call about|what can I do|what's this/i,
+  }),
+  row("I'll keep this short, I promise.", "unclear", {
+    stage: "opening",
+    reply: /who|call about|what can I do|what's this|go ahead/i,
+  }),
+  // Single lines, discovery.
+  row("Who ends up fixing the routes when that happens?", "owner_question", {
+    reply: /dispatch lead|dispatcher|manager/i,
+  }),
+  row("If you could wave a magic wand, what would you change?", "detail_question", {
+    reply: /I'd want|wish|minutes|change|one thing/i,
+  }),
+  row("What's the biggest headache in dispatch right now?", "detail_question", {
+    reply: /reroutes|sick calls|time|mornings|honestly/i,
+    not: /not sure I follow|think about that/i,
+  }),
+  row("Tell me more about that.", "detail_question", {
+    reply: /take a|monday|driver|calls out|example|well/i,
+  }),
+  row("Why is that?", "detail_question", { reply: /because|nobody|time|honestly|mostly/i }),
+  row("What have you tried so far?", "detail_question", {
+    reply: /looked at|tried|spreadsheet|software|once/i,
+  }),
+  row("How do your drivers find out about changes?", "process_question"),
+  row("Is there anything else I should know?", "detail_question", {
+    reply: /only that|mondays|worth knowing|one more|out the/i,
+    not: /not always|skipped/i,
+  }),
+  row("Has anyone looked at fixing this before?", "detail_question", {
+    reply: /looked|tried|once|years|software|tweaked|not really/i,
+    not: /not always|skipped/i,
+  }),
+  row("What made you pick the tool you have now?", "detail_question", {
+    reply: /came with|cheap|price|habit|chose|picked/i,
+  }),
+  row("What happens to the customer when a delivery is late?", "problem_cost_question", {
+    reply: /customer|\$|overtime|refund/i,
+  }),
+  row("So the main issue is the Monday reroutes, is that right?", "detail_question", {
+    reply: /that's it|yes|right|exactly|and the|pretty much/i,
+    not: /not sure I follow/i,
+  }),
+  row(
+    "Our app does all of that automatically and drivers get the new route on their phone.",
+    "pitch",
+    { after: "objection" },
+  ),
+  row("Basically you'd never touch a spreadsheet again.", "pitch", { after: "objection" }),
+  row("We charge per driver, around $15 each.", "pitch", { after: "objection" }),
+  // Single lines, after an objection.
+  row("Any chance you're free Wednesday afternoon?", "proposal", {
+    stage: "objection",
+    before: OBJECTED,
+    reply: /Wednesday afternoon/,
+    after: "close",
+  }),
+  row("Can I get 15 minutes on your calendar next Tuesday?", "proposal", {
+    reply: /Tuesday/,
+    after: "close",
+  }),
+  row("Shall I send an invite for Thursday at 10?", "proposal", {
+    reply: /Thursday at 10/,
+    after: "close",
+  }),
+  row("Would Monday or Tuesday be better?", "proposal", {
+    reply: /^Tuesday/,
+    not: /packed/i,
+    after: "close",
+  }),
+  row("Totally understand. What would make the timing easier?", "conditions_question", {
+    stage: "objection",
+    before: OBJECTED,
+    reply: /proof|price|month|switch|quarter|after|setup/i,
+  }),
+  row(
+    "Understandable. Lots of our customers said the same thing before they switched.",
+    "acknowledgement",
+    {
+      stage: "objection",
+      before: OBJECTED,
+      reply: /example|who else|company like ours/i,
+    },
+  ),
+  row("What's driving the timing concern?", "detail_question", {
+    stage: "objection",
+    before: OBJECTED,
+    reply: /time|honestly|burned|weeks|quarter/i,
+  }),
+  row("Fair. If we could have you live in a week, would that help?", "hypothetical", {
+    stage: "objection",
+    before: OBJECTED,
+    reply: /help|show me|see it|maybe|week/i,
+  }),
+  row("What time do your dispatchers start in the morning on Thursdays?", "timing_question", {
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  row("Do your drivers check their phones at 6am on Mondays?", "yes_no_question", {
+    reply: /yes|no\b|mostly|not really|depends|usually/i,
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  row("When does the quarter end for you, next week?", "detail_question", {
+    reply: /end of|month|weeks|quarter/i,
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  row("How busy are you guys on Friday afternoons usually?", "detail_question", {
+    reply: /friday|quiet|busy|afternoons?|mornings/i,
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
+  // Single lines, booked.
+  row("Thanks so much, really appreciate your time.", "wrap_up", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /talk|bye|problem|welcome/i,
+  }),
+  row("Speak soon!", "wrap_up", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /talk|bye|soon|Thursday/i,
+  }),
+  row("Actually, could we push it to Friday?", "proposal", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /Friday/,
+  }),
+  row("Should I include your dispatch lead on the invite?", "invite_guest", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /yes|please|add|copy|do\b/i,
+  }),
+  row("Sounds good, talk then.", "wrap_up", {
+    stage: "close",
+    before: BOOKED_THURSDAY,
+    reply: /talk|bye/i,
+  }),
+  // Single lines, hiring manager.
+  row("What do you enjoy most about working there?", "detail_question", {
+    voice: "hiring",
+    reply: /people|watching|first meeting|honestly/i,
+    not: /think about it|why do you ask/i,
+  }),
+  row("What would my first week look like?", "process_question", {
+    voice: "hiring",
+    reply: /outreach|calls|research|emails/i,
+  }),
+  row("How did you get into sales?", "detail_question", {
+    voice: "hiring",
+    reply: /accident|summer|never left|started/i,
+  }),
+  row("Do you hire many people straight out of college?", "detail_question", {
+    voice: "hiring",
+    reply: /couple a year|a few|when they|most years/i,
+    not: /some weeks are different/i,
+  }),
+  row("Totally understand. I'm a fast learner though.", "acknowledgement", {
+    voice: "hiring",
+    stage: "objection",
+    before: HIRING_OBJECTED,
+    reply: /first month|learn something fast|example/i,
+  }),
+  row("What's the next step in your process?", "detail_question", {
+    voice: "hiring",
+    stage: "objection",
+    before: HIRING_OBJECTED,
+    reply: /team lead|account executive|then me/i,
+    not: /not personal|ramp time/i,
+  }),
+  // Single lines, contact.
+  row("My cousin said Ravi at Northpay is building out his sales team.", "target", {
+    voice: "contact",
+    reply: /put in a word|hoping I can do/i,
+  }),
+  row("Ravi works at Northpay and I think he's hiring.", "target", { voice: "contact" }),
+  row("Have you spoken to Ravi recently?", "relationship_question", {
+    voice: "contact",
+    reply: /now and then|lunch|months|coffee|well enough|years|spring/i,
+  }),
+  row("I can write a short blurb about myself.", "offer_to_send", {
+    voice: "contact",
+    reply: /few lines|send|easy|help/i,
+  }),
+  row("I'll ping you Monday to see if he got back.", "follow_up", {
+    voice: "contact",
+    reply: /Monday/,
+    after: "close",
+  }),
+  row("What do you think he'd want to see from me?", "detail_question", {
+    voice: "contact",
+    reply: /numbers|result|sold|run|short|clear/i,
+    not: /think about that|why do you ask/i,
+  }),
+  // Single lines, the reviewer's regression set.
+  row("Does Thursday work for your front desk to make the calls?", "yes_no_question", {
+    not: ACCEPT_OR_COUNTER,
+  }),
+  row("Do your dispatchers call drivers at 6am?", "yes_no_question", { not: ACCEPT_OR_COUNTER }),
+  row("I hear you. One firm your size was live in five days.", "proof", {
+    stage: "objection",
+    before: OBJECTED,
+    reply: /result|how long|talk to them/i,
+  }),
+  row("Hey how are you doing today?", "small_talk", { stage: "opening", reply: SMALL_TALK_REPLY }),
+  row("asdf qwerty", "unclear", { reply: /say that again|once more|missed that/i }),
+  row("Bananas are yellow.", "short_reply", {
+    reply: /what else|where were we|question|say that|again|do with us/i,
+  }),
+  // Single lines, more ways to propose a time.
+  row("How's Thursday looking?", "availability_question", {
+    reply: /Thursday|open|Tuesday|morning/i,
+    after: "close",
+  }),
+  row("You free Thursday at 2?", "proposal", { reply: /Thursday at 2/, after: "close" }),
+  row("Can you do Thursday at 2?", "proposal", { reply: /Thursday at 2/, after: "close" }),
+  row("Could you do Tuesday morning?", "proposal", { reply: /Tuesday morning/, after: "close" }),
+  row("Are you able to meet Thursday?", "proposal", { reply: /Thursday/, after: "close" }),
+  row("I'd love to set up 20 minutes with you on Thursday.", "proposal", {
+    reply: /Thursday/,
+    after: "close",
+  }),
+  row("Can I put something in your calendar for Thursday?", "proposal", {
+    reply: /Thursday/,
+    after: "close",
+  }),
+  row("Does Tuesday at 10 work?", "proposal", { reply: /Tuesday at 10/, after: "close" }),
+  row("What about a quick demo on Friday?", "proposal", { reply: /Friday/, after: "close" }),
+  row("How about we talk again on Monday?", "proposal", { reply: /Monday/, after: "close" }),
+  row("Maybe we could chat more on Thursday?", "proposal", { reply: /Thursday/, after: "close" }),
+  row("I was thinking Thursday at 2, if that works.", "proposal", {
+    reply: /Thursday at 2/,
+    after: "close",
+  }),
+  row("Can I book you in for Tuesday at 3pm?", "proposal", {
+    reply: /Tuesday at 3pm/,
+    after: "close",
+  }),
+  row("Would you have time on Wednesday?", "proposal", { reply: /Wednesday/, after: "close" }),
+  row("Do you have any time Thursday afternoon?", "proposal", {
+    reply: /Thursday afternoon/,
+    after: "close",
+  }),
+  row("Let me send you an invite for Wednesday at 9.", "follow_up", {
+    reply: /Wednesday at 9/,
+    after: "close",
+  }),
+  row("Could I steal 15 minutes of your time on Thursday?", "proposal", {
+    reply: /Thursday/,
+    after: "close",
+  }),
+  row("Next Tuesday, 10am, does that suit?", "proposal", { reply: /Tuesday/, after: "close" }),
+  row("Can we pencil in Friday at 11?", "proposal", { reply: /Friday at 11/, after: "close" }),
+  row("do you have time tomorrow", "proposal", { reply: /Tomorrow/, after: "close" }),
+
+  // Round 5, lines from the author's own fresh calls that the reviewer's set didn't cover.
+  row("Morning Ruth, Dev calling from Shelfwise. Is this a terrible moment?", "small_talk", {
+    stage: "opening",
+    reply: /few minutes, Dev|go ahead/i,
+  }),
+  row("Great. We work with multi-site retailers on stock counts and reordering.", "opener", {
+    before: ["I've got a few minutes, Dev. Go ahead."],
+    reply: /mean for us|in practice|who's this for/i,
+  }),
+  row(
+    "And what does a stock-out on a weekend actually cost one of your stores?",
+    "problem_cost_question",
+    {
+      reply: /\$\d|overtime|customer|refund|chair|sales|time/i,
+      not: /weekend|quiet/i,
+    },
+  ),
+  row("Who would I need to convince besides you?", "decision_question", {
+    reply: /sign|manager|dispatch lead|say/i,
+  }),
+  row("Great, invite's on its way. Enjoy the rest of your day.", "wrap_up", {
+    stage: "close",
+    before: ["Monday at 9 is packed for me. Could we do Thursday at the same time instead?"],
+    reply: /For Thursday/,
+  }),
+  row(
+    "Before anything else, how many empty slots would you guess you get in a week?",
+    "quantity_question",
+    {
+      reply: /\b(two|three|four|five|six|hours?|\d+)\b/i,
+      not: /one more thing|only that/i,
+    },
+  ),
+  row(
+    "I understand the hesitation. What did the last tool promise you that it didn't deliver?",
+    "detail_question",
+    {
+      reply: /looked|tried|tweaked|not really|came with|once/i,
+    },
+  ),
+  row(
+    "Fair enough. If we ran it at a single clinic for a month at no cost, would that take the risk out?",
+    "small_start",
+    {
+      reply: /one location|small|first step/i,
+    },
+  ),
+  row("And who at head office would need to look at it?", "decision_question", {
+    reply: /sign|manager|dispatch lead|say/i,
+  }),
+  row("What does your morning look like when everything goes to plan?", "process_question"),
+  row("Last one: what would a good fix look like from where you sit?", "conditions_question", {
+    reply: /proof|price|month|switch|quarter/i,
+  }),
+  row(
+    "That's really helpful. Can I come back to you Tuesday with something concrete?",
+    "follow_up",
+    {
+      reply: /Tuesday/,
+      after: "close",
+    },
+  ),
+  row(
+    "I'm finishing a psychology degree and I've been running the student job board's advertiser outreach for two years.",
+    "pitch",
+    {
+      voice: "hiring",
+      before: ["Good to meet you, Jess. Why this role?"],
+      after: "objection",
+    },
+  ),
+  row("How much coaching does a new rep get in week one?", "detail_question", {
+    voice: "hiring",
+    reply: /week one|team lead|daily|month|calls/i,
+  }),
+  row(
+    "I know I haven't carried a quota. I did bring in nineteen paying advertisers last year from cold outreach, though.",
+    "pitch",
+    {
+      voice: "hiring",
+      after: "objection",
+    },
+  ),
+  row("Is the role mostly outbound, or is there inbound too?", "job_question", {
+    voice: "hiring",
+    reply: /outbound|phone|calls|half/i,
+  }),
+  row("What day would suit you for that?", "availability_question", {
+    voice: "hiring",
+    reply: /Thursday/,
+    after: "close",
+  }),
+  row(
+    "I'm good. So I'm finishing up in May and I'm chasing SDR roles at software companies.",
+    "target",
+    {
+      voice: "contact",
+      reply: /put in a word|hoping I can do/i,
+    },
+  ),
+  row("I remember you knew someone at Fathom who runs their sales team.", "target", {
+    voice: "contact",
+    reply: /put in a word|hoping I can do/i,
+  }),
+  row(
+    "That's completely fair, it's been a while. Would a two-line note from me make it easy for you to pass along?",
+    "offer_to_send",
+    {
+      voice: "contact",
+      reply: /few lines|send|easy|help/i,
+    },
+  ),
+  row("What would you want me to put in it?", "detail_question", {
+    voice: "contact",
+    reply: /numbers|result|short|specific|did/i,
+  }),
+  row(
+    "Brilliant. I'll let you know what comes back. Thanks Tom, give my best to the team.",
+    "wrap_up",
+    {
+      voice: "contact",
+      stage: "close",
+      reply: /course|anytime|keep me posted|let me know|talk then|bye/i,
+    },
+  ),
+  row("cool cool its ravi from boxroute sorry if its a bad time", "small_talk", {
+    stage: "opening",
+    reply: /few minutes, Ravi|go ahead/i,
+  }),
+  row("ok and whats that costing you a month roughly", "problem_cost_question", {
+    reply: /\$\d|overtime|customer|refund|chair/i,
+  }),
+  row(
+    "so like with us the customer gets a text before they even notice its late and support stops getting those emails",
+    "pitch",
+    {
+      after: "objection",
+    },
+  ),
+  row("yeah fair fair", "short_reply", { not: /say that again|once more/i }),
+  row("so whats your take on it honestly", "detail_question", {
+    reply: /honestly|interested|promises|useful/i,
+  }),
+  row("ok what if we did a quick 15 min screen share friday morning", "proposal", {
+    reply: /Friday morning/,
+    after: "close",
+  }),
+
+  // Round 5, paraphrases of the patterns the author's measurement calls missed.
+  row("What percentage of orders show up late?", "quantity_question", {
+    reply: /\b(two|three|four|forty|dozen|hundred|\d+|one in)\b/i,
+  }),
+  row("What's a typical afternoon like when two people don't turn up?", "process_question"),
+  row("We flag the late ones to your customers before they chase you.", "pitch", {
+    stage: "pitch",
+    after: "objection",
+  }),
+  row(
+    "Understood. If setup took an afternoon and nobody changed how they work, would that be different?",
+    "hypothetical",
+    {
+      stage: "objection",
+      before: OBJECTED,
+      reply: /help|show me|see it|maybe|real/i,
+    },
+  ),
+  row("Who would you want on the call before you'd say yes to a trial?", "decision_question", {
+    reply: /sign|manager|dispatch lead|say/i,
+  }),
+  row("Would sometime early next week work for a follow-up, say Monday morning?", "proposal", {
+    reply: /Monday morning/,
+    after: "close",
+  }),
+  row("Has it got better or worse over the last year?", "detail_question", {
+    reply: /worse|better|same|slowly|volume/i,
+  }),
+  row("What would good look like for you here?", "detail_question", {
+    reply: /I'd want|one thing|wish|reach|minutes/i,
+  }),
+  row("Anything I should have asked and didn't?", "detail_question", {
+    reply: /only that|one more|worth|out the/i,
+  }),
+  row("Would it be alright if I rang you back Friday with a couple of ideas?", "follow_up", {
+    reply: /Friday/,
+    after: "close",
+  }),
+  row("I've run the fundraising committee for two years and brought in about $8,000.", "pitch", {
+    voice: "hiring",
+    before: ["Good to meet you, Jess. Why this role?"],
+    after: "objection",
+  }),
+  row("I set my own targets on that work and hit them most weeks.", "pitch", {
+    voice: "hiring",
+    after: "objection",
+  }),
+  row("I'm drawn to it because I like figuring out what people actually need.", "target", {
+    voice: "hiring",
+    reply: /what kind of conversations|conversation that went well/i,
+  }),
+  row("How many reps are you planning to bring on this year?", "detail_question", {
+    voice: "hiring",
+    reply: /couple a year|a few|when they/i,
+  }),
+  row("Could I come in and shadow the team one afternoon?", "open_proposal", {
+    voice: "hiring",
+    reply: /what day|when works/i,
+    after: "close",
+  }),
+  row("Which morning works best for you?", "availability_question", {
+    reply: /Thursday|Tuesday|open/i,
+    after: "close",
+  }),
+  row("Thursday is perfect.", "proposal", {
+    stage: "close",
+    before: ["I keep Thursday afternoons for interviews. Does that suit you?"],
+    voice: "hiring",
+    reply: /^Thursday works/,
+  }),
+  row("Hey, it's Dan. How've things been at the agency?", "opener", {
+    voice: "contact",
+    stage: "opening",
+    reply: /Dan|good|what's going on/i,
+    not: /how they hire/i,
+  }),
+  row("Are you still in contact with Grace?", "relationship_question", {
+    voice: "contact",
+    reply: /now and then|lunch|months|coffee|well enough|years/i,
+  }),
+  row("I think you mentioned your old colleague Grace leads sales at Harbourline now.", "target", {
+    voice: "contact",
+    reply: /put in a word|hoping I can do/i,
+  }),
+  row("how was your weekend anyway", "small_talk", {
+    reply: /weekend|quiet|good|short/i,
+    not: OPERATIONS,
+  }),
+  row("so what do you reckon, honestly", "detail_question", {
+    reply: /honestly|interested|promises|useful/i,
+  }),
+  row("Which bit worries your team most, the learning curve or the setup?", "detail_question", {
+    reply: /learning curve|training|manual/i,
+  }),
+  row("thursday at 9 then", "proposal", {
+    stage: "close",
+    before: ["Thursday morning works. Send the invite and I'll bring our practice manager."],
+    reply: /Thursday at 9/,
+    not: /thursday/,
+  }),
+
+  row(
+    "How many patients would you say miss an appointment in a normal week?",
+    "quantity_question",
+    {
+      scenario: CLINIC,
+      reply: /no-shows|thirty/i,
+      not: /hour a day|minutes a call/i,
+    },
+  ),
+  row("roughly how long does the desk spend ringing round for that", "quantity_question", {
+    scenario: CLINIC,
+    reply: /hour|minutes/i,
+    not: /no-shows a week/i,
+  }),
+  row("How often does a driver call in sick?", "quantity_question", {
+    reply: /times a day|most days|mondays/i,
+  }),
+  row("Friday afternoon is perfect.", "proposal", {
+    stage: "close",
+    before: ["Next week's fairly open. Tuesday or Thursday morning would work."],
+    reply: /^Friday afternoon (?:works|is packed)/,
+  }),
+  row("Thursday morning then.", "proposal", {
+    stage: "close",
+    before: ["Thursday's my best day. Mornings, ideally."],
+    reply: /^Thursday morning works/,
+  }),
+
   // Short turns, filler and the plainly unclear: neutral replies for the stage.
   row("ok", "short_reply", {
     reply: /what else|question|where were we|what can I do|next/i,
@@ -1148,18 +2021,19 @@ const CORPUS: Row[] = [
 
 describe("the demo persona's turn corpus", () => {
   it("has well over a hundred labelled lines", () => {
-    expect(CORPUS.length).toBeGreaterThanOrEqual(210);
+    expect(CORPUS.length).toBeGreaterThanOrEqual(415);
   });
 
   it.each(CORPUS.map((entry) => [entry.line, entry]))("hears %j for what it is", (_line, entry) => {
     const { voice = "buyer", stage = "discovery", before = [] } = entry;
-    const scenario = scenarioFor(voice, stage);
+    const scenario = scenarioFor(voice, stage, entry.scenario);
     // Raised when a previous line ends the way the hidden objection does ("…a rollout now.").
     const reading = readTurn(entry.line, {
       voice,
       stage,
       firstName: scenario.scenarioPublic.personaName.split(" ")[0] ?? "",
-      said: before,
+      turn: before.length + 1,
+      booking: readBooking(before),
       objectionRaised: before.some((line) =>
         scenario.scenarioPrivate.hiddenObjections.some((objection) =>
           line.toLowerCase().includes(objection.slice(-14).toLowerCase()),
@@ -1172,6 +2046,9 @@ describe("the demo persona's turn corpus", () => {
     const text = textOf(reply);
     expect(text.split(/\s+/).length).toBeLessThanOrEqual(80);
     expect(text).not.toMatch(/^(?:Go on\.|Mm\. Keep going\.|Okay, and then\?)/);
+    expect(text).not.toMatch(
+      /Not sure I follow|behind the question|Why do you ask|think about (?:that|it)\./i,
+    );
     expect(text).not.toMatch(/ {2}|make week work/);
     if (entry.reply) expect(text, entry.line).toMatch(entry.reply);
     if (entry.not) expect(text, entry.line).not.toMatch(entry.not);
@@ -1316,7 +2193,7 @@ describe("whole calls through the real prompts", () => {
     noRepeats(turns);
     expect(turns[2]?.partner).toMatch(/prepar|research|personally|best|curious/i);
     expect(turns[3]?.stage).toBe("objection");
-    expect(turns[5]?.partner).toMatch(/call|phone|email/i);
+    expect(turns[5]?.partner).toMatch(/call|phone|email|outbound/i);
     expect(turns[6]?.partner).toMatch(/posting|base|range/i);
     expect(turns[7]?.partner).toMatch(/team lead|me\b/i);
     expect(turns[8]?.partner).toMatch(/Tuesday/);
@@ -1327,7 +2204,7 @@ describe("whole calls through the real prompts", () => {
     } else {
       expect(turns[9]?.partner).toMatch(/Tuesday at 3pm/);
     }
-    expect(turns[10]?.partner).toMatch(/talk|bye|see you|look out|thanks|good luck/i);
+    expect(turns[10]?.partner).toMatch(/talk|bye|see you|look out|thanks|good luck|For Thursday/i);
   });
 
   it("helps like a contact: relationship, favour, follow-up date, goodbye", async () => {
@@ -1383,6 +2260,30 @@ describe("whole calls through the real prompts", () => {
     expect(turns[9]?.partner).not.toMatch(/next step|get this moving|from here|decent case/i);
     expect(turns[10]?.partner).toMatch(/talk|bye|see you|look out|sounds good|thanks/i);
     expect(turns[10]?.partner).not.toMatch(/next step|get this moving|from here|decent case/i);
+  });
+
+  it("turns a day down once, then books the next one offered", async () => {
+    for (const seed of [71, 80, 81]) {
+      const { turns } = await play("next-steps", seed, [
+        "Hi Maya, I'm Alex from Routekeep.",
+        "Routekeep rebuilds routes in two minutes, which saves your dispatchers hours.",
+        "Could we set up a 20-minute call Tuesday at 10?",
+        "Hmm, what about Tuesday at 3 then?",
+        "Okay, Thursday at 10 it is.",
+        "Great, I'll send the invite.",
+      ]);
+      stagesNeverGoBack(turns);
+      noRepeats(turns);
+      const refusedTuesday = turns[2]?.partner.includes("is packed") ?? false;
+      if (refusedTuesday) {
+        expect(turns[3]?.partner).toMatch(/Tuesday|Thursday/);
+        expect(turns[3]?.partner).not.toMatch(/Tuesday at 3 works/);
+        expect(turns[4]?.partner).toMatch(/^Thursday at 10 works/);
+      } else {
+        expect(turns[2]?.partner).toMatch(/^Tuesday at 10 works/);
+      }
+      expect(turns[5]?.partner).toMatch(/look out|keep an eye|talk|bye|invite/i);
+    }
   });
 
   it("keeps the README practice-room exchange", async () => {

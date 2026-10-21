@@ -210,6 +210,28 @@ describe("heuristicScorecard", () => {
     ).toBeGreaterThanOrEqual(3);
   });
 
+  it.each([
+    "I understand.",
+    "Totally understand.",
+    "Completely understand where you're coming from.",
+    "That's fair.",
+    "Makes sense.",
+    "I hear you.",
+  ])("scores %j as acknowledging the pushback, the same as 'I understand'", (acknowledgement) => {
+    const call = (ack: string) => [
+      "Hi Maya, I'm Alex from Routekeep.",
+      "How do you plan routes today?",
+      "Routekeep rebuilds routes in two minutes, which saves your dispatchers hours.",
+      `${ack} One carrier your size cut replanning by 4 hours a week.`,
+      "Could we do Thursday at 2?",
+    ];
+    const score = (ack: string) =>
+      heuristicScorecard(call(ack), "objections").dimensions.find((d) => d.key === "objections")
+        ?.score;
+    expect(score(acknowledgement)).toBe(score("I understand."));
+    expect(score(acknowledgement)).toBeGreaterThanOrEqual(4);
+  });
+
   it("credits proof in the same sentence as the acknowledgement", () => {
     const turns = [
       "Hi, I'm Riley from Routewise. How do you plan routes today?",

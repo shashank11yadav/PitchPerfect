@@ -16,12 +16,13 @@ export const ASK =
   /\b(?:could|can|shall|should) we\b|\blet'?s\b|\bwould you be (?:open|up) to\b|\b(?:next step|follow up|schedule|book|introduce|introduction|trial|pilot)\b/i;
 
 /**
- * Agreeing a concern is fair before answering it. "I get that" only when it stands on its own
- * ("I get that, but…"), not "can I get that over to you"; "understand" only when it isn't the
- * start of a question ("I want to understand how…").
+ * Agreeing a concern is fair before answering it: "I understand", "Totally understand", "That's
+ * fair", "Makes sense", "I hear you". "I get that" only when it stands on its own ("I get that,
+ * but…"), not "can I get that over to you"; "understand" only when it isn't the start of a
+ * question ("I want to understand how…").
  */
 export const ACKNOWLEDGE =
-  /\bi (?:\w+ )?understand\b(?!\s+(?:how|what|why|when|where|who|whether|if)\b)|\bunderstood\b|\bfair\b|\bmakes sense\b|\bhear you\b|\bgood question\b|\bgreat question\b|\bi see\b|\bi get (?:it|that)\b(?=\s*(?:[,.;!?]|$|but\b|and\b|though\b|so\b))/i;
+  /\b(?:(?:i|we) (?:\w+ )?|totally |completely |fully |absolutely |that's )?understand(?:able)?\b(?!\s+(?:how|what|why|when|who|whether|if)\b)(?!\s+where\s+(?!you))|\bunderstood\b|\bfair\b|\bmakes sense\b|\bhear you\b|\bgood question\b|\bgreat question\b|\bi see\b|\bi get (?:it|that)\b(?=\s*(?:[,.;!?]|$|but\b|and\b|though\b|so\b))/i;
 
 /** Saying what changes for the buyer. */
 export const BENEFIT =

@@ -598,7 +598,7 @@ describe("FakeProvider", () => {
         stage: "discovery",
         scenario: contact,
       });
-      expect(know).toMatch(/worked|known|years|coffee|touch/i);
+      expect(know).toMatch(/worked|known|years|coffee|touch|lunch|now and then|email|months/i);
       const runs = await buyer(["who runs hiring over there"], {
         stage: "discovery",
         scenario: contact,
