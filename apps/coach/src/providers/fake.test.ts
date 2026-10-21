@@ -312,12 +312,6 @@ describe("FakeProvider", () => {
       ["a cost question", INTENT_LINES.cost, /\$\d/, "discovery"],
       ["a decision question", INTENT_LINES.decision, /sign[- ]off|manager/i, "discovery"],
       ["a pitch", INTENT_LINES.pitch, /mid-quarter|rollout/i, "objection"],
-      [
-        "an acknowledgement",
-        INTENT_LINES.acknowledge,
-        /example|company like ours|someone like us/i,
-        "objection",
-      ],
     ])("answers %s in kind", async (_name, line, expected, stage) => {
       const reply = await buyer([line], { stage: "discovery" });
       expect(reply).toMatch(expected);
@@ -385,7 +379,7 @@ describe("FakeProvider", () => {
       ["Can we do this Wednesday?", /Wednesday/, "close"],
       ["How about Wednesday at 3pm?", /Wednesday at 3pm/, "close"],
       ["What does next week look like for you?", /Tuesday|Thursday|open/i, "close"],
-      ["I'll follow up next week.", /^Next week (?:works|should work)/, "close"],
+      ["I'll follow up next week.", /next week/i, "close"],
       ["Our reminders cut no-shows. Would a trial next month help?", /trial/i, "close"],
       [
         "Who decides on new software at your clinics?",
@@ -408,9 +402,231 @@ describe("FakeProvider", () => {
     });
 
     it.each([
+      [
+        "can we grab 20 minutes thursday at 10 with you and your dispatch lead",
+        /^Thursday at 10 (?:works|is packed)/,
+      ],
+      ["Could we set up a 20-minute demo Thursday at 10am?", /Thursday at 10am/],
+      ["I'll send you an invite for Tuesday.", /Tuesday/],
+      ["Would Thursday at 10 work for you?", /Thursday at 10/],
+      ["Are you free Monday at 9am?", /Monday at 9am/],
+      ["Does 2pm suit you?", /2pm/],
+      ["thursday at 2 work for you", /^Thursday at 2 (?:works|is packed)/],
+      ["I'll call you next week.", /next week/i],
+      ["Let's pick this up next week.", /^Next week/],
+    ] as const)("hears %j as a meeting proposal", async (line, expected) => {
+      const reply = await buyer([line], { stage: "discovery" });
+      expect(stageOf(reply)).toBe("close");
+      expect(reply).toMatch(expected);
+      expect(reply).not.toMatch(/ {2}/);
+    });
+
+    it.each([
+      ["What does next week look like for you?", /open|Tuesday|Thursday/i],
+      ["How's your Thursday looking?", /open|Tuesday|Thursday|morning/i],
+      ["When are you free?", /open|Tuesday|Thursday|morning/i],
+    ])("answers %j with its own availability", async (line, expected) => {
+      const reply = await buyer([line], { stage: "discovery" });
+      expect(reply).toMatch(expected);
+      expect(reply).not.toMatch(/spreadsheet|phone calls/i);
+    });
+
+    it("answers a question about someone else's Monday as a process question", async () => {
+      const reply = await buyer(["What does Monday morning look like for your dispatchers?"], {
+        stage: "discovery",
+      });
+      expect(reply).toMatch(/spreadsheet|dispatcher|driver|route/i);
+      expect(stageOf(reply)).toBe("discovery");
+    });
+
+    it("takes a bare day after it said a day works as the proposal", async () => {
+      const first = await buyer(["Would you be open to a quick call next week?"], {
+        stage: "pitch",
+      });
+      expect(first).toMatch(/^Next week/);
+      const reply = await buyer(
+        ["Would you be open to a quick call next week?", "Thursday at 2pm?"],
+        {
+          stage: "close",
+          replies: [first.replace(TAG, "")],
+        },
+      );
+      expect(reply).toMatch(/Thursday at 2pm/);
+    });
+
+    it.each([
+      ["How are you doing today?", /thanks|busy|good|fine|not bad/i],
+      ["how's your week going", /week|busy|good|fine/i],
+      ["Is now an okay time?", /few minutes|go ahead/i],
+    ])("answers small talk %j like a person", async (line, expected) => {
+      const reply = await buyer([line], { stage: "opening", scenario: CLINIC });
+      expect(reply).toMatch(expected);
+      expect(reply).not.toMatch(/front desk|calendar|\$/i);
+    });
+
+    it.each([
+      ["Who works the front desk on Tuesday?", /two people|one or two/i],
+      ["I can't help but notice you're busy", /busy|bit|quickly|always/i],
+      ["Do you call patients at 9am the day before?", /yes|sometimes|usually|depends/i],
+      ["What about Monday mornings, are those the worst?", /Mondays?/],
+      ["Let's talk about Monday mornings for a sec.", /what about|what do you want/i],
+    ])("answers %j as asked", async (line, expected) => {
+      const reply = await buyer([line], { stage: "discovery", scenario: CLINIC });
+      expect(reply).toMatch(expected);
+      expect(reply).not.toMatch(/my call|remind me who you are/i);
+    });
+
+    it.each([
+      [
+        "can I ask how you handle it today when a driver calls in sick",
+        /spreadsheet|phone|route|dispatcher/i,
+      ],
+      ["how much is the current tool running you, if you don't mind me asking", /\$\d/],
+      ["I'll check in next Monday to see if it went out", /Monday|talk/i],
+    ])("answers %j in kind, from the call it's in", async (line, expected) => {
+      const reply = await buyer([line], { stage: "discovery" });
+      expect(reply).toMatch(expected);
+      expect(reply).not.toMatch(/is packed|catch\?/i);
+    });
+
+    it("accepts the day it just offered instead of countering it", async () => {
+      const offered = "Thursday's my best day. Mornings, ideally.";
+      const reply = await buyer(["how's your Thursday looking", "Thursday at 9 then?"], {
+        stage: "close",
+        replies: [offered],
+      });
+      expect(reply).toMatch(/^Thursday at 9 works/);
+    });
+
+    it("tells a candidate who they'd work with", async () => {
+      const reply = await buyer(["who would I be working with day to day"], {
+        stage: "objection",
+        scenario: HIRING,
+      });
+      expect(reply).toMatch(/team lead/i);
+    });
+
+    it("takes a concrete result seriously, with or without an objection first", async () => {
+      const result = "a clinic group about your size went from twelve no-shows a week to five";
+      const fresh = await buyer([result], { stage: "discovery", scenario: CLINIC });
+      expect(fresh).toMatch(/result|number|how long|talk to them/i);
+      const objection = await buyer([INTENT_LINES.pitch], { stage: "pitch" });
+      const answered = await buyer(
+        [INTENT_LINES.pitch, "I get that. One carrier your size cut overtime by $2,500 a month."],
+        { stage: "objection", replies: [objection.replace(TAG, "")] },
+      );
+      expect(answered).toMatch(/result|number|how long|talk to them/i);
+      expect(answered).not.toMatch(/who else like us|example from a company/i);
+    });
+
+    it("thanks the student back instead of asking for more", async () => {
+      const reply = await buyer(["thanks so much, really appreciate it"], { stage: "close" });
+      expect(reply).not.toMatch(/^(?:Go on|Mm|Okay, and then)/);
+      expect(reply).toMatch(/talk|welcome|sounds good|course|thanks|sure|keep an eye/i);
+    });
+
+    it("keeps a vague reaction in the current stage and answers it", async () => {
+      const reply = await buyer(["yeah that sounds rough"], { stage: "discovery", replies: [] });
+      expect(stageOf(reply)).toBe("discovery");
+      expect(reply).not.toMatch(/next step|from here|what would you suggest/i);
+      expect(reply).not.toMatch(/^(?:Go on|Mm|Okay, and then)/);
+    });
+
+    it("never falls back to a bare 'go on'", async () => {
+      const lines = ["yeah", "right", "okay", "sure", "hm", "got it", "cool", "yep"];
+      const replies: string[] = [];
+      for (let index = 0; index < lines.length; index += 1) {
+        const reply = await buyer(lines.slice(0, index + 1), { stage: "discovery", replies });
+        replies.push(reply.replace(TAG, ""));
+        expect(reply).not.toMatch(/^(?:Go on\.|Mm\. Keep going\.|Okay, and then\?)/);
+      }
+    });
+
+    it("lower-cases an objection that follows a lead-in", async () => {
+      const replies = new Set<string>();
+      for (let seed = 1; seed <= 12; seed += 1) {
+        replies.add(await buyer([INTENT_LINES.pitch], { stage: "pitch", seed }));
+      }
+      for (const reply of replies) expect(reply).not.toMatch(/\bBut We're\b|But The\b/);
+      expect([...replies].some((reply) => /But we're mid-quarter|honest\. We're/.test(reply))).toBe(
+        true,
+      );
+    });
+
+    it.each([
+      ["how much does the current tool run you", /\$\d/],
+      ["and how well does that work for you", /works|job|percent|fine|well/i],
+    ])("answers %j in kind", async (line, expected) => {
+      const reply = await buyer(["What are you using today?", line], {
+        stage: "discovery",
+        replies: ["A routing add-on that came with our fleet software."],
+      });
+      expect(reply).toMatch(expected);
+      expect(reply).not.toMatch(/next step|from here/i);
+    });
+
+    it("gives a hiring manager its own answers", async () => {
+      const day = await buyer(["what do your SDRs spend most of their day on"], {
+        stage: "discovery",
+        scenario: HIRING,
+      });
+      expect(day).toMatch(/outreach|calls|emails/i);
+      expect(day).not.toMatch(/commission|posting|\$/i);
+      const runs = await buyer(["Who runs the SDR team day to day?"], {
+        stage: "discovery",
+        scenario: HIRING,
+      });
+      expect(runs).toMatch(/team lead/i);
+      expect(runs).not.toMatch(/my call/i);
+    });
+
+    it("gives a contact its own answers, and agrees to the favour it can do", async () => {
+      const contact: Scenario = {
+        scenarioPublic: {
+          personaName: "Tom Becker",
+          personaTitle: "Your former internship manager",
+          companyType: "A regional marketing agency",
+          personality: "Warm but busy",
+          openingLine: "Hey, good to hear from you. It's Tom. What's up?",
+        },
+        scenarioPrivate: {
+          hiddenObjections: ["I haven't talked to that person in a while."],
+          winConditions: ["The student suggests a specific follow-up date."],
+        },
+      };
+      const know = await buyer(["how well do you know her these days"], {
+        stage: "discovery",
+        scenario: contact,
+      });
+      expect(know).toMatch(/worked|known|years|coffee|touch/i);
+      const runs = await buyer(["who runs hiring over there"], {
+        stage: "discovery",
+        scenario: contact,
+      });
+      expect(runs).not.toMatch(/my call/i);
+      const favour = await buyer(["Could you send it by Friday?"], {
+        stage: "close",
+        scenario: contact,
+      });
+      expect(favour).toMatch(/Friday/);
+      expect(favour).toMatch(/send|forward|draft/i);
+    });
+
+    it.each([
       "How do you schedule your drivers each morning?",
       "Hi Priya, let me introduce myself.",
       "How do patients book appointments today?",
+      "Do you call patients at 9am the day before?",
+      "How does that work on a busy Friday?",
+      "What about Monday mornings, are those the worst?",
+      "Who works the front desk on Tuesday?",
+      "Do you meet with your managers on Mondays?",
+      "Let's talk about Monday mornings for a sec.",
+      "Can we talk about what happens on Friday afternoons?",
+      "do your dispatchers call drivers at 6am to confirm",
+      "What does Monday morning look like for the front desk?",
+      "I'm calling because a few clinics I spoke with this week mentioned no-shows.",
+      "I'd pay attention to Mondays.",
     ])("doesn't take %j as a meeting request", async (line) => {
       const reply = await buyer([line], { stage: "opening" });
       expect(stageOf(reply)).not.toBe("close");
@@ -472,6 +688,23 @@ describe("FakeProvider", () => {
         scenario: HIRING,
       });
       expect(who).toMatch(/team lead|account executive/i);
+    });
+
+    it("answers an acknowledgement after its objection by asking for proof", async () => {
+      const objection = await buyer([INTENT_LINES.pitch], { stage: "pitch" });
+      const reply = await buyer([INTENT_LINES.pitch, INTENT_LINES.acknowledge], {
+        stage: "objection",
+        replies: [objection.replace(TAG, "")],
+      });
+      expect(reply).toMatch(/example|company like ours|someone like us|who else like us/i);
+      expect(stageOf(reply)).toBe("objection");
+    });
+
+    it("doesn't treat 'fair' in small talk as answering an objection", async () => {
+      const reply = await buyer(["ha, fair. so I'm Sam, I'm with Routewise."], {
+        stage: "opening",
+      });
+      expect(reply).not.toMatch(/who else like us|example from a company/i);
     });
 
     it("raises the next hidden objection it hasn't raised yet", async () => {

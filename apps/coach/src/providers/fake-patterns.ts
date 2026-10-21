@@ -17,7 +17,7 @@ export const ASK =
 
 /** Agreeing a concern is fair before answering it. */
 export const ACKNOWLEDGE =
-  /\b(understand|fair|makes sense|hear you|good question|great question|i see|i get it)\b/i;
+  /\b(understand|fair|makes sense|hear you|good question|great question|i see|i get (?:it|that))\b/i;
 
 /** Saying what changes for the buyer. */
 export const BENEFIT =
