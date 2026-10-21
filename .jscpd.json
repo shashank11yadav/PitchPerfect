@@ -1,5 +1,5 @@
 {
-  "path": ["apps", "packages"],
+  "path": ["apps", "packages", "e2e"],
   "threshold": 3,
   "minLines": 8,
   "gitignore": true,

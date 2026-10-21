@@ -72,7 +72,9 @@ Run the whole stack in containers instead: `docker compose --profile full up --b
 | `npm run lint` / `npm run format` | ESLint / Prettier                                                                                  |
 | `npm run typecheck`               | TypeScript project-wide check                                                                      |
 | `npm test`                        | Unit and integration tests for all workspaces                                                      |
-| `npm run e2e`                     | Playwright end-to-end tests (fake practice provider)                                               |
+| `npm run e2e`                     | Build, then Playwright end-to-end tests on a throwaway database (needs `dev:infra`; fake provider) |
+| `npm run e2e:smoke`               | Read-only smoke test of a running site: `BASE_URL=https://… npm run e2e:smoke`                     |
+| `npm run lighthouse`              | Lighthouse CI on `/`, `/students` and `/jobs` against `next start` (needs a build and the api)     |
 | `npm run check:dead`              | knip (unused files, exports, deps) and jscpd (duplication)                                         |
 | `npm run eval -w apps/coach`      | Run practice partner evals against a real provider (needs a key)                                   |
 | `npm run admin -- <command>`      | Admin CLI: `migrate`, `list-unverified`, `approve-company`, `suspend-company`, `unsuspend-company` |

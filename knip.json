@@ -1,10 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignoreBinaries": ["gitleaks"],
-  "ignoreDependencies": ["@axe-core/playwright"],
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.mjs"]
+      "entry": ["scripts/*.mjs", "e2e/global-setup.ts", "e2e/{tests,smoke}/**/*.spec.ts"],
+      "playwright": false
     },
     "packages/shared": {},
     "apps/api": {

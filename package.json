@@ -24,7 +24,9 @@
     "format:check": "prettier . --check",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "e2e": "npm run build && playwright test -c e2e/playwright.config.ts",
+    "e2e:smoke": "playwright test -c e2e/playwright.smoke.config.ts",
+    "lighthouse": "npx --yes @lhci/cli@0.15.1 autorun",
     "check:dead": "knip && jscpd",
     "check:attribution": "node scripts/check-attribution.mjs"
   },
@@ -41,6 +43,7 @@
     "jscpd": "5.4.1",
     "jsdom": "30.1.3",
     "knip": "6.42.1",
+    "mongodb": "7.5.0",
     "prettier": "3.9.10",
     "simple-git-hooks": "2.14.0",
     "typescript": "6.0.3",

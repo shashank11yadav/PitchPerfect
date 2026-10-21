@@ -7,3 +7,4 @@ package-lock.json
 *.tsbuildinfo
 playwright-report
 test-results
+e2e/.auth
