@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { LoadError, Loading } from "@/components/ui/LoadState";
+import { SCRIPTED_PARTNER_NOTICE } from "@/content/partner-notice";
 import { attemptPath, practiceHref } from "@/lib/practice/paths";
 import type { PracticeQuotaLoad } from "@/lib/practice/use-practice-partner";
 import type { PracticeRoomControls } from "@/lib/practice/use-practice-room";
@@ -158,8 +159,7 @@ export function RoomLobby({ skill, jobId, room, quota }: RoomLobbyProps) {
         </div>
         <p className="max-w-prose text-small text-muted">
           Starting uses one of today’s sessions.{" "}
-          {quota.partner === "scripted" &&
-            "Your partner in this demo is scripted and runs on our server; what you say isn’t sent to an AI provider. "}
+          {quota.partner === "scripted" && `${SCRIPTED_PARTNER_NOTICE} `}
           {VOICE_DISCLOSURE}{" "}
           <Link href="/privacy" className={TEXT_LINK}>
             Privacy

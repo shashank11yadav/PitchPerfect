@@ -11,6 +11,7 @@ import HomePage, { metadata as home } from "./page";
 import PrivacyPage, { metadata as privacy } from "./privacy/page";
 import StudentsPage, { metadata as students } from "./students/page";
 import TermsPage, { metadata as terms } from "./terms/page";
+import { forgetPracticePartnerKind } from "@/lib/practice-partner";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 
@@ -28,6 +29,7 @@ beforeEach(() => {
   // By default the api can't be reached, which the pages must read as a live partner.
   fetchMock.mockRejectedValue(new TypeError("fetch failed"));
   vi.stubGlobal("fetch", fetchMock);
+  forgetPracticePartnerKind();
 });
 
 afterEach(() => {
@@ -104,8 +106,8 @@ describe("home page", () => {
 });
 
 describe("how it works page", () => {
-  it("carries FAQPage structured data", () => {
-    const { container } = render(<HowItWorksPage />);
+  it("carries FAQPage structured data", async () => {
+    const { container } = render(await HowItWorksPage());
     expect(jsonLdTypes(container)).toEqual(["FAQPage"]);
   });
 });
@@ -224,7 +226,7 @@ describe("fix round 1", () => {
 
 describe("final review: the legal pages describe the partner that is really running", () => {
   const SCRIPTED =
-    "This demo uses a scripted practice partner that runs on our server. What you say isn’t sent to an AI provider.";
+    "This demo’s practice partner is scripted and runs on our server; what you say isn’t sent to an AI provider.";
 
   it("privacy keeps the AI provider wording when the api can't say otherwise", async () => {
     const { container } = render(await PrivacyPage());
@@ -250,10 +252,45 @@ describe("final review: the legal pages describe the partner that is really runn
     expect(scripted.container).not.toHaveTextContent(/AI provider|is an AI/);
     scripted.unmount();
 
+    forgetPracticePartnerKind();
     fetchMock.mockResolvedValue(healthBody("live"));
     const live = render(await TermsPage());
     expect(live.container).toHaveTextContent("The practice partner is an AI, not a person");
     expect(live.container).toHaveTextContent(/our AI provider/);
+  });
+
+  it("how it works says nothing leaves PitchPerfect in the scripted demo, and labels the partner truthfully", async () => {
+    fetchMock.mockResolvedValue(healthBody("scripted"));
+    const scripted = render(await HowItWorksPage());
+    expect(scripted.container).toHaveTextContent("nothing you say leaves PitchPerfect");
+    expect(scripted.container).not.toHaveTextContent(/sent to our AI provider/);
+    expect(scripted.container).toHaveTextContent("as AI or as a scripted demo");
+    expect(scripted.container).not.toHaveTextContent(/labelled as AI/);
+    scripted.unmount();
+
+    forgetPracticePartnerKind();
+    fetchMock.mockResolvedValue(healthBody("live"));
+    const live = render(await HowItWorksPage());
+    expect(live.container).toHaveTextContent("sent to our AI provider");
+    expect(live.container).not.toHaveTextContent(/leaves PitchPerfect/);
+  });
+
+  it("asks the api about the partner once a minute, not once a render", async () => {
+    fetchMock.mockResolvedValue(healthBody("scripted"));
+    render(await PrivacyPage());
+    render(await TermsPage());
+    render(await HowItWorksPage());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("the about page and the home FAQ stay true for either partner", () => {
+    const about = render(<AboutPage />);
+    expect(about.container).toHaveTextContent("The partner is software, and it says so.");
+    expect(about.container).not.toHaveTextContent(/partner is an AI/);
+    about.unmount();
+    const { container } = render(<HomePage />);
+    expect(container).toHaveTextContent("an AI model or a scripted demo");
+    expect(container).not.toHaveTextContent(/labelled as AI everywhere/);
   });
 
   it("terms don't claim every employer must sign up with a company address", async () => {

@@ -319,11 +319,13 @@ describe("PracticeRoom before the call", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Before your first practice call" });
     await waitFor(() => {
-      expect(dialog).toHaveTextContent(/scripted practice partner that runs on our server/);
+      expect(dialog).toHaveTextContent(/scripted partner runs on our own server/);
     });
     expect(dialog).not.toHaveTextContent(/partner is an AI/);
     await user.click(within(dialog).getByRole("button", { name: "Not now" }));
-    expect(await screen.findByText(/partner in this demo is scripted/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/This demo’s practice partner is scripted and runs on our server/),
+    ).toBeInTheDocument();
   });
 
   it("labels the partner as scripted in the room when the quota answer says so", async () => {

@@ -47,8 +47,8 @@ export default function AboutPage() {
         {/* Running prose in two columns, read down then across, like a printed page. */}
         <div className="mt-10 flex flex-col gap-5 text-statement text-ink md:mt-14 lg:block lg:columns-2 lg:gap-x-16">
           <p className="break-inside-avoid lg:mb-5">
-            The partner is an AI, and it says so. It plays a believable buyer, but it never claims
-            to be a person, and if you ask what it is, it tells you.
+            The partner is software, and it says so. It plays a believable buyer, but it never
+            claims to be a person, and if you ask what it is, it tells you.
           </p>
           <p className="break-inside-avoid lg:mb-5">
             A number on its own teaches you nothing. Every rubric line on a scorecard comes with the

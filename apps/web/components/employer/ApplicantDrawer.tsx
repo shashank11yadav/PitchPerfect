@@ -91,7 +91,7 @@ function SharedScorecardPanel({
   return (
     <div className="flex flex-col gap-3">
       <p className="max-w-prose text-small text-ink">
-        {firstName} attached this scorecard from a {title.toLowerCase()} practice call with the AI
+        {firstName} attached this scorecard from a {title.toLowerCase()} practice call with the
         practice partner{completedAt ? `, ${formatLocalDate(completedAt)}` : ""}. The quotes are
         their own words from that call.
       </p>

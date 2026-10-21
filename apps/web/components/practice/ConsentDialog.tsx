@@ -18,10 +18,6 @@ interface ConsentDialogProps {
   partner?: PracticePartnerKind;
 }
 
-/** The scripted partner never leaves the server; the notice must not say otherwise. */
-const SCRIPTED_PARTNER_NOTICE =
-  "This demo uses a scripted practice partner that runs on our server. What you say isn’t sent to an AI provider.";
-
 /**
  * The one-time practice notice (docs/security.md, Age and consent): who the partner really is
  * (an AI model, or the scripted demo), where transcripts go and how long they're kept, and what
@@ -65,8 +61,8 @@ export function ConsentDialog({ open, onClose, onAccepted, partner = "live" }: C
                 the call when you end it.
               </li>
               <li>
-                <strong className="font-semibold">What you say stays with us.</strong>{" "}
-                {SCRIPTED_PARTNER_NOTICE} Transcripts and scorecards are kept for{" "}
+                <strong className="font-semibold">What you say stays with us.</strong> The scripted
+                partner runs on our own server. Transcripts and scorecards are kept for{" "}
                 {LIMITS.attemptRetentionDays} days, and you can delete any of them sooner.
               </li>
             </>

@@ -1,12 +1,10 @@
 import type { PracticePartnerKind } from "@pitchperfect/shared";
 import type { LegalSection } from "@/components/marketing/LegalDocument";
 import { COPY_LIMITS as L } from "./limits";
+import { SCRIPTED_PARTNER_NOTICE } from "./partner-notice";
 
 const AI_PROVIDER = "our AI provider (OpenAI or Anthropic, depending on configuration)";
 const CONTACT = "the maintainer listed on the project's GitHub page";
-/** What the scripted demo does with your words: nothing leaves the server. */
-const SCRIPTED_PARTNER =
-  "This demo uses a scripted practice partner that runs on our server. What you say isn’t sent to an AI provider.";
 
 /**
  * The privacy policy template. It must match the data flows in docs/security.md, so the parts
@@ -22,7 +20,7 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         <li>We keep what you give us to run your account, your practice and your applications.</li>
         <li>
           {partner === "scripted"
-            ? `${SCRIPTED_PARTNER} Transcripts are deleted after ${L.retentionDays} days.`
+            ? `${SCRIPTED_PARTNER_NOTICE} Transcripts are deleted after ${L.retentionDays} days.`
             : `Your practice turns go to ${AI_PROVIDER}, which plays the buyer and scores the session. Transcripts are deleted after ${L.retentionDays} days.`}
         </li>
         <li>
@@ -70,8 +68,8 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         <li>
           <strong>Practice sessions:</strong> the skill, the job if you practiced for one, the buyer
           scenario, what you and the partner said, your scorecard, timestamps, and how much{" "}
-          {partner === "scripted" ? "partner" : "AI"} processing the session used. We also record
-          when you accepted the practice notice.
+          {partner === "scripted" ? "" : "AI "}processing the session used. We also record when you
+          accepted the practice notice.
         </li>
         <li>
           <strong>Jobs and applications:</strong> jobs you save, jobs you apply to, the scorecard
@@ -136,9 +134,9 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
       <ul>
         {partner === "scripted" ? (
           <li>
-            <strong>No AI provider.</strong> {SCRIPTED_PARTNER} Your practice turns are stored with
-            your session, with email addresses, phone numbers and card-like numbers replaced by
-            placeholders.
+            <strong>No AI provider.</strong> The scripted partner runs on our server. Your practice
+            turns are stored with your session, with email addresses, phone numbers and card-like
+            numbers replaced by placeholders.
           </li>
         ) : (
           <li>

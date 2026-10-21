@@ -1,3 +1,4 @@
+import type { PracticePartnerKind } from "@pitchperfect/shared";
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { CtaLinks } from "@/components/marketing/CtaLinks";
 import { Faq } from "@/components/marketing/Faq";
@@ -12,6 +13,7 @@ import { StatementRows, type Statement } from "@/components/marketing/StatementR
 import { PRACTICE_FAQ } from "@/content/faq";
 import { SESSION_LENGTH } from "@/content/limits";
 import { curlyApostrophes } from "@/lib/plain-text";
+import { practicePartnerKind } from "@/lib/practice-partner";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.howItWorks);
@@ -20,10 +22,11 @@ export const metadata = pageMetadata(PUBLIC_PAGES.howItWorks);
 const OBJECTION_QUOTE =
   SAMPLE_SCORECARD.dimensions.find((dimension) => dimension.key === "objections")?.evidence ?? "";
 
-const SAFEGUARDS: Statement[] = [
+/** What keeps the partner honest, for the partner this deployment really runs. */
+const safeguards = (partner: PracticePartnerKind): Statement[] => [
   {
-    title: "Always labelled as AI",
-    body: "The partner is marked as AI wherever it appears, and says so if you sincerely ask.",
+    title: "Always labelled",
+    body: "The partner is labelled wherever it appears, as AI or as a scripted demo, and says so if you sincerely ask.",
   },
   {
     title: "Stays on the call",
@@ -31,7 +34,10 @@ const SAFEGUARDS: Statement[] = [
   },
   {
     title: "Contact details removed",
-    body: "Email addresses, phone numbers and card-like numbers are removed from your text before it's stored or sent to our AI provider.",
+    body:
+      partner === "scripted"
+        ? "Email addresses, phone numbers and card-like numbers are removed from your text before it's stored. In this demo nothing you say leaves PitchPerfect."
+        : "Email addresses, phone numbers and card-like numbers are removed from your text before it's stored or sent to our AI provider.",
   },
   {
     title: "Session limits",
@@ -39,7 +45,8 @@ const SAFEGUARDS: Statement[] = [
   },
 ];
 
-export default function HowItWorksPage() {
+export default async function HowItWorksPage() {
+  const partner = await practicePartnerKind();
   return (
     <>
       <PageHero
@@ -118,7 +125,7 @@ export default function HowItWorksPage() {
             </div>
           </div>
           <StatementRows
-            items={SAFEGUARDS}
+            items={safeguards(partner)}
             layout="pinned"
             dark
             className="lg:col-span-7 lg:col-start-6"
