@@ -88,6 +88,44 @@ const SCENARIO = {
   },
 };
 
+type Scenario = typeof SCENARIO;
+
+/** A clinic buyer, the reviewer's probe scenario. */
+const CLINIC: Scenario = {
+  scenarioPublic: {
+    personaName: "Ruth Lindgren",
+    personaTitle: "Clinic director",
+    companyType: "A mid-sized group of dental clinics",
+    personality: "Warm but cautious",
+    openingLine: "Hi, this is Ruth Lindgren. I have a few minutes. What can I do for you?",
+  },
+  scenarioPrivate: {
+    hiddenObjections: [
+      "We are mid-quarter and cannot take on a rollout now.",
+      "We already use a tool that mostly works.",
+    ],
+    winConditions: ["The student proposes a specific next meeting."],
+  },
+};
+
+/** A hiring manager, for introducing yourself. */
+const HIRING: Scenario = {
+  scenarioPublic: {
+    personaName: "Priya Natarajan",
+    personaTitle: "Sales hiring manager",
+    companyType: "A B2B software company selling scheduling tools to clinics",
+    personality: "Friendly but probing",
+    openingLine: "Hi, Priya here. Thanks for reaching out. What did you want to talk about?",
+  },
+  scenarioPrivate: {
+    hiddenObjections: [
+      "You have no direct sales experience.",
+      "We usually hire people with a year of quota-carrying experience.",
+    ],
+    winConditions: ["The student asks for a specific next step."],
+  },
+};
+
 /** One line per kind of student turn the demo buyer tells apart. */
 const INTENT_LINES = {
   identity: "Sorry, quick question first: are you a real person?",
@@ -112,14 +150,21 @@ async function buyer(
     replies = [],
     lastTurn = false,
     seed = 1,
-  }: { stage?: string; replies?: readonly string[]; lastTurn?: boolean; seed?: number } = {},
+    scenario = SCENARIO,
+  }: {
+    stage?: string;
+    replies?: readonly string[];
+    lastTurn?: boolean;
+    seed?: number;
+    scenario?: Scenario;
+  } = {},
 ): Promise<string> {
   const messages: ChatMessage[] = [
     {
       role: "user",
-      content: `${scenarioBlock(SCENARIO.scenarioPublic, SCENARIO.scenarioPrivate)}\n\n(The call connects.)`,
+      content: `${scenarioBlock(scenario.scenarioPublic, scenario.scenarioPrivate)}\n\n(The call connects.)`,
     },
-    { role: "assistant", content: SCENARIO.scenarioPublic.openingLine },
+    { role: "assistant", content: scenario.scenarioPublic.openingLine },
   ];
   studentTurns.forEach((text, index) => {
     if (index > 0) {
@@ -197,6 +242,24 @@ describe("FakeProvider", () => {
       );
     });
 
+    it.each([
+      ["Introducing yourself", /hiring|sales|talent/i, /experience|quota|sales/i],
+      ["Referrals & networking", /former|friend|colleague|mentor/i, /vouch|while|intro/i],
+    ])("plays the right person for %s", async (title, persona, objection) => {
+      const result = await new FakeProvider({ seed: 2 }).structured(
+        {
+          system: `${TASK_TAGS.plan} Build a scenario.`,
+          messages: [{ role: "user", content: `Create the scenario for the skill "${title}".` }],
+          maxTokens: 600,
+          schema: PlanSchema,
+          schemaName: "scenario",
+        },
+        signal(),
+      );
+      expect(result.scenarioPublic.personaTitle).toMatch(persona);
+      expect(result.scenarioPrivate.hiddenObjections.join(" ")).toMatch(objection);
+    });
+
     it("varies with the seed", async () => {
       const results = await Promise.all(
         [1, 2, 3, 4, 5].map((seed) => plan(new FakeProvider({ seed }))),
@@ -248,7 +311,7 @@ describe("FakeProvider", () => {
       ],
       ["a cost question", INTENT_LINES.cost, /\$\d/, "discovery"],
       ["a decision question", INTENT_LINES.decision, /sign[- ]off|manager/i, "discovery"],
-      ["a pitch", INTENT_LINES.pitch, /price/i, "objection"],
+      ["a pitch", INTENT_LINES.pitch, /mid-quarter|rollout/i, "objection"],
       [
         "an acknowledgement",
         INTENT_LINES.acknowledge,
@@ -295,9 +358,126 @@ describe("FakeProvider", () => {
       expect(reply).toMatch(/dispatch lead|manager/i);
     });
 
+    const PROCESS_ANSWER = /front desk|calendar/i;
+    const NOT_A_PROPOSAL = /what day|when, and who|works\. send|is packed/i;
+    const OBJECTION = /mid-quarter|already use/i;
+
+    // The reviewer's single-line probes, each from the opening of a call with a clinic buyer.
+    it.each([
+      ["How do patients book appointments today?", PROCESS_ANSWER, "not-close"],
+      ["Let me introduce myself first. I'm Taylor from Brightdesk.", null, "not-close"],
+      ["Should we start with how your front desk works?", PROCESS_ANSWER, "not-close"],
+      ["how do you handle reminders today", PROCESS_ANSWER, "not-close"],
+      ["walk me through your reminder process", PROCESS_ANSWER, "not-close"],
+      ["What are you using today?", /booking system|practice software/i, "not-close"],
+      ["Is this a real person I'm talking to?", /AI practice partner,? playing Ruth/, "opening"],
+      ["Are you a person or a recording?", /AI practice partner,? playing Ruth/, "opening"],
+      ["are you real", /AI practice partner/, "opening"],
+      ["Am I talking to a bot?", /AI practice partner/, "opening"],
+      ["Sorry, I can't help but notice you sound busy.", null, "not-close"],
+      ["Thanks, that helps.", null, "not-close"],
+      [
+        "I'm a student at State. I'd like to learn how you run scheduling.",
+        PROCESS_ANSWER,
+        "not-close",
+      ],
+      ["Let's say a patient cancels at 8am. What happens?", PROCESS_ANSWER, "not-close"],
+      ["Can we do this Wednesday?", /Wednesday/, "close"],
+      ["How about Wednesday at 3pm?", /Wednesday at 3pm/, "close"],
+      ["What does next week look like for you?", /Tuesday|Thursday|open/i, "close"],
+      ["I'll follow up next week.", /^Next week (?:works|should work)/, "close"],
+      ["Our reminders cut no-shows. Would a trial next month help?", /trial/i, "close"],
+      [
+        "Who decides on new software at your clinics?",
+        /practice manager|decide|sign/i,
+        "not-close",
+      ],
+      ["What's your budget for this?", /\$\d/, "not-close"],
+      ["What do you pay for the reminder tool?", /\$\d/, "not-close"],
+    ] as const)("hears %j for what it is", async (line, expected, stage) => {
+      const reply = await buyer([line], { stage: "opening", scenario: CLINIC });
+      if (expected) expect(reply).toMatch(expected);
+      if (stage === "not-close") {
+        expect(stageOf(reply)).not.toBe("close");
+        expect(reply).not.toMatch(NOT_A_PROPOSAL);
+      } else {
+        expect(stageOf(reply)).toBe(stage);
+      }
+      if (!line.includes("cut no-shows")) expect(reply).not.toMatch(OBJECTION);
+      expect(reply).not.toMatch(/make week work/);
+    });
+
+    it.each([
+      "How do you schedule your drivers each morning?",
+      "Hi Priya, let me introduce myself.",
+      "How do patients book appointments today?",
+    ])("doesn't take %j as a meeting request", async (line) => {
+      const reply = await buyer([line], { stage: "opening" });
+      expect(stageOf(reply)).not.toBe("close");
+      expect(reply).not.toMatch(NOT_A_PROPOSAL);
+    });
+
+    it("takes a day in the answer to its own 'what day' as the proposal", async () => {
+      const asked = await buyer(["Would you be open to a two-week pilot?"], { stage: "pitch" });
+      expect(asked).toMatch(/what day|when/i);
+      const reply = await buyer(
+        ["Would you be open to a two-week pilot?", "Wednesday works, 3pm?"],
+        {
+          stage: "close",
+          replies: [asked.replace(TAG, "")],
+        },
+      );
+      expect(reply).toMatch(/Wednesday/);
+      expect(reply).not.toMatch(/what day/i);
+    });
+
+    it("keeps the price worry back until money has come up", async () => {
+      const priceFirst: Scenario = {
+        ...CLINIC,
+        scenarioPrivate: {
+          ...CLINIC.scenarioPrivate,
+          hiddenObjections: [
+            "The price is higher than what we pay today.",
+            "We already use a tool that mostly works.",
+          ],
+        },
+      };
+      const pitch = "Our reminders cut no-shows by a third.";
+      const first = await buyer([pitch], { stage: "pitch", scenario: priceFirst });
+      expect(first).toMatch(/already use/i);
+      expect(first).not.toMatch(/price/i);
+      const later = await buyer([pitch, "It costs less than one empty chair a month."], {
+        stage: "objection",
+        replies: [first.replace(TAG, "")],
+        scenario: priceFirst,
+      });
+      expect(later).toMatch(/price/i);
+    });
+
+    it("talks like a hiring manager when the student introduces themself", async () => {
+      const day = await buyer(["What does a typical day look like for an SDR on your team?"], {
+        stage: "discovery",
+        scenario: HIRING,
+      });
+      expect(day).toMatch(/outreach|calls|meetings/i);
+      expect(day).not.toMatch(/front desk|patients/i);
+      const record = await buyer(
+        ["I ran our club's fundraising and booked 40 meetings with local businesses last spring."],
+        { stage: "discovery", scenario: HIRING },
+      );
+      expect(record).toMatch(/sales experience|quota/i);
+      expect(stageOf(record)).not.toBe("close");
+      const who = await buyer(["Who else would I meet in the process?"], {
+        stage: "discovery",
+        scenario: HIRING,
+      });
+      expect(who).toMatch(/team lead|account executive/i);
+    });
+
     it("raises the next hidden objection it hasn't raised yet", async () => {
+      // Price waits until money comes up, so the first objection is the rollout.
       const first = await buyer([INTENT_LINES.pitch], { stage: "pitch" });
-      expect(first).toMatch(/price/i);
+      expect(first).toMatch(/mid-quarter|rollout/i);
       const second = await buyer(
         [INTENT_LINES.pitch, "Our tool also cuts reporting time in half."],
         {
@@ -305,7 +485,7 @@ describe("FakeProvider", () => {
           replies: [first],
         },
       );
-      expect(second).toMatch(/mid-quarter|rollout/i);
+      expect(second).toMatch(/sign-off|manager/i);
     });
 
     it("never repeats a line it already said in this call", async () => {

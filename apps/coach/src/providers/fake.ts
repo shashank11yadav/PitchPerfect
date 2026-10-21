@@ -1,4 +1,9 @@
-import { SKILLS, type ScenarioPrivate, type ScenarioPublic } from "@pitchperfect/shared";
+import {
+  SKILLS,
+  type ScenarioPrivate,
+  type ScenarioPublic,
+  type SkillSlug,
+} from "@pitchperfect/shared";
 import { mulberry32 } from "./fake-patterns.js";
 import { personaReply } from "./fake-persona.js";
 import { heuristicScorecard } from "./fake-scorecard.js";
@@ -34,49 +39,126 @@ const random = (seed: number, salt: number) =>
 const pick = <T>(items: readonly T[], next: () => number): T =>
   items[Math.floor(next() * items.length)] as T;
 
-const PERSONAS = [
-  {
-    personaName: "Maya Okonjo",
-    personaTitle: "Operations manager",
-    personality: "Busy and direct",
-  },
-  {
-    personaName: "Daniel Reyes",
-    personaTitle: "Head of finance",
-    personality: "Skeptical, wants numbers",
-  },
-  {
-    personaName: "Ruth Lindgren",
-    personaTitle: "Clinic director",
-    personality: "Warm but cautious",
-  },
-  {
-    personaName: "Sam Achterberg",
-    personaTitle: "IT lead",
-    personality: "Distracted, short on time",
-  },
-] as const;
+interface Cast {
+  personas: readonly {
+    personaName: string;
+    personaTitle: string;
+    personality: string;
+    companyType: string;
+  }[];
+  objections: readonly string[];
+  winConditions: readonly string[];
+  opening: (firstName: string, fullName: string) => string;
+}
 
-const COMPANY_TYPES = [
-  "A 40-person regional logistics firm",
-  "A mid-sized group of dental clinics",
-  "A growing online furniture retailer",
-  "A family-owned chain of hardware stores",
-] as const;
+/** Buyers, each in the trade their title belongs to. */
+const BUYERS: Cast = {
+  personas: [
+    {
+      personaName: "Maya Okonjo",
+      personaTitle: "Operations manager",
+      personality: "Busy and direct",
+      companyType: "A 40-person regional logistics firm",
+    },
+    {
+      personaName: "Daniel Reyes",
+      personaTitle: "Head of finance",
+      personality: "Skeptical, wants numbers",
+      companyType: "A growing online furniture retailer",
+    },
+    {
+      personaName: "Ruth Lindgren",
+      personaTitle: "Clinic director",
+      personality: "Warm but cautious",
+      companyType: "A small chain of physical therapy clinics",
+    },
+    {
+      personaName: "Sam Achterberg",
+      personaTitle: "IT lead",
+      personality: "Distracted, short on time",
+      companyType: "A mid-sized group of dental clinics",
+    },
+  ],
+  objections: [
+    "The price is higher than what we pay today.",
+    "We are mid-quarter and cannot take on a rollout now.",
+    "We already use a tool that mostly works.",
+    "I am not sure my team will adopt something new.",
+    "I need sign-off from my manager before anything moves.",
+  ],
+  winConditions: [
+    "The student asks about the current process before pitching.",
+    "The student ties the offer to a problem the buyer mentioned.",
+    "The student proposes a specific next meeting.",
+  ],
+  opening: (_first, full) => `Hi, this is ${full}. I have a few minutes. What can I do for you?`,
+};
 
-const OBJECTIONS = [
-  "The price is higher than what we pay today.",
-  "We are mid-quarter and cannot take on a rollout now.",
-  "We already use a tool that mostly works.",
-  "I am not sure my team will adopt something new.",
-  "I need sign-off from my manager before anything moves.",
-] as const;
+/** Introducing yourself: a hiring manager, not a buyer. */
+const HIRING_MANAGERS: Cast = {
+  personas: [
+    {
+      personaName: "Dana Whitfield",
+      personaTitle: "Sales hiring manager",
+      personality: "Friendly but probing",
+      companyType: "A B2B software company hiring its first sales development reps",
+    },
+    {
+      personaName: "Elena Brandt",
+      personaTitle: "Head of sales development",
+      personality: "Direct, short on time",
+      companyType: "A logistics software company growing its sales team",
+    },
+  ],
+  objections: [
+    "You don't have direct sales experience yet.",
+    "We usually hire people with a year of quota-carrying experience.",
+    "I'm not sure why you want sales rather than marketing.",
+  ],
+  winConditions: [
+    "The student opens with one clear point about themself.",
+    "The student backs a claim with a specific result.",
+    "The student asks a real question about the team.",
+  ],
+  opening: (first) =>
+    `Hi, ${first} here. Thanks for reaching out. What did you want to talk about?`,
+};
 
-const WIN_CONDITIONS = [
-  "The student asks about the current process before pitching.",
-  "The student ties the offer to a problem the buyer mentioned.",
-  "The student proposes a specific next meeting.",
-] as const;
+/** Referrals and networking: someone who knows the student and could make an introduction. */
+const CONTACTS: Cast = {
+  personas: [
+    {
+      personaName: "Tom Becker",
+      personaTitle: "Your former internship manager",
+      personality: "Warm but busy",
+      companyType: "A regional marketing agency",
+    },
+    {
+      personaName: "Lena Ortiz",
+      personaTitle: "A family friend who works in sales",
+      personality: "Helpful, a little cautious",
+      companyType: "A payments company",
+    },
+  ],
+  objections: [
+    "I haven't talked to that person in a while.",
+    "I'm not sure I know your work well enough to vouch for you.",
+    "I don't want to put my name on an intro that goes nowhere.",
+  ],
+  winConditions: [
+    "The student names the exact person they want to meet.",
+    "The student offers to write the introduction themself.",
+    "The student suggests a specific follow-up date.",
+  ],
+  opening: (first) => `Hey, good to hear from you. It's ${first}. What's up?`,
+};
+
+/** Who the student talks to for a skill. */
+function castFor(skill: SkillSlug | undefined): Cast {
+  if (skill === "introducing-yourself") return HIRING_MANAGERS;
+  if (skill === "referrals-networking") return CONTACTS;
+  return BUYERS;
+}
 
 const STUDENT_TURN = /<student_turn>([\s\S]*?)<\/student_turn>/g;
 
@@ -167,8 +249,11 @@ export class FakeProvider implements LlmProvider {
     if (override) return override({ system: input.system, messages: input.messages });
     const turns = studentTurns(input.messages);
     switch (task) {
-      case "plan":
-        return this.#plan();
+      case "plan": {
+        const text = input.system + input.messages.map((m) => m.content).join(" ");
+        const skill = SKILLS.find((candidate) => text.includes(`"${candidate.title}"`));
+        return this.#plan(skill?.slug);
+      }
       case "turn":
         return personaReply(this.#seed, input);
       case "score": {
@@ -181,23 +266,31 @@ export class FakeProvider implements LlmProvider {
     }
   }
 
-  #plan(): { scenarioPublic: ScenarioPublic; scenarioPrivate: ScenarioPrivate } {
+  #plan(skill: SkillSlug | undefined): {
+    scenarioPublic: ScenarioPublic;
+    scenarioPrivate: ScenarioPrivate;
+  } {
+    const cast = castFor(skill);
     const next = random(this.#seed, 0);
-    const persona = pick(PERSONAS, next);
-    const offset = Math.floor(next() * OBJECTIONS.length);
+    const { companyType, ...persona } = pick(cast.personas, next);
+    const offset = Math.floor(next() * cast.objections.length);
     const count = next() < 0.5 ? 2 : 3;
+    const firstName = persona.personaName.split(" ")[0] ?? persona.personaName;
     return {
       scenarioPublic: {
         ...persona,
-        companyType: pick(COMPANY_TYPES, next),
-        openingLine: `Hi, this is ${persona.personaName}. I have a few minutes. What can I do for you?`,
+        companyType,
+        openingLine: cast.opening(firstName, persona.personaName),
       },
       scenarioPrivate: {
         hiddenObjections: Array.from(
           { length: count },
-          (_, i) => OBJECTIONS[(offset + i) % OBJECTIONS.length] ?? OBJECTIONS[0],
+          (_, i) => cast.objections[(offset + i) % cast.objections.length] ?? "",
         ),
-        winConditions: WIN_CONDITIONS.slice(0, 1 + Math.floor(next() * WIN_CONDITIONS.length)),
+        winConditions: cast.winConditions.slice(
+          0,
+          1 + Math.floor(next() * cast.winConditions.length),
+        ),
       },
     };
   }

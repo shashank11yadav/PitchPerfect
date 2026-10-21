@@ -152,13 +152,16 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
   const time = timed?.match(TIME_PHRASE)?.[0];
   const ask = timed ?? first(ASK);
   const acknowledged = first(ACKNOWLEDGE);
-  // Proof answers the concern just acknowledged: a fact after it, not a time or a number in an ask.
+  // Proof answers the concern just acknowledged: a fact after it, not a time or a number in an
+  // ask. The rest of the acknowledging sentence counts ("I hear you, and one carrier cut $3,000").
+  const isProof = (text: string) => PROOF.test(text) && !ASK.test(text) && !TIME_PHRASE.test(text);
+  const ackMatch = acknowledged ? ACKNOWLEDGE.exec(acknowledged) : null;
+  const ackRest =
+    acknowledged && ackMatch ? acknowledged.slice(ackMatch.index + ackMatch[0].length) : "";
   const afterAcknowledging = acknowledged
     ? sentences.slice(sentences.indexOf(acknowledged) + 1)
     : [];
-  const proof = afterAcknowledging.find(
-    (sentence) => PROOF.test(sentence) && !ASK.test(sentence) && !TIME_PHRASE.test(sentence),
-  );
+  const proof = isProof(ackRest) ? acknowledged : afterAcknowledging.find(isProof);
   const opener = OPENER.test(turns[0] ?? "") ? sentences[0] : undefined;
 
   // Structure first, so the opening line is its evidence and clarity quotes something else.

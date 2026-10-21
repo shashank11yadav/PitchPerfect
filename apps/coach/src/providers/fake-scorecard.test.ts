@@ -191,4 +191,14 @@ describe("heuristicScorecard", () => {
     const strong = card(STRONG).dimensions.find((dimension) => dimension.key === "objections");
     expect(strong?.score).toBeGreaterThanOrEqual(4);
   });
+
+  it("credits proof in the same sentence as the acknowledgement", () => {
+    const turns = [
+      "Hi, I'm Riley from Routewise. How do you plan routes today?",
+      "Our planner rebuilds routes in minutes, so your dispatchers stop redoing them.",
+      "I hear you on price, and one carrier your size cut overtime by $3,000 a month.",
+    ];
+    const objections = card(turns).dimensions.find((dimension) => dimension.key === "objections");
+    expect(objections?.justification).toMatch(/backed it up with something concrete/);
+  });
 });

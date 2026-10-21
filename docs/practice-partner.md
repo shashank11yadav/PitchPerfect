@@ -125,7 +125,7 @@ interface LlmProvider {
 - `index.ts` picks the provider from `COACH_PROVIDER` at startup and throws a clear error if its key or model env vars are missing.
 - `openai.ts` uses the official `openai` SDK (Chat Completions or Responses API with streaming; JSON schema structured output via `zod-to-json-schema` or the SDK's zod helper).
 - `anthropic.ts` uses the official `@anthropic-ai/sdk` (Messages API with streaming; structured output via a single forced tool whose input schema is the JSON schema).
-- `fake.ts` is deterministic: a seeded persona, scripted replies that cycle through stages, objections raised at turn 3, and a scorecard computed from simple heuristics (question marks → discovery, word counts → clarity, presence of a date/time → CTA). It powers local dev without keys, unit tests, and e2e.
+- `fake.ts` is deterministic: the same input always gives the same output. It plans a seeded persona that fits the skill (a buyer, a hiring manager for introducing yourself, a former manager or family friend for referrals). Its replies (`fake-persona.ts`) read the scenario, the current stage and the student's last turn, and answer in kind: a question gets an answer in the persona's world, a pitch gets the next hidden objection, and a meeting request with a day or time gets a yes or a counter. The stage never moves backwards. Its scorecard (`fake-scorecard.ts`) comes from simple heuristics: questions → discovery, turn length → clarity, an ask with a day or time → call to action. It powers local dev without keys, unit tests, and e2e.
 - Model IDs come only from env: `COACH_MODEL` (turns, plan, guard) and `COACH_SCORING_MODEL` (scoring). There are no hard-coded model names in code.
 
 ## Evals (`apps/coach/evals/`)

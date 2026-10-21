@@ -1,5 +1,5 @@
 import { STAGES, type Stage } from "@pitchperfect/shared";
-import { ACKNOWLEDGE, ASK, BENEFIT, mulberry32, TIME_PHRASE } from "./fake-patterns.js";
+import { ACKNOWLEDGE, mulberry32, TIME_PHRASE } from "./fake-patterns.js";
 import { stageTag, type ChatMessage } from "./provider.js";
 
 /**
@@ -11,7 +11,8 @@ import { stageTag, type ChatMessage } from "./provider.js";
 
 interface Scenario {
   firstName: string;
-  company: string;
+  /** Title and organisation, lower case, for telling a buyer from a hiring manager. */
+  who: string;
   objections: string[];
 }
 
@@ -37,7 +38,7 @@ const unescape = (text: string) =>
 
 const DEFAULT_SCENARIO: Scenario = {
   firstName: "the buyer",
-  company: "",
+  who: "",
   objections: [
     "The price is higher than what we pay today.",
     "We already use a tool that mostly works.",
@@ -52,7 +53,7 @@ function readScenario(messages: readonly ChatMessage[]): Scenario {
   const objections = /Hidden objections:\n((?:- .+\n?)+)/.exec(text)?.[1] ?? "";
   return {
     firstName: /^\S+/.exec(field("Name"))?.[0] ?? DEFAULT_SCENARIO.firstName,
-    company: field("Organisation").toLowerCase(),
+    who: `${field("Title")} | ${field("Organisation")}`.toLowerCase(),
     objections: objections
       .split("\n")
       .map((line) => line.replace(/^- /, "").trim())
@@ -91,102 +92,304 @@ const later = (a: Stage, b: Stage | undefined): Stage =>
 const byProgress = (turns: number): Stage =>
   STAGES[Math.min(turns, STAGES.length - 1)] ?? "opening";
 
-/** What kind of business the buyer runs, for answers that sound like theirs. */
-type Trade = "logistics" | "clinic" | "retail" | "stores" | "other";
+const capitalized = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
-function tradeOf(company: string): Trade {
-  if (/logistic|freight|carrier|delivery|dispatch|fleet/.test(company)) return "logistics";
-  if (/clinic|dental|health|medical|therap/.test(company)) return "clinic";
-  if (/retail|online|shop|e-?commerce/.test(company)) return "retail";
-  if (/store|hardware|chain/.test(company)) return "stores";
+/**
+ * Who the student is talking to: a buyer in one of a few trades, a hiring manager (introducing
+ * yourself), or a warm contact (referrals and networking).
+ */
+type Trade = "logistics" | "clinic" | "retail" | "stores" | "other" | "hiring" | "contact";
+
+function tradeOf(who: string): Trade {
+  const [title = ""] = who.split(" | ");
+  if (/hiring|recruit|talent|head of sales development/.test(title)) return "hiring";
+  if (/former|friend|mentor|alum|colleague|old manager|internship/.test(title)) return "contact";
+  if (/logistic|freight|carrier|delivery|dispatch|fleet/.test(who)) return "logistics";
+  if (/clinic|dental|health|medical|therap/.test(who)) return "clinic";
+  if (/retail|online|shop|e-?commerce/.test(who)) return "retail";
+  if (/store|hardware|chain/.test(who)) return "stores";
   return "other";
 }
 
-const PROCESS: Record<Trade, readonly string[]> = {
-  logistics: [
-    "Spreadsheets and a lot of phone calls. When a driver calls in sick, someone rebuilds the routes by hand.",
-    "One of our dispatchers does it first thing every morning, mostly from a spreadsheet and the carrier sites.",
-  ],
-  clinic: [
-    "The front desk phones patients the day before. If nobody picks up, we just hope they show.",
-    "It's mostly the front desk and a shared calendar. Every clinic does it a little differently.",
-  ],
-  retail: [
-    "Our support team answers delivery questions by email, and orders live in a shared spreadsheet.",
-    "Honestly, it's a few people, a spreadsheet and a lot of copying between tabs.",
-  ],
-  stores: [
-    "Each store manager does it their own way. Some use a notebook, some use the till system.",
-    "It's paper at two stores and a spreadsheet at the others. We've talked about fixing it for years.",
-  ],
-  other: [
-    "Honestly, it's a mix of spreadsheets and email, and it depends who's in that day.",
-    "We have a process, mostly. It lives in a couple of people's heads.",
-  ],
-};
+/** What each kind of person says, by kind of question. */
+interface Voice {
+  process: readonly string[];
+  /** What they use today. */
+  tools: readonly string[];
+  quantity: readonly string[];
+  problemCost: readonly string[];
+  cost: readonly string[];
+  /** Who else is involved, as "my dispatch lead". */
+  colleague: string;
+  /** Answers to "who decides" or "who else" when the scenario has no sign-off objection. */
+  decision: readonly string[];
+  acknowledge: readonly string[];
+  /** When every hidden objection has been raised. */
+  doubt: readonly string[];
+  availability: readonly string[];
+  stages: Record<Stage, readonly string[]>;
+}
 
-const QUANTITY: Record<Trade, readonly string[]> = {
-  logistics: [
-    "Probably two hours every morning, and longer on Mondays.",
-    "Three or four reroutes a day, and each one eats twenty minutes.",
-  ],
-  clinic: [
-    "Maybe five or six no-shows a week per clinic.",
-    "The front desk spends about an hour a day on it.",
-  ],
-  retail: [
-    "A few hundred orders a week, and maybe one in twenty goes sideways.",
-    "Two people spend most of Monday on it.",
-  ],
-  stores: [
-    "Each manager loses half a day a week to it, give or take.",
-    "Across six stores? Probably ten hours a week.",
-  ],
-  other: [
-    "Six or seven hours a week across the team, give or take.",
-    "More than I'd like. Call it a day a week.",
-  ],
-};
-
-const PROBLEM_COSTS: Record<Trade, readonly string[]> = {
-  logistics: [
-    "A missed delivery window can cost us the customer. Day to day, it's a few hundred dollars in overtime.",
-    "Overtime, mostly. Call it $400 on a bad day, and we have a couple of those a week.",
-  ],
-  clinic: [
-    "An empty chair is about $200 an hour for us, so one bad afternoon adds up fast.",
-    "Each no-show is maybe $150 we don't get back, and the staff are paid either way.",
-  ],
-  retail: [
-    "Every late order is a refund or a discount, so maybe $40 a time, plus the review.",
-    "Hard to say exactly. A few thousand a month once you count refunds.",
-  ],
-  stores: [
-    "A stock-out on a Saturday probably costs a store $1,000 in sales.",
-    "Mostly people's time. Half a day a week, per store, at $25 an hour.",
-  ],
-  other: [
-    "Hard to put a number on it. A few thousand a month, if I'm honest.",
-    "More than it should. Probably a person's whole Friday, every week.",
-  ],
-};
-
-const COST = [
+const BUYER_COST = [
   "Somewhere around $900 a month for what we use now. I'd have to check the last invoice.",
   "About $1,200 a month, I think, though finance would know better than me.",
 ];
 
-const CO_DECIDER: Record<Trade, string> = {
-  logistics: "my dispatch lead",
-  clinic: "our practice manager",
-  retail: "our head of operations",
-  stores: "the owner",
-  other: "my manager",
+const BUYER_STAGES: Record<Stage, readonly string[]> = {
+  opening: [
+    "Sorry, who did you say you were with, and why the call?",
+    "Okay. Remind me who you are and why you reached out?",
+  ],
+  discovery: [
+    "Fair enough. Honestly, things work fine as they are. What makes you think we need anything?",
+    "Okay. What exactly do you want to know about how we work?",
+  ],
+  pitch: [
+    "Alright, I'm listening. What would this actually change for a team like mine?",
+    "Sure. So what is it you're offering, in a sentence?",
+  ],
+  objection: [
+    "I'm still not sure. Why would we switch from what we have?",
+    "That's what everyone says. What's the catch?",
+  ],
+  close: [
+    "That's helpful. If we did move ahead, what would the next step look like?",
+    "You've made a decent case. What would you suggest we do from here?",
+  ],
 };
 
-const capitalized = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+function buyer(
+  colleague: string,
+  answers: Pick<Voice, "process" | "tools" | "quantity" | "problemCost">,
+): Voice {
+  return {
+    ...answers,
+    cost: BUYER_COST,
+    colleague,
+    decision: [
+      `Me, mostly. ${capitalized(colleague)} would want a say.`,
+      `I'd decide, but I wouldn't do it without ${colleague}.`,
+    ],
+    acknowledge: [
+      "I appreciate that. Do you have an example from a company like ours?",
+      "Okay, that helps a little. Who else like us has done this, and how did it go?",
+    ],
+    doubt: [
+      "Okay, but how do I know it'll work for a business like ours?",
+      "I've heard that before. What makes this one different?",
+    ],
+    availability: [
+      "Next week's fairly open. Tuesday or Thursday morning would work.",
+      "Thursday's my best day. Mornings, ideally.",
+    ],
+    stages: BUYER_STAGES,
+  };
+}
 
-/** A hidden objection as the buyer would say it out loud. */
+const VOICES: Record<Trade, Voice> = {
+  logistics: buyer("my dispatch lead", {
+    process: [
+      "Spreadsheets and a lot of phone calls. When a driver calls in sick, someone rebuilds the routes by hand.",
+      "One of our dispatchers does it first thing every morning, mostly from a spreadsheet and the carrier sites.",
+    ],
+    tools: [
+      "A routing add-on that came with our fleet software. It mostly works, until someone calls in sick.",
+      "Spreadsheets, honestly, and the carrier portals. We looked at proper software once and it was too much.",
+    ],
+    quantity: [
+      "Probably two hours every morning, and longer on Mondays.",
+      "Three or four reroutes a day, and each one eats twenty minutes.",
+    ],
+    problemCost: [
+      "A missed delivery window can cost us the customer. Day to day, it's a few hundred dollars in overtime.",
+      "Overtime, mostly. Call it $400 on a bad day, and we have a couple of those a week.",
+    ],
+  }),
+  clinic: buyer("our practice manager", {
+    process: [
+      "The front desk phones patients the day before. If nobody picks up, we just hope they show.",
+      "It's mostly the front desk and a shared calendar. Every clinic does it a little differently.",
+    ],
+    tools: [
+      "The reminder feature in our booking system. Half the patients ignore the texts.",
+      "Our practice software sends reminders, but nobody trusts it, so the front desk calls anyway.",
+    ],
+    quantity: [
+      "Maybe five or six no-shows a week per clinic.",
+      "The front desk spends about an hour a day on it.",
+    ],
+    problemCost: [
+      "An empty chair is about $200 an hour for us, so one bad afternoon adds up fast.",
+      "Each no-show is maybe $150 we don't get back, and the staff are paid either way.",
+    ],
+  }),
+  retail: buyer("our head of operations", {
+    process: [
+      "Our support team answers delivery questions by email, and orders live in a shared spreadsheet.",
+      "Honestly, it's a few people, a spreadsheet and a lot of copying between tabs.",
+    ],
+    tools: [
+      "Our store platform, plus a help desk inbox and a lot of spreadsheets.",
+      "The shipping plugin that came with the shop. It does the basics.",
+    ],
+    quantity: [
+      "A few hundred orders a week, and maybe one in twenty goes sideways.",
+      "Two people spend most of Monday on it.",
+    ],
+    problemCost: [
+      "Every late order is a refund or a discount, so maybe $40 a time, plus the review.",
+      "Hard to say exactly. A few thousand a month once you count refunds.",
+    ],
+  }),
+  stores: buyer("the owner", {
+    process: [
+      "Each store manager does it their own way. Some use a notebook, some use the till system.",
+      "It's paper at two stores and a spreadsheet at the others. We've talked about fixing it for years.",
+    ],
+    tools: [
+      "The till system at four stores and paper at the other two.",
+      "Whatever each manager likes. That's the problem, really.",
+    ],
+    quantity: [
+      "Each manager loses half a day a week to it, give or take.",
+      "Across six stores? Probably ten hours a week.",
+    ],
+    problemCost: [
+      "A stock-out on a Saturday probably costs a store $1,000 in sales.",
+      "Mostly people's time. Half a day a week, per store, at $25 an hour.",
+    ],
+  }),
+  other: buyer("my manager", {
+    process: [
+      "Honestly, it's a mix of spreadsheets and email, and it depends who's in that day.",
+      "We have a process, mostly. It lives in a couple of people's heads.",
+    ],
+    tools: [
+      "A tool we bought a few years ago. It mostly works.",
+      "Mostly spreadsheets and email, if I'm honest.",
+    ],
+    quantity: [
+      "Six or seven hours a week across the team, give or take.",
+      "More than I'd like. Call it a day a week.",
+    ],
+    problemCost: [
+      "Hard to put a number on it. A few thousand a month, if I'm honest.",
+      "More than it should. Probably a person's whole Friday, every week.",
+    ],
+  }),
+  hiring: {
+    process: [
+      "Mornings are outreach, afternoons are calls. Once someone's ramped, they book about eight meetings a week.",
+      "It's a lot of research and short emails, then first calls with the people who answer. Fridays we review the pipeline together.",
+    ],
+    tools: [
+      "A CRM, a sequencing tool and a lot of LinkedIn. We'd train you on all of it.",
+      "Our CRM and a dialer. Nothing you can't learn in a week.",
+    ],
+    quantity: [
+      "Ramp takes about three months. We hire two or three SDRs a year.",
+      "The team books around thirty meetings a week between five of them.",
+    ],
+    problemCost: [
+      "A bad hire costs us a quarter, honestly. That's why I ask so many questions.",
+      "Mostly time. Every seat that sits empty is meetings we don't book.",
+    ],
+    cost: [
+      "The range is in the posting. Most people start near the middle of it.",
+      "It's base plus commission, and the posting has the numbers.",
+    ],
+    colleague: "our team lead",
+    decision: [
+      "You'd meet our team lead and one of the account executives, then me again.",
+      "Our team lead has a say, and so does one of the account executives you'd support.",
+    ],
+    acknowledge: [
+      "Fair enough. So what would you do in your first month here?",
+      "I appreciate that. Tell me about a time you had to learn something fast.",
+    ],
+    doubt: [
+      "Okay. What makes you want sales rather than something safer?",
+      "Why this team, though, and not somewhere bigger?",
+    ],
+    availability: [
+      "I keep Thursday afternoons for interviews. Does that suit you?",
+      "Next week is busy, but I can find thirty minutes on Thursday.",
+    ],
+    stages: {
+      opening: ["Sure. Tell me a bit about yourself.", "Happy to chat. What's your background?"],
+      discovery: ["What drew you to sales?", "What do you know about what we do here?"],
+      pitch: ["So why this role, and why now?", "What would you bring to the team on day one?"],
+      objection: [
+        "What would you say to someone who worries you're too new to this?",
+        "How would you handle hearing no forty times a day?",
+      ],
+      close: [
+        "What would you like to happen next?",
+        "This was useful. What's the best next step from your side?",
+      ],
+    },
+  },
+  contact: {
+    process: [
+      "Honestly, I'm not sure how they hire these days. It's been a while since I talked shop with them.",
+      "Last I heard they hire through referrals first, then the job board.",
+    ],
+    tools: [
+      "Email, mostly. They're not big on LinkedIn messages.",
+      "I'd just forward your note with a line from me.",
+    ],
+    quantity: [
+      "I've known them about five years, but we only catch up a couple of times a year.",
+      "We worked together for two years before they moved.",
+    ],
+    problemCost: [
+      "It doesn't cost me anything, but I do care what my name gets attached to.",
+      "Nothing really. I just want it to go well for both of you.",
+    ],
+    cost: [
+      "Ha, nothing. I'm happy to help if it's a good fit.",
+      "You don't owe me anything. Buy me a coffee if it works out.",
+    ],
+    colleague: "their sales director",
+    decision: [
+      "That'd be their sales director, I think. I can ask.",
+      "Probably the head of sales. I know them a little.",
+    ],
+    acknowledge: [
+      "That's fair. What exactly would you want me to say about you?",
+      "Okay. Could you send me a few lines I can forward?",
+    ],
+    doubt: [
+      "I want to help, I just need to know what I'm vouching for.",
+      "Remind me what you worked on when we overlapped?",
+    ],
+    availability: [
+      "Next week's fine. Send me something I can forward and I'll do it then.",
+      "I could do it Thursday. Send me the draft before then.",
+    ],
+    stages: {
+      opening: [
+        "Good to hear from you. What's going on?",
+        "Hey, it's been a while. What can I do for you?",
+      ],
+      discovery: ["So what are you hoping I can do?", "Who are you trying to reach, exactly?"],
+      pitch: [
+        "Okay, and what would you want me to say about you?",
+        "What makes you a good fit for them?",
+      ],
+      objection: [
+        "I'd want to be sure I can actually vouch for you.",
+        "I don't want to push it if it isn't a fit.",
+      ],
+      close: [
+        "Send me a few lines I can forward and I'll see what I can do.",
+        "Okay. What do you need from me, and by when?",
+      ],
+    },
+  },
+};
+
+/** A hidden objection as the person would say it out loud. */
 function spoken(objection: string): string {
   const said = objection
     .replace(/\bWe are\b/g, "We're")
@@ -199,6 +402,11 @@ function spoken(objection: string): string {
 }
 
 const OBJECTION_LEADS = ["I'll be honest.", "Sounds fine on paper.", "Maybe. But"];
+
+/** Money has come up, so a price objection fits. */
+const MONEY =
+  /\b(?:price|pricing|budget|pay|paying|expensive|cheap|afford|roi|subscription|fee)\b|\$\d|\bcosts? (?:less|more|about|around|under)\b/i;
+const PRICE_OBJECTION = /\b(?:price|cost|budget|expensive|afford)\b/i;
 
 /** Words worth repeating back from the student's line; anything else would read oddly. */
 const ECHO_WORDS = [
@@ -228,41 +436,103 @@ interface Reply {
   lead?: string;
 }
 
+const sentencesOf = (line: string) =>
+  line
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+
+/** A question, with or without its question mark. */
+const QUESTION_SHAPE =
+  /\?\s*$|^(?:so,? |and |but |okay,? |sorry,? )?(?:what|how|who|when|where|why|which)\b|^(?:can you |could you )?(?:walk me through|tell me about)\b|^(?:do|does|did|is|are|can|could|would|should|will|have|has) (?:you|your|we|it|this|that|the|they)\b|\b(?:learn|know|understand|hear) (?:how|what|why|who|when)\b/i;
+
 const IDENTITY =
-  /\b(?:are|r) (?:you|u) (?:a |an )?(?:real )?(?:person|human|bot|robot|ai|machine)\b|\b(?:am i|are we) (?:talking|speaking) (?:to|with) (?:a |an )?(?:real )?(?:person|human|bot|robot|ai)\b/i;
-const PROCESS_QUESTION =
-  /\bhow (?:do|does|are|is) (?:you|your)\b|\bwalk me through\b|\bwhat does .+ look like\b|\bwhat happens when\b/i;
+  /\b(?:are|r) (?:you|u) (?:a |an )?(?:real|actual|live)?\s*(?:person|human|bot|robot|ai|machine|recording|real)\b|\bis this (?:a |an )?(?:real |actual |live )?(?:person|human|bot|robot|ai|machine|recording)\b|\b(?:am i|are we) (?:talking|speaking) (?:to|with) (?:a |an )?(?:real |actual |live )?(?:person|human|bot|robot|ai|machine|recording)\b/i;
+
+/**
+ * Asking for a meeting, as the buyer hears it. It only counts in a sentence that also names a day
+ * or a time, so "how do you schedule…" or "let me introduce myself" never jump to the close.
+ */
+const MEETING_ASK =
+  /\b(?:could|can|shall|should) we\b|\blet'?s (?!say\b|suppose\b|imagine\b|assume\b|pretend\b|start with\b)|\bwould you be (?:open|up|free)\b|\b(?:are|would) you (?:be )?(?:free|around|available)\b|\bhow about\b|\bwhat about\b|\bworks?\b|\bfollow up\b|\bset up\b|\bmeet\b|\bcall\b|\bchat\b|\bdemo\b|\bpilot\b|\btrial\b|\bsend (?:you|an invite|the invite|over)\b/i;
+/** A proposal with no time yet: a meeting word with an ask around it. */
+const OPEN_PROPOSAL =
+  /\b(?:could|can|shall|should) we (?:set up|book|schedule|do|have|grab|get|run|try)\b.*\b(?:call|chat|demo|meeting|pilot|trial|time|minutes)\b|\bwould you be (?:open|up) (?:to|for) (?:a |an )?(?:[\w-]+ ){0,2}(?:call|chat|demo|meeting|pilot|trial)\b|\bwould a (?:trial|pilot|demo|call|meeting|chat)\b/i;
+const AVAILABILITY =
+  /\b(?:what|how)(?:'s| is| does)? (?:next week|this week|tomorrow|your (?:week|calendar|schedule)|monday|tuesday|wednesday|thursday|friday)\b.*\blook\b|\bwhen (?:are|would|will) you (?:be )?(?:free|available|around)\b|\bwhat (?:day|time)s? (?:work|suit)/i;
 const QUANTITY_QUESTION = /\bhow (?:much time|long|many|often)\b/i;
-const COST_QUESTION = /\b(?:cost|pay|paying|spend|budget|price|pricing)\b/i;
 /** What the problem costs them, rather than what they pay for a tool today. */
 const PROBLEM_COST =
   /\bwhat (?:does|would|did) .+ cost\b|\bcosts? (?:you|us|them)\b|\bwhat(?:'s| is) that costing\b/i;
-const DECISION_QUESTION =
-  /\bwho on your (?:side|team|end)\b|\bwho (?:else )?(?:would|should) (?:want|need) to (?:see|know|be)\b|\bwho (?:else )?(?:would|will|needs?|has to|gets to|is)\b.*\b(?:sign|decide|approve|involved|say|weigh|buy)|\bsign[- ]?off\b|\bdecision\b/i;
+const COST_QUESTION =
+  /\b(?:cost|pay|paying|spend|budget|price|pricing|salary|comp|compensation)\b/i;
 const OWNER_QUESTION = /\bwho (?:owns|runs|looks after|is in charge of|handles)\b/i;
-const PITCH =
-  /\b(?:we help|our (?:tool|platform|product|software|planner|service|team|app)|helps? you)\b/i;
+const DECISION_QUESTION =
+  /\bwho (?:decides|else|signs|approves|makes the call)\b|\bwho on your (?:side|team|end)\b|\bwho (?:would|should|will|needs? to|has to|gets to|is)\b.*\b(?:sign|decide|approve|involved|say|weigh|buy|see|know|meet)\b|\bsign[- ]?off\b|\bdecision\b/i;
+const TOOL_QUESTION =
+  /\bwhat (?:are|is) (?:you|your [\w-]+) using\b|\bwhat (?:tool|tools|system|software|platform)\b|\bwhat do you use\b/i;
+const PROCESS_QUESTION =
+  /\bhow (?:do|does|did|are|is|you|your)\b|\bwalk me through\b|\btell me about\b|\bwhat does .+ look like\b|\bwhat .+ is like\b|\bwhat happens\b|\bhow you\b/i;
+/** A claim about what the offer does for them: "our planner rebuilds…", "we help…". */
+const BENEFIT_CLAIM =
+  /\b(?:we|our [\w-]+|it|this|that tool|the (?:tool|planner|platform|app|service))\s+(?:\w+\s+)?(?:cuts?|saves?|reduces?|rebuilds?|fills?|frees?|stops?|removes?|handles?|automates?|texts?|sends?|lets? you|helps? (?:you|your|teams?|clinics|carriers|dispatch|the))\b|\bwe help\b|\bhelps? (?:you|your)\b|\bmeans (?:the|your|you)\b|\bso your\b/i;
+/** A candidate's own record, for a hiring manager: "I ran…", "I booked 40…". */
+const SELF_PITCH =
+  /\bI (?:ran|led|built|booked|sold|managed|hit|grew|started|organi[sz]ed|raised|closed|worked|interned|made|won|doubled)\b/i;
 
-/** The kinds of turn the buyer tells apart, first match wins. */
+/** The next hidden objection that fits what's been said; price waits until money comes up. */
+function nextObjection(context: Context): string | undefined {
+  const { scenario, said, turns } = context;
+  const raised = (objection: string) => said.some((reply) => reply.includes(spoken(objection)));
+  const moneyCameUp = turns.some((turn) => MONEY.test(turn));
+  const fresh = scenario.objections.filter((objection) => !raised(objection));
+  return fresh.find((objection) => moneyCameUp || !PRICE_OBJECTION.test(objection));
+}
+
+/** "Wednesday at 3pm" or "next week", from whichever sentence holds it. */
+function timeIn(line: string): string | undefined {
+  const found = TIME_PHRASE.exec(line)?.[0];
+  if (!found) return undefined;
+  return /^next\s+week/i.test(found) ? found : found.replace(/^next\s+/i, "");
+}
+
+function proposalReply(context: Context, voice: Voice, line: string, when: string): Reply {
+  const day = /monday|tuesday|wednesday|thursday|friday/i.exec(when)?.[0];
+  const other = day && /thursday/i.test(day) ? "Friday" : "Thursday";
+  // Whoever the student asked to bring, in the buyer's words, or the buyer's own pick.
+  const named = /\byour ((?:\w+ )?(?:lead|manager|director|boss|partner|owner))\b/i.exec(line)?.[1];
+  const guest = named ? `my ${named.toLowerCase()}` : voice.colleague;
+  return {
+    stage: "close",
+    lines: [
+      day
+        ? `${capitalized(when)} works. Send the invite and I'll bring ${guest}.`
+        : `${capitalized(when)} works. Send me the details first.`,
+      day
+        ? `${capitalized(when)} is packed for me. Could we do ${other} at the same time instead?`
+        : `${capitalized(when)} should work. Send me the details and I'll check with ${voice.colleague}.`,
+    ],
+  };
+}
+
+/** The kinds of turn the person tells apart, first match wins. */
 function replyFor(context: Context, line: string, next: Next): Reply {
   const { scenario, current, said } = context;
-  const trade = tradeOf(scenario.company);
+  const trade = tradeOf(scenario.who);
+  const voice = VOICES[trade];
   const progress = later(byProgress(context.turns.length), current);
+  const sentences = sentencesOf(line);
   // Questions are read from the question itself, so a word in the sentence before it doesn't
   // decide the answer ("…spend hours a week. How do you plan routes today?").
-  const question = line
-    .split(/(?<=[.!?])\s+/)
-    .filter((sentence) => sentence.includes("?"))
-    .at(-1);
-  const isQuestion = question !== undefined;
-  const asked = question ?? "";
+  const asked = sentences.filter((sentence) => QUESTION_SHAPE.test(sentence)).at(-1);
+  const at = (stage: Stage) => later(stage, current);
 
   if (context.lastTurn) {
     return {
       stage: "close",
       lines: [
         "I need to jump onto another call. Send me a short email with what we covered and I'll take it from there.",
-        "I have to run, but this was useful. Put it in an email and I'll share it with the team.",
+        "I have to run, but this was useful. Put it in an email and I'll pass it along.",
       ],
     };
   }
@@ -275,124 +545,91 @@ function replyFor(context: Context, line: string, next: Next): Reply {
       ],
     };
   }
-  const time = TIME_PHRASE.exec(line)?.[0];
-  if (ASK.test(line) && time) {
-    const when = time.replace(/^next\s+/i, "");
-    const day = /monday|tuesday|wednesday|thursday|friday/i.exec(when)?.[0];
-    const other = day && /thursday/i.test(day) ? "Friday" : "Thursday";
-    // Whoever the student asked to bring, in the buyer's words, or the buyer's own pick.
-    const named = /\byour ((?:\w+ )?(?:lead|manager|director|boss|partner|owner))\b/i.exec(
-      line,
-    )?.[1];
-    const guest = named ? `my ${named.toLowerCase()}` : CO_DECIDER[trade];
+  // A day or time in a sentence that asks for it, or any day after this person asked "what day".
+  const askedForDay = /what day|when, and who|when would it start/i.test(said.at(-1) ?? "");
+  const proposal = sentences.find(
+    (sentence) => timeIn(sentence) && (askedForDay || MEETING_ASK.test(sentence)),
+  );
+  if (proposal && !AVAILABILITY.test(proposal)) {
+    return proposalReply(context, voice, proposal, timeIn(proposal) ?? "");
+  }
+  if (AVAILABILITY.test(line)) return { stage: at("close"), lines: voice.availability };
+  if (OPEN_PROPOSAL.test(line)) {
     return {
-      stage: "close",
-      lines: [
-        `${capitalized(when)} works. Send the invite and I'll bring ${guest}.`,
-        day
-          ? `${capitalized(when)} is packed for me. Could we do ${other} at the same time instead?`
-          : `I can probably make ${when} work. Send me the details first.`,
-      ],
-    };
-  }
-  if (ASK.test(line)) {
-    return {
-      stage: later("close", current),
-      lines: [
-        "Maybe. What day were you thinking, and how long do you need?",
-        "I could find some time. When, and who should be there?",
-      ],
-    };
-  }
-  if (isQuestion && QUANTITY_QUESTION.test(asked)) {
-    return { stage: later("discovery", current), lines: QUANTITY[trade] };
-  }
-  if (isQuestion && PROBLEM_COST.test(asked)) {
-    return { stage: later("discovery", current), lines: PROBLEM_COSTS[trade] };
-  }
-  if (isQuestion && COST_QUESTION.test(asked)) {
-    return { stage: later("discovery", current), lines: COST };
-  }
-  if (isQuestion && OWNER_QUESTION.test(asked)) {
-    return {
-      stage: later("discovery", current),
-      lines: [
-        `${capitalized(CO_DECIDER[trade])} runs it day to day.`,
-        `Day to day, ${CO_DECIDER[trade]}. Changing it would be my call, though.`,
-      ],
-    };
-  }
-  if (isQuestion && DECISION_QUESTION.test(asked)) {
-    const signOff = scenario.objections.find((objection) => /sign[- ]?off|approv/i.test(objection));
-    const coDecider = capitalized(CO_DECIDER[trade]);
-    const alreadySaid =
-      signOff !== undefined && said.some((reply) => reply.includes(spoken(signOff)));
-    return {
-      stage: later("discovery", current),
-      lines: !signOff
+      stage: at("close"),
+      lines: /trial|pilot/i.test(line)
         ? [
-            `Me, mostly. ${coDecider} would want a say.`,
-            `I'd decide, but I wouldn't do it without ${CO_DECIDER[trade]}.`,
+            "A trial might work. When would it start, and what would you need from us?",
+            "Maybe a trial. What day were you thinking, and how long would it run?",
           ]
-        : alreadySaid
-          ? [
-              `Like I said, my manager has the final word. ${coDecider} would want a say too.`,
-              `My manager, in the end. I'd want ${CO_DECIDER[trade]} in the room as well.`,
-            ]
-          : [spoken(signOff), `${spoken(signOff)} ${coDecider} would want a say too.`],
-    };
-  }
-  if (isQuestion && PROCESS_QUESTION.test(asked)) {
-    return { stage: later("discovery", current), lines: PROCESS[trade], lead: echo(line, next) };
-  }
-  if (ACKNOWLEDGE.test(line)) {
-    return {
-      stage: later("objection", current),
-      lines: [
-        "I appreciate that. Do you have an example from a company like ours?",
-        "Okay, that helps a little. Who else like us has done this, and how did it go?",
-      ],
-    };
-  }
-  if (!isQuestion && (PITCH.test(line) || BENEFIT.test(line))) {
-    const raised = (objection: string) => said.some((reply) => reply.includes(spoken(objection)));
-    const fresh = scenario.objections.find((objection) => !raised(objection));
-    return {
-      stage: later("objection", current),
-      lines: fresh
-        ? OBJECTION_LEADS.map((lead) => `${lead} ${spoken(fresh)}`)
         : [
-            "Okay, but how do I know it'll work for a business like ours?",
-            "I've heard that before. What makes this one different?",
+            "Maybe. What day were you thinking, and how long do you need?",
+            "I could find some time. When, and who should be there?",
           ],
     };
   }
-  return { stage: progress, lines: STAGE_LINES[progress] };
+  if (asked) {
+    if (QUANTITY_QUESTION.test(asked)) return { stage: at("discovery"), lines: voice.quantity };
+    if (PROBLEM_COST.test(asked)) return { stage: at("discovery"), lines: voice.problemCost };
+    if (COST_QUESTION.test(asked)) return { stage: at("discovery"), lines: voice.cost };
+    if (OWNER_QUESTION.test(asked)) {
+      return {
+        stage: at("discovery"),
+        lines: [
+          `${capitalized(voice.colleague)} runs it day to day.`,
+          `Day to day, ${voice.colleague}. Changing it would be my call, though.`,
+        ],
+      };
+    }
+    if (DECISION_QUESTION.test(asked)) {
+      const signOff = scenario.objections.find((objection) =>
+        /sign[- ]?off|approv/i.test(objection),
+      );
+      const alreadySaid =
+        signOff !== undefined && said.some((reply) => reply.includes(spoken(signOff)));
+      return {
+        stage: at("discovery"),
+        lines: !signOff
+          ? voice.decision
+          : alreadySaid
+            ? [
+                `Like I said, my manager has the final word. ${capitalized(voice.colleague)} would want a say too.`,
+                `My manager, in the end. I'd want ${voice.colleague} in the room as well.`,
+              ]
+            : [
+                spoken(signOff),
+                `${spoken(signOff)} ${capitalized(voice.colleague)} would want a say too.`,
+              ],
+      };
+    }
+    if (TOOL_QUESTION.test(asked)) {
+      // The first answer names a tool, so it agrees with an "already use a tool" objection.
+      const hasTool = scenario.objections.some((objection) =>
+        /already (?:use|have)/i.test(objection),
+      );
+      return { stage: at("discovery"), lines: hasTool ? voice.tools.slice(0, 1) : voice.tools };
+    }
+    if (PROCESS_QUESTION.test(asked)) {
+      return { stage: at("discovery"), lines: voice.process, lead: echo(line, next) };
+    }
+  }
+  if (ACKNOWLEDGE.test(line)) return { stage: at("objection"), lines: voice.acknowledge };
+  // A claim about what the offer does, money brought up in a statement, or a candidate's record.
+  const pitched =
+    BENEFIT_CLAIM.test(line) ||
+    MONEY.test(line) ||
+    ((trade === "hiring" || trade === "contact") && SELF_PITCH.test(line));
+  if (pitched) {
+    const objection = nextObjection(context);
+    return {
+      stage: at("objection"),
+      lines: objection
+        ? OBJECTION_LEADS.map((lead) => `${lead} ${spoken(objection)}`)
+        : voice.doubt,
+    };
+  }
+  return { stage: progress, lines: voice.stages[progress] };
 }
-
-/** When nothing more specific fits: a line for where the call is. */
-const STAGE_LINES: Record<Stage, readonly string[]> = {
-  opening: [
-    "Sorry, who did you say you were with, and why the call?",
-    "Okay. Remind me who you are and why you reached out?",
-  ],
-  discovery: [
-    "Fair enough. Honestly, things work fine as they are. What makes you think we need anything?",
-    "Okay. What exactly do you want to know about how we work?",
-  ],
-  pitch: [
-    "Alright, I'm listening. What would this actually change for a team like mine?",
-    "Sure. So what is it you're offering, in a sentence?",
-  ],
-  objection: [
-    "I'm still not sure. Why would we switch from what we have?",
-    "That's what everyone says. What's the catch?",
-  ],
-  close: [
-    "That's helpful. If we did move ahead, what would the next step look like?",
-    "You've made a decent case. What would you suggest we do from here?",
-  ],
-};
 
 /** Lines kept for when every other option has been used in this call. */
 const LAST_RESORT = ["Go on.", "Mm. Keep going.", "Okay, and then?"];
@@ -406,7 +643,7 @@ function seeded(seed: number, input: string): Next {
   return mulberry32(state);
 }
 
-/** The demo buyer's reply to the last student turn, ending with its stage tag. */
+/** The demo persona's reply to the last student turn, ending with its stage tag. */
 export function personaReply(
   seed: number,
   input: { system: string; messages: readonly ChatMessage[] },
@@ -416,9 +653,10 @@ export function personaReply(
   const next = seeded(seed, `${String(context.turns.length)}|${line}`);
   const reply = replyFor(context, line, next);
   const lead = reply.lead ?? "";
+  const voice = VOICES[tradeOf(context.scenario.who)];
   const unsaid = (text: string) => !context.said.includes(text);
   const options = reply.lines.map((text) => `${lead}${text}`).filter(unsaid);
-  const fallback = STAGE_LINES[reply.stage].filter(unsaid);
+  const fallback = voice.stages[reply.stage].filter(unsaid);
   const pool = options.length ? options : fallback.length ? fallback : LAST_RESORT.filter(unsaid);
   const text = pool[Math.floor(next() * pool.length)] ?? "Go on.";
   return `${text} ${stageTag(later(reply.stage, context.current))}`;
