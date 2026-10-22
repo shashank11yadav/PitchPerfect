@@ -6,7 +6,13 @@ import {
   type Scorecard,
   type SkillSlug,
 } from "@pitchperfect/shared";
-import { description, hourly, salary, type SeedCompany, type SeedJob } from "./seed-data.js";
+import {
+  description,
+  hourly,
+  salary,
+  type SeedCompany,
+  type SeedJob,
+} from "@pitchperfect/shared/seed-data";
 
 /** Demo accounts, created only by `seed --demo`. Fictional people on a reserved domain. */
 

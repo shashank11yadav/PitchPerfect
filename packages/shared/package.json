@@ -18,6 +18,10 @@
     "./hmac": {
       "types": "./dist/hmac.d.ts",
       "default": "./dist/hmac.js"
+    },
+    "./seed-data": {
+      "types": "./dist/seed-data.d.ts",
+      "default": "./dist/seed-data.js"
     }
   },
   "scripts": {

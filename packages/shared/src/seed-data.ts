@@ -1,8 +1,10 @@
-import type { EmploymentType, JobPay, JobStatus, Workplace } from "@pitchperfect/shared";
+import type { EmploymentType, JobStatus, Workplace } from "./enums.js";
+import type { JobPay } from "./schemas/jobs.js";
 
 /**
- * Fictional demo content. Every company lives on a reserved `.example` domain, so no address
- * here can ever reach a real inbox or website.
+ * Fictional demo content, shared by the api's seed script and the static demo's job board. Every
+ * company lives on a reserved `.example` domain, so no address here can ever reach a real inbox
+ * or website.
  */
 
 export interface SeedCompany {

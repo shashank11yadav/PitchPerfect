@@ -1,3 +1,4 @@
+import { slugify } from "@pitchperfect/shared";
 import mongoose from "mongoose";
 import {
   Application,
@@ -11,7 +12,6 @@ import {
 import type { ApplicationAttrs } from "../../src/db/models/application.js";
 import type { JobAttrs } from "../../src/db/models/job.js";
 import type { PracticeAttemptAttrs } from "../../src/db/models/practice-attempt.js";
-import { slugify } from "../../src/db/slug.js";
 import { sanitizeJobHtml } from "../../src/services/html-sanitizer.js";
 import { hashPassword } from "../../src/services/passwords.js";
 import { withCsrf, type CsrfAgent, type TestAgent } from "./csrf.js";

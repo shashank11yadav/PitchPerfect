@@ -1,6 +1,12 @@
 import mongoose, { Types } from "mongoose";
 import { describe, expect, it } from "vitest";
-import { RUBRIC_KEYS, ScorecardSchema, SKILLS, type Scorecard } from "@pitchperfect/shared";
+import {
+  RUBRIC_KEYS,
+  ScorecardSchema,
+  SKILLS,
+  slugify,
+  type Scorecard,
+} from "@pitchperfect/shared";
 import {
   Application,
   AuthToken,
@@ -22,7 +28,6 @@ import {
   toPublicUser,
   toStudentProfileView,
 } from "../src/db/mappers.js";
-import { slugify } from "../src/db/slug.js";
 import { useTestDb } from "./helpers/db.js";
 
 useTestDb();

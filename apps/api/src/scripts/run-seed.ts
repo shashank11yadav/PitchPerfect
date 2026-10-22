@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { Types } from "mongoose";
-import { LIMITS, PaySchema, type Role } from "@pitchperfect/shared";
+import { LIMITS, PaySchema, slugify, type Role } from "@pitchperfect/shared";
 import {
   Application,
   Company,
@@ -10,7 +10,6 @@ import {
   StudentProfile,
   User,
 } from "../db/models/index.js";
-import { slugify } from "../db/slug.js";
 import { sanitizeJobHtml } from "../services/html-sanitizer.js";
 import { checkPassword, PASSWORD_PROBLEM_MESSAGES } from "../services/password-policy.js";
 import { hashPassword } from "../services/passwords.js";
@@ -24,7 +23,12 @@ import {
   DEMO_STUDENT_EMAIL,
   scorecardFor,
 } from "./demo-data.js";
-import { SEED_COMPANIES, SEED_JOBS, type SeedCompany, type SeedJob } from "./seed-data.js";
+import {
+  SEED_COMPANIES,
+  SEED_JOBS,
+  type SeedCompany,
+  type SeedJob,
+} from "@pitchperfect/shared/seed-data";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TURN_GAP_MS = 45_000;

@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import type { Types } from "mongoose";
 import {
   LIMITS,
+  slugify,
   type AuthMe,
   type PublicUser,
   type ResetPassword,
@@ -22,7 +23,6 @@ import {
   StudentProfile,
   User,
 } from "../../db/models/index.js";
-import { slugify } from "../../db/slug.js";
 import { InvalidCredentialsError, UnauthenticatedError, ValidationError } from "../../errors.js";
 import type { SessionIdentity } from "../../middleware/session.js";
 import { verificationForCompany } from "../../services/company-verification.js";

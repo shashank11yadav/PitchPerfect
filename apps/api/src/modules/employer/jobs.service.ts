@@ -1,17 +1,17 @@
 import { randomInt } from "node:crypto";
 import mongoose from "mongoose";
-import type {
-  EmployerJob,
-  EmployerJobListQuery,
-  EmployerJobSummary,
-  JobInput,
-  JobStatus,
-  JobUpdate,
-  Page,
+import {
+  slugify,
+  type EmployerJob,
+  type EmployerJobListQuery,
+  type EmployerJobSummary,
+  type JobInput,
+  type JobStatus,
+  type JobUpdate,
+  type Page,
 } from "@pitchperfect/shared";
 import { toEmployerJob, toEmployerJobSummary } from "../../db/mappers.js";
 import { Application, Job, PracticeAttempt, SavedJob } from "../../db/models/index.js";
-import { slugify } from "../../db/slug.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../errors.js";
 import { htmlToPlainText, sanitizeJobHtml } from "../../services/html-sanitizer.js";
 import type { MailFailureLog, Mailer } from "../../services/mailer.js";
