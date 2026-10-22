@@ -29,7 +29,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # Builds apps/web/out, then checks it the way the CI job does; a failing demo is not uploaded.
       - run: npm run e2e:pages
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report-pages
