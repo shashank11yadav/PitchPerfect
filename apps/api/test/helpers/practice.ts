@@ -54,7 +54,9 @@ class StallableCoach implements CoachClient {
         yield { type: "error", code: "upstream_error" };
         return;
       }
+      // A stalled coach sends nothing after the caller leaves, not even events it already buffered.
       await aborted(signal);
+      return;
     }
   }
 }
