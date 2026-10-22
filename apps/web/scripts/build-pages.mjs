@@ -10,7 +10,7 @@
  * set in the environment for a fork served from somewhere else.
  */
 import { execFileSync } from "node:child_process";
-import { rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const web = resolve(import.meta.dirname, "..");
@@ -34,4 +34,23 @@ run("npx", ["next", "build"], web, {
   NEXT_TELEMETRY_DISABLED: "1",
 });
 writeFileSync(resolve(out, ".nojekyll"), "");
+// The share image route exports an extensionless PNG; a static host needs the extension to send
+// it as an image. The pages point at the `.png` copy (lib/seo.ts).
+copyFileSync(resolve(out, "opengraph-image"), resolve(out, "opengraph-image.png"));
+// React hoists the policy `<meta>` into `<head>` after Next's own preloads and scripts. A meta
+// policy governs only what comes after it, so every page gets it as the first child of `<head>`.
+const META_CSP = /<meta http-equiv="Content-Security-Policy"[^>]*>/;
+for (const file of htmlFiles(out)) {
+  const html = readFileSync(file, "utf8");
+  const meta = META_CSP.exec(html)?.[0];
+  if (!meta || html.indexOf(meta) === html.indexOf("<head>") + "<head>".length) continue;
+  writeFileSync(file, html.replace(meta, "").replace("<head>", `<head>${meta}`));
+}
 console.log(`Static demo written to apps/web/out for ${siteUrl}`);
+
+/** Every `.html` file under `dir`. */
+function htmlFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true, recursive: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".html"))
+    .map((entry) => resolve(entry.parentPath, entry.name));
+}

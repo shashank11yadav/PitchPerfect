@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # One deployment at a time; a newer push waits for the one in flight rather than cancelling it.
 concurrency:
@@ -18,12 +16,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,9 +26,31 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run build:pages -w apps/web
+      - run: npx playwright install --with-deps chromium
+      # Builds apps/web/out, then checks it the way the CI job does; a failing demo is not uploaded.
+      - run: npm run e2e:pages
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-pages
+          path: |
+            playwright-report/pages/
+            test-results/pages/
+          retention-days: 7
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/web/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -35,7 +35,7 @@ test("the home page renders under the base path with the demo banner and its pol
 }) => {
   await page.goto(at(""));
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Practice your pitch.");
-  await expect(page.getByText("This is a static demo")).toBeVisible();
+  await expect(page.getByText("This is a static demo")).toContainText("scripted partner");
   await expect(page.getByRole("link", { name: "the code is on GitHub" })).toHaveAttribute(
     "href",
     "https://github.com/shashank11yadav/PitchPerfect",
@@ -44,6 +44,19 @@ test("the home page renders under the base path with the demo banner and its pol
   const csp = page.locator('meta[http-equiv="Content-Security-Policy"]');
   await expect(csp).toHaveAttribute("content", /connect-src 'self'/);
   await expect(csp).not.toHaveAttribute("content", /unsafe-eval/);
+  // First in <head> as served, so it governs every script and stylesheet the page loads. (Once
+  // React hydrates it moves hoisted tags around; the browser has applied the policy by then.)
+  const html = await (await page.request.get(at(""))).text();
+  expect(html.slice(html.indexOf("<head>") + "<head>".length)).toMatch(
+    /^<meta http-equiv="Content-Security-Policy"/,
+  );
+  // The share image is a real PNG file, so the host sends it as an image.
+  const image = await page.locator('meta[property="og:image"]').getAttribute("content");
+  expect(image).toMatch(/\/PitchPerfect\/opengraph-image\.png$/);
+  // The tag names the Pages URL; the same path on this server is the file the export wrote.
+  const served = await page.request.get(new URL(image ?? "", PAGES_URL).pathname);
+  expect(served.status()).toBe(200);
+  expect(served.headers()["content-type"]).toBe("image/png");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",
     "https://shashank11yadav.github.io/PitchPerfect/",
@@ -99,6 +112,10 @@ test("a practice call by text runs in the browser through to a scorecard", async
   const notice = page.getByRole("dialog", { name: "Before your first practice call" });
   await expect(notice).toBeVisible();
   await expect(notice).toContainText("Your practice partner is scripted.");
+  // The in-browser wording, not the coach's: no server and no retention period here.
+  await expect(notice).toContainText("Everything runs in this browser tab.");
+  await expect(notice).not.toContainText("our own server");
+  await expect(notice).not.toContainText("180 days");
   await notice.getByRole("button", { name: "I understand" }).click();
   await expect(notice).toBeHidden();
 
