@@ -118,4 +118,4 @@ Never commit secrets. Every app reads configuration from its own `.env` (see the
 
 ## Author
 
-Built by [Shashank Yadav](https://github.com/shashank11yadav).
+Built by Shashank Yadav. Website: [shashankyadav.dev](https://www.shashankyadav.dev/) · GitHub: [@shashank11yadav](https://github.com/shashank11yadav)
