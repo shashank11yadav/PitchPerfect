@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { FakeProvider, createUsageMeter } from "../providers/index.js";
+import { FakeProvider } from "../fake/fake.js";
+import { createUsageMeter } from "../provider.js";
 import { CANARY } from "./canary.js";
 import { capReply, checkOutput } from "./output.js";
 

@@ -4,7 +4,7 @@ import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildCoachApp } from "../src/app.js";
 import { loadCoachConfig } from "../src/config.js";
-import { CANARY } from "../src/guardrails/canary.js";
+import { CANARY } from "@pitchperfect/partner";
 import { FakeProvider, ProviderError, type LlmProvider } from "../src/providers/index.js";
 import {
   buildApp,

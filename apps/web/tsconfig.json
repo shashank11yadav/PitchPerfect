@@ -25,6 +25,9 @@
   "references": [
     {
       "path": "../../packages/shared"
+    },
+    {
+      "path": "../../packages/partner"
     }
   ]
 }

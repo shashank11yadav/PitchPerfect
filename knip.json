@@ -11,6 +11,7 @@
       "playwright": false
     },
     "packages/shared": {},
+    "packages/partner": {},
     "apps/api": {
       "entry": ["src/scripts/*.ts", "test/**/*.test.ts"]
     },

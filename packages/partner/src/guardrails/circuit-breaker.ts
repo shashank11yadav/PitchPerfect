@@ -1,4 +1,4 @@
-import { ProviderError } from "../providers/index.js";
+import { ProviderError } from "../provider.js";
 
 /** Only retryable provider errors (429, 5xx, connection errors, timeouts) say the upstream is unwell. */
 const isOutage = (error: unknown) => error instanceof ProviderError && error.retryable;

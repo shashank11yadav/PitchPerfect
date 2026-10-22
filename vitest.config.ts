@@ -13,6 +13,9 @@ const alias = {
     new URL("./packages/shared/src/hmac.ts", import.meta.url),
   ),
   "@pitchperfect/shared": fileURLToPath(new URL("./packages/shared/src/index.ts", import.meta.url)),
+  "@pitchperfect/partner": fileURLToPath(
+    new URL("./packages/partner/src/index.ts", import.meta.url),
+  ),
   "@pitchperfect/coach/app": fileURLToPath(new URL("./apps/coach/src/app.ts", import.meta.url)),
 };
 
@@ -34,6 +37,15 @@ export default defineConfig({
           root: "packages/shared",
           environment: "node",
           include: ["src/**/*.test.ts", "test/**/*.test.ts"],
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          name: "partner",
+          root: "packages/partner",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
         },
       },
       {

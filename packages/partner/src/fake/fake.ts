@@ -18,7 +18,7 @@ import {
   abortedBy,
   parseStructured,
   taskOf,
-} from "./provider.js";
+} from "../provider.js";
 
 type OverrideKey = ProviderTask | "moderate";
 type Override = (input: { system: string; messages: ChatMessage[] }) => string | object;

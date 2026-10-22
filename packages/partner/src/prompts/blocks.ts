@@ -1,6 +1,6 @@
 import type { ScenarioPrivate, ScenarioPublic, TranscriptEntry } from "@pitchperfect/shared";
 import { CANARY } from "../guardrails/canary.js";
-import { TASK_TAGS, type ChatMessage } from "../providers/index.js";
+import { TASK_TAGS, type ChatMessage } from "../provider.js";
 
 /** What every prompt builder returns: the rules in `system`, all untrusted text in `messages`. */
 export interface PromptInput {

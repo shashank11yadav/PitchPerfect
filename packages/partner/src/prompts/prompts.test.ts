@@ -8,7 +8,7 @@ import {
 } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
 import { CANARY } from "../guardrails/canary.js";
-import { TASK_TAGS } from "../providers/index.js";
+import { TASK_TAGS } from "../provider.js";
 import { dataBlock, type PromptInput } from "./blocks.js";
 import { buildGuardPrompt } from "./guard.js";
 import { buildPlanPrompt } from "./persona-plan.js";

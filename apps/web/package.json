@@ -17,6 +17,7 @@
     "@mdx-js/react": "3.1.1",
     "@next/mdx": "16.4.2",
     "@paper-design/shaders": "0.0.81",
+    "@pitchperfect/partner": "0.0.0",
     "@pitchperfect/shared": "0.0.0",
     "@tiptap/extension-link": "3.32.0",
     "@tiptap/pm": "3.32.0",

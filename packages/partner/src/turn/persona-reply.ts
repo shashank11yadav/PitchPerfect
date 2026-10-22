@@ -1,23 +1,33 @@
-import { LIMITS, STAGES, type CoachTurnRequest, type Stage } from "@pitchperfect/shared";
+import {
+  LIMITS,
+  STAGES,
+  type CoachTurnEvent,
+  type CoachTurnRequest,
+  type Stage,
+} from "@pitchperfect/shared";
 import { withTimeout } from "../guardrails/circuit-breaker.js";
 import { createLeakScanner } from "../guardrails/leak-scan.js";
 import { checkOutput } from "../guardrails/output.js";
 import { FALLBACK_LINE } from "../prompts/fixed-lines.js";
 import { buildTurnPrompt, studentTurnNumber, TURN_LEAK_SOURCE } from "../prompts/persona-turn.js";
-import type { createUsageMeter } from "../providers/index.js";
-import type { ChatStreamInput } from "../providers/provider.js";
+import { reliably, type PracticeDeps } from "../deps.js";
+import type { ChatStreamInput, createUsageMeter } from "../provider.js";
 import { ReplyFilter, splitStageTag, type BlockReason } from "./reply-filter.js";
-import type { SseStream } from "./sse.js";
-import { reliably, type PracticeDeps } from "./support.js";
 
 const REPLY_TEMPERATURE = 0.8;
 
 /** Built once: the leak source holds only fixed rule text. */
 const leaks = createLeakScanner(TURN_LEAK_SOURCE);
 
+/** Where a turn's events go: the coach's SSE response, or the demo room in the browser. */
+export interface TurnSink {
+  /** Delivers one event; resolves once the receiver can take more. */
+  send(event: CoachTurnEvent): Promise<void>;
+}
+
 export interface TurnContext {
   deps: PracticeDeps;
-  sse: SseStream;
+  sink: TurnSink;
   signal: AbortSignal;
   meter: ReturnType<typeof createUsageMeter>;
 }
@@ -116,7 +126,7 @@ export async function personaReply(turn: CoachTurnRequest, ctx: TurnContext) {
     maxTokens: LIMITS.maxTokensReply,
     temperature: REPLY_TEMPERATURE,
   };
-  const sendDelta = (text: string) => ctx.sse.send({ type: "delta", text });
+  const sendDelta = (text: string) => ctx.sink.send({ type: "delta", text });
 
   const first = await streamOnce(input, ctx, sendDelta);
   let modelStage = first.stage;

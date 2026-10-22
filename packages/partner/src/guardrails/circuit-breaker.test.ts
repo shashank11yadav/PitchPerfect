@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ProviderError } from "../providers/index.js";
+import { ProviderError } from "../provider.js";
 import { CircuitBreaker, withRetry, withTimeout } from "./circuit-breaker.js";
 
 const upstream = () => new ProviderError("upstream_unavailable", { status: 503 });

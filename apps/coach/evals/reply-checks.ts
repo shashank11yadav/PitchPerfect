@@ -1,8 +1,10 @@
 import { LIMITS, redactPii } from "@pitchperfect/shared";
-import { containsCanary } from "../src/guardrails/canary.js";
-import { ruleCheck } from "../src/guardrails/guard-rules.js";
-import { createLeakScanner } from "../src/guardrails/leak-scan.js";
-import { TURN_LEAK_SOURCE } from "../src/prompts/persona-turn.js";
+import {
+  containsCanary,
+  createLeakScanner,
+  ruleCheck,
+  TURN_LEAK_SOURCE,
+} from "@pitchperfect/partner";
 
 const leaksInstructions = createLeakScanner(TURN_LEAK_SOURCE);
 

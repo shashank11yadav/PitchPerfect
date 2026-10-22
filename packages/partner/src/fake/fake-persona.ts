@@ -2,7 +2,7 @@ import { STAGES, type Stage } from "@pitchperfect/shared";
 import { type Booking, type Reading, type Voice, readTurn, timeIn } from "./fake-intents.js";
 import { mulberry32 } from "./fake-patterns.js";
 import { type Lines, tradeOf, VOICES, voiceOf } from "./fake-voices.js";
-import { stageTag, type ChatMessage } from "./provider.js";
+import { stageTag, type ChatMessage } from "../provider.js";
 
 /**
  * The offline demo persona: a buyer, a hiring manager or a warm contact. It reads the scenario and

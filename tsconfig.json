@@ -5,6 +5,9 @@
       "path": "packages/shared"
     },
     {
+      "path": "packages/partner"
+    },
+    {
       "path": "apps/api"
     },
     {

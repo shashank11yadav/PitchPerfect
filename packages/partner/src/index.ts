@@ -1,0 +1,40 @@
+/**
+ * The practice partner engine: prompts, guardrails, the scripted (fake) provider, and the three
+ * steps of a session (plan, turn, score) without any transport. The coach service wraps it in
+ * Fastify routes behind an HMAC check; the static demo runs it in the browser.
+ */
+export {
+  createPracticeDeps,
+  reliably,
+  structuredWithRepair,
+  usageOf,
+  type PartnerConfig,
+  type PracticeDeps,
+} from "./deps.js";
+export { FakeProvider, type FakeProviderOptions } from "./fake/fake.js";
+export { CANARY, containsCanary } from "./guardrails/canary.js";
+export { CircuitBreaker, withRetry, withTimeout } from "./guardrails/circuit-breaker.js";
+export { ruleCheck } from "./guardrails/guard-rules.js";
+export { InputError, sanitizeInput } from "./guardrails/input.js";
+export { createLeakScanner } from "./guardrails/leak-scan.js";
+export { planScenario } from "./plan.js";
+export { TURN_LEAK_SOURCE } from "./prompts/persona-turn.js";
+export {
+  abortedBy,
+  createUsageMeter,
+  parseStructured,
+  ProviderError,
+  stageTag,
+  TASK_TAGS,
+  taskOf,
+  type ChatMessage,
+  type ChatStreamInput,
+  type LlmProvider,
+  type ProviderTask,
+  type StructuredInput,
+  type Usage,
+  type UsageMeter,
+} from "./provider.js";
+export { NotEnoughTurnsError, scoreTranscript } from "./score.js";
+export { type TurnContext, type TurnSink } from "./turn/persona-reply.js";
+export { runTurn, turnErrorCode, type TurnOutcome, type TurnResult } from "./turn/run-turn.js";

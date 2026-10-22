@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CANARY } from "../src/guardrails/canary.js";
+import { CANARY } from "@pitchperfect/partner";
 import { leakProblems, replyProblems } from "./reply-checks.js";
 
 describe("replyProblems", () => {

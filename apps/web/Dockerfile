@@ -12,15 +12,17 @@ WORKDIR /repo
 # workspaces that aren't present, so the api and coach dependencies stay out of the build.
 COPY package.json package-lock.json .npmrc ./
 COPY packages/shared/package.json packages/shared/
+COPY packages/partner/package.json packages/partner/
 COPY apps/web/package.json apps/web/
 RUN npm ci --ignore-scripts --no-audit --include-workspace-root \
-      --workspace packages/shared --workspace apps/web
+      --workspace packages/shared --workspace packages/partner --workspace apps/web
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
+COPY packages/partner packages/partner
 COPY apps/web apps/web
 ARG API_ORIGIN=http://api:4000
 ENV API_ORIGIN=${API_ORIGIN} NEXT_OUTPUT=standalone NEXT_TELEMETRY_DISABLED=1
-RUN npm run build -w packages/shared && npm run build -w apps/web
+RUN npm run build -w packages/shared && npm run build -w packages/partner && npm run build -w apps/web
 
 FROM ${NODE_IMAGE} AS runtime
 ARG API_ORIGIN=http://api:4000

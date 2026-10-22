@@ -11,7 +11,7 @@ import {
   type StructuredInput,
   abortedBy,
   type UsageMeter,
-} from "./provider.js";
+} from "@pitchperfect/partner";
 import { SdkProvider } from "./sdk-provider.js";
 
 const toUsage = (usage: CompletionUsage) => ({

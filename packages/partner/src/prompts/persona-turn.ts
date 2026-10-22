@@ -5,7 +5,7 @@ import {
   type CoachTurnRequest,
   type TranscriptEntry,
 } from "@pitchperfect/shared";
-import type { ChatMessage } from "../providers/index.js";
+import type { ChatMessage } from "../provider.js";
 import {
   dataBlock,
   dataRule,

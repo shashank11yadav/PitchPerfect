@@ -1,5 +1,5 @@
 import { LIMITS } from "@pitchperfect/shared";
-import type { LlmProvider, UsageMeter } from "../providers/index.js";
+import type { LlmProvider, UsageMeter } from "../provider.js";
 import { containsCanary } from "./canary.js";
 import { ruleCheck } from "./guard-rules.js";
 

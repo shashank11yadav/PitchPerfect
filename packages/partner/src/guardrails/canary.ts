@@ -1,9 +1,11 @@
-import { randomUUID } from "node:crypto";
-
 const PREFIX = "pp-canary-";
-const ID = randomUUID();
+// Web Crypto, so the same module runs in Node and in a browser.
+const ID = globalThis.crypto.randomUUID();
 
-/** Random per process. Every system prompt carries it with an instruction never to repeat it. */
+/**
+ * Random per process (per page, in a browser). Every system prompt carries it with an instruction
+ * never to repeat it.
+ */
 export const CANARY = `${PREFIX}${ID}`;
 
 const ID_COMPACT = ID.replaceAll("-", "");

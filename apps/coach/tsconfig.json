@@ -6,5 +6,5 @@
     "emitDeclarationOnly": true
   },
   "include": ["src", "test", "evals"],
-  "references": [{ "path": "../../packages/shared" }]
+  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/partner" }]
 }

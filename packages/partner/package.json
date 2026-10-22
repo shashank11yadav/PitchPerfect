@@ -1,0 +1,22 @@
+{
+  "name": "@pitchperfect/partner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@pitchperfect/shared": "0.0.0",
+    "zod": "4.6.7"
+  }
+}

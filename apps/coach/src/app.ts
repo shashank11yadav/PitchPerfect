@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createPracticeDeps } from "@pitchperfect/partner";
 import Fastify, { LogController, type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import type { DestinationStream } from "pino";
 import { requireSignedRequests } from "./auth/guard.js";
@@ -9,7 +10,6 @@ import { createProvider, type LlmProvider } from "./providers/index.js";
 import { healthRoutes } from "./routes/health.js";
 import { planRoute } from "./routes/plan.js";
 import { scoreRoute } from "./routes/score.js";
-import { createPracticeDeps } from "./routes/support.js";
 import { turnRoute } from "./routes/turn.js";
 
 const BODY_LIMIT_BYTES = 262_144;

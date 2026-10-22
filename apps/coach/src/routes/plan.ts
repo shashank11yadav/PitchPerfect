@@ -1,67 +1,17 @@
-import {
-  CoachPlanRequestSchema,
-  LIMITS,
-  type CoachPlanRequest,
-  type CoachPlanResponse,
-  type ScenarioPrivate,
-  type ScenarioPublic,
-} from "@pitchperfect/shared";
+import { planScenario, type PracticeDeps } from "@pitchperfect/partner";
+import { CoachPlanRequestSchema, type CoachPlanResponse } from "@pitchperfect/shared";
 import type { FastifyInstance } from "fastify";
-import { ruleCheck } from "../guardrails/guard-rules.js";
-import { buildPlanPrompt, PlanSchema } from "../prompts/persona-plan.js";
-import { createUsageMeter, ProviderError, type UsageMeter } from "../providers/index.js";
-import {
-  clientSignal,
-  parseBody,
-  structuredWithRepair,
-  usageOf,
-  type PracticeDeps,
-} from "./support.js";
-
-interface Scenario {
-  scenarioPublic: ScenarioPublic;
-  scenarioPrivate: ScenarioPrivate;
-}
-
-/** True when any generated field reads like an attack or harmful text, e.g. echoed from a job post. */
-function looksInjected({ scenarioPublic, scenarioPrivate }: Scenario): boolean {
-  const fields = [
-    ...Object.values(scenarioPublic),
-    ...scenarioPrivate.hiddenObjections,
-    ...scenarioPrivate.winConditions,
-  ];
-  return fields.some((field) => ruleCheck(field) !== null);
-}
+import { clientSignal, parseBody } from "./support.js";
 
 /**
- * `POST /v1/plan`: a persona and hidden objections for one practice session. Employer job text
- * can steer the planner, so a scenario with a flagged field is planned once more without the job;
- * if that is flagged too the request fails with `502 upstream_error`.
+ * `POST /v1/plan`: a persona and hidden objections for one practice session. A scenario the
+ * engine had to plan again without the job is logged; a second flagged plan is `502 upstream_error`.
  */
 export function planRoute(app: FastifyInstance, deps: PracticeDeps): void {
   app.post("/v1/plan", async (request, reply): Promise<CoachPlanResponse> => {
     const req = parseBody(CoachPlanRequestSchema, request.body);
-    const meter = createUsageMeter();
-    const signal = clientSignal(reply);
-    const plan = (input: CoachPlanRequest, usage: UsageMeter) =>
-      structuredWithRepair(
-        deps,
-        {
-          ...buildPlanPrompt(input),
-          maxTokens: LIMITS.maxTokensPlan,
-          schema: PlanSchema,
-          schemaName: "scenario",
-        },
-        signal,
-        usage,
-      );
-
-    let scenario = await plan(req, meter);
-    if (looksInjected(scenario)) {
+    return planScenario(deps, req, clientSignal(reply), () => {
       request.log.warn({ outcome: "scenario_flagged" }, "re-planning without the job");
-      scenario = await plan({ ...req, job: undefined }, meter);
-      if (looksInjected(scenario)) throw new ProviderError("upstream_error");
-    }
-    return { ...scenario, usage: usageOf(deps, meter, "plan") };
+    });
   });
 }

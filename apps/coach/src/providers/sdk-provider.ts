@@ -1,5 +1,5 @@
 import type { CoachConfig } from "../config.js";
-import { abortedBy, ProviderError, taskOf } from "./provider.js";
+import { abortedBy, ProviderError, taskOf } from "@pitchperfect/partner";
 
 type ErrorClass<T = Error> = abstract new (...args: never[]) => T;
 

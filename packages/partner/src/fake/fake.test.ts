@@ -1,16 +1,16 @@
 import { ScenarioPrivateSchema, ScenarioPublicSchema, ScorecardSchema } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { dataBlock, scenarioBlock } from "../prompts/blocks.js";
 import {
   type ChatMessage,
   createUsageMeter,
-  FakeProvider,
   ProviderError,
   stageTag,
   TASK_TAGS,
   type UsageMeter,
-} from "./index.js";
-import { dataBlock, scenarioBlock } from "../prompts/blocks.js";
+} from "../provider.js";
+import { FakeProvider } from "./fake.js";
 
 const PlanSchema = z.strictObject({
   scenarioPublic: ScenarioPublicSchema,
