@@ -2,6 +2,7 @@
   "name": "pitchperfect",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "workspaces": [
     "packages/*",

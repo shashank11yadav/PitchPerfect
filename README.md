@@ -124,3 +124,7 @@ Never commit secrets. Every app reads configuration from its own `.env` (see the
 ## Author
 
 Built by Shashank Yadav. Website: [shashankyadav.dev](https://www.shashankyadav.dev/) · GitHub: [@shashank11yadav](https://github.com/shashank11yadav)
+
+## License
+
+[MIT](LICENSE). Third-party code keeps its own license; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
