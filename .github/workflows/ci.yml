@@ -55,7 +55,7 @@ jobs:
       # Builds every workspace, then Playwright starts coach (COACH_PROVIDER=fake), api and
       # `next start` itself (e2e/playwright.config.ts) on a throwaway database.
       - run: npm run e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
@@ -77,7 +77,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e:pages
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report-pages
@@ -123,7 +123,7 @@ jobs:
           exit 1
       # Starts `next start` and checks /, /students and /jobs (lighthouserc.json).
       - run: npm run lighthouse
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: lighthouse-reports
