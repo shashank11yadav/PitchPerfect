@@ -36,7 +36,7 @@ const safeguards = (partner: PracticePartnerKind): Statement[] => [
     title: "Contact details removed",
     body:
       partner === "scripted"
-        ? "Email addresses, phone numbers and card-like numbers are removed from your text before it's stored. In this demo nothing you say leaves PitchPerfect."
+        ? "Email addresses, phone numbers and card-like numbers are removed from your text before it's stored. In this demo your text isn't sent to an AI provider."
         : "Email addresses, phone numbers and card-like numbers are removed from your text before it's stored or sent to our AI provider.",
   },
   {

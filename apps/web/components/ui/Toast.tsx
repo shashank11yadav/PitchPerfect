@@ -108,7 +108,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 pause(id);
               }}
               onBlur={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget)) start(id);
+                if (
+                  !event.currentTarget.contains(event.relatedTarget) &&
+                  !event.currentTarget.matches(":hover")
+                ) {
+                  start(id);
+                }
               }}
               className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-card border border-border bg-surface p-4 shadow-card-hover"
             >

@@ -262,7 +262,9 @@ describe("final review: the legal pages describe the partner that is really runn
   it("how it works says nothing leaves PitchPerfect in the scripted demo, and labels the partner truthfully", async () => {
     fetchMock.mockResolvedValue(healthBody("scripted"));
     const scripted = render(await HowItWorksPage());
-    expect(scripted.container).toHaveTextContent("nothing you say leaves PitchPerfect");
+    expect(scripted.container).toHaveTextContent(
+      "In this demo your text isn't sent to an AI provider.",
+    );
     expect(scripted.container).not.toHaveTextContent(/sent to our AI provider/);
     expect(scripted.container).toHaveTextContent("as AI or as a scripted demo");
     expect(scripted.container).not.toHaveTextContent(/labelled as AI/);

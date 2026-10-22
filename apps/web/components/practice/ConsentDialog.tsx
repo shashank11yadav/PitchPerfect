@@ -61,7 +61,7 @@ export function ConsentDialog({ open, onClose, onAccepted, partner = "live" }: C
                 the call when you end it.
               </li>
               <li>
-                <strong className="font-semibold">What you say stays with us.</strong> The scripted
+                <strong className="font-semibold">Your text stays with us.</strong> The scripted
                 partner runs on our own server. Transcripts and scorecards are kept for{" "}
                 {LIMITS.attemptRetentionDays} days, and you can delete any of them sooner.
               </li>

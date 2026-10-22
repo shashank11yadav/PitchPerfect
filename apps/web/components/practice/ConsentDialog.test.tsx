@@ -56,7 +56,7 @@ describe("ConsentDialog", () => {
     const dialog = screen.getByRole("dialog", { name: "Before your first practice call" });
     expect(dialog).toHaveTextContent("Your practice partner is scripted.");
     expect(dialog).toHaveTextContent(
-      "What you say stays with us. The scripted partner runs on our own server.",
+      "Your text stays with us. The scripted partner runs on our own server.",
     );
     // Said once: the heading carries the claim, the sentence after it says why.
     expect(dialog).not.toHaveTextContent(/isn’t sent to an AI provider/);
