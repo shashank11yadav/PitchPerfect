@@ -99,18 +99,18 @@ docker compose exec -e SEED_DEMO_PASSWORD='pick-a-12-plus-char-password' api nod
 
 ## Documentation
 
-| Doc                                                                                  | Read it when you're...                                         |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| [docs/architecture.md](docs/architecture.md)                                         | Getting oriented: services, data model, request flows          |
-| [docs/conventions.md](docs/conventions.md)                                           | Writing any code: structure, naming, validation, errors, tests |
-| [docs/api.md](docs/api.md)                                                           | Adding or calling an endpoint                                  |
-| [docs/practice-partner.md](docs/practice-partner.md)                                 | Working on personas, scoring, guardrails, or providers         |
-| [docs/design-system.md](docs/design-system.md)                                       | Building UI: brand tokens, components, accessibility, SEO      |
-| [docs/security.md](docs/security.md)                                                 | Touching auth, data, uploads, or anything user-facing          |
-| [docs/deploy.md](docs/deploy.md)                                                     | Deploying                                                      |
-| [docs/limits.md](docs/limits.md)                                                     | Wondering what's intentionally out of scope                    |
-| [docs/design/2026-10-19-rebuild-design.md](docs/design/2026-10-19-rebuild-design.md) | Understanding why the product is shaped this way               |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                                                   | Opening a pull request                                         |
+| Doc                                                            | Read it when you're...                                         |
+| -------------------------------------------------------------- | -------------------------------------------------------------- |
+| [docs/architecture.md](docs/architecture.md)                   | Getting oriented: services, data model, request flows          |
+| [docs/conventions.md](docs/conventions.md)                     | Writing any code: structure, naming, validation, errors, tests |
+| [docs/api.md](docs/api.md)                                     | Adding or calling an endpoint                                  |
+| [docs/practice-partner.md](docs/practice-partner.md)           | Working on personas, scoring, guardrails, or providers         |
+| [docs/design-system.md](docs/design-system.md)                 | Building UI: brand tokens, components, accessibility, SEO      |
+| [docs/security.md](docs/security.md)                           | Touching auth, data, uploads, or anything user-facing          |
+| [docs/deploy.md](docs/deploy.md)                               | Deploying                                                      |
+| [docs/limits.md](docs/limits.md)                               | Wondering what's intentionally out of scope                    |
+| [docs/design/product-design.md](docs/design/product-design.md) | Understanding why the product is shaped this way               |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                             | Opening a pull request                                         |
 
 ## Security
 
