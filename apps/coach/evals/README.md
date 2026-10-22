@@ -13,7 +13,7 @@ npm run eval -w apps/coach -- --concurrency=1 # slower, gentler on rate limits
 
 It prints one row per case and a summary, and writes `apps/coach/evals/results/<timestamp>.json`. The exit code is 1 when fewer than 90% of cases pass or any adversarial case fails.
 
-**Cost.** Each quality case is a plan call, up to 8 reply turns (each with a guard call and a moderation call), and one score call. That is roughly 30 conversations of up to 8 turns, so a few hundred model calls per run. Run it before changing prompts or models, not on every commit, and record the pass rate in the PR.
+**Cost.** Each quality case is a plan call, a few reply turns (each with a guard call, plus a moderation call on OpenAI), and one score call. Across about 30 conversations that is a few hundred model calls per run. Run it before changing prompts or models, not on every commit, and record the pass rate in the PR.
 
 ## Cases
 

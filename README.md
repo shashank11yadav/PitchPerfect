@@ -46,18 +46,18 @@ Browser ──► apps/web (Next.js, port 3000)
 
 - `apps/web`: Next.js App Router site: public pages (static/SSR for SEO), student app, employer app.
 - `apps/api`: REST API: accounts, sessions, companies, jobs, applications, lessons, and the practice proxy.
-- `apps/coach`: independent practice partner service: buyer personas, conversation, scoring, guardrails, provider adapter.
+- `apps/coach`: the independent practice partner service: HMAC-checked routes over `packages/partner`, its config, the OpenAI and Anthropic adapters, and the evals.
 - `packages/partner`: the practice partner engine (prompts, guardrails, the scripted provider, and the plan, turn and score steps), used by coach and by the static demo in the browser.
-- `packages/shared`: zod schemas, types, constants and the fictional seed data shared by all apps.
+- `packages/shared`: zod schemas, types, constants, the fictional seed data, and small helpers (slugify, UTC calendar days, PII redaction) shared by all apps.
 
 Details: [docs/architecture.md](docs/architecture.md).
 
 ## Quick start
 
-Requirements: Node 22+ and Docker.
+Requirements: Node 22.12 or later (`.nvmrc` pins 22) and Docker.
 
 ```bash
-git clone <this repo> pitchperfect && cd pitchperfect
+git clone https://github.com/shashank11yadav/PitchPerfect.git pitchperfect && cd pitchperfect
 npm install
 cp apps/api/.env.example apps/api/.env
 cp apps/coach/.env.example apps/coach/.env
@@ -81,26 +81,27 @@ docker compose exec -e SEED_DEMO_PASSWORD='pick-a-12-plus-char-password' api nod
 
 ## Scripts
 
-| Command                                       | What it does                                                                                              |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `npm run dev`                                 | Run web, api, and coach in watch mode                                                                     |
-| `npm run dev:infra`                           | Start MongoDB and Mailpit containers                                                                      |
-| `npm run seed -- --demo`                      | Load demo data and accounts (idempotent; needs `SEED_DEMO_PASSWORD`)                                      |
-| `npm run purge`                               | Delete expired attempts and tokens, abandon stale sessions, clear unfinished starts                       |
-| `npm run build`                               | Build every workspace                                                                                     |
-| `npm run lint` / `npm run format`             | ESLint / Prettier                                                                                         |
-| `npm run typecheck`                           | TypeScript project-wide check                                                                             |
-| `npm test`                                    | Unit and integration tests for all workspaces                                                             |
-| `npm run e2e`                                 | Build, then Playwright end-to-end tests on a throwaway database (needs `dev:infra`; fake provider)        |
-| `npm run e2e:smoke`                           | Read-only smoke test of a running site: `BASE_URL=https://… npm run e2e:smoke`                            |
-| `npm run build:pages -w apps/web`             | Build the static GitHub Pages demo into `apps/web/out` (docs/deploy.md)                                   |
-| `npm run e2e:pages`                           | Build the static demo, serve it under `/PitchPerfect/` and run its Playwright checks                      |
-| `npm run lighthouse`                          | Lighthouse CI on `/`, `/students` and `/jobs` against `next start` (needs a build and the api)            |
-| `npm run check:dead`                          | knip (unused files, exports, deps) and jscpd (duplication)                                                |
-| `npm run eval -w apps/coach`                  | Run practice partner evals against a real provider (needs a key)                                          |
-| `npm run admin -- <command>`                  | Admin CLI: `migrate`, `list-unverified`, `approve-company`, `suspend-company`, `unsuspend-company`        |
-| `npm run admin:prod -w apps/api -- <command>` | The admin CLI run from the compiled build, for production. `seed:prod` and `purge:prod` work the same way |
-| `npx tsx e2e/screenshots.ts`                  | Retake the screenshots above from a running stack (needs `SEED_DEMO_PASSWORD`, `BASE_URL`)                |
+| Command                                                    | What it does                                                                                                                                                                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                                              | Run web, api, and coach in watch mode                                                                                                                                                       |
+| `npm run dev:infra`                                        | Start MongoDB and Mailpit containers                                                                                                                                                        |
+| `npm run seed -- --demo`                                   | Load demo data and accounts (idempotent; needs `SEED_DEMO_PASSWORD`)                                                                                                                        |
+| `npm run purge`                                            | Delete expired attempts and tokens, abandon stale sessions, clear unfinished starts                                                                                                         |
+| `npm run build`                                            | Build every workspace                                                                                                                                                                       |
+| `npm run lint` / `npm run format` / `npm run format:check` | ESLint / Prettier (write) / Prettier (check only, as CI runs it)                                                                                                                            |
+| `npm run typecheck`                                        | TypeScript project-wide check                                                                                                                                                               |
+| `npm test`                                                 | Unit and integration tests for all workspaces                                                                                                                                               |
+| `npm run e2e`                                              | Build, then Playwright end-to-end tests on a throwaway database (needs `dev:infra`; fake provider). Ports 3000, 4000 and 4100 move with `E2E_WEB_PORT`, `E2E_API_PORT` and `E2E_COACH_PORT` |
+| `npm run e2e:smoke`                                        | Read-only smoke test of a running site: `BASE_URL=https://… npm run e2e:smoke`                                                                                                              |
+| `npm run build:pages -w apps/web`                          | Build the static GitHub Pages demo into `apps/web/out` (docs/deploy.md)                                                                                                                     |
+| `npm run e2e:pages`                                        | Build the static demo, serve it under `/PitchPerfect/` on port 3100 (`E2E_PAGES_PORT`) and run its Playwright checks                                                                        |
+| `npm run lighthouse`                                       | Lighthouse CI on `/`, `/students` and `/jobs` against `next start` (needs a build and the api)                                                                                              |
+| `npm run check:dead`                                       | knip (unused files, exports, deps) and jscpd (duplication)                                                                                                                                  |
+| `npm run check:attribution`                                | Fail if a tracked file or commit message credits an AI tool (also runs in the pre-commit hook)                                                                                              |
+| `npm run eval -w apps/coach`                               | Run practice partner evals against a real provider (needs a key)                                                                                                                            |
+| `npm run admin -- <command>`                               | Admin CLI: `migrate`, `list-unverified`, `approve-company`, `suspend-company`, `unsuspend-company`                                                                                          |
+| `npm run admin:prod -w apps/api -- <command>`              | The admin CLI run from the compiled build, for production. `seed:prod` and `purge:prod` work the same way                                                                                   |
+| `npx tsx e2e/screenshots.ts`                               | Retake the screenshots above from a running stack with the demo data (needs `SEED_DEMO_PASSWORD`; `BASE_URL` defaults to http://localhost:3000)                                             |
 
 ## Documentation
 

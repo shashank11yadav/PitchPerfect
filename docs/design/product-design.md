@@ -36,14 +36,15 @@ In the product, the practice feature is honestly called an **"AI practice partne
 
 ## 5. Constraints
 
-- **Brand:** the name is **PitchPerfect**, with a logo and favicon set (a simple wordmark plus an icon mark, drawn as SVG). Palette and typography: primary blue `#3f56d2`, deep navy `#2d3c90`, neutrals (`#212529`, `#6c757d`, `#f8f9fa`, `#e9ecef`), Poppins (headings) and Manrope (body), and the same student/employer structure.
+- **Brand:** the name is **PitchPerfect**, with a logo and favicon set (a simple wordmark plus an icon mark, drawn as SVG). Palette and typography: primary blue `#3f56d2`, deep navy `#2d3c90`, neutrals (`#212529`, `#6c757d`, `#f8f9fa`, `#e9ecef`), Poppins (headings) and Manrope (body). The site has a student side and an employer side.
 - **Stack:**
-  - **TypeScript everywhere**, Node 22 LTS (`engines: >=22`), npm workspaces monorepo.
+  - **TypeScript everywhere**, Node 22 LTS (`engines: >=22.12`), npm workspaces monorepo.
   - **`apps/web`:** Next.js (App Router) + React, for server-rendered, SEO-friendly pages. Styling is Tailwind CSS, with brand tokens as CSS variables.
   - **`apps/api`:** Express + Mongoose + MongoDB.
   - **`apps/coach`:** a separate Node service (Fastify) for pitch practice. It is internal-only.
-  - **`packages/shared`:** zod schemas and types used by all three apps, which removes client/server duplication.
-  - **Local:** `docker compose up` runs MongoDB, a local mail catcher (Mailpit), api, coach and web.
+  - **`packages/shared`:** zod schemas, types, constants and small helpers used by all three apps, which removes client/server duplication.
+  - **`packages/partner`:** the practice partner engine (prompts, guardrails, the scripted provider, and the plan, turn and score steps), run by coach and by the static demo.
+  - **Local:** `npm run dev:infra` starts MongoDB and a local mail catcher (Mailpit) for `npm run dev`; `docker compose --profile full up --build -d` runs those plus api, coach and web.
 - **Practice mode:** voice-first with typing always available. It uses the browser's Web Speech API for speech-to-text and `speechSynthesis` for the buyer's voice. Unsupported browsers (e.g. Firefox STT) fall back to text automatically.
 - **LLM provider:** swappable between OpenAI and Anthropic via `COACH_PROVIDER=openai|anthropic`. Model IDs come from env (`COACH_MODEL`, `COACH_SCORING_MODEL`). Keys exist only in the coach service's environment.
 
@@ -53,28 +54,30 @@ In the product, the practice feature is honestly called an **"AI practice partne
 
 ```
 PitchPerfect/
-  apps/web/        Next.js site (public pages + student + employer apps)
-  apps/api/        REST API: auth, users, companies, jobs, applications, practice proxy
-  apps/coach/      Pitch-practice service: personas, conversation, scoring, guardrails
-  packages/shared/ zod schemas, types, constants (skills, roles, enums)
-  docs/            architecture.md, security.md, deploy.md, design/ (this doc)
+  apps/web/         Next.js site (public pages + student + employer apps), also built as the static demo
+  apps/api/         REST API: auth, users, companies, jobs, applications, practice proxy
+  apps/coach/       Pitch-practice service: HMAC-checked routes, LLM provider adapters, evals
+  packages/partner/ the practice partner engine: personas, conversation, scoring, guardrails
+  packages/shared/  zod schemas, types, constants (skills, roles, enums), seed data
+  e2e/              Playwright suites for the full stack, the static demo and a deployed site
+  docs/             architecture.md, security.md, deploy.md, and the other guides; design/ (this doc)
   docker-compose.yml, .env.example (per app), .gitignore, .gitleaks.toml
-  .github/workflows/ci.yml
+  .github/          workflows/ci.yml, workflows/pages.yml, dependabot.yml
 ```
 
 ### 6.2 Accounts and auth
 
 - **Roles:** `student`, `employer`. One `User` collection with a `role` field, plus role-specific profile documents, so sign-in and sessions are one code path for both roles.
-- **Sign up:** email + password (min 12 chars, checked against a breached-password list via a k-anonymity range query, or a bundled top-100k list if offline). Students must tick an **"I am 18 or older"** confirmation. Email verification is required before practice or applying. Each employer creates their **own** company record, one employer per company in v1, with no invites or teams, so one employer can never take over another's company.
+- **Sign up:** email + password (min 12 chars, checked against a breached-password list via a k-anonymity range query, or a bundled list of common passwords if offline). Students must tick an **"I am 18 or older"** confirmation. Email verification is required before practice or applying. Each employer creates their **own** company record, one employer per company in v1, with no invites or teams, so one employer can never take over another's company.
 - **Employer verification (lightweight, demo-appropriate):** a company is marked **verified** automatically when the employer's verified email domain matches the company website's domain. Otherwise it stays **unverified** until approved with the admin CLI (`npm run admin -- approve-company <id>`). Jobs from unverified companies show an "Unverified employer" badge, are `noindex`, and are left out of the sitemap and `JobPosting` structured data. The admin CLI can also suspend a company, which hides its jobs.
 - **Sessions:** server-side sessions stored in MongoDB, with an opaque session ID in an `httpOnly; Secure; SameSite=Lax` cookie. Rolling expiry is 7 days, absolute expiry 30 days. Logout destroys the session server-side. No JWTs in the browser.
-- **CSRF:** SameSite=Lax plus an Origin/Referer check on every state-changing request, plus a double-submit CSRF token for form posts.
+- **CSRF:** SameSite=Lax plus an Origin/Referer check on every state-changing request, plus a double-submit CSRF token (`x-csrf-token`) on every non-GET request.
 - **Password reset:** a 32-byte random token stored **hashed**, single use, expiring after 30 minutes. The link is built from `APP_URL`, never from the Host header. The response is the same whether or not the email exists.
-- **Rate limits:** sign-in 5/min per IP+email with exponential backoff; sign-up 3/hour per IP; reset 3/hour per email. Storage is Mongo-backed (or Redis if `REDIS_URL` is set).
+- **Rate limits:** sign-in 5/min per IP+email with exponential backoff; sign-up 3/hour per IP; reset 3/hour per email. Counters are stored in MongoDB.
 - **Data minimization:** students give name, email, school, major, graduation year, target role/industry and state. **Race, gender, date of birth and phone are not collected.** Employers give name, work email, job title and company.
 - **Uploads:** students can upload one résumé PDF. It is validated by magic bytes and capped at 2 MB, stored in GridFS under a random ID, and served only to the owner and to employers whose job the student applied to. Profile photos aren't part of v1.
 - **Account deletion:**
-  - **Student:** removes the user, sessions, applications, practice attempts and résumé.
+  - **Student:** removes the user, sessions, applications, saved jobs, practice attempts and résumé.
   - **Employer:** removes the user, their company, its jobs and interviews. Open applications to those jobs are marked "closed (employer left)", and affected applicants get an email.
 - **Same-origin API:** the browser only ever talks to the web origin. Next.js rewrites `/api/*` to the api service (and SSE streams pass through the same rewrite), so session cookies are always first-party and no cross-site CORS is needed in production. This works with or without a custom domain.
 
@@ -99,20 +102,20 @@ PitchPerfect/
 **Employer app (`/employer`):**
 
 - **Company profile:** name, website, LinkedIn, pitch, logo URL (validated HTTPS).
-- **Jobs:** create, edit, draft, publish, archive, delete. The description editor produces sanitized HTML (allowlist via DOMPurify on the server at write time and on render).
+- **Jobs:** create, edit, draft, publish, archive, delete. The description editor produces sanitized HTML (an allowlist applied with sanitize-html on the server at write time, and again with DOMPurify on render).
 - **Candidates per job:** the applicant list, with status pipeline applied → shortlisted → interview → hired/rejected and a save-for-later toggle. Employers schedule interviews with a date/time and a meeting link (HTTPS validated). Employers see a candidate's résumé and any scorecard the candidate chose to share.
 - **Dashboard:** counts of active jobs, applicants and interviews.
 - **Ownership:** every employer route checks that the job belongs to the employer's company (no cross-company access).
 
 ### 6.4 Pitch-practice service ("coach")
 
-**Shape:** `apps/coach` is its own process with its own package.json, Dockerfile, env and tests. It is **never exposed publicly**. Only `apps/api` calls it, over HTTP, using an HMAC-signed request (shared secret `COACH_SHARED_SECRET`, timestamp + body hash, 60 s replay window). The coach has no database access: the api owns persistence and passes in whatever context the coach needs.
+**Shape:** `apps/coach` is its own process with its own package.json, Dockerfile, env and tests. It is **never exposed publicly**. Only `apps/api` calls it, over HTTP, using an HMAC-signed request (shared secret `COACH_SHARED_SECRET`, signature over the timestamp, method, path and body, 60 s replay window). The coach has no database access: the api owns persistence and passes in whatever context the coach needs.
 
 **Flow:**
 
-1. **Start:** the student picks a skill (and optionally a job). The api checks auth, email verification and quota, then calls `coach POST /sessions/plan` with skill + job context + student target role. The coach returns a **scenario**: buyer persona (name, title, company type, personality, 2–3 hidden objections, what would convince them) and an opening line. The scenario is stored by the api; the hidden fields are never sent to the browser.
-2. **Turns:** the browser captures speech, transcribes it in-browser, shows the transcript for the student to edit, and sends it to `api POST /practice/:id/turns`. The api appends it and calls `coach POST /turns` with the scenario + transcript so far. The coach returns the persona's reply (≤ 80 words) plus a stage marker (opening, discovery, pitch, objection, close). Replies stream to the browser (SSE via the api) and are spoken with `speechSynthesis`.
-3. **End:** the student ends the session, or it auto-ends at the turn or time cap. The api calls `coach POST /score`, which returns a **scorecard** validated against a zod schema:
+1. **Start:** the student picks a skill (and optionally a job). The api checks auth, email verification and quota, then calls `coach POST /v1/plan` with skill + job context + student target role. The coach returns a **scenario**: buyer persona (name, title, company type, personality, 2–3 hidden objections, what would convince them) and an opening line. The scenario is stored by the api; the hidden fields are never sent to the browser.
+2. **Turns:** the browser captures speech, transcribes it in-browser, shows the transcript for the student to edit, and sends it to `api POST /api/practice/sessions/:id/turns`. The api appends it and calls `coach POST /v1/turn` with the scenario + transcript so far. The coach returns the persona's reply (≤ 80 words) plus a stage marker (opening, discovery, pitch, objection, close). Replies stream to the browser (SSE via the api) and are spoken with `speechSynthesis`.
+3. **End:** the student ends the session, or it auto-ends at the turn or time cap. The api calls `coach POST /v1/score`, which returns a **scorecard** validated against a zod schema:
    - Rubric dimensions, each scored 1–5 with a one-sentence justification quoting the student's words: Clarity, Value & relevance, Structure, Discovery questions, Objection handling, Confidence & language, Call to action.
    - An overall 0–100 score.
    - 3 strengths and 3 improvements.
@@ -120,7 +123,7 @@ PitchPerfect/
    - The skill-specific dimension is weighted higher (e.g. Objection handling for that skill).
 4. Results are saved as a `PracticeAttempt` (studentId, skill, jobId?, scenario public fields, transcript, scorecard, model/provider used, token counts, timestamps).
 
-**Provider adapter:** `LlmProvider` interface with `chat(messages, opts)` (streaming) and `structured(messages, zodSchema)`, implemented for OpenAI and Anthropic. It is selected by env at startup and fails fast with a clear error if the selected provider's key is missing. No provider names appear in prompts or UI.
+**Provider adapter:** `LlmProvider` interface with `chatStream` (streaming), `structured` (zod-validated) and an optional `moderate`, implemented for OpenAI and Anthropic in the coach, plus the deterministic scripted provider in `packages/partner`. It is selected by env at startup and fails fast with a clear error if the selected provider's key or model IDs are missing. No provider names appear in prompts; the privacy page names the provider that processes transcripts.
 
 **Guardrails (coach + api):**
 
@@ -128,9 +131,9 @@ PitchPerfect/
 - **Off-topic and jailbreak handling:** the system prompt pins the persona to the sales scenario. A cheap pre-check (rules + a small classification call) flags attempts to extract instructions, change role, or request harmful/sexual/violent/illegal content. Flagged turns get an in-character redirect, and 3 flags end the session with a neutral notice.
 - **Output:** replies are checked for system-prompt leakage (canary token in the prompt; if it appears in output, the reply is dropped and regenerated once), length-capped, and run through the provider's moderation endpoint where available, otherwise through the rule filter.
 - **PII:** emails, phone numbers and card-like numbers are redacted from transcripts before they are sent to the provider and before storage.
-- **Cost:** per-student quota (default 5 sessions/day, 30/month, env-configurable). A global daily token budget makes the coach refuse new sessions with a friendly message once it is exceeded. Per-request timeout 30 s, one retry with backoff, and a circuit breaker on provider errors.
-- **Privacy:** logs record IDs, timings, token counts and outcome codes only, never transcript text. Transcripts are kept 180 days, then purged by a scheduled job. Students can delete any attempt.
-- **Evaluation:** `apps/coach/evals/` contains ~30 scripted pitch transcripts (good, mediocre, off-topic, jailbreak attempts) with expected score bands and guardrail outcomes. `npm run eval` runs them against a real provider (manual, needs a key). Unit tests run against a fake provider in CI.
+- **Cost:** per-student quota (default 5 sessions/day, 30/month, env-configurable). A global daily token budget makes the api refuse new sessions with a friendly message once it is exceeded. Per-request timeout 30 s, one retry with backoff, and a circuit breaker on provider errors.
+- **Privacy:** logs record IDs, timings, token counts and outcome codes only, never transcript text. Transcripts are kept 180 days, then removed by a TTL index, with a scheduled purge job as a backstop. Students can delete any attempt.
+- **Evaluation:** `apps/coach/evals/` contains ~30 scripted conversations (strong, mediocre, weak, and adversarial ones such as off-topic chatter and jailbreak attempts) with expected score bands and guardrail outcomes. `npm run eval -w apps/coach` runs them against a real provider (manual, needs a key). Unit tests run against the fake provider in CI.
 
 **Voice UX:**
 
@@ -145,7 +148,7 @@ PitchPerfect/
 ### 6.5 Security baseline (all services)
 
 - Request validation with shared zod schemas on every route. Unknown fields are rejected (no mass assignment). `mongoose.set('sanitizeFilter', true)` and `strictQuery`.
-- helmet with a strict Content-Security-Policy (no inline scripts except Next.js nonces). HSTS in production. CORS allowlist from `CORS_ORIGINS`. web and api share a parent domain in production, so cookies stay first-party.
+- helmet with a strict Content-Security-Policy (no inline scripts except Next.js nonces). HSTS in production. No CORS: the browser reaches the api only through web's same-origin `/api` rewrite, so cookies stay first-party.
 - A central error handler maps validation and cast errors to 400, duplicates to 409 and everything else to a generic 500 with a request ID. No stack traces reach clients.
 - Rate limiting on all public routes. Body size limit 100 kB (except résumé upload). Pagination limits on all list endpoints.
 - All user-generated HTML is sanitized. Everything else renders as text.
@@ -154,9 +157,9 @@ PitchPerfect/
 
 ### 6.6 Design system
 
-- **Look:** clean, airy, confident. A white/`#f8f9fa` base, brand blue `#3f56d2` for primary actions and highlights, navy `#2d3c90` for headers, footers and hero gradients, Poppins headings and Manrope body. Rounded 12–16 px cards, soft shadows and generous spacing. A new PitchPerfect wordmark and icon in the same palette (SVG, plus generated favicon/PWA sizes).
+- **Look:** clean, airy, confident. A white/`#f8f9fa` base, brand blue `#3f56d2` for primary actions and highlights, navy `#2d3c90` for headers, footers and hero gradients, Poppins headings and Manrope body. Rounded 12–16 px cards, soft shadows and generous spacing. The PitchPerfect wordmark and icon in the same palette (SVG, plus generated favicon/PWA sizes).
 - **Legal pages:** `/privacy` and `/terms` are complete, readable templates covering the real data flows (accounts, résumés, transcripts, LLM provider, browser speech, retention, deletion, 18+). Each carries a visible banner saying it is a demo template, not legal advice.
-- **Components** (one shared set): Button, Input/Field with label + error, Select, Card, Badge, Tabs, Modal, Toast, EmptyState, Skeleton, DataTable, Navbar (role-aware: one component with links passed in), Footer, SkillCard, ScoreRing, RubricBar.
+- **Components** (one shared set): Button, Input/Field with label + error, Select, Card, Badge, Tabs, Modal, Toast, EmptyState, Skeleton, DataTable, Navbar (public) and AppShell (role-aware: one component with links passed in), Footer, SkillGrid, ScoreRing, RubricBar.
 - **Accessibility:** WCAG 2.2 AA. Every input has a visible label, focus rings are visible, contrast is checked, and everything works by keyboard. `prefers-reduced-motion` is respected.
 - **Responsive:** mobile-first. Dashboards collapse to a bottom tab bar on phones.
 - **Motion:** subtle only (hover, page fade, score count-up). Nothing that hurts Core Web Vitals.
@@ -165,10 +168,10 @@ PitchPerfect/
 
 - **Tests:**
   - api: integration tests (Vitest + supertest + mongodb-memory-server) for auth, ownership, validation and rate limits.
-  - coach: unit tests with a fake provider for guardrails, adapter selection, schema validation and HMAC.
+  - partner and coach: unit tests with the fake provider for guardrails, prompts, the scripted partner, adapter selection, schema validation and HMAC.
   - web: component tests for forms and the practice room state machine.
-  - Playwright e2e: sign up → verify (via Mailpit) → practice in text mode → see scorecard → apply to a job; employer posts a job → sees applicant → schedules interview.
-- **CI** (GitHub Actions): install, lint (ESLint + Prettier), typecheck, unit/integration tests, build, e2e (with the fake coach provider), gitleaks, npm audit.
+  - Playwright e2e: sign up → verify (via Mailpit) → practice in text mode → see scorecard → apply to a job; employer posts a job → sees applicant → schedules interview. A separate suite checks the static demo build.
+- **CI** (GitHub Actions): install, format check (Prettier), lint (ESLint), typecheck, unit/integration tests, build, knip and jscpd, the attribution check, npm audit and gitleaks; e2e (with the fake coach provider); the static demo's e2e; Lighthouse; and a build of the three container images.
 - **Docs:** README (what it is, screenshots, run locally, env vars, scripts), `docs/architecture.md` (diagram of web → api → coach → provider), `docs/deploy.md`.
 
 ### 6.8 Deployment
@@ -177,14 +180,14 @@ PitchPerfect/
 - **api** and **coach:** containers (Render or Fly.io). coach on a private network or protected by HMAC + IP allowlist.
 - **Database:** a new MongoDB Atlas cluster with a new user, IP allowlist and TLS.
 - **Email:** any SMTP provider via env.
-- **Static demo:** the public pages and the practice room are also published to GitHub Pages, with the scripted practice partner running in the browser.
+- **Static demo:** the public pages, lessons, job board and practice room are also published to GitHub Pages (https://shashank11yadav.github.io/PitchPerfect/) by `.github/workflows/pages.yml` on every push to `main`, with the scripted practice partner and the scorer running in the browser. Accounts, applying and the employer tools are full-app only.
 
 ## 7. Success criteria
 
-- `docker compose up` gives a working site at `http://localhost:3000` with seed data (fictional companies and jobs). All e2e flows pass.
-- Public pages score Lighthouse ≥ 90 in all four categories.
+- `docker compose --profile full up --build -d` gives a working site at `http://localhost:3000`, and the seed command loads the fictional companies and jobs. All e2e flows pass.
+- Public pages score Lighthouse ≥ 90 in all four categories (CI allows performance down to 85 on shared runners).
 - gitleaks and `npm audit --audit-level=high` are clean, and there are no high-severity findings in a final security review.
-- Duplicate code (jscpd) is under 3%, and knip/depcheck report no unused files or dependencies.
+- Duplicate code (jscpd) is under 3%, and knip reports no unused files, exports or dependencies.
 - A practice session works by voice in Chrome/Edge/Safari and by text in Firefox, and returns a scorecard in under 10 s after ending.
 
 ## 8. Key decisions

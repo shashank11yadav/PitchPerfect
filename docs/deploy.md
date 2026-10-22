@@ -1,6 +1,6 @@
 # Deployment
 
-Nothing here runs automatically. Deploying is a manual, deliberate step.
+Deploying the full stack is a manual, deliberate step; no workflow deploys it. The one automatic deploy is the static demo on GitHub Pages ([below](#github-pages-demo)).
 
 ## Topology
 
@@ -23,7 +23,7 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
    - Deploy the `apps/api/Dockerfile` image. Set every variable from `apps/api/.env.example`, with `APP_URL=https://<web domain>` and `COACH_URL=<private coach URL>`. The image sets `NODE_ENV=production`.
    - Run `node dist/scripts/admin.js migrate` (builds indexes) once, in a one-off container from the api image (for example a Render shell or `fly ssh console`). The scripts are compiled into the image; `tsx` and the `npm run admin`/`seed`/`purge` scripts are for development only. Outside a container, `npm run admin:prod -w apps/api -- migrate` runs the same build after `npm run build`.
    - Run `node dist/scripts/seed.js --demo` only for a demo environment, with `SEED_DEMO_PASSWORD` (12 or more characters) set for that command. The password is never printed, and re-running the seed never changes an existing account's password.
-5. **Deploy web:** set `API_ORIGIN`, `SITE_URL`, and `PROXY_SHARED_SECRET` if used. `API_ORIGIN` must be set when the app is **built**, because Next.js compiles the `/api` rewrite into the build. For the container image that means a build argument, `--build-arg API_ORIGIN=<api URL>`; set the same value at run time too, since server-rendered pages read it then. Build shared first, since web imports its compiled output: `npm run build -w packages/shared && npm run build -w apps/web` (the root `npm run build` does both in that order). See [The web proxy](#the-web-proxy) below.
+5. **Deploy web:** set `API_ORIGIN`, `SITE_URL`, and `PROXY_SHARED_SECRET` if used. `API_ORIGIN` must be set when the app is **built**, because Next.js compiles the `/api` rewrite into the build. For the container image that means a build argument, `--build-arg API_ORIGIN=<api URL>`; set the same value at run time too, since server-rendered pages read it then. Build the packages first, since web imports their compiled output: `npm run build -w packages/shared && npm run build -w packages/partner && npm run build -w apps/web` (the root `npm run build` builds `packages/*` before `apps/*`). See [The web proxy](#the-web-proxy) below.
 6. **Verify:**
    - Run `npx playwright test --config e2e/playwright.smoke.config.ts` with `BASE_URL` set to the deployed URL. It runs a read-only smoke test of the public pages, `/api/health`, and the headers.
    - Run Lighthouse on `/`, `/jobs` and one job page.
@@ -42,7 +42,7 @@ The live site at https://shashank11yadav.github.io/PitchPerfect/ is a static exp
 - Sign-in, sign-up, `/app/*` and `/employer/*` show a short note with the way to the practice room, the jobs and the repository. The normal build serves `/practice/*` and `/learn/*` as "not found"; they exist only in the export.
 - There are no response headers on Pages, so the page carries a `<meta http-equiv="Content-Security-Policy">` (see [security.md](security.md#the-static-demo)). The site's own `proxy.ts` and `/api` rewrite are not part of the export.
 
-Check it locally with `npm run e2e:pages`, which builds the export, serves it under `/PitchPerfect/` from `e2e/pages/static-server.mjs` and runs `e2e/pages/demo.spec.ts`. CI runs the same job on every push and pull request, and `pages.yml` runs it again before it uploads the export, so a broken demo is never deployed. The normal build, dev server, gate and e2e suite are unchanged: `PAGES_EXPORT` is unset for them.
+Check it locally with `npm run e2e:pages`, which builds the export, serves it under `/PitchPerfect/` on port 3100 (`E2E_PAGES_PORT` moves it) from `e2e/pages/static-server.mjs` and runs `e2e/pages/demo.spec.ts`. CI's `e2e-pages` job runs the same check on every push and pull request, and the `build` job in `pages.yml` (`npm ci`, Chromium, `npm run e2e:pages`, then the upload) runs it again before the `deploy` job publishes, so a broken demo is never deployed. `PAGES_EXPORT` is unset for the normal build, the dev server and the full e2e suite.
 
 ## Container images
 
@@ -54,7 +54,7 @@ docker build -f apps/api/Dockerfile -t pitchperfect-api .
 docker build -f apps/web/Dockerfile --build-arg API_ORIGIN=https://api.example.test -t pitchperfect-web .
 ```
 
-- The base is `node:22.23.3-alpine3.23`. The build stage installs only the image's own workspace and `packages/shared`, builds shared, then the app.
+- The base is `node:22.23.3-alpine3.23`. The build stage installs only the workspaces the image needs (its own, `packages/shared`, and `packages/partner` for coach and web), builds the packages, then the app.
 - The runtime stage holds production dependencies and the compiled output, runs as the non-root `node` user with `NODE_ENV=production`, and can't write to its own files (web's Next.js cache directory is the one exception).
 - Each image has a `HEALTHCHECK`: api `GET /api/health`, coach `GET /healthz`, web `GET /`.
 - web is the Next.js standalone server (`NEXT_OUTPUT=standalone` at build time). Other builds, including Vercel's and the one `next start` uses in CI, keep the normal output.

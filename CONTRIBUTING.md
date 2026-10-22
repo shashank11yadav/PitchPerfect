@@ -15,7 +15,7 @@
    ```bash
    npm run format && npm run lint && npm run typecheck && npm test && npm run check:dead
    ```
-   Run `npm run e2e` too if the change affects a user journey.
+   Run `npm run e2e` too if the change affects a user journey, and `npm run e2e:pages` if it affects the static demo. The pre-commit hook checks formatting of staged files, runs `npm run check:attribution`, and runs gitleaks when it is installed.
 5. Open a PR with a summary, screenshots for UI changes, test evidence, and the security considerations if any apply. For prompt or model changes, also include the eval results.
 
 ## Definition of done
@@ -28,4 +28,8 @@
 
 ## Commit messages
 
-Conventional commits: `type(scope): summary`. The types are `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf` and `security`. The scopes are `web`, `api`, `coach`, `shared`, `e2e`, `repo`.
+Conventional commits: `type(scope): summary`. The types are `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf` and `security`. The scopes are `web`, `api`, `coach`, `partner`, `shared`, `e2e`, `repo`, and `deps` for dependency updates.
+
+## Dependency updates
+
+Dependabot opens weekly pull requests for npm (grouped into one) and for GitHub Actions. It skips semver-major bumps of `@types/node`, which follows the Node 22 runtime in `.nvmrc`, and of `typescript`; do those by hand. Merge its pull requests with "Rebase and merge": a squash merge adds a co-author trailer to the commit.

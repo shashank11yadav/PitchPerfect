@@ -1,14 +1,14 @@
 # Design system
 
-PitchPerfect uses a light canvas, one strong blue, deep navy for weight, plenty of space, and type that is friendly without being cute. It keeps the original project's palette and typography, so it reads as the same product under a new name and mark.
+PitchPerfect uses a light canvas, one strong blue, deep navy for weight, plenty of space, and type that is friendly without being cute.
 
 ## Brand
 
 - **Name:** PitchPerfect (one word, two capitals). Never "Pitch Perfect" or "pitchperfect" in UI copy.
 - **Tagline:** "Practice your pitch. Get hired."
 - **Logo:** `apps/web/public/brand/logo.svg` (wordmark + mark) and `mark.svg` (icon only). The mark is a rounded speech bubble whose tail forms an upward check/arrow, drawn in `--pp-blue` on light backgrounds and white on navy. Minimum mark size 20 px; clear space = height of the bubble's tail.
-- **Favicons/PWA icons:** generated from `mark.svg` at build time into `apps/web/app/` (`icon.svg`, `apple-icon.png` 180 px) plus `public/icons/` 192 and 512 px; `manifest.webmanifest` with `theme_color #3f56d2`, `background_color #ffffff`.
-- **Open Graph image:** `app/opengraph-image.tsx` (1200×630, navy gradient, wordmark, tagline).
+- **Favicons/PWA icons:** generated from `mark.svg` by `npm run icons -w apps/web` (`scripts/generate-icons.mjs`; run it after changing the mark and commit the output) into `apps/web/app/` (`icon.svg`, `apple-icon.png` 180 px) plus `public/icons/` 192 and 512 px. `app/manifest.ts` serves `manifest.webmanifest` with `theme_color #3f56d2`, `background_color #ffffff`.
+- **Open Graph image:** one site-wide card, `app/opengraph-image.tsx` (1200×630, navy gradient, wordmark, tagline). Every page's `openGraph` and `twitter` metadata lists it (`lib/seo.ts`); the static demo serves it as `/opengraph-image.png`.
 
 ## Tokens
 
@@ -102,7 +102,7 @@ Each component is implemented once:
 
 - **Primitives:** `Button` (primary/secondary/ghost/danger; sizes sm/md/lg; `loading`), `Field` (label + control + hint + error; wraps Input/Textarea/Select), `Checkbox`, `RadioGroup`, `Badge`, `Card`, `Tabs`, `Modal` (focus trap, Esc, return focus), `Toast` (aria-live polite), `Skeleton`, `EmptyState`, `Pagination`, `DataTable`.
 - **Navigation:** `Navbar` (public), `AppShell` (sidebar/topbar/bottom tabs, links passed in by role), `Footer`.
-- **Domain:** `SkillCard`, `LessonContent`, `JobCard`, `JobDetails` (actions slot), `JobForm` (with `RichTextEditor`), `ApplicationRow`, `StatusPill`, `PersonaCard`, `TranscriptBubble`, `MicButton`, `ScoreRing`, `RubricBar`, `Scorecard`, `QuotaMeter`, `ConsentDialog`, `SafeHtml`.
+- **Domain:** `SkillGrid`, `LessonContent`, `JobCard`, `JobDetails` (actions slot), `JobForm` (with `RichTextEditor`), `ApplicationRow`, `StatusPill`, `PersonaCard`, `TranscriptBubble`, `MicButton`, `ScoreRing`, `RubricBar`, `Scorecard`, `QuotaMeter`, `ConsentDialog`, `SafeHtml`.
 
 ## Motion
 
@@ -130,7 +130,7 @@ Each component is implemented once:
   - Unique `description` of 140–160 characters.
   - `alternates.canonical` built from `SITE_URL`.
   - `openGraph` and `twitter` card.
-- `app/sitemap.ts` lists static public pages plus active jobs of verified companies. `app/robots.ts` allows public pages and disallows `/app`, `/employer`, `/api`.
+- `app/sitemap.ts` lists static public pages plus active jobs of verified companies (the static demo adds its practice and lesson pages and bakes the jobs from the seed data). `app/robots.ts` allows public pages and disallows `/app`, `/employer`, `/api`.
 - JSON-LD via a `JsonLd` component:
   - `Organization` and `WebSite` on `/`.
   - `FAQPage` on `/` and `/how-it-works`.

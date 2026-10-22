@@ -19,8 +19,9 @@ These rules apply to every workspace. If a rule here conflicts with a habit, the
 ## No duplication (DRY rules that matter here)
 
 - **Schemas live once** in `packages/shared/src/schemas`. api validates requests with them; web uses the same schemas for form validation and response typing. Never re-declare a request/response type by hand.
-- **Constants live once**: skills, rubric dimensions, enums, limits → `packages/shared`.
-- **UI lives once**: one `Navbar` (links passed in by role), one `AuthForm` family, one `JobDetails` used by public, student, and employer views (actions passed as props), one `ProfileForm` driven by a field config. If you're about to copy a component, add a prop instead.
+- **Constants live once**: skills, rubric dimensions, enums, limits → `packages/shared`. So do the helpers more than one app needs: `slugify`, the UTC day/month helpers, `redactTurn`/`redactPii`, and the fictional seed data.
+- **The practice partner lives once** in `packages/partner`: prompts, guardrails, the scripted provider, and `planScenario`/`runTurn`/`scoreTranscript`. coach and the static demo call it; neither re-implements a step.
+- **UI lives once**: one `Navbar` for the public site and one `AppShell` for both signed-in areas (links passed in by role), one auth form family (`AuthCard`, `SignupFormShell`, `form-parts`), one `JobDetails` used by public, student, and employer views (actions passed as props), one `ProfileForm` driven by a field config. If you're about to copy a component, add a prop instead.
 - **Server patterns live once**: ownership checks are helpers (`requireJobOwnedBy(employer)`, `requireApplicationForEmployer(...)`); status changes on applications go through one `transitionApplication(app, to, actor)` function with an allowed-transitions table.
 - CI runs jscpd; the duplication threshold is **3%**.
 
@@ -42,15 +43,15 @@ These rules apply to every workspace. If a rule here conflicts with a habit, the
 
 - Never build HTML from user input except through the shared sanitizer. Never use `dangerouslySetInnerHTML` except in `SafeHtml`, which takes already-sanitized HTML and sanitizes it again, and `JsonLd`, which writes `JSON.stringify` output with `<`, `>`, `&`, U+2028 and U+2029 escaped as `\uXXXX` (React would entity-encode a text child and break the JSON). These are the only two exceptions.
 - Never log request bodies, transcripts, passwords, tokens, or résumé contents. Log IDs, routes, status codes, timings.
-- Never read secrets outside `config.ts`.
+- Never read secrets outside `config.ts`. web has no `config.ts`; its one secret, `PROXY_SHARED_SECRET`, is read only in `proxy.ts`.
 - Never put secrets, personal data, or real people's information in fixtures, seeds, screenshots, or docs. Seed data is fictional.
 
 ## Testing
 
 - TDD for logic: write the failing test, make it pass, refactor.
-- Vitest everywhere. api integration tests use supertest against `createApp()` with `mongodb-memory-server`. coach tests use the `fake` provider; no test ever calls a real LLM.
+- Vitest everywhere. api integration tests use supertest against `createApp()` with `mongodb-memory-server`. partner and coach tests use the `fake` provider; no test ever calls a real LLM.
 - Every endpoint gets at least: happy path, validation failure, unauthenticated, wrong role, and (where relevant) not-owner tests.
-- Playwright e2e covers the main journeys and runs against the full stack with `COACH_PROVIDER=fake`.
+- Playwright e2e covers the main journeys and runs against the full stack with `COACH_PROVIDER=fake`. A separate suite (`npm run e2e:pages`) checks the static demo build.
 - Tests must be deterministic: no real network, fixed clock where time matters (`vi.useFakeTimers`), seeded randomness in the fake provider.
 
 ## Git
@@ -58,7 +59,7 @@ These rules apply to every workspace. If a rule here conflicts with a habit, the
 - Branch from `main`: `feat/<topic>`, `fix/<topic>`, `chore/<topic>`, `docs/<topic>`.
 - Conventional commit messages: `feat(api): add job applications`, `fix(web): keep focus in modal`. Present tense, imperative, ≤ 72-char subject.
 - Small commits that each pass `npm run lint && npm run typecheck && npm test` for the touched workspace.
-- Never commit `.env` files, generated builds, or anything under `.private/`.
+- Never commit `.env` files or generated builds.
 
 ## Copy and content
 
