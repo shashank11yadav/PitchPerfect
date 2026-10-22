@@ -28,8 +28,6 @@ const SESSIONS_COLLECTION = "sessions";
 
 /** The client of the app's existing Mongoose connection, so sessions share its pool. */
 type ConnectionClient = ReturnType<Connection["getClient"]>;
-/** connect-mongo is typed against its own copy of the driver; the runtime API is the same. */
-type StoreClient = NonNullable<Parameters<typeof MongoStore.create>[0]["client"]>;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -46,7 +44,7 @@ class LazyMongoStore extends session.Store {
 
   private open(): MongoStore {
     this.store ??= MongoStore.create({
-      client: this.getClient() as unknown as StoreClient,
+      client: this.getClient(),
       collectionName: SESSIONS_COLLECTION,
       ttl: (LIMITS.sessionRollingDays * DAY_MS) / 1000,
       autoRemove: "native",
