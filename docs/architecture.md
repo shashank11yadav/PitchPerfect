@@ -8,7 +8,7 @@
 | api     | `apps/api`                       | Express 5, Mongoose, MongoDB              | 4000               | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas   |
 | coach   | `apps/coach`                     | Fastify                                   | 4100               | **Never**                           | Personas, conversation turns, scoring, guardrails, LLM calls |
 | shared  | `packages/shared`                | TypeScript library                        | n/a                | n/a                                 | zod schemas, types, constants                                |
-| mongo   | Docker `mongo:8`                 |                                           | 27017              | No                                  | Data                                                         |
+| mongo   | Docker `mongo:8.2.6`             |                                           | 27017              | No                                  | Data                                                         |
 | mailpit | Docker `axllent/mailpit:v1.31.6` |                                           | 1025 SMTP, 8025 UI | Dev only                            | Catches outgoing email locally                               |
 
 ### Why three services

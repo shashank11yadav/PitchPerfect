@@ -11,7 +11,7 @@ x-dev-coach-secret: &dev-coach-secret dev-only-compose-coach-shared-secret-00000
 
 services:
   mongo:
-    image: mongo:8
+    image: mongo:8.2.6
     # Published on this machine only, never on the network.
     ports:
       - "127.0.0.1:27017:27017"
