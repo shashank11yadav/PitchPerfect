@@ -56,7 +56,7 @@ async function deleteEmployerData(mailer: Mailer, log: MailFailureLog, userId: s
 }
 
 /**
- * Deletes the account and everything it owns (design §6.3). The user document goes last, so a
+ * Deletes the account and everything it owns (design §6.2). The user document goes last, so a
  * failure part-way leaves an account that can simply try again; the steps are safe to repeat.
  * Sessions need no sweep: they are rejected as soon as their user no longer exists.
  */

@@ -171,7 +171,7 @@ PitchPerfect/
   - partner and coach: unit tests with the fake provider for guardrails, prompts, the scripted partner, adapter selection, schema validation and HMAC.
   - web: component tests for forms and the practice room state machine.
   - Playwright e2e: sign up → verify (via Mailpit) → practice in text mode → see scorecard → apply to a job; employer posts a job → sees applicant → schedules interview. A separate suite checks the static demo build.
-- **CI** (GitHub Actions): install, format check (Prettier), lint (ESLint), typecheck, unit/integration tests, build, knip and jscpd, the attribution check, npm audit and gitleaks; e2e (with the fake coach provider); the static demo's e2e; Lighthouse; and a build of the three container images.
+- **CI** (GitHub Actions): install, format check (Prettier), lint (ESLint), typecheck, unit/integration tests, build, knip and jscpd, npm audit and gitleaks; e2e (with the fake coach provider); the static demo's e2e; Lighthouse; and a build of the three container images.
 - **Docs:** README (what it is, screenshots, run locally, env vars, scripts), `docs/architecture.md` (diagram of web → api → coach → provider), `docs/deploy.md`.
 
 ### 6.8 Deployment

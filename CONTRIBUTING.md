@@ -15,7 +15,7 @@
    ```bash
    npm run format && npm run lint && npm run typecheck && npm test && npm run check:dead
    ```
-   Run `npm run e2e` too if the change affects a user journey, and `npm run e2e:pages` if it affects the static demo. The pre-commit hook checks formatting of staged files, runs `npm run check:attribution`, and runs gitleaks when it is installed.
+   Run `npm run e2e` too if the change affects a user journey, and `npm run e2e:pages` if it affects the static demo. The pre-commit hook checks formatting of staged files and runs gitleaks when it is installed.
 5. Open a PR with a summary, screenshots for UI changes, test evidence, and the security considerations if any apply. For prompt or model changes, also include the eval results.
 
 ## Definition of done
