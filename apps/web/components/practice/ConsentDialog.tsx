@@ -20,8 +20,8 @@ interface ConsentDialogProps {
 
 /**
  * The one-time practice notice (docs/security.md, Age and consent): who the partner really is
- * (an AI model, or the scripted demo), where transcripts go and how long they're kept, and what
- * the browser does with your voice.
+ * (an AI model, the scripted demo on our server, or the scripted demo in this browser), where
+ * transcripts go and how long they're kept, and what the browser does with your voice.
  */
 export function ConsentDialog({ open, onClose, onAccepted, partner = "live" }: ConsentDialogProps) {
   const { refresh } = useSession();
@@ -53,20 +53,28 @@ export function ConsentDialog({ open, onClose, onAccepted, partner = "live" }: C
     >
       <div className="flex flex-col gap-5">
         <ul className="flex flex-col gap-4 text-ink">
-          {partner === "scripted" ? (
-            <>
-              <li>
-                <strong className="font-semibold">Your practice partner is scripted.</strong> It
-                plays a buyer with a made-up name and job from a fixed set of lines, and it scores
-                the call when you end it.
-              </li>
-              <li>
-                <strong className="font-semibold">Your text stays with us.</strong> The scripted
-                partner runs on our own server. Transcripts and scorecards are kept for{" "}
-                {LIMITS.attemptRetentionDays} days, and you can delete any of them sooner.
-              </li>
-            </>
-          ) : (
+          {partner !== "live" && (
+            <li>
+              <strong className="font-semibold">Your practice partner is scripted.</strong> It plays
+              a buyer with a made-up name and job from a fixed set of lines, and it scores the call
+              when you end it.
+            </li>
+          )}
+          {partner === "scripted" && (
+            <li>
+              <strong className="font-semibold">Your text stays with us.</strong> The scripted
+              partner runs on our own server. Transcripts and scorecards are kept for{" "}
+              {LIMITS.attemptRetentionDays} days, and you can delete any of them sooner.
+            </li>
+          )}
+          {partner === "browser" && (
+            <li>
+              <strong className="font-semibold">Everything runs in this browser tab.</strong> The
+              partner and the scorer run here, typed text never leaves the page, and your sessions
+              stay in this tab until you close it.
+            </li>
+          )}
+          {partner === "live" && (
             <>
               <li>
                 <strong className="font-semibold">Your practice partner is an AI.</strong> It plays

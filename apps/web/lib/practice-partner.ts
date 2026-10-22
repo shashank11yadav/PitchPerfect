@@ -15,8 +15,8 @@ let cached: { kind: PracticePartnerKind; until: number } | undefined;
  * model, the disclosure that is safe to be wrong about.
  */
 export async function practicePartnerKind(): Promise<PracticePartnerKind> {
-  // The static demo has no api: its partner is the scripted one, running in the browser.
-  if (PAGES_EXPORT) return "scripted";
+  // The static demo has no api: its scripted partner runs in the visitor's browser.
+  if (PAGES_EXPORT) return "browser";
   const now = Date.now();
   if (cached && now < cached.until) return cached.kind;
   let kind: PracticePartnerKind = "live";

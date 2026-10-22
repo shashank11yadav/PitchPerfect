@@ -51,7 +51,7 @@ describe("the practice room's api, answered in the browser", () => {
     expect(demoQuota()).toMatchObject({
       dailyUsed: 0,
       available: true,
-      practicePartner: "scripted",
+      practicePartner: "browser",
     });
     const started = await startDemoSession({ skill: "pitching" });
     expect(started.scenario.openingLine).not.toBe("");
@@ -170,7 +170,7 @@ describe("the demo's api routes", () => {
 
   it("answers the room's routes the way the api would", async () => {
     await expect(demoFetch("/practice/quota")).resolves.toMatchObject({
-      practicePartner: "scripted",
+      practicePartner: "browser",
     });
     const started = await demoFetch<{ attemptId: string }>("/practice/sessions", {
       method: "POST",

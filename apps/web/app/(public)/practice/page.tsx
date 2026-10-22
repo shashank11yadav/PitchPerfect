@@ -22,8 +22,9 @@ export default function DemoPracticePage() {
       title="Practice"
       lead={
         <p>
-          Your partner is scripted and runs in this browser. Nothing you say leaves the page, and
-          the scorecard is built here too.
+          Your partner is scripted and runs in this browser tab, and so does the scorer. Typed text
+          never leaves the page; if you talk, your browser’s speech service turns it into text
+          first.
         </p>
       }
     >

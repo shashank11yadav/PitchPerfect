@@ -4,7 +4,7 @@ import { isSkillSlug, type SkillSlug } from "@pitchperfect/shared";
 import { History } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useSyncExternalStore, type ReactNode } from "react";
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { AttemptScreen } from "@/components/practice/AttemptScreen";
 import { PracticeHistory } from "@/components/practice/PracticeHistory";
 import { PracticeRoom } from "@/components/practice/PracticeRoom";
@@ -51,10 +51,17 @@ function DemoSession({ children }: { children: ReactNode }) {
   return <ProvideSession session={session}>{children}</ProvideSession>;
 }
 
-/** `?jobId=` when it looks like an id (the room checks that the job is listed). */
+/**
+ * `?jobId=` when it looks like an id (the room checks that the job is listed), read once: the room
+ * rewrites the address when a call starts, and the job must stay with the session.
+ */
 function useJobIdParam(): string | undefined {
-  const jobId = useSearchParams().get("jobId");
-  return jobId !== null && /^[a-f0-9]{24}$/i.test(jobId) ? jobId : undefined;
+  const params = useSearchParams();
+  const [jobId] = useState(() => {
+    const value = params.get("jobId");
+    return value !== null && /^[a-f0-9]{24}$/i.test(value) ? value : undefined;
+  });
+  return jobId;
 }
 
 /** `/practice/`: pick a skill, with the job from the query string if there is one. */

@@ -1,6 +1,7 @@
 import {
   LIMITS,
   redactPii,
+  redactTurn,
   STAGES,
   type CoachTurnRequest,
   type EndedReason,
@@ -19,7 +20,7 @@ import type { CoachClient } from "../../services/coach-client.js";
 import { recordUsage } from "./quota.js";
 import { scenarioOf, sessionEndsAt, studentTurnsOf, visible } from "./service.js";
 import type { PracticeStream } from "./sse.js";
-import { estimateUnansweredTurn, redactTurn } from "./text.js";
+import { estimateUnansweredTurn } from "./text.js";
 import { acquireTurnLock, releaseTurnLock, type TurnLock } from "./turn-lock.js";
 
 /** The slice of a logger a turn needs; pino's `req.log` fits. Only ids, codes, and counts go in. */

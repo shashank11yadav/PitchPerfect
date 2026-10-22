@@ -42,8 +42,9 @@ export const Quota: Parser<PracticeQuota> = {
       typeof data.budgetExhausted === "boolean" &&
       typeof data.resetsAt === "string"
     ) {
-      // Anything but a clear "scripted" is disclosed as a live model: the conservative reading.
-      const practicePartner = data.practicePartner === "scripted" ? "scripted" : "live";
+      // Anything but a clear "scripted" (or the demo's "browser") is disclosed as a live model.
+      const { practicePartner: kind } = data;
+      const practicePartner = kind === "scripted" || kind === "browser" ? kind : "live";
       return { ...data, practicePartner } as unknown as PracticeQuota;
     }
     throw unexpected("/practice/quota");

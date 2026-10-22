@@ -150,7 +150,8 @@ export const tokenPageMetadata = (page: PageSeo): Metadata => ({
  * `openGraph` replaces the inherited one, image included.
  */
 const SHARE_IMAGE = {
-  url: "/opengraph-image",
+  // The export copies the route's PNG to a `.png` path, so a static host serves it as an image.
+  url: PAGES_EXPORT ? "/opengraph-image.png" : "/opengraph-image",
   width: 1200,
   height: 630,
   alt: `${SITE_NAME}: ${TAGLINE}`,

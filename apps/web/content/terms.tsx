@@ -32,13 +32,15 @@ export const termsSections = (partner: PracticePartnerKind): readonly LegalSecti
   },
   {
     id: "practice-partner",
-    title: partner === "scripted" ? "The practice partner" : "The AI practice partner",
+    title: partner === "live" ? "The AI practice partner" : "The practice partner",
     body: (
       <>
         <p>
-          {partner === "scripted"
-            ? "The practice partner is scripted, not a person. It runs on our server and picks its lines from a fixed set."
-            : "The practice partner is an AI, not a person."}{" "}
+          {partner === "live"
+            ? "The practice partner is an AI, not a person."
+            : partner === "scripted"
+              ? "The practice partner is scripted, not a person. It runs on our server and picks its lines from a fixed set."
+              : "The practice partner is scripted, not a person. In this demo it runs in your browser and picks its lines from a fixed set."}{" "}
           The buyers it plays, and the companies they work for, are invented. Its replies and
           scorecards are generated automatically and can be wrong. Treat them as practice feedback,
           not as professional, legal or career advice, and not as a prediction of any hiring
@@ -61,8 +63,8 @@ export const termsSections = (partner: PracticePartnerKind): readonly LegalSecti
       <p>
         You keep ownership of what you add: your profile, résumé, practice turns, job posts and
         company details. You allow us to store and process it to run the service
-        {partner === "scripted" ? "" : ", including sending practice text to our AI provider"}, and
-        to show it to the people you choose: employers you apply to, or, for job posts and company
+        {partner === "live" ? ", including sending practice text to our AI provider" : ""}, and to
+        show it to the people you choose: employers you apply to, or, for job posts and company
         profiles, the public.
       </p>
     ),

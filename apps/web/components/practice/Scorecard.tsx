@@ -5,6 +5,7 @@ import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { formatLocalDate } from "@/lib/local-time";
+import { PAGES_EXPORT } from "@/lib/pages-export";
 import { practiceHref } from "@/lib/practice/paths";
 import { DeleteAttempt } from "./DeleteAttempt";
 import { ScorecardDetails } from "./ScorecardDetails";
@@ -58,18 +59,21 @@ export function Scorecard({ attempt, onPracticeAgain }: ScorecardProps) {
         />
       </Card>
 
-      <Card as="section" aria-labelledby="share-title" className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 id="share-title" className="text-h4">
-            Share with an application
-          </h2>
-          <p className="max-w-prose text-ink">
-            The employer sees the scores, the reasons and the lines quoted here, not the whole
-            transcript. You can stop sharing at any time.
-          </p>
-        </div>
-        <ShareScorecard attemptId={attempt.id} />
-      </Card>
+      {/* Sharing needs an application, which the static demo has no way to make. */}
+      {!PAGES_EXPORT && (
+        <Card as="section" aria-labelledby="share-title" className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <h2 id="share-title" className="text-h4">
+              Share with an application
+            </h2>
+            <p className="max-w-prose text-ink">
+              The employer sees the scores, the reasons and the lines quoted here, not the whole
+              transcript. You can stop sharing at any time.
+            </p>
+          </div>
+          <ShareScorecard attemptId={attempt.id} />
+        </Card>
+      )}
     </div>
   );
 }

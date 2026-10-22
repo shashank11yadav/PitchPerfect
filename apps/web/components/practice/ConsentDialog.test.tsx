@@ -66,6 +66,16 @@ describe("ConsentDialog", () => {
     expect(dialog).toHaveTextContent(/never receives or stores audio/);
   });
 
+  it("says the partner and the scorer run in this tab when the demo runs in the browser", () => {
+    render(<ConsentDialog open partner="browser" onClose={vi.fn()} onAccepted={vi.fn()} />);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent("Your practice partner is scripted.");
+    expect(dialog).toHaveTextContent("Everything runs in this browser tab.");
+    expect(dialog).toHaveTextContent("Talking uses your browser’s speech recognition.");
+    expect(dialog).not.toHaveTextContent("our own server");
+    expect(dialog).not.toHaveTextContent("180 days");
+  });
+
   it("records the acceptance and refreshes the session", async () => {
     const user = userEvent.setup();
     const onAccepted = vi.fn();

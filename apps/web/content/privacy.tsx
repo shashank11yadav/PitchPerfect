@@ -1,7 +1,7 @@
 import type { PracticePartnerKind } from "@pitchperfect/shared";
 import type { LegalSection } from "@/components/marketing/LegalDocument";
 import { COPY_LIMITS as L } from "./limits";
-import { SCRIPTED_PARTNER_NOTICE } from "./partner-notice";
+import { BROWSER_PARTNER_NOTICE, SCRIPTED_PARTNER_NOTICE } from "./partner-notice";
 
 const AI_PROVIDER = "our AI provider (OpenAI or Anthropic, depending on configuration)";
 const CONTACT = "the maintainer listed on the project's GitHub page";
@@ -19,9 +19,11 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
       <ul>
         <li>We keep what you give us to run your account, your practice and your applications.</li>
         <li>
-          {partner === "scripted"
-            ? `${SCRIPTED_PARTNER_NOTICE} Transcripts are deleted after ${L.retentionDays} days.`
-            : `Your practice turns go to ${AI_PROVIDER}, which plays the buyer and scores the session. Transcripts are deleted after ${L.retentionDays} days.`}
+          {partner === "live"
+            ? `Your practice turns go to ${AI_PROVIDER}, which plays the buyer and scores the session. Transcripts are deleted after ${L.retentionDays} days.`
+            : partner === "scripted"
+              ? `${SCRIPTED_PARTNER_NOTICE} Transcripts are deleted after ${L.retentionDays} days.`
+              : BROWSER_PARTNER_NOTICE}
         </li>
         <li>
           We never get your audio. Your browser turns speech into text, and only the text reaches
@@ -68,7 +70,7 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         <li>
           <strong>Practice sessions:</strong> the skill, the job if you practiced for one, the buyer
           scenario, what you and the partner said, your scorecard, timestamps, and how much{" "}
-          {partner === "scripted" ? "" : "AI "}processing the session used. We also record when you
+          {partner === "live" ? "AI " : ""}processing the session used. We also record when you
           accepted the practice notice.
         </li>
         <li>
@@ -132,13 +134,21 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
     title: "Who else processes your data",
     body: (
       <ul>
-        {partner === "scripted" ? (
+        {partner === "browser" && (
+          <li>
+            <strong>No one.</strong> The scripted partner and the scorer run in this browser tab,
+            and your practice turns stay in the tab, with email addresses, phone numbers and
+            card-like numbers replaced by placeholders.
+          </li>
+        )}
+        {partner === "scripted" && (
           <li>
             <strong>No AI provider.</strong> The scripted partner runs on our server. Your practice
             turns are stored with your session, with email addresses, phone numbers and card-like
             numbers replaced by placeholders.
           </li>
-        ) : (
+        )}
+        {partner === "live" && (
           <li>
             <strong>{AI_PROVIDER}</strong> receives the text of your practice turns, the scenario
             and, if you practiced for a job, that job&apos;s title, description and skills. Before

@@ -15,6 +15,7 @@ import {
 import {
   LIMITS,
   redactPii,
+  redactTurn,
   secondsUntil,
   STAGES,
   type AttemptListQuery,
@@ -100,7 +101,7 @@ export function demoQuota(now = new Date()): PracticeQuota {
     available: dailyUsed < LIMITS.dailyQuota && monthlyUsed < LIMITS.monthlyQuota,
     budgetExhausted: false,
     resetsAt: utcDay(now, 1).toISOString(),
-    practicePartner: "scripted",
+    practicePartner: "browser",
   };
 }
 
@@ -279,7 +280,8 @@ export async function runDemoTurn(
 
   let studentText: string;
   try {
-    studentText = redactPii(sanitizeInput(text));
+    sanitizeInput(text);
+    studentText = redactTurn(text);
   } catch (error) {
     if (error instanceof InputError) {
       throw new ApiError(400, "validation_failed", "Your message must be 1–1000 characters.");

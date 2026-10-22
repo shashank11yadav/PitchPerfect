@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { LoadError, Loading } from "@/components/ui/LoadState";
-import { SCRIPTED_PARTNER_NOTICE } from "@/content/partner-notice";
+import { partnerNotice } from "@/content/partner-notice";
 import { attemptPath, historyHref, lessonPath, practiceHref } from "@/lib/practice/paths";
 import type { PracticeQuotaLoad } from "@/lib/practice/use-practice-partner";
 import type { PracticeRoomControls } from "@/lib/practice/use-practice-room";
@@ -158,8 +158,7 @@ export function RoomLobby({ skill, jobId, room, quota }: RoomLobbyProps) {
           </Link>
         </div>
         <p className="max-w-prose text-small text-muted">
-          Starting uses one of today’s sessions.{" "}
-          {quota.partner === "scripted" && `${SCRIPTED_PARTNER_NOTICE} `}
+          Starting uses one of today’s sessions. {partnerNotice(quota.partner)?.concat(" ")}
           {VOICE_DISCLOSURE}{" "}
           <Link href="/privacy" className={TEXT_LINK}>
             Privacy

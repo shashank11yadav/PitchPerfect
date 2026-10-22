@@ -12,8 +12,8 @@ export function DemoBanner() {
   return (
     <div className="bg-primary-soft text-ink">
       <p className="mx-auto w-full max-w-wide px-4 py-2.5 text-small sm:px-6 lg:px-8">
-        This is a static demo: practice calls and the job board work here. Accounts and employer
-        tools run in the full app;{" "}
+        This is a static demo: practice with a scripted partner and browse the job board here.
+        Accounts and employer tools run in the full app;{" "}
         <a href={REPO_URL} className={`${LINK} text-primary`} rel="noopener noreferrer">
           the code is on GitHub
         </a>
@@ -32,7 +32,7 @@ const COPY: Record<Area, { title: string; lead: string }> = {
   },
   student: {
     title: "The student app isn’t part of this demo",
-    lead: "The dashboard, saved jobs, applications and history need an account and a server, and this static build has neither. You can still run a practice call and read the job board.",
+    lead: "The dashboard, saved jobs and applications need an account and a server, and this static build has neither. You can still run a practice call, look back at this tab’s sessions and read the job board.",
   },
   employer: {
     title: "The employer app isn’t part of this demo",

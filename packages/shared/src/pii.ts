@@ -1,3 +1,6 @@
+import { LIMITS } from "./limits.js";
+import { countChars, normalizeTurnText } from "./text.js";
+
 const EMAIL = /[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,24}/g;
 
 // Date, time, and year-range shapes that must never be mistaken for a phone number.
@@ -53,4 +56,20 @@ function redactToken(match: string, timestamp?: string, prefix = "", run = ""): 
 /** Replaces emails, phone numbers, and Luhn-valid card numbers with placeholders. */
 export function redactPii(text: string): string {
   return text.replace(EMAIL, "[email]").replace(TOKEN, redactToken);
+}
+
+const clip = (text: string) => Array.from(text).slice(0, LIMITS.turnMaxChars).join("");
+
+/** A placeholder such as `[email]` cut short at the end of the text. */
+const CUT_PLACEHOLDER = /\[[a-z]*$/;
+
+/**
+ * A student's turn as it is stored and forwarded: normalized, clipped to the turn limit, then
+ * PII-redacted. A placeholder can be longer than what it replaced; if that pushes the text over
+ * the limit, the text is clipped again and a placeholder cut in half is dropped, never kept partial.
+ */
+export function redactTurn(text: string): string {
+  const redacted = redactPii(clip(normalizeTurnText(text)));
+  if (countChars(redacted) <= LIMITS.turnMaxChars) return redacted;
+  return clip(redacted).replace(CUT_PLACEHOLDER, "").trimEnd();
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { redactPii } from "./pii.js";
+import { LIMITS } from "./limits.js";
+import { redactPii, redactTurn } from "./pii.js";
+import { countChars } from "./text.js";
 
 describe("redactPii", () => {
   it("redacts emails", () => {
@@ -72,5 +74,25 @@ describe("redactPii", () => {
     redactPii("1 ".repeat(50_000));
     redactPii("a.".repeat(50_000) + "@");
     expect(Date.now() - start).toBeLessThan(1000);
+  });
+});
+
+describe("redactTurn", () => {
+  it("normalizes and redacts personal data", () => {
+    expect(redactTurn("  Call  me at 617-555-0100\u0000 or a.b@example.test ")).toBe(
+      "Call me at [phone] or [email]",
+    );
+  });
+
+  it("keeps a placeholder that fits within the limit", () => {
+    const text = `${"z".repeat(990)} a@b.co`;
+    expect(redactTurn(text)).toBe(`${"z".repeat(990)} [email]`);
+  });
+
+  it("drops a placeholder that redaction pushed past the limit instead of cutting it", () => {
+    // 1000 characters; "[email]" is one character longer than "a@b.co".
+    const text = `${"z".repeat(LIMITS.turnMaxChars - 7)} a@b.co`;
+    expect(countChars(text)).toBe(LIMITS.turnMaxChars);
+    expect(redactTurn(text)).toBe("z".repeat(LIMITS.turnMaxChars - 7));
   });
 });

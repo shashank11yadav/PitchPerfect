@@ -32,7 +32,7 @@ const traits = (personality: string) =>
 
 /**
  * Who the student is talking to. The persona has a human name but is always labelled for what it
- * is: an AI model, or the scripted demo partner when that is what the coach runs.
+ * is: an AI model, or the scripted demo partner (on our server, or in the visitor's browser).
  */
 export function PersonaCard({
   persona,
@@ -41,7 +41,8 @@ export function PersonaCard({
   className,
 }: PersonaCardProps) {
   const id = useId();
-  const BadgeIcon = partner === "scripted" ? ScrollText : Sparkles;
+  const scripted = partner !== "live";
+  const BadgeIcon = scripted ? ScrollText : Sparkles;
   return (
     <section
       aria-labelledby={id}
@@ -61,7 +62,7 @@ export function PersonaCard({
             </Title>
             <Badge tone="info">
               <BadgeIcon aria-hidden="true" className="size-3" />
-              {partner === "scripted" ? "Scripted demo partner" : "AI practice partner"}
+              {scripted ? "Scripted demo partner" : "AI practice partner"}
             </Badge>
           </div>
           <p className="text-small text-ink">{persona.personaTitle}</p>

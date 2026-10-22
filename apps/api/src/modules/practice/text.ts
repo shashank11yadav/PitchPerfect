@@ -1,27 +1,4 @@
-import {
-  countChars,
-  LIMITS,
-  normalizeTurnText,
-  redactPii,
-  type CoachTurnRequest,
-  type Usage,
-} from "@pitchperfect/shared";
-
-const clip = (text: string) => Array.from(text).slice(0, LIMITS.turnMaxChars).join("");
-
-/** A placeholder such as `[email]` cut short at the end of the text. */
-const CUT_PLACEHOLDER = /\[[a-z]*$/;
-
-/**
- * The student's text as it is stored and forwarded: normalized, clipped to the turn limit, then
- * PII-redacted. A placeholder can be longer than what it replaced; if that pushes the text over
- * the limit, the text is clipped again and a placeholder cut in half is dropped, never kept partial.
- */
-export function redactTurn(text: string): string {
-  const redacted = redactPii(clip(normalizeTurnText(text)));
-  if (countChars(redacted) <= LIMITS.turnMaxChars) return redacted;
-  return clip(redacted).replace(CUT_PLACEHOLDER, "").trimEnd();
-}
+import { LIMITS, type CoachTurnRequest, type Usage } from "@pitchperfect/shared";
 
 /**
  * Usage charged for a turn the coach started but never finished (client left, or an `error`

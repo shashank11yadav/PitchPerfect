@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadError, Loading } from "@/components/ui/LoadState";
 import { ApiError } from "@/lib/api";
 import { formatLocalDate } from "@/lib/local-time";
+import { PAGES_EXPORT } from "@/lib/pages-export";
 import { END_NOTICES, unscoredReason } from "@/lib/practice/practice-reducer";
 import { withoutOpening } from "@/lib/practice/use-practice-room";
 import { historyHref, practiceHref } from "@/lib/practice/paths";
@@ -81,7 +82,11 @@ export function AttemptScreen({ id }: { id: string }) {
         <EmptyState
           icon={<History className="size-6" />}
           title="We can’t find that session"
-          description={`It may have been deleted, or it’s older than ${String(LIMITS.attemptRetentionDays)} days.`}
+          description={
+            PAGES_EXPORT
+              ? "It may have been deleted, or it ran in another tab: this demo keeps sessions in the tab that ran them."
+              : `It may have been deleted, or it’s older than ${String(LIMITS.attemptRetentionDays)} days.`
+          }
           action={
             <Link href={historyHref()} className={buttonClasses()}>
               See your sessions
