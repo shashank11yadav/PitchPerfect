@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 
 // Character classes keep this file from matching its own patterns.
 const PATTERNS = [
-  /co-authored[-]by:/i,
+  // Co-author trailers only count when they credit an AI tool; GitHub adds one for Dependabot.
+  /co-authored[-]by:.*\b([c]laude|[a]nthropic|[c]hatgpt|[o]penai|[c]opilot|[c]ursor|[c]odex|[g]emini)\b/i,
   /generated (with|by) ([c]laude|[c]hatgpt|[c]opilot|an? ai\b)/i,
   /\b[c]laude\b/i,
   /\b[c]hatgpt\b/i,
