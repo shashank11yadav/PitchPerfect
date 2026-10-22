@@ -139,5 +139,5 @@ Each component is implemented once:
 - Performance:
   - Public pages are server-rendered per request with minimal client JS, and use `next/image` for images.
   - No layout shift from fonts (`next/font`).
-  - Lighthouse ≥ 90 in all four categories, checked in CI with `@lhci/cli` against `next start`.
+  - Lighthouse ≥ 90 in all four categories locally. CI checks accessibility, best practices and SEO at ≥ 90 and performance at ≥ 85, because shared CI runners score a few points lower than a laptop.
 - `noindex` on the app, employer, auth, and unverified-company job pages.
