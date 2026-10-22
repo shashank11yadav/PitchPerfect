@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import type { PracticeQuota } from "@pitchperfect/shared";
+import { secondsUntil, utcDay, utcMonth, type PracticeQuota } from "@pitchperfect/shared";
 import type { Config } from "../../config.js";
 import { PracticeAttempt, UsageDay } from "../../db/models/index.js";
 import { BudgetExhaustedError, QuotaExceededError } from "../../errors.js";
@@ -14,17 +14,6 @@ export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
 }
-
-/** Start of the UTC day `offset` days from `now`'s. */
-const utcDay = (now: Date, offset = 0) =>
-  new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offset));
-
-/** Start of the UTC calendar month `offset` months from `now`'s. */
-const utcMonth = (now: Date, offset = 0) =>
-  new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1));
-
-const secondsUntil = (now: Date, then: Date) =>
-  Math.max(1, Math.ceil((then.getTime() - now.getTime()) / 1000));
 
 /** `YYYY-MM-DD` of the UTC day, the key of `usagedays`. */
 const dayKey = (now: Date) => now.toISOString().slice(0, 10);
