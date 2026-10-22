@@ -32,6 +32,18 @@ Nothing here runs automatically. Deploying is a manual, deliberate step.
    - Run the [security checklist](security.md#pre-release-security-checklist).
 7. **Schedule the purge job:** run `node dist/scripts/purge-expired.js` daily from the api image (a cron job on the host with the api's environment; `npm run purge:prod -w apps/api` outside a container). It removes expired tokens and attempts as a backstop for the TTL indexes, marks sessions that were left `active` long past the 20-minute limit as abandoned, and removes `starting` placeholders of session starts that never finished (older than 5 minutes).
 
+## GitHub Pages demo
+
+The live site at https://shashank11yadav.github.io/PitchPerfect/ is a static export of `apps/web`, deployed by `.github/workflows/pages.yml` on every push to `main` (and by hand with "Run workflow"). Pages serves files only, so nothing of the api, the coach or the database runs there. What the demo does instead:
+
+- `npm run build:pages -w apps/web` (`apps/web/scripts/build-pages.mjs`) builds `packages/shared` and `packages/partner`, then runs `next build` with `PAGES_EXPORT=1`: `output: "export"`, `basePath` and `assetPrefix` from `PAGES_BASE_PATH` (default `/PitchPerfect`), `trailingSlash`, unoptimized images, and no rewrites or headers. The output is `apps/web/out`, with a `.nojekyll` marker; the build's own files go to `.next` as for any build, so run `npm run build` again before a local `next start`. `SITE_URL` defaults to the Pages URL, and canonical links, the sitemap, robots and JSON-LD use it.
+- The job board, job pages and the sitemap are baked from the seed data (`@pitchperfect/shared/seed-data`, the same records `npm run seed` loads); search and filters run in the browser.
+- `/practice/` is a public practice room. The partner is the engine the coach runs (`packages/partner`) with its scripted provider, in the browser: the consent notice, the input guard, PII redaction, the turn, time and guard-flag limits and the scorer all run there. Sessions, consent and lesson progress live in `sessionStorage` for the tab; nothing is sent anywhere. `/learn/` has the lessons and `/practice/history/` the tab's sessions.
+- Sign-in, sign-up, `/app/*` and `/employer/*` show a short note with the way to the practice room, the jobs and the repository. The normal build serves `/practice/*` and `/learn/*` as "not found"; they exist only in the export.
+- There are no response headers on Pages, so the page carries a `<meta http-equiv="Content-Security-Policy">` (see [security.md](security.md#the-static-demo)). The site's own `proxy.ts` and `/api` rewrite are not part of the export.
+
+Check it locally with `npm run e2e:pages`, which builds the export, serves it under `/PitchPerfect/` from `e2e/pages/static-server.mjs` and runs `e2e/pages/demo.spec.ts`. The normal build, dev server, gate and e2e suite are unchanged: `PAGES_EXPORT` is unset for them.
+
 ## Container images
 
 Each service has a multi-stage image built from the repository root:

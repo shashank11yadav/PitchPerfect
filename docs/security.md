@@ -37,6 +37,15 @@ This is the threat model, the controls we require, and how to check them. Any ch
 | Secrets in git                       | `.env*` ignored (except `.env.example`), gitleaks in CI and pre-commit, config only via env                                                                                                                                                                                                          | repo                                          | CI                                                                  |
 | Vulnerable dependencies              | `npm audit --audit-level=high` in CI, Dependabot weekly, exact versions                                                                                                                                                                                                                              | repo                                          | CI                                                                  |
 
+## The static demo
+
+The GitHub Pages site ([deploy.md](deploy.md#github-pages-demo)) is files only, so the controls in the table that live in the api, in sessions, cookies or CSRF tokens, or in the coach's HMAC check have nothing to protect there: the demo has no accounts, stores nothing on a server, and the practice partner runs in the visitor's browser, where the only data is the visitor's own. What changes:
+
+- **Headers.** A static host sets none, so the document carries `<meta http-equiv="Content-Security-Policy">` with `default-src 'self'`, `script-src 'self' 'unsafe-inline'`, `style-src 'self' 'unsafe-inline'`, `img-src 'self' data:`, `font-src 'self'`, `connect-src 'self'`, `base-uri 'self'`, `form-action 'self'` and `object-src 'none'`. Static HTML has no per-request nonce, so Next's inline bootstrap needs `'unsafe-inline'`; `'unsafe-eval'` stays out, and `connect-src 'self'` means the page can call nothing but its own origin. `frame-ancestors`, HSTS, `X-Content-Type-Options`, `Referrer-Policy` and `Permissions-Policy` cannot be set from a page and are missing on the demo. The e2e suite for the export (`npm run e2e:pages`) fails on any CSP violation in the console.
+- **Cookies and CSRF.** The export never sets or reads a cookie: the root layout does not read the session cookie, `apiFetch` and `apiStream` answer from the browser (`apps/web/lib/demo`), and no CSRF token is fetched. Session state is `sessionStorage` for the tab.
+- **The partner.** The same guard rules, canary check, output check and PII redaction run, in the browser, on the visitor's own text; the hidden part of a scenario is in the tab's storage because the partner that needs it runs there. The scripted provider makes no network calls.
+- **Robots.** `robots.txt` is generated under `/PitchPerfect/`, where crawlers do not look for it; the `noindex` metadata on the account routes still applies to the note pages they render.
+
 ## Age and consent
 
 - Students confirm they are 18 or older at sign-up (`ageConfirmed: true` is required and stored as `ageConfirmedAt`).

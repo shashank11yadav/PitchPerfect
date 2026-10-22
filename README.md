@@ -5,6 +5,8 @@ Practice the sales call out loud before the real one, then apply with the scorec
 PitchPerfect is a practice and hiring site for entry-level sales jobs. A student reads a short lesson on one skill, then runs the call by voice or text with an AI practice partner that plays the buyer. When the call ends they get a scorecard that quotes what they actually said. Employers post roles and, if a candidate chooses to share one, read that scorecard next to the application.
 
 > Status: portfolio project. It runs end to end on your machine with seeded demo data; deployment steps are in [docs/deploy.md](docs/deploy.md).
+>
+> **Live demo:** https://shashank11yadav.github.io/PitchPerfect/ is a static build on GitHub Pages. You can run a practice call (the scripted partner and the scorer run in your browser), read the lessons and browse the job board; accounts, applying and the employer tools need the api and database, so they are only in the full app.
 
 ## What's inside
 
@@ -45,7 +47,8 @@ Browser ──► apps/web (Next.js, port 3000)
 - `apps/web`: Next.js App Router site: public pages (static/SSR for SEO), student app, employer app.
 - `apps/api`: REST API: accounts, sessions, companies, jobs, applications, lessons, and the practice proxy.
 - `apps/coach`: independent practice partner service: buyer personas, conversation, scoring, guardrails, provider adapter.
-- `packages/shared`: zod schemas, types, and constants shared by all apps.
+- `packages/partner`: the practice partner engine (prompts, guardrails, the scripted provider, and the plan, turn and score steps), used by coach and by the static demo in the browser.
+- `packages/shared`: zod schemas, types, constants and the fictional seed data shared by all apps.
 
 Details: [docs/architecture.md](docs/architecture.md).
 
@@ -90,6 +93,8 @@ docker compose exec -e SEED_DEMO_PASSWORD='pick-a-12-plus-char-password' api nod
 | `npm test`                                    | Unit and integration tests for all workspaces                                                             |
 | `npm run e2e`                                 | Build, then Playwright end-to-end tests on a throwaway database (needs `dev:infra`; fake provider)        |
 | `npm run e2e:smoke`                           | Read-only smoke test of a running site: `BASE_URL=https://… npm run e2e:smoke`                            |
+| `npm run build:pages -w apps/web`             | Build the static GitHub Pages demo into `apps/web/out` (docs/deploy.md)                                   |
+| `npm run e2e:pages`                           | Build the static demo, serve it under `/PitchPerfect/` and run its Playwright checks                      |
 | `npm run lighthouse`                          | Lighthouse CI on `/`, `/students` and `/jobs` against `next start` (needs a build and the api)            |
 | `npm run check:dead`                          | knip (unused files, exports, deps) and jscpd (duplication)                                                |
 | `npm run eval -w apps/coach`                  | Run practice partner evals against a real provider (needs a key)                                          |

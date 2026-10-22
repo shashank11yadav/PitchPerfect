@@ -2,20 +2,21 @@
 
 ## Services
 
-| Service | Path                             | Runtime                                   | Port               | Exposed publicly                    | Owns                                                         |
-| ------- | -------------------------------- | ----------------------------------------- | ------------------ | ----------------------------------- | ------------------------------------------------------------ |
-| web     | `apps/web`                       | Next.js (App Router), React, Tailwind CSS | 3000               | Yes                                 | Pages, UI, SEO, proxying `/api/*`                            |
-| api     | `apps/api`                       | Express 5, Mongoose, MongoDB              | 4000               | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas   |
-| coach   | `apps/coach`                     | Fastify                                   | 4100               | **Never**                           | Personas, conversation turns, scoring, guardrails, LLM calls |
-| shared  | `packages/shared`                | TypeScript library                        | n/a                | n/a                                 | zod schemas, types, constants                                |
-| mongo   | Docker `mongo:8.2.6`             |                                           | 27017              | No                                  | Data                                                         |
-| mailpit | Docker `axllent/mailpit:v1.31.6` |                                           | 1025 SMTP, 8025 UI | Dev only                            | Catches outgoing email locally                               |
+| Service | Path                             | Runtime                                   | Port               | Exposed publicly                    | Owns                                                                                 |
+| ------- | -------------------------------- | ----------------------------------------- | ------------------ | ----------------------------------- | ------------------------------------------------------------------------------------ |
+| web     | `apps/web`                       | Next.js (App Router), React, Tailwind CSS | 3000               | Yes                                 | Pages, UI, SEO, proxying `/api/*`                                                    |
+| api     | `apps/api`                       | Express 5, Mongoose, MongoDB              | 4000               | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas                           |
+| coach   | `apps/coach`                     | Fastify                                   | 4100               | **Never**                           | Personas, conversation turns, scoring, guardrails, LLM calls                         |
+| partner | `packages/partner`               | TypeScript library                        | n/a                | n/a                                 | The practice partner engine: prompts, guardrails, scripted provider, plan/turn/score |
+| shared  | `packages/shared`                | TypeScript library                        | n/a                | n/a                                 | zod schemas, types, constants, seed data                                             |
+| mongo   | Docker `mongo:8.2.6`             |                                           | 27017              | No                                  | Data                                                                                 |
+| mailpit | Docker `axllent/mailpit:v1.31.6` |                                           | 1025 SMTP, 8025 UI | Dev only                            | Catches outgoing email locally                                                       |
 
 ### Why three services
 
 - **web** renders public pages on the server for SEO and serves the app UI. The browser only ever talks to the web origin; Next.js rewrites `/api/:path*` to `${API_ORIGIN}/api/:path*`, so the session cookie is always first-party and production needs no cross-site CORS.
 - **api** is the only component with database access and the only component that decides _who may do what_. Every authorization check lives here.
-- **coach** is the independent practice partner. It holds the LLM keys and nothing else: no database, no user accounts, no cookies. It trusts only HMAC-signed requests from api, so it can be deployed, scaled, rate-limited, and swapped independently, and a compromise of web cannot reach the LLM keys.
+- **coach** is the independent practice partner. It holds the LLM keys and nothing else: no database, no user accounts, no cookies. It trusts only HMAC-signed requests from api, so it can be deployed, scaled, rate-limited, and swapped independently, and a compromise of web cannot reach the LLM keys. The partner's logic itself (prompts, guardrails, the scripted provider, and the plan, turn and score steps) is `packages/partner`, a plain TypeScript library with no transport; coach wraps it in Fastify routes, and the static GitHub Pages demo runs the same code in the browser with the scripted provider ([deploy.md](deploy.md#github-pages-demo)).
 
 ## Monorepo layout
 
@@ -51,20 +52,26 @@ apps/
     src/
       app.ts, server.ts, config.ts
       auth/hmac.ts          request signature verification
-      providers/            provider.ts (interface), openai.ts, anthropic.ts, fake.ts, index.ts (selection)
-      prompts/              persona-plan.ts, persona-turn.ts, scorer.ts, guard.ts
-      guardrails/           input.ts, pii.ts, output.ts, canary.ts
-      routes/               plan.ts, turn.ts, score.ts, health.ts
+      providers/            openai.ts, anthropic.ts, index.ts (selection by COACH_PROVIDER)
+      routes/               plan.ts, turn.ts, score.ts, health.ts (thin wrappers over packages/partner)
     evals/                  scripted transcripts + runner
     test/
     Dockerfile              practice partner image (never given a public port)
 packages/
+  partner/
+    src/
+      provider.ts           the LlmProvider interface, task tags, ProviderError
+      prompts/              persona-plan.ts, persona-turn.ts, scorer.ts, guard.ts, blocks.ts
+      guardrails/           input.ts, guard-rules.ts, output.ts, canary.ts, leak-scan.ts, circuit-breaker.ts
+      fake/                 the scripted provider: persona, intents, voices, scorecard
+      plan.ts, turn/, score.ts  the three steps of a session, without a transport
   shared/
     src/
       skills.ts             the 8 skills (slug, title, summary, weighted rubric dimension)
       rubric.ts             rubric dimensions and scorecard schema
       schemas/              request/response zod schemas per api module + coach contract
       enums.ts              roles, job status, application status, etc.
+      seed-data.ts          the fictional companies and jobs (api seed, static demo board)
       index.ts
 e2e/                        Playwright tests, plus screenshots.ts for the README images
 docs/                       docs, and images/ for the README screenshots
@@ -135,7 +142,7 @@ Browser speech recognition produces the text; the browser's `speechSynthesis` sp
 | `/app` (dashboard), `/app/learn`, `/app/learn/[skill]`, `/app/practice`, `/app/practice/[skill]`, `/app/practice/attempt/[id]`, `/app/history`, `/app/jobs`, `/app/applications`, `/app/settings` | Client app, `noindex`                | Student    |
 | `/employer` (dashboard), `/employer/company`, `/employer/jobs`, `/employer/jobs/new`, `/employer/jobs/[id]`, `/employer/jobs/[id]/applicants`, `/employer/settings`                               | Client app, `noindex`                | Employer   |
 
-Every page renders per request: the CSP nonce is new on each request, and Next.js adds it to scripts only while rendering a request. Never add `force-static`, `revalidate` or other ISR/static options to a page; the browser would block its scripts.
+Every page renders per request: the CSP nonce is new on each request, and Next.js adds it to scripts only while rendering a request. Never add `force-static`, `revalidate` or other ISR/static options to a page; the browser would block its scripts. (The static demo is the one exception, and it is a separate build: `PAGES_EXPORT=1` turns off the per-request pieces and carries its policy in a `<meta>` tag. In that build `/practice/*` and `/learn/*` are public pages for the room and the lessons, and the account routes show a note; in the normal build those two trees are "not found".)
 
 Route protection: `apps/web/proxy.ts` (the Next.js 16 name for middleware) checks for the session cookie and redirects to `/signin?next=…`; the page then calls `GET /api/auth/me` and redirects on 401/403 (wrong role → own dashboard). The API is the real gate; the client guard is only UX.
 
