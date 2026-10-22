@@ -22,9 +22,6 @@ blob-report/
 *.pem
 *.key
 
-# Local-only notes and working files
-.private/
-
 # Practice partner eval outputs (may contain model text)
 apps/coach/evals/results/
 .lighthouseci/

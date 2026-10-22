@@ -27,7 +27,6 @@
 **/*.key
 
 # Local-only notes and working files
-.private
 OneDrive*
 **/*.docx
 **/*.doc
