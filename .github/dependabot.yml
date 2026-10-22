@@ -8,6 +8,13 @@ updates:
       npm-dependencies:
         patterns:
           - "*"
+    ignore:
+      # Node types follow the runtime in .nvmrc (22); bump them together with Node.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # A TypeScript major is a planned migration, not a weekly bump.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
