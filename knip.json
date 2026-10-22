@@ -6,7 +6,8 @@
         "scripts/*.mjs",
         "e2e/global-setup.ts",
         "e2e/screenshots.ts",
-        "e2e/{tests,smoke}/**/*.spec.ts"
+        "e2e/{tests,smoke,pages}/**/*.spec.ts",
+        "e2e/pages/static-server.mjs"
       ],
       "playwright": false
     },

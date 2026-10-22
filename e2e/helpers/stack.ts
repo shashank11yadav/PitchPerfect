@@ -4,11 +4,17 @@
  * `dev-only-` placeholder, which the services refuse in production.
  */
 
-/** 3000, unless `E2E_WEB_PORT` moves it (when another app already holds 3000). */
+/**
+ * 3000, 4000 and 4100, unless `E2E_WEB_PORT`, `E2E_API_PORT` or `E2E_COACH_PORT` moves one (when a
+ * dev stack already holds it). The web build must then point at the api too: `API_ORIGIN` is
+ * compiled into it, so set it to the moved api URL for `npm run e2e`.
+ */
 export const WEB_PORT = process.env.E2E_WEB_PORT ?? "3000";
+const API_PORT = process.env.E2E_API_PORT ?? "4000";
+const COACH_PORT = process.env.E2E_COACH_PORT ?? "4100";
 export const WEB_URL = `http://localhost:${WEB_PORT}`;
-export const API_URL = "http://localhost:4000";
-export const COACH_URL = "http://127.0.0.1:4100";
+export const API_URL = `http://localhost:${API_PORT}`;
+export const COACH_URL = `http://127.0.0.1:${COACH_PORT}`;
 export const MAILPIT_URL = "http://localhost:8025";
 export const MONGO_URL = "mongodb://localhost:27017";
 export const E2E_DATABASE = "pitchperfect-e2e";
@@ -21,7 +27,7 @@ const COACH_SHARED_SECRET = "dev-only-e2e-coach-shared-secret-0000000000";
 
 export const COACH_ENV = {
   NODE_ENV: "development",
-  PORT: "4100",
+  PORT: COACH_PORT,
   LOG_LEVEL: "warn",
   COACH_PROVIDER: "fake",
   COACH_SHARED_SECRET,
@@ -29,7 +35,7 @@ export const COACH_ENV = {
 
 export const API_ENV = {
   NODE_ENV: "development",
-  PORT: "4000",
+  PORT: API_PORT,
   LOG_LEVEL: "warn",
   APP_URL: WEB_URL,
   MONGODB_URI,

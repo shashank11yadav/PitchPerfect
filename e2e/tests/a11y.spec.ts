@@ -1,12 +1,8 @@
-import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { EMPLOYER_STATE, STUDENT_STATE } from "../helpers/accounts";
+import { expectAxeClean } from "../helpers/axe";
 import { expect, test } from "../helpers/fixtures";
 import { publicJob } from "../helpers/jobs";
-
-/** WCAG 2.2 A and AA (docs/design-system.md, Accessibility). */
-const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const BLOCKING = new Set(["serious", "critical"]);
 
 /** Loads `path`, waits for its data, and fails on any serious or critical axe violation. */
 async function expectNoSeriousViolations(page: Page, path: string): Promise<void> {
@@ -14,25 +10,7 @@ async function expectNoSeriousViolations(page: Page, path: string): Promise<void
   await page.waitForLoadState("networkidle");
   // A signed-in page that bounced to sign-in would still pass, so check where we are.
   expect(new URL(page.url()).pathname).toBe(path);
-  await expect(page.locator("h1")).toHaveCount(1);
-  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
-  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
-  // Minor and moderate findings don't fail the run; they're listed in the report.
-  for (const { id, impact, nodes } of violations) {
-    test.info().annotations.push({
-      type: "axe",
-      description: `${path}: ${String(impact)} ${id} (${String(nodes.length)})`,
-    });
-  }
-  const blocking = violations
-    .filter((violation) => BLOCKING.has(violation.impact ?? ""))
-    .map(({ id, impact, help, nodes }) => ({
-      id,
-      impact,
-      help,
-      targets: nodes.map((node) => node.target.join(" ")),
-    }));
-  expect(blocking, `serious or critical axe violations on ${path}`).toEqual([]);
+  await expectAxeClean(page, path);
 }
 
 test.describe("public pages", () => {
