@@ -1,9 +1,15 @@
-import { PublicJobSummaryPageSchema, type PublicJobSummary } from "@pitchperfect/shared";
+import {
+  PublicJobSummaryPageSchema,
+  SKILL_SLUGS,
+  type PublicJobSummary,
+} from "@pitchperfect/shared";
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
-import { PUBLIC_PAGES } from "@/lib/seo";
+import { DEMO_JOBS } from "@/lib/demo/jobs";
+import { PAGES_EXPORT, staticMetadataRoute } from "@/lib/pages-export";
+
+import { absoluteUrl, PUBLIC_PAGES } from "@/lib/seo";
 import { serverApi } from "@/lib/server-api";
-import { SITE_URL } from "@/lib/site";
 
 const PAGE_SIZE = 50;
 /** A backstop against a misbehaving api: 100 pages is 5,000 jobs. */
@@ -23,20 +29,30 @@ async function activeJobs(): Promise<PublicJobSummary[]> {
   return jobs;
 }
 
+/** Pre-rendered in the static export only; see `staticMetadataRoute`. */
+export const generateStaticParams = staticMetadataRoute;
+
 /** Static public pages, plus active jobs of verified companies (docs/design-system.md, SEO). */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // Built per request, so new jobs appear without a rebuild.
-  await connection();
-  const pages = Object.values(PUBLIC_PAGES).map(({ path }) => ({
-    url: new URL(path, `${SITE_URL}/`).toString(),
-  }));
+  // Built per request, so new jobs appear without a rebuild. The static demo bakes its board.
+  if (!PAGES_EXPORT) await connection();
+  const paths = Object.values(PUBLIC_PAGES).map(({ path }) => path);
+  // The static demo's practice room and lessons are public pages there, and nowhere else.
+  const demoPaths = PAGES_EXPORT
+    ? [
+        "/practice",
+        "/learn",
+        ...SKILL_SLUGS.flatMap((skill) => [`/practice/${skill}`, `/learn/${skill}`]),
+      ]
+    : [];
+  const pages = [...paths, ...demoPaths].map((path) => ({ url: absoluteUrl(path) }));
 
   // If the api can't be reached, the static pages are still worth serving.
-  const jobs = await activeJobs().catch(() => []);
+  const jobs = PAGES_EXPORT ? DEMO_JOBS.map(({ job }) => job) : await activeJobs().catch(() => []);
   const jobEntries = jobs
     .filter((job) => job.company.verification === "verified")
     // No lastModified: publishedAt says when a job went live, not when its page last changed.
-    .map((job) => ({ url: `${SITE_URL}/jobs/${job.slug}` }));
+    .map((job) => ({ url: absoluteUrl(`/jobs/${job.slug}`) }));
 
   return [...pages, ...jobEntries];
 }

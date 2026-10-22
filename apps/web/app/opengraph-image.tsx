@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { SITE_NAME, TAGLINE } from "@/lib/site";
+import { staticMetadataRoute } from "@/lib/pages-export";
 
 export const alt = `${SITE_NAME}: ${TAGLINE}`;
 export const size = { width: 1200, height: 630 };
@@ -33,3 +34,6 @@ export default async function OpenGraphImage() {
     size,
   );
 }
+
+/** Pre-rendered in the static export only; see `staticMetadataRoute`. */
+export const generateStaticParams = staticMetadataRoute;

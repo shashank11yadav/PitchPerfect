@@ -1,12 +1,8 @@
 import { isSkillSlug, type SkillSlug } from "@pitchperfect/shared";
+import { queryValue as first, type SearchParams } from "@/lib/search-params";
 
 /** Next's `searchParams` for the student pages. */
-export type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-async function first(searchParams: SearchParams, key: string): Promise<string | undefined> {
-  const raw = (await searchParams)[key];
-  return Array.isArray(raw) ? raw[0] : raw;
-}
+export type { SearchParams };
 
 /** `?page=` as a whole number from 1, or 1. */
 export async function pageParam(searchParams: SearchParams): Promise<number> {

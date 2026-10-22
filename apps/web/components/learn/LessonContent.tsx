@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { lessonPath, practiceHref } from "@/lib/practice/paths";
 import { LessonProgress } from "./LessonProgress";
 
 const TEXT_LINK =
@@ -31,7 +32,7 @@ export function LessonContent({ skill, children }: LessonContentProps) {
       className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start xl:gap-8"
     >
       <Card className="md:p-10">
-        <Link href="/app/learn" className={`${TEXT_LINK} text-small`}>
+        <Link href={lessonPath()} className={`${TEXT_LINK} text-small`}>
           <ArrowLeft aria-hidden="true" className="size-4" />
           All lessons
         </Link>
@@ -42,7 +43,7 @@ export function LessonContent({ skill, children }: LessonContentProps) {
         <div className="mt-8 max-w-prose border-t border-border pt-8 text-ink">{children}</div>
         <div className="mt-10 flex max-w-prose flex-col gap-6 border-t border-border pt-8 sm:flex-row sm:items-start sm:justify-between">
           <LessonProgress skill={skill} />
-          <Link href={`/app/practice/${skill}`} className={buttonClasses({ size: "lg" })}>
+          <Link href={practiceHref(skill)} className={buttonClasses({ size: "lg" })}>
             <Mic aria-hidden="true" className="size-5" />
             Practice this skill
           </Link>
@@ -72,7 +73,7 @@ export function LessonContent({ skill, children }: LessonContentProps) {
           </Card>
         )}
         {next && (
-          <Link href={`/app/learn/${next.slug}`} className={TEXT_LINK}>
+          <Link href={lessonPath(next.slug)} className={TEXT_LINK}>
             Next lesson: {next.title}
             <ArrowRight aria-hidden="true" className="size-4" />
           </Link>

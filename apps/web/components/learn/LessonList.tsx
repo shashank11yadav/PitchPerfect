@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/cn";
+import { lessonPath } from "@/lib/practice/paths";
 import { LessonsDone } from "@/lib/student-api";
 import { useApi } from "@/lib/use-api";
 
@@ -34,7 +35,7 @@ export function LessonList() {
             return (
               <li key={slug}>
                 <Link
-                  href={`/app/learn/${slug}`}
+                  href={lessonPath(slug)}
                   className="group flex items-start gap-4 rounded-card px-5 py-5 hover:bg-surface-2 md:px-6"
                 >
                   <span

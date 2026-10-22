@@ -9,7 +9,7 @@ import { LoadError, Loading } from "@/components/ui/LoadState";
 import { cn } from "@/lib/cn";
 import { AttemptsPage, LessonsDone, Quota } from "@/lib/student-api";
 import { useApi } from "@/lib/use-api";
-import { practiceHref } from "@/lib/practice/paths";
+import { historyHref, practiceHref } from "@/lib/practice/paths";
 import { QuotaMeter } from "./QuotaMeter";
 import { scoreBand } from "./ScoreRing";
 
@@ -115,7 +115,7 @@ export function PracticeOverview({ jobId }: { jobId?: string | undefined }) {
           </p>
           {jobId && (
             <Link
-              href="/app/practice"
+              href={practiceHref()}
               className="pp-link self-start rounded-control text-small font-semibold text-primary"
             >
               Practice without the job
@@ -147,7 +147,7 @@ export function PracticeOverview({ jobId }: { jobId?: string | undefined }) {
         {quota.state === "error" && <LoadError what="your sessions" onRetry={quota.reload} />}
         {quota.state === "ready" && <QuotaMeter quota={quota.data} />}
         <Link
-          href="/app/history"
+          href={historyHref()}
           className="pp-link self-start rounded-control font-semibold text-primary"
         >
           Your past sessions

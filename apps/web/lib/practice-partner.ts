@@ -1,5 +1,6 @@
 import "server-only";
 import { HealthResponseSchema, type PracticePartnerKind } from "@pitchperfect/shared";
+import { PAGES_EXPORT } from "./pages-export";
 import { serverApi } from "./server-api";
 
 /** How long one answer from the api stands in for the next ones, per web instance. */
@@ -14,6 +15,8 @@ let cached: { kind: PracticePartnerKind; until: number } | undefined;
  * model, the disclosure that is safe to be wrong about.
  */
 export async function practicePartnerKind(): Promise<PracticePartnerKind> {
+  // The static demo has no api: its partner is the scripted one, running in the browser.
+  if (PAGES_EXPORT) return "scripted";
   const now = Date.now();
   if (cached && now < cached.until) return cached.kind;
   let kind: PracticePartnerKind = "live";

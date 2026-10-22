@@ -11,6 +11,7 @@
     "**/*.mdx",
     "**/dist/**",
     "**/.next/**",
+    "**/out/**",
     "**/coverage/**",
     "**/*.d.ts",
     "**/next-env.d.ts",

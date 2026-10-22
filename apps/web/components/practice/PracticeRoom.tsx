@@ -8,6 +8,7 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/cn";
 import type { PracticePartnerKind } from "@pitchperfect/shared";
+import { historyHref } from "@/lib/practice/paths";
 import { canEnd, type RoomEntry, type RoomState } from "@/lib/practice/practice-reducer";
 import { usePracticeQuota } from "@/lib/practice/use-practice-partner";
 import { usePracticeRoom, type PracticeRoomControls } from "@/lib/practice/use-practice-room";
@@ -100,7 +101,7 @@ function EndedPanel({ room }: { room: PracticeRoomControls }) {
             Start a new session
           </button>
         )}
-        <Link href="/app/history" className="pp-link rounded-control font-semibold text-primary">
+        <Link href={historyHref()} className="pp-link rounded-control font-semibold text-primary">
           Your past sessions
         </Link>
       </div>

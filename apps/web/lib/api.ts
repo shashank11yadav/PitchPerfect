@@ -1,4 +1,5 @@
 import { PracticeEvent } from "@pitchperfect/shared";
+import { PAGES_EXPORT } from "./pages-export";
 
 /** An error response from the api, or a failure to reach it (`status` 0). */
 export class ApiError extends Error {
@@ -165,11 +166,19 @@ async function send(
   return res;
 }
 
-/** Calls the api on the web origin and returns its JSON body (`undefined` for 204). */
+/**
+ * Calls the api on the web origin and returns its JSON body (`undefined` for 204). The static
+ * demo has no api: there, the practice routes are answered in the browser (lib/demo), loaded
+ * only in that build.
+ */
 export async function apiFetch<T = unknown>(
   path: string,
   { schema, ...options }: ApiFetchOptions<T> = {},
 ): Promise<T> {
+  if (PAGES_EXPORT) {
+    const { demoFetch } = await import("./demo/demo-api");
+    return demoFetch<T>(path, { ...options, ...(schema && { schema }) });
+  }
   const res = await send(path, { ...options, accept: "application/json" });
   if (res.status === 204) return undefined as T;
   const data: unknown = await res.json();
@@ -217,6 +226,10 @@ export async function apiStream(
   onEvent: (event: PracticeEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
+  if (PAGES_EXPORT) {
+    const { demoStream } = await import("./demo/demo-api");
+    return demoStream(path, body, onEvent, signal);
+  }
   const res = await send(path, { method: "POST", body, signal, accept: "text/event-stream" });
   if (!res.body) return;
 

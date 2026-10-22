@@ -4,7 +4,7 @@ import { LIMITS, type AttemptView, type PracticeEvent, type SkillSlug } from "@p
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { ApiError, apiFetch, apiStream } from "@/lib/api";
 import { OneAttempt, StartedPractice } from "@/lib/student-api";
-import { attemptPath, practiceHref } from "./paths";
+import { attemptPath, browserUrl, practiceHref } from "./paths";
 import { endProblem, startProblem, turnProblem } from "./practice-messages";
 import {
   canEnd,
@@ -153,7 +153,7 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
       });
       setNow(Date.now());
       // A reload now comes back to this session instead of the start screen.
-      window.history.replaceState(null, "", attemptPath(started.attemptId));
+      window.history.replaceState(null, "", browserUrl(attemptPath(started.attemptId)));
       speakReply(started.scenario.openingLine);
       return null;
     } catch (error) {
@@ -315,7 +315,7 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
     cancel();
     dispatch({ type: "reset" });
     // The address still names the old session; point it back at this skill's start screen.
-    window.history.replaceState(null, "", practiceHref(skill, jobId));
+    window.history.replaceState(null, "", browserUrl(practiceHref(skill, jobId)));
   }, [cancel, jobId, skill, stopListening]);
 
   const timeLeftMs = expiresAt === undefined ? null : Math.max(0, Date.parse(expiresAt) - now);

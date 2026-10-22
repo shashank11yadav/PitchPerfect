@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { EMPLOYMENT_TYPE_LABELS, WORKPLACE_LABELS } from "@/lib/job-labels";
 import { hasFilters, type JobQuery } from "@/lib/job-query";
+import { formAction } from "@/lib/pages-export";
 
 /**
  * The board's search, as a plain GET form: it works without JavaScript, and the URL it produces
- * is what the server renders. A new search starts again from page 1.
+ * is what the server renders (the static demo reads it in the browser). A new search starts again
+ * from page 1. `action` is the board's route; the form itself gets the address the host serves.
  */
 export function JobFilters({ query, action = "/jobs" }: { query: JobQuery; action?: string }) {
   return (
@@ -18,7 +20,7 @@ export function JobFilters({ query, action = "/jobs" }: { query: JobQuery; actio
       role="search"
       aria-label="Search jobs"
       method="get"
-      action={action}
+      action={formAction(action)}
       className="grid grid-cols-2 gap-x-4 gap-y-5 sm:gap-x-6 lg:grid-cols-12 lg:items-end"
     >
       <Field label="Search" className="col-span-2 lg:col-span-5">

@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadError, Loading } from "@/components/ui/LoadState";
 import { Pagination } from "@/components/ui/Pagination";
 import { formatLocalDate } from "@/lib/local-time";
-import { attemptPath } from "@/lib/practice/paths";
+import { attemptPath, historyHref, practiceHref } from "@/lib/practice/paths";
 import { AttemptsPage } from "@/lib/student-api";
 import { useApi } from "@/lib/use-api";
 import { scoreBand } from "./ScoreRing";
@@ -34,14 +34,6 @@ const UNSCORED: Record<Exclude<AttemptStatus, "completed">, string> = {
   // Never returned by the api; listed so every status has a label.
   starting: "Starting",
 };
-
-function historyHref(skill: SkillSlug | undefined, page = 1): string {
-  const query = new URLSearchParams();
-  if (skill) query.set("skill", skill);
-  if (page > 1) query.set("page", String(page));
-  const search = query.toString();
-  return search ? `/app/history?${search}` : "/app/history";
-}
 
 const skillQuery = (skill: SkillSlug | undefined) => (skill ? `&skill=${skill}` : "");
 
@@ -164,10 +156,7 @@ export function PracticeHistory({ skill, page }: PracticeHistoryProps) {
           }
           description="Every session you finish shows up here with its score, so you can see whether you’re getting better."
           action={
-            <Link
-              href={skill ? `/app/practice/${skill}` : "/app/practice"}
-              className={buttonClasses()}
-            >
+            <Link href={practiceHref(skill)} className={buttonClasses()}>
               {title ? `Practice ${title.toLowerCase()}` : "Pick a skill"}
             </Link>
           }

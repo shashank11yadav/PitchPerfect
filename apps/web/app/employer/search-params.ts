@@ -1,12 +1,8 @@
 import { JOB_STATUSES, type JobStatus } from "@pitchperfect/shared";
+import { queryValue as value, type SearchParams } from "@/lib/search-params";
 
 /** Next's `searchParams` for the employer pages. */
-export type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-async function value(searchParams: SearchParams, key: string): Promise<string | undefined> {
-  const raw = (await searchParams)[key];
-  return Array.isArray(raw) ? raw[0] : raw;
-}
+export type { SearchParams };
 
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
 

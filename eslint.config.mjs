@@ -9,6 +9,7 @@ export default tseslint.config(
     ignores: [
       "**/dist/**",
       "**/.next/**",
+      "apps/web/out/**",
       "**/coverage/**",
       "**/node_modules/**",
       ".private/**",

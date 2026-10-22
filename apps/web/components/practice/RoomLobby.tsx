@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { LoadError, Loading } from "@/components/ui/LoadState";
 import { SCRIPTED_PARTNER_NOTICE } from "@/content/partner-notice";
-import { attemptPath, practiceHref } from "@/lib/practice/paths";
+import { attemptPath, historyHref, lessonPath, practiceHref } from "@/lib/practice/paths";
 import type { PracticeQuotaLoad } from "@/lib/practice/use-practice-partner";
 import type { PracticeRoomControls } from "@/lib/practice/use-practice-room";
 import { useSession } from "@/lib/session";
@@ -153,7 +153,7 @@ export function RoomLobby({ skill, jobId, room, quota }: RoomLobbyProps) {
             Start the call
             <ArrowRight aria-hidden="true" className="size-4" />
           </Button>
-          <Link href={`/app/learn/${skill}`} className={TEXT_LINK}>
+          <Link href={lessonPath(skill)} className={TEXT_LINK}>
             Read the lesson first
           </Link>
         </div>
@@ -174,7 +174,7 @@ export function RoomLobby({ skill, jobId, room, quota }: RoomLobbyProps) {
         {quota.state === "loading" && <Loading label="Loading your sessions" lines={2} />}
         {quota.state === "error" && <LoadError what="your sessions" onRetry={quota.reload} />}
         {quota.state === "ready" && <QuotaMeter quota={quota.data} />}
-        <Link href="/app/history" className={TEXT_LINK}>
+        <Link href={historyHref()} className={TEXT_LINK}>
           Your past sessions
         </Link>
       </Card>

@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api";
 import { formatLocalDate } from "@/lib/local-time";
 import { END_NOTICES, unscoredReason } from "@/lib/practice/practice-reducer";
 import { withoutOpening } from "@/lib/practice/use-practice-room";
-import { practiceHref } from "@/lib/practice/paths";
+import { historyHref, practiceHref } from "@/lib/practice/paths";
 import { OneAttempt } from "@/lib/student-api";
 import { useApi } from "@/lib/use-api";
 import { DeleteAttempt } from "./DeleteAttempt";
@@ -83,7 +83,7 @@ export function AttemptScreen({ id }: { id: string }) {
           title="We can’t find that session"
           description={`It may have been deleted, or it’s older than ${String(LIMITS.attemptRetentionDays)} days.`}
           action={
-            <Link href="/app/history" className={buttonClasses()}>
+            <Link href={historyHref()} className={buttonClasses()}>
               See your sessions
             </Link>
           }

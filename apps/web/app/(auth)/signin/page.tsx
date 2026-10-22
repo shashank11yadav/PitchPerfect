@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AUTH_LINK, AuthCard } from "@/components/auth/AuthCard";
 import { SigninForm } from "@/components/auth/SigninForm";
 import { AUTH_PAGES, authPageMetadata } from "@/lib/seo";
-import { queryValue, type SearchParams } from "../search-params";
+import { queryValue, type SearchParams } from "@/lib/search-params";
 
 export const metadata = authPageMetadata(AUTH_PAGES.signin);
 

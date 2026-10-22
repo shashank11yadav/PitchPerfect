@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { SkipLink } from "@/components/layout/SkipLink";
+import { PAGES_EXPORT, STATIC_CSP } from "@/lib/pages-export";
 import { SessionProvider } from "@/lib/session";
 import { SESSION_COOKIE, SITE_NAME, SITE_URL, TAGLINE } from "@/lib/site";
 import "./globals.css";
@@ -39,13 +40,18 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  // Render every page per request so Next can stamp proxy.ts's CSP nonce on its scripts.
-  await connection();
-  // Without the session cookie nobody is signed in, so the page renders signed-out on the server
-  // and never asks the api. With it, the session may still be valid: `/auth/me` decides.
-  const hasSession = (await cookies()).has(SESSION_COOKIE);
+  let hasSession = false;
+  if (!PAGES_EXPORT) {
+    // Render every page per request so Next can stamp proxy.ts's CSP nonce on its scripts.
+    await connection();
+    // Without the session cookie nobody is signed in, so the page renders signed-out on the server
+    // and never asks the api. With it, the session may still be valid: `/auth/me` decides.
+    hasSession = (await cookies()).has(SESSION_COOKIE);
+  }
   return (
     <html lang="en" className={`${poppins.variable} ${manrope.variable}`}>
+      {/* A static host sets no headers, so the export carries its policy in the document. */}
+      {PAGES_EXPORT && <meta httpEquiv="Content-Security-Policy" content={STATIC_CSP} />}
       <body className="min-h-dvh antialiased">
         <SkipLink />
         <SessionProvider initialStatus={hasSession ? "loading" : "signed_out"}>

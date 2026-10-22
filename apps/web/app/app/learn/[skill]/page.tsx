@@ -1,8 +1,12 @@
-import { getSkill, isSkillSlug } from "@pitchperfect/shared";
+import { getSkill, isSkillSlug, SKILL_SLUGS } from "@pitchperfect/shared";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LessonContent } from "@/components/learn/LessonContent";
 import { LESSONS } from "@/content/lessons";
+import { exportOnly } from "@/lib/pages-export";
+
+/** The export lists every dynamic route; its layout shows the demo note for all of them. */
+export const generateStaticParams = exportOnly(() => SKILL_SLUGS.map((skill) => ({ skill })));
 
 interface LessonPageProps {
   params: Promise<{ skill: string }>;

@@ -126,6 +126,11 @@ export function useSession(): Session {
   return use(SessionContext);
 }
 
+/** Gives a subtree a fixed session, such as the static demo's visitor in the practice room. */
+export function ProvideSession({ session, children }: { session: Session; children: ReactNode }) {
+  return <SessionContext value={session}>{children}</SessionContext>;
+}
+
 function Checking({ label }: { label: string }) {
   return (
     <div role="status" className="flex items-center gap-3 py-10 text-muted">

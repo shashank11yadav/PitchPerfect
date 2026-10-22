@@ -6,6 +6,7 @@ import type {
   PublicJob,
 } from "@pitchperfect/shared";
 import type { Metadata } from "next";
+import { PAGES_EXPORT } from "./pages-export";
 import { SITE_NAME, SITE_URL, TAGLINE } from "./site";
 
 interface PageSeo {
@@ -18,8 +19,20 @@ interface PageSeo {
   noindex?: boolean;
 }
 
-/** Absolute URL on the canonical origin. */
-const absolute = (path: string) => new URL(path, `${SITE_URL}/`).toString();
+/** A path that names a file, such as an icon, rather than a page. */
+const FILE_PATH = /\.[a-z0-9]+$/i;
+
+/**
+ * Absolute URL of a page or file on the canonical origin. `SITE_URL` may carry a path (the GitHub
+ * Pages demo lives under /PitchPerfect), and the static export serves every page with a trailing
+ * slash.
+ */
+export function absoluteUrl(path: string): string {
+  const base = new URL(`${SITE_URL}/`);
+  const pathname = `${base.pathname.replace(/\/$/, "")}${path}`;
+  const slash = PAGES_EXPORT && !pathname.endsWith("/") && !FILE_PATH.test(pathname);
+  return new URL(slash ? `${pathname}/` : pathname, base).href;
+}
 
 /** The public pages, in sitemap order. Each page's metadata comes from its entry here. */
 export const PUBLIC_PAGES = {
@@ -145,7 +158,7 @@ const SHARE_IMAGE = {
 
 /** Per-page metadata: title, description, canonical URL, Open Graph and Twitter card. */
 export function pageMetadata({ title, description, path, noindex = false }: PageSeo): Metadata {
-  const url = absolute(path);
+  const url = absoluteUrl(path);
   // Only `title` gets the layout's template; the social titles are spelled out in full.
   const fullTitle = `${title} · ${SITE_NAME}`;
   return {
@@ -176,8 +189,8 @@ export function organizationJsonLd() {
     "@context": CONTEXT,
     "@type": "Organization",
     name: SITE_NAME,
-    url: absolute("/"),
-    logo: absolute("/icons/icon-512.png"),
+    url: absoluteUrl("/"),
+    logo: absoluteUrl("/icons/icon-512.png"),
     description: ORGANIZATION_DESCRIPTION,
   };
 }
@@ -187,7 +200,7 @@ export function websiteJsonLd() {
     "@context": CONTEXT,
     "@type": "WebSite",
     name: SITE_NAME,
-    url: absolute("/"),
+    url: absoluteUrl("/"),
     description: ORGANIZATION_DESCRIPTION,
   };
 }
@@ -270,7 +283,7 @@ export function jobPostingJsonLd(job: PostedJob, company: PublicCompany) {
     "@type": "JobPosting",
     title: job.title,
     description: job.descriptionHtml,
-    url: absolute(`/jobs/${job.slug}`),
+    url: absoluteUrl(`/jobs/${job.slug}`),
     ...(job.publishedAt && { datePosted: job.publishedAt }),
     ...(job.closesAt && { validThrough: job.closesAt }),
     employmentType: EMPLOYMENT_TYPE[job.employmentType],

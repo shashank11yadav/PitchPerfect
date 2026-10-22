@@ -7,7 +7,7 @@ import * as signupEmployer from "./signup/employer/page";
 import * as signup from "./signup/page";
 import * as signupStudent from "./signup/student/page";
 import * as verify from "./verify-email/page";
-import { queryValue } from "./search-params";
+import { queryValue } from "@/lib/search-params";
 
 const PAGES: [string, Metadata][] = [
   ["/signin", signin.metadata],

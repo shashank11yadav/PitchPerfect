@@ -1,7 +1,7 @@
 import { AuthCard } from "@/components/auth/AuthCard";
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
 import { AUTH_PAGES, tokenPageMetadata } from "@/lib/seo";
-import { queryValue, type SearchParams } from "../search-params";
+import { queryValue, type SearchParams } from "@/lib/search-params";
 
 export const metadata = tokenPageMetadata(AUTH_PAGES.resetPassword);
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { apiFetch } from "@/lib/api";
+import { historyHref } from "@/lib/practice/paths";
 
 /** Delete a practice session for good (after a confirm), then go to the history. */
 export function DeleteAttempt({ attemptId }: { attemptId: string }) {
@@ -33,7 +34,7 @@ export function DeleteAttempt({ attemptId }: { attemptId: string }) {
         cancelLabel="Keep it"
         onConfirm={async () => {
           await apiFetch(`/practice/attempts/${attemptId}`, { method: "DELETE" });
-          router.push("/app/history");
+          router.push(historyHref());
         }}
       />
     </>

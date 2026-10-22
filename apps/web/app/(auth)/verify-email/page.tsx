@@ -1,7 +1,7 @@
 import { AuthCard } from "@/components/auth/AuthCard";
 import { VerifyEmailStatus } from "@/components/auth/VerifyEmailStatus";
 import { AUTH_PAGES, tokenPageMetadata } from "@/lib/seo";
-import { queryValue, type SearchParams } from "../search-params";
+import { queryValue, type SearchParams } from "@/lib/search-params";
 
 export const metadata = tokenPageMetadata(AUTH_PAGES.verifyEmail);
 
