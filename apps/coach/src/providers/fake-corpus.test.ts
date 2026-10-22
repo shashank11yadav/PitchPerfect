@@ -2193,6 +2193,12 @@ const CORPUS: Row[] = [
     not: ACCEPT_OR_COUNTER,
     after: "not-close",
   }),
+  // "Call in sick" is the buyer's own pain, not a call being set up.
+  row("Do more drivers call in sick on Monday or Friday?", "other_question", {
+    reply: /sick|reroute|monday|friday/i,
+    not: ACCEPT_OR_COUNTER,
+    after: "not-close",
+  }),
   row("Is Monday or Tuesday quieter for you?", "busiest_question", {
     not: ACCEPT_OR_COUNTER,
     after: "not-close",
@@ -2280,6 +2286,23 @@ const CORPUS: Row[] = [
     reply: /send me|draft|couple of lines|forward/i,
     after: "close",
   }),
+  // Talking, speaking, saying or recommending is a favour when it's aimed at the person or at me.
+  ...[
+    "Can you recommend me to her?",
+    "Could you recommend me to the hiring manager?",
+    "Could you talk to her about me?",
+    "Would you mind speaking to her about me?",
+    "Could you speak to her on my behalf?",
+    "Would you say a word to her for me?",
+    "Can you say something to her about me?",
+    "Could you message her and let her know I'll reach out?",
+  ].map((line) =>
+    row(line, "favour", {
+      voice: "contact",
+      reply: /send me|draft|couple of lines|forward/i,
+      after: "close",
+    }),
+  ),
   row("Do you know if he's still at Brightpath?", "target_question", {
     voice: "contact",
     reply: /still there|same team|as far as I know|nothing had changed/i,

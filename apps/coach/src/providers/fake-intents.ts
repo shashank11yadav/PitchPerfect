@@ -231,6 +231,7 @@ const EITHER_OR_FRAME =
 const MEETING_NOUN =
   "(?:meeting|call|demo|chat|time|slot|session|invite|minutes?|mins?|coffee|walkthrough|walk-through|catch-up|catch up|conversation|zoom|video call|video chat|screen ?share|screen-share|google meet|teams meeting|sync|check-in|intro call|discovery call|appointment|sit-down|huddle)";
 const MEETING_NOUN_IN = new RegExp(`\\b${MEETING_NOUN}\\b`, "i");
+const CALL_IN_SICK = /\bcall(?:s|ed|ing)? (?:in|out) sick\b/gi;
 const SETUP_VERB =
   "(?:set up|setup|book|grab|schedule|get|find|put|send|have|hold|block|lock in|pencil in|do|did|run|hop on|jump on|get on|arrange|fix|make|squeeze in|carve out|spare|free up|take|open to|up for)";
 const MEASURE =
@@ -374,11 +375,16 @@ const HYPOTHETICAL =
 // Favours, offers and small starts.
 
 /**
- * What a contact can do for the student. Talking, saying, speaking and recommending are left out:
- * "can you talk me through how she hires" asks a question, it doesn't ask for a favour.
+ * What a contact can do for the student. Talking, saying, speaking, recommending and messaging
+ * only count when they're aimed at the person or at the student: "can you talk to her about me"
+ * asks a favour, "can you talk me through how she hires" asks a question.
  */
 const FAVOUR_VERB =
-  "(?:send|forward|introduc|pass|make|mak|do|share|put|connect|mention|flag|vouch|reach|refer|email|ping|writ|drop)";
+  "(?:send|forward|introduc|pass|make|mak|do|share|put|connect|mention|flag|vouch|reach|refer|email|ping|writ|drop" +
+  "|recommend(?:ing)? me\\b" +
+  "|(?:talk|speak)(?:ing)? (?:to|with) (?:her|him|them)\\b" +
+  "|say(?:ing)? (?:a (?:good |kind |quick )?word|something|a few words)(?: to (?:her|him|them))? (?:for|about) me\\b" +
+  "|messag(?:e|ing) (?:her|him|them)\\b)";
 const FAVOUR = new RegExp(
   [
     `\\b(?:could|can|would|will) you (?:maybe |possibly |perhaps |please |just |quickly )?${FAVOUR_VERB}`,
@@ -723,10 +729,12 @@ function isProposal(sentence: string, dayAsked: boolean): boolean {
     DOES_THAT_SUIT.test(sentence) ||
     WHAT_ABOUT_MEETING.test(sentence) ||
     (SAY_TIME.test(sentence) && asked) ||
-    // "Is Monday or Tuesday quieter for you?" asks about their week, not for a slot in it.
+    // "Is Monday or Tuesday quieter for you?" asks about their week, not for a slot in it, and
+    // "call in sick on Monday or Friday" is their pain, not a call being set up.
     (EITHER_OR.test(sentence) &&
       !BUSIEST_QUESTION.test(sentence) &&
-      (EITHER_OR_FRAME.test(sentence) || MEETING_NOUN_IN.test(sentence))) ||
+      (EITHER_OR_FRAME.test(sentence) ||
+        MEETING_NOUN_IN.test(sentence.replace(CALL_IN_SICK, "")))) ||
     (THINKING.test(sentence) && (asked || /\bif that works\b/i.test(sentence))) ||
     (TO_MEET.test(sentence) && asked)
   ) {
