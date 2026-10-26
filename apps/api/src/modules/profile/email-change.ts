@@ -1,5 +1,5 @@
 import mongoose, { type Types } from "mongoose";
-import { LIMITS, type ChangeEmail } from "@pitchperfect/shared";
+import { HOUR_MS, LIMITS, type ChangeEmail } from "@pitchperfect/shared";
 import { AuthToken, Company, EmailChange, User } from "../../db/models/index.js";
 import { UnauthenticatedError, ValidationError } from "../../errors.js";
 import * as emails from "../../services/email-templates.js";
@@ -10,7 +10,7 @@ import { holdOwnerEmail } from "../employer/hold.js";
 import { upsertRow } from "../practice/quota.js";
 import { requireCurrentPassword } from "./credentials.js";
 
-const CHANGE_TTL_MS = LIMITS.verifyTokenHours * 60 * 60 * 1000;
+const CHANGE_TTL_MS = LIMITS.verifyTokenHours * HOUR_MS;
 
 /** Tells the owner of `email` that another account asked to move to it; nothing was changed. */
 function noticeToExistingAccount(deps: AuthDeps, log: MailFailureLog, email: string): void {
