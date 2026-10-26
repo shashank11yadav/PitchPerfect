@@ -246,6 +246,65 @@ describe("heuristicScorecard", () => {
     expect(score(acknowledgement)).toBeGreaterThanOrEqual(4);
   });
 
+  describe("keyword stuffing", () => {
+    /** Two lines packed with every phrase the scorer listens for. */
+    const STUFFED = [
+      "Hi, I'm Alex, thanks for the call. How do you handle routing today? What does it cost you? Why does it matter? Who decides?",
+      "I understand, that's fair: teams like yours save 40% and cut 10 hours, which helps you and your team grow faster. Could we book a demo Thursday at 10am?",
+    ];
+    const scoreOf = (scorecard: Scorecard, key: string) =>
+      scorecard.dimensions.find((dimension) => dimension.key === key)?.score;
+
+    it("scores two stuffed lines low", () => {
+      const stuffed = card(STUFFED);
+      expect(stuffed.overall).toBeLessThanOrEqual(50);
+      expect(stuffed.overall).toBeLessThan(card(STRONG).overall);
+    });
+
+    it("caps every dimension of a short call, and says why", () => {
+      const short = card(STUFFED);
+      for (const dimension of short.dimensions) expect(dimension.score).toBeLessThanOrEqual(3);
+      const cta = short.dimensions.find((dimension) => dimension.key === "cta");
+      expect(cta?.justification).toMatch(/2 turns/);
+      expect(ScorecardSchema.safeParse(short).success).toBe(true);
+    });
+
+    it("counts questions, benefits and “you” once per turn, not once per mention", () => {
+      const opener = "Hi Sam, I'm Riley from Routewise. How do you plan routes today?";
+      const ask = "Could we look at your routes together on Thursday at 10am?";
+      const once = [opener, "Our planner saves your dispatchers an hour a day.", ask];
+      const piled = [
+        opener,
+        "Our planner saves your dispatchers an hour a day. It saves you money. It cuts your overtime. It helps your team grow. What do you think? How does that sound? Who else should hear it?",
+        ask,
+      ];
+      expect(scoreOf(card(piled), "value")).toBe(scoreOf(card(once), "value"));
+      expect(scoreOf(card(piled), "discovery")).toBeLessThanOrEqual(
+        (scoreOf(card(once), "discovery") ?? 0) + 1,
+      );
+    });
+
+    it("counts a line said twice as one turn", () => {
+      const repeated = [...STUFFED, STUFFED[1] ?? "", STUFFED[1] ?? ""];
+      expect(card(repeated).overall).toBe(card(STUFFED).overall);
+    });
+
+    it("doesn't credit structure or pushback handling packed into the opening turn", () => {
+      const opening =
+        "Hi, I'm Riley. I understand, and teams like yours cut 4 hours a week. Could we meet Thursday at 10am?";
+      const turns = [
+        opening,
+        "How do you plan routes today?",
+        "What happens when a driver is out?",
+        "Who fixes the plan when that happens?",
+      ];
+      expect(scoreOf(card(turns), "objections")).toBe(1);
+      const structure = card(turns).dimensions.find((dimension) => dimension.key === "structure");
+      expect(structure?.score).toBeLessThanOrEqual(4);
+      expect(structure?.justification).toMatch(/first turn/);
+    });
+  });
+
   it("credits proof in the same sentence as the acknowledgement", () => {
     const turns = [
       "Hi, I'm Riley from Routewise. How do you plan routes today?",

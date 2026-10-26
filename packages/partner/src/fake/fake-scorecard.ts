@@ -56,7 +56,7 @@ const bare = (sentence: string) => sentence.replace(/[.!?]+$/, "");
 
 const OPEN_QUESTION = /^(what|how|why|which|where|who|tell me|walk me)\b/i;
 const PROOF = /\b(\d+|for example|customers|teams like|case study|results)\b/i;
-const YOU = /\b(you|your|yours)\b/gi;
+const YOU = /\b(you|your|yours)\b/i;
 const HEDGES = [
   "um",
   "uh",
@@ -129,14 +129,25 @@ function shortened(line: string): string {
 }
 
 function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
-  const sentences = turns.flatMap(sentencesOf);
+  const said = turns.flatMap((turn, index) =>
+    sentencesOf(turn).map((sentence) => ({ sentence, turn: index })),
+  );
+  const sentences = said.map(({ sentence }) => sentence);
   const all = turns.join(" ");
   const take = quoter();
   const first = (pattern: RegExp) => sentences.find((sentence) => pattern.test(sentence));
+  /** The first match after the opening turn: pushback and the ask come once the call is under way. */
+  const later = (pattern: RegExp) =>
+    said.find(({ sentence, turn }) => turn > 0 && pattern.test(sentence))?.sentence;
+  /** How many turns say it at least once: saying it again in the same turn earns nothing more. */
+  const turnsWith = (test: (sentence: string) => boolean) =>
+    new Set(said.filter(({ sentence }) => test(sentence)).map(({ turn }) => turn)).size;
   const last = sentences.at(-1) ?? "";
 
   const questions = sentences.filter((sentence) => sentence.includes("?"));
   const open = questions.filter((sentence) => OPEN_QUESTION.test(sentence));
+  const questionTurns = turnsWith((sentence) => sentence.includes("?"));
+  const openTurns = turnsWith((sentence) => sentence.includes("?") && OPEN_QUESTION.test(sentence));
   const closed = questions.find((sentence) => !OPEN_QUESTION.test(sentence));
   const averageWords = turns.length ? Math.round(wordCount(all) / turns.length) : 0;
   const longest = [...sentences].sort((a, b) => wordCount(b) - wordCount(a))[0] ?? "";
@@ -146,12 +157,14 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
   });
   const hedges = hedgeList(all);
   const hedged = first(HEDGE_ONE);
-  const youCount = all.match(YOU)?.length ?? 0;
+  const youTurns = turns.filter((turn) => YOU.test(turn)).length;
   const benefits = sentences.filter((sentence) => BENEFIT.test(sentence));
+  const benefitTurns = turnsWith((sentence) => BENEFIT.test(sentence));
   const timed = first(TIME_PHRASE);
   const time = timed?.match(TIME_PHRASE)?.[0];
   const ask = timed ?? first(ASK);
-  const acknowledged = first(ACKNOWLEDGE);
+  const askedLater = later(TIME_PHRASE) ?? later(ASK);
+  const acknowledged = later(ACKNOWLEDGE);
   // Proof answers the concern just acknowledged: a fact after it, not a time or a number in an
   // ask. The rest of the acknowledging sentence counts ("I hear you, and one carrier cut $3,000").
   const isProof = (text: string) => PROOF.test(text) && !ASK.test(text) && !TIME_PHRASE.test(text);
@@ -190,6 +203,14 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
       fix: "Finish with a clear ask for the next meeting.",
       rewrite: (line: string) => `${bare(line)}. ${ASK_LINE}`,
     },
+    ask !== undefined &&
+      askedLater === undefined && {
+        reason:
+          "You asked for the meeting in your first turn, before they had a reason to say yes.",
+        quote: ask,
+        fix: "Make the ask at the end, once they've told you what matters to them.",
+        rewrite: () => DISCOVERY_LINE,
+      },
   ].filter((part) => part !== false);
   const structureScore = clamp(5 - missing.length);
 
@@ -255,13 +276,13 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
   };
 
   const valueScore = clamp(
-    1 + Math.min(2, benefits.length) + Number(youCount >= 2) + Number(youCount >= 5),
+    1 + Math.min(2, benefitTurns) + Number(youTurns >= 2) + Number(youTurns >= 4),
   );
   const value: Judgement = {
     score: valueScore,
     justification:
       valueScore >= 4
-        ? `You said “you” or “your” ${plural(youCount, "time")} and named what would get better for them.`
+        ? `You talked about them, with “you” and “your”, in ${plural(youTurns, "turn")} and named what would get better for them.`
         : benefits.length > 0
           ? `You named ${benefits.length === 1 ? "a benefit" : plural(benefits.length, "benefit")}, but in your terms. Tie it to something they told you, so it's about their problem.`
           : "You described what you do, not what they'd get. Name one thing that changes for them.",
@@ -291,9 +312,7 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
     rewrite: missing[0]?.rewrite ?? ((line) => `${bare(line)}. ${ASK_LINE}`),
   };
 
-  const discoveryScore = clamp(
-    1 + questions.length + Math.min(1, open.length) - (open.length ? 0 : 1),
-  );
+  const discoveryScore = clamp(1 + questionTurns + Math.min(1, openTurns) - (openTurns ? 0 : 1));
   const discovery: Judgement = {
     score: discoveryScore,
     justification:
@@ -382,7 +401,51 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
           : `${bare(line)}. ${ASK_LINE}`,
   };
 
-  return { clarity, value, structure, discovery, objections, confidence, cta };
+  return capped(
+    { clarity, value, structure, discovery, objections, confidence, cta },
+    turns.length,
+  );
+}
+
+/** A reason with a note added, shortened to its first sentence (or dropped) if both don't fit. */
+function withNote(reason: string, note: string): string {
+  for (const text of [`${reason} ${note}`, `${sentencesOf(reason)[0] ?? ""} ${note}`]) {
+    if (text.length <= LIMITS.justificationMaxLength) return text;
+  }
+  return note;
+}
+
+/**
+ * A call of a few turns can't show much, however well each line is written: no dimension scores
+ * above one more than the number of turns, and a capped one says so.
+ */
+function capped(judged: Record<RubricKey, Judgement>, turns: number): Record<RubricKey, Judgement> {
+  const cap = clamp(1 + turns);
+  const note = `Capped at ${String(cap)}: ${plural(turns, "turn")} is too short a call to show more.`;
+  const fit = (judgement: Judgement): Judgement =>
+    judgement.score <= cap
+      ? judgement
+      : { ...judgement, score: cap, justification: withNote(judgement.justification, note) };
+  return {
+    clarity: fit(judged.clarity),
+    value: fit(judged.value),
+    structure: fit(judged.structure),
+    discovery: fit(judged.discovery),
+    objections: fit(judged.objections),
+    confidence: fit(judged.confidence),
+    cta: fit(judged.cta),
+  };
+}
+
+/** The turns with repeats dropped: a line said twice is one turn's worth of credit. */
+function distinctTurns(turns: readonly string[]): string[] {
+  const seen = new Set<string>();
+  return turns.filter((turn) => {
+    const key = turn.trim().replace(/\s+/g, " ").toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /** True things to say about any call the student kept going. */
@@ -392,8 +455,12 @@ const FALLBACK_STRENGTHS = [
   "You kept your turns about the call.",
 ];
 
-/** A rubric-shaped scorecard from simple text heuristics; quotes come only from `turns`. */
-export function heuristicScorecard(turns: readonly string[], weighted: RubricKey): Scorecard {
+/**
+ * A rubric-shaped scorecard from simple text heuristics; quotes come only from `turns`. Credit
+ * comes from distinct turns, so piling keywords into one line or repeating a line adds nothing.
+ */
+export function heuristicScorecard(said: readonly string[], weighted: RubricKey): Scorecard {
+  const turns = distinctTurns(said);
   const judged = judge(turns);
   const dimensions = RUBRIC_DIMENSIONS.map(({ key }) => {
     const { score, justification, evidence } = judged[key];

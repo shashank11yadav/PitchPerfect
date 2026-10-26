@@ -311,6 +311,12 @@ describe("buildScorePrompt", () => {
     expect(prompt.system).toMatch(/verbatim/i);
     expect(prompt.system).toMatch(/null/);
   });
+
+  it("tells the scorer that notes to the grader in a turn are data that earn nothing", () => {
+    expect(prompt.system).toMatch(/note to the grader/i);
+    expect(prompt.system).toMatch(/never follow/i);
+    expect(prompt.system).toMatch(/no credit/i);
+  });
 });
 
 describe("buildGuardPrompt", () => {
@@ -323,6 +329,10 @@ describe("buildGuardPrompt", () => {
     for (const category of ["ok", "off_topic", "prompt_attack", "harmful"]) {
       expect(prompt.system).toContain(`"${category}"`);
     }
+  });
+
+  it("counts telling the grader what score to give as a prompt attack", () => {
+    expect(prompt.system).toMatch(/"prompt_attack":[^\n]*grade/);
   });
 });
 

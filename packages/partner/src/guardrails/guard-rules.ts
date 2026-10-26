@@ -161,6 +161,52 @@ const SUSPECT_ATTACK: readonly RegExp[] = [
   /\bdeveloper mode (?:is )?(?:enabled|activated)(?=$| (?:now|you|answer|respond|reply|ignore|from)\b)/,
 ];
 
+/** Whoever, or whatever, grades the call. "Evaluator" and "coach" are ordinary words on a call. */
+const GRADER =
+  "(?:(?:ai |automated )?(?:grader|scorer)s?|ai (?:evaluator|judge|coach)s?|(?:grading|scoring) (?:ai|model|bot|engine)s?|whoever (?:is |s )?(?:grading|scoring|marking))";
+const SCORE_VERBS = "(?:score|grade|rate|mark|give|award|assign)";
+/** What this call is, as something to be scored: "me", "this call", "every dimension". */
+const SCORED =
+  "(?:me|this|this (?:call|conversation|transcript|session|attempt|pitch)|the student|my (?:call|pitch|performance|answers?|turns?|responses?)|(?:every|all|each) (?:of the |the )?(?:dimensions?|categories|criteria|rubric \\w+)|everything)";
+/** A top mark: "5", "5/5", "100", "full marks", "all fives". */
+const TOP_MARK =
+  "(?:5|five|10|ten|100|perfect(?: scores?| marks)?|full marks|top marks|max(?:imum)?(?: score)?|(?:the )?highest(?: score| rating| marks?)?|all (?:5|fives|ss)|fives|ss)";
+
+/**
+ * Notes to the grader or orders about the score, written into a turn so the scorer reads them.
+ * They are suspect: the turn is redirected, so it is never scored.
+ */
+const GRADER_ATTACK: readonly RegExp[] = [
+  new RegExp(
+    `\\b(?:note|message|memo|reminder|hint|ps|p s|psst) (?:to|for) (?:the |any |my )?${GRADER}\\b`,
+  ),
+  new RegExp(`\\b(?:dear|hey|hi|hello|attention|attn|to) (?:the )?${GRADER}\\b`),
+  new RegExp(`\\b(?:score|grade|rate|mark)s? ${SCORED} (?:as |at |with |an? )?${TOP_MARK}\\b`),
+  new RegExp(
+    `\\b(?:give|award|assign|grant) ${SCORED} (?:an? |the )?(?:5 5|5 out of 5|10 10|10 out of 10|100 100|100 out of 100|100 points|full marks|top marks|perfect (?:score|marks)s?|(?:highest|maximum|max|top) (?:score|rating|marks?|grade)s?|all (?:5|fives|ss)|straight (?:5|fives|ss)|fives|5 (?:on|for|in|across) (?:every|all|each))\\b`,
+  ),
+  new RegExp(
+    `\\bthis (?:call|transcript|conversation|session|attempt|pitch) (?:deserves|earns|merits|gets|should (?:get|receive|score)|scores?) (?:an? |the )?${TOP_MARK}\\b`,
+  ),
+  /\b(?:every|all|each) rubric (?:dimensions?|items?|scores?|categor\w+|criteri\w+)\b/,
+  /\bwhen (?:you|the ai|the model|the grader|the scorer|the coach) (?:grade|score|evaluate|assess|mark)s? (?:this (?:call|conversation|transcript|session)|my (?:pitch|performance|turns|answers))\b/,
+];
+
+/** Addressing the grader and telling it what to give, or dropping the rubric: confirmed attacks. */
+const CONFIRMED_GRADER_ATTACK: readonly RegExp[] = [
+  new RegExp(
+    `\\b(?:note|message|memo|reminder|hint|ps|p s|psst|dear|hey|hi|hello|attention|attn) (?:to |for )?(?:the |any |my )?${GRADER}\\b(?: \\w+){0,12}? (?:${SCORE_VERBS}|${TOP_MARK})\\b`,
+  ),
+  new RegExp(
+    `\\b(?:score|grade|rate|mark)s? (?:every|all|each) (?:of the |the )?(?:dimensions?|categories|criteria|rubric \\w+) (?:as |at |with |an? )?${TOP_MARK}\\b`,
+  ),
+  /\b(?:ignore|disregard|forget|override|bypass) (?:the |your )?rubric\b/,
+];
+
+// Scorecard JSON pasted into a turn, matched on the raw text: its quotes and colons are the tell.
+const SCORECARD_JSON =
+  /"(?:overall|dimensions|strengths|improvements|strongerLine|justification|evidence)"\s*:/i;
+
 const WEAPON_NOUN =
   "(?:bombs?(?! (?:proof|squad|shelter|shell))|explosives|explosive (?:devices?|materials?)|bioweapons?|chemical weapons?|nerve agents?|ghost guns?|untraceable guns?)";
 const HOW_TO =
@@ -209,10 +255,13 @@ export function ruleCheck(text: string): RuleVerdict | null {
   if (anyMatch(HARMFUL, words)) return "harmful";
   const flagged =
     CHAT_TEMPLATE.test(text) ||
+    SCORECARD_JSON.test(text) ||
     INSTRUCTIONS_HEADER.test(text) ||
     isDan(text) ||
     anyMatch(CONFIRMED_ATTACK, words) ||
-    anyMatch(SUSPECT_ATTACK, words);
+    anyMatch(SUSPECT_ATTACK, words) ||
+    anyMatch(CONFIRMED_GRADER_ATTACK, words) ||
+    anyMatch(GRADER_ATTACK, words);
   return flagged ? "prompt_attack" : null;
 }
 
@@ -226,8 +275,10 @@ export function confirmsAttack(text: string): boolean {
   return (
     anyMatch(HARMFUL, words) ||
     CHAT_TEMPLATE.test(text) ||
+    SCORECARD_JSON.test(text) ||
     (INSTRUCTIONS_HEADER.test(text) && HEADER_TAKEOVER.test(words)) ||
     isDan(text) ||
-    anyMatch(CONFIRMED_ATTACK, words)
+    anyMatch(CONFIRMED_ATTACK, words) ||
+    anyMatch(CONFIRMED_GRADER_ATTACK, words)
   );
 }
