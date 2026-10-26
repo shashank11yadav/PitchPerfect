@@ -127,7 +127,7 @@ export default async function JobPage({ params }: JobPageProps) {
       />
       <CtaBand
         title="Rehearse the call before you apply"
-        body="Practice with the AI practice partner, read a scorecard that quotes what you said, and go into the interview having done it once."
+        body="Practice with a partner who plays the buyer, read a scorecard that quotes what you said, and go into the interview having done it once."
         secondary={{ href: "/how-it-works", label: "How practice works" }}
       />
     </>

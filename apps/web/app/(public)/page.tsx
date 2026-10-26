@@ -21,7 +21,7 @@ export default function HomePage() {
       <HomeHero
         lead={
           <p>
-            Run a sales call with an AI practice partner playing a busy buyer. Your scorecard quotes
+            Run a sales call with a practice partner playing a busy buyer. Your scorecard quotes
             what you actually said, and you can attach it when you apply for a sales job.
           </p>
         }

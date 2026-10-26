@@ -48,7 +48,7 @@ export function PracticeFragment() {
   return (
     <div data-ui className="flex flex-col gap-3 rounded-[20px] bg-surface p-4 ring-1 ring-border">
       <p className="px-1 text-caption font-semibold text-muted">Pitching: your buyer</p>
-      <PersonaCard persona={PITCH_BUYER} titleAs="p" />
+      <PersonaCard persona={PITCH_BUYER} partner="sample" titleAs="p" />
       <div aria-hidden="true" className="flex items-center gap-3 rounded-card bg-surface-2 p-3">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-pill bg-primary text-white">
           <Mic className="size-5" />

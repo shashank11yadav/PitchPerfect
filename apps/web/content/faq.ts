@@ -9,7 +9,7 @@ export const HOME_FAQ: readonly FaqItem[] = [
   {
     question: "Is the practice partner a real person?",
     answer:
-      "No. It's software that plays a buyer, say a busy operations lead or a skeptical manager. It is labelled for what it is everywhere it appears, an AI model or a scripted demo, and if you sincerely ask whether it's human, it tells you.",
+      "No. It's software that plays a buyer, say a busy operations lead or a skeptical manager. Depending on how the site is set up, that's a scripted partner or a live model from OpenAI or Anthropic; the public demo uses the scripted one. It's labelled for what it is wherever it appears, and if you sincerely ask whether it's human, it tells you.",
   },
   {
     question: "Do I have to talk out loud?",

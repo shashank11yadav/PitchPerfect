@@ -11,7 +11,7 @@ const BRIEF = [
   },
   {
     verb: "Practice",
-    body: "Run the call with an AI buyer who reacts to what you say, by voice or by typing.",
+    body: "Run the call with a buyer who reacts to what you say, by voice or by typing.",
   },
   {
     verb: "Get hired",

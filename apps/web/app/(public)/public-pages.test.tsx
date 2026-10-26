@@ -266,14 +266,15 @@ describe("final review: the legal pages describe the partner that is really runn
       "In this demo your text isn't sent to an AI provider.",
     );
     expect(scripted.container).not.toHaveTextContent(/sent to our AI provider/);
-    expect(scripted.container).toHaveTextContent("as AI or as a scripted demo");
-    expect(scripted.container).not.toHaveTextContent(/labelled as AI/);
+    expect(scripted.container).toHaveTextContent("labelled as a scripted demo wherever it appears");
+    expect(scripted.container).not.toHaveTextContent(/labelled as AI|an AI buyer/);
     scripted.unmount();
 
     forgetPracticePartnerKind();
     fetchMock.mockResolvedValue(healthBody("live"));
     const live = render(await HowItWorksPage());
     expect(live.container).toHaveTextContent("sent to our AI provider");
+    expect(live.container).toHaveTextContent("labelled as AI wherever it appears");
     expect(live.container).not.toHaveTextContent(/leaves PitchPerfect/);
   });
 
@@ -291,8 +292,21 @@ describe("final review: the legal pages describe the partner that is really runn
     expect(about.container).not.toHaveTextContent(/partner is an AI/);
     about.unmount();
     const { container } = render(<HomePage />);
-    expect(container).toHaveTextContent("an AI model or a scripted demo");
+    expect(container).toHaveTextContent(
+      "that's a scripted partner or a live model from OpenAI or Anthropic; the public demo uses the scripted one",
+    );
     expect(container).not.toHaveTextContent(/labelled as AI everywhere/);
+  });
+
+  it("no page that can't ask the api calls the partner an AI", () => {
+    for (const Page of [HomePage, StudentsPage, EmployersPage, AboutPage]) {
+      const { container, unmount } = render(<PublicLayout>{Page()}</PublicLayout>);
+      expect(container).not.toHaveTextContent(/\bAI\b/);
+      unmount();
+    }
+    for (const page of [home, students, employers, about]) {
+      expect(page.description).not.toMatch(/\bAI\b/);
+    }
   });
 
   it("terms don't claim every employer must sign up with a company address", async () => {

@@ -26,7 +26,10 @@ const OBJECTION_QUOTE =
 const safeguards = (partner: PracticePartnerKind): Statement[] => [
   {
     title: "Always labelled",
-    body: "The partner is labelled wherever it appears, as AI or as a scripted demo, and says so if you sincerely ask.",
+    body:
+      partner === "live"
+        ? "The partner is labelled as AI wherever it appears, and says so if you sincerely ask."
+        : "The partner is labelled as a scripted demo wherever it appears, and says so if you sincerely ask.",
   },
   {
     title: "Stays on the call",
@@ -55,8 +58,8 @@ export default async function HowItWorksPage() {
         title="From a lesson to a scorecard"
         lead={
           <p>
-            A lesson, a call with an AI buyer, and a scorecard you can act on. Here&apos;s what
-            happens at each step, and where your data goes.
+            A lesson, a call with a buyer who pushes back, and a scorecard you can act on.
+            Here&apos;s what happens at each step, and where your data goes.
           </p>
         }
         actions={<CtaLinks />}

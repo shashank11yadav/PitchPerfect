@@ -40,13 +40,13 @@ export const PUBLIC_PAGES = {
     title: TAGLINE,
     path: "/",
     description:
-      "Rehearse sales conversations out loud with an AI practice partner, get a scorecard that quotes your own words, and apply to entry-level sales roles.",
+      "Rehearse sales calls out loud with a practice partner that plays the buyer, get a scorecard that quotes your own words, and apply to entry-level sales roles.",
   },
   students: {
     title: "For students",
     path: "/students",
     description:
-      "Practice introductions, pitches and objection handling with an AI practice partner, see exactly what to improve, and share your best scorecard with employers.",
+      "Practice introductions, pitches and objection handling against a practice buyer, see exactly what to improve, and share your best scorecard with employers.",
   },
   employers: {
     title: "For employers",
@@ -58,13 +58,13 @@ export const PUBLIC_PAGES = {
     title: "How it works",
     path: "/how-it-works",
     description:
-      "Learn a skill, practice it with an AI practice partner that plays a realistic buyer, read a scorecard built from your own words, then apply for sales roles.",
+      "Learn a skill, practice it with a partner that plays a realistic buyer, read a scorecard built from your own words, then apply for entry-level sales roles.",
   },
   jobs: {
     title: "Entry-level sales jobs",
     path: "/jobs",
     description:
-      "Browse entry-level sales, business development and customer success roles. Practice for a specific job with an AI practice partner before you apply.",
+      "Browse entry-level sales, business development and customer success roles. Practice for a specific job with a partner playing the buyer before you apply.",
   },
   about: {
     title: "About",
@@ -82,7 +82,7 @@ export const PUBLIC_PAGES = {
     title: "Terms of use",
     path: "/terms",
     description:
-      "The rules for using PitchPerfect: accounts for people 18 and older, fair use of the AI practice partner, job postings, applications and account deletion.",
+      "The rules for using PitchPerfect: accounts for people 18 and older, fair use of the practice partner, job postings, applications and account deletion.",
   },
 } as const satisfies Record<string, PageSeo>;
 
@@ -92,7 +92,7 @@ export const AUTH_PAGES = {
     title: "Sign in",
     path: "/signin",
     description:
-      "Sign in to PitchPerfect to practice sales conversations with the AI practice partner, read your scorecards, or review applicants for your open roles.",
+      "Sign in to PitchPerfect to practice sales conversations with the practice partner, read your scorecards, or review applicants for your open roles.",
   },
   signup: {
     title: "Sign up",
@@ -104,7 +104,7 @@ export const AUTH_PAGES = {
     title: "Sign up as a student",
     path: "/signup/student",
     description:
-      "Create a free student account on PitchPerfect to practice sales conversations with an AI practice partner and apply to entry-level sales roles.",
+      "Create a free student account on PitchPerfect to practice sales calls with a partner that plays the buyer, and apply to entry-level sales roles.",
   },
   signupEmployer: {
     title: "Sign up as an employer",
@@ -183,7 +183,7 @@ export function pageMetadata({ title, description, path, noindex = false }: Page
 const CONTEXT = "https://schema.org";
 
 const ORGANIZATION_DESCRIPTION =
-  "PitchPerfect is a practice and hiring platform for entry-level sales roles, with an AI practice partner and rubric-based scorecards.";
+  "PitchPerfect is a practice and hiring platform for entry-level sales roles, with a practice partner that plays the buyer and rubric-based scorecards.";
 
 export function organizationJsonLd() {
   return {

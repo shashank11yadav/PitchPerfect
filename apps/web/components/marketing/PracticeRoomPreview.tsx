@@ -36,8 +36,8 @@ export function PracticeRoomPreview({
       )}
     >
       <figcaption className="sr-only">
-        A sample practice session: a student practicing {skillTitle.toLowerCase()} with an AI
-        practice partner.
+        A sample practice session: a student practicing {skillTitle.toLowerCase()} with a buyer
+        played by the practice partner.
       </figcaption>
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 @2xl:px-6">
         <div>
@@ -59,7 +59,7 @@ export function PracticeRoomPreview({
       <StageStepper stage={stage} className="border-b border-border px-4 py-3 @2xl:px-6" />
 
       <div className="grid gap-4 bg-surface-2 p-4 @2xl:grid-cols-[15rem_1fr] @2xl:gap-6 @2xl:p-6">
-        <PersonaCard persona={persona} titleAs="p" className="self-start" />
+        <PersonaCard persona={persona} partner="sample" titleAs="p" className="self-start" />
         <ul aria-label="Transcript" className="flex flex-col gap-2.5">
           {transcript.map((entry) => (
             <TranscriptBubble

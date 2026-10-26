@@ -35,6 +35,23 @@ describe("PersonaCard", () => {
     expect(within(card).queryByText("AI practice partner")).toBeNull();
   });
 
+  it("labels a marketing page's sample buyer as a sample, not as AI or scripted", () => {
+    render(
+      <PersonaCard
+        partner="sample"
+        persona={{
+          personaName: "Maya Chen",
+          personaTitle: "VP Operations",
+          companyType: "Regional logistics company",
+          personality: "Direct",
+        }}
+      />,
+    );
+    const card = screen.getByRole("region", { name: "Maya Chen" });
+    expect(within(card).getByText("Sample buyer")).toBeInTheDocument();
+    expect(within(card).queryByText(/AI practice partner|Scripted demo partner/)).toBeNull();
+  });
+
   it("labels the persona as AI and shows their role, company type and personality", () => {
     render(
       <PersonaCard

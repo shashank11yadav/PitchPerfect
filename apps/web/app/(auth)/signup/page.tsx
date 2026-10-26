@@ -40,7 +40,7 @@ export default function SignupPage() {
             </InViewItem>
             <InViewItem>
               <p className="max-w-[44ch] text-lede text-ink">
-                Practice sales calls out loud with the AI practice partner, read a scorecard that
+                Practice sales calls out loud with the practice partner, read a scorecard that
                 quotes what you said, and apply to entry-level jobs. It’s free, and it’s for people
                 18 and older.
               </p>

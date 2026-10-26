@@ -11,7 +11,7 @@ export default function StudentSignupPage() {
     <AuthCard
       size="wide"
       title="Your student account"
-      lead="It’s free. Practice sales calls with the AI practice partner, keep your scorecards, and apply to entry-level jobs from the same account."
+      lead="It’s free. Practice sales calls with the practice partner, keep your scorecards, and apply to entry-level jobs from the same account."
       aside={
         <>
           Hiring instead?{" "}

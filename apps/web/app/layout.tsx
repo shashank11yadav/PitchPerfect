@@ -24,7 +24,7 @@ const manrope = Manrope({
 });
 
 const DESCRIPTION =
-  "Practice sales conversations with an AI practice partner, get a scored rubric with clear feedback, and apply to entry-level sales jobs on PitchPerfect.";
+  "Practice sales conversations with a partner that plays the buyer, get a scored rubric with clear feedback, and apply to entry-level sales jobs on PitchPerfect.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

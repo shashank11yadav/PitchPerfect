@@ -8,8 +8,11 @@ type Persona = Pick<ScenarioPublic, "personaName" | "personaTitle" | "companyTyp
 
 interface PersonaCardProps {
   persona: Persona;
-  /** What is really answering: a live model (the default) or the scripted demo persona. */
-  partner?: PracticePartnerKind;
+  /**
+   * What is really answering: a live model (the default) or the scripted demo persona. `sample`
+   * is for the made-up calls on the marketing pages, which don't know which partner the site runs.
+   */
+  partner?: PracticePartnerKind | "sample";
   /** The name's element; a plain paragraph where a heading would break the page outline. */
   titleAs?: "h2" | "h3" | "p";
   className?: string;
@@ -32,7 +35,8 @@ const traits = (personality: string) =>
 
 /**
  * Who the student is talking to. The persona has a human name but is always labelled for what it
- * is: an AI model, or the scripted demo partner (on our server, or in the visitor's browser).
+ * is: an AI model, the scripted demo partner (on our server, or in the visitor's browser), or a
+ * sample buyer.
  */
 export function PersonaCard({
   persona,
@@ -41,8 +45,13 @@ export function PersonaCard({
   className,
 }: PersonaCardProps) {
   const id = useId();
-  const scripted = partner !== "live";
-  const BadgeIcon = scripted ? ScrollText : Sparkles;
+  const live = partner === "live";
+  const BadgeIcon = live ? Sparkles : ScrollText;
+  const badge = live
+    ? "AI practice partner"
+    : partner === "sample"
+      ? "Sample buyer"
+      : "Scripted demo partner";
   return (
     <section
       aria-labelledby={id}
@@ -62,7 +71,7 @@ export function PersonaCard({
             </Title>
             <Badge tone="info">
               <BadgeIcon aria-hidden="true" className="size-3" />
-              {scripted ? "Scripted demo partner" : "AI practice partner"}
+              {badge}
             </Badge>
           </div>
           <p className="text-small text-ink">{persona.personaTitle}</p>

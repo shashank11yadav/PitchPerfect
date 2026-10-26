@@ -80,9 +80,10 @@ describe("ScorecardPreview", () => {
 });
 
 describe("PracticeRoomPreview", () => {
-  it("labels the partner as AI and shows the conversation stage", () => {
+  it("labels the buyer as a sample, not as AI, and shows the conversation stage", () => {
     render(<PracticeRoomPreview />);
-    expect(screen.getByText("AI practice partner")).toBeInTheDocument();
+    expect(screen.getByText("Sample buyer")).toBeInTheDocument();
+    expect(screen.queryByText("AI practice partner")).toBeNull();
     expect(screen.getByRole("list", { name: "Conversation stages" })).toBeInTheDocument();
     expect(screen.getByText("Objection").closest("li")).toHaveAttribute("aria-current", "step");
   });
