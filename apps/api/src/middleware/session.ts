@@ -2,7 +2,7 @@ import MongoStore from "connect-mongo";
 import express, { type CookieOptions, type RequestHandler, type Response } from "express";
 import session from "express-session";
 import type { Connection } from "mongoose";
-import { LIMITS, type Role } from "@pitchperfect/shared";
+import { DAY_MS, LIMITS, type Role } from "@pitchperfect/shared";
 import type { Config } from "../config.js";
 
 declare module "express-session" {
@@ -28,8 +28,6 @@ const SESSIONS_COLLECTION = "sessions";
 
 /** The client of the app's existing Mongoose connection, so sessions share its pool. */
 type ConnectionClient = ReturnType<Connection["getClient"]>;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Opens the Mongo-backed store on first use, so the app can be built before the database is

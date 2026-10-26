@@ -1,7 +1,7 @@
 import type { Router } from "express";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LIMITS } from "@pitchperfect/shared";
+import { LIMITS, MINUTE_MS } from "@pitchperfect/shared";
 import { byIp } from "../src/middleware/rate-limit.js";
 import { DEVICE_COOKIE, deviceToken, isKnownDevice } from "../src/modules/auth/known-device.js";
 import { makeTestApp } from "./helpers/app.js";
@@ -16,7 +16,6 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const MINUTE_MS = 60 * 1000;
 const WRONG_PASSWORD = "copper-meadow-signal-58";
 /** Failed sign-ins one address may make across all emails, and one email across all addresses. */
 const IP_FAILURES = 30;

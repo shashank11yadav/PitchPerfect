@@ -1,7 +1,14 @@
 import mongoose from "mongoose";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AttemptSummary, AttemptView, Page, ScenarioPublic } from "@pitchperfect/shared";
+import {
+  DAY_MS,
+  MINUTE_MS,
+  type AttemptSummary,
+  type AttemptView,
+  type Page,
+  type ScenarioPublic,
+} from "@pitchperfect/shared";
 import { Application, Company, PracticeAttempt, UsageDay } from "../src/db/models/index.js";
 import { csrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
@@ -24,9 +31,6 @@ import { callCount } from "./helpers/stub-coach.js";
 
 useTestDb();
 const harness = usePracticeHarness();
-
-const MINUTE_MS = 60 * 1000;
-const DAY_MS = 24 * 60 * MINUTE_MS;
 
 afterEach(() => {
   vi.useRealTimers();

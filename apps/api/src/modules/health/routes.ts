@@ -1,9 +1,8 @@
 import { Router } from "express";
+import { MINUTE_MS } from "@pitchperfect/shared";
 import { byIp, rateLimit } from "../../middleware/rate-limit.js";
 import type { CoachProbe } from "../../services/coach-probe.js";
 import { healthHandler } from "./handlers.js";
-
-const MINUTE_MS = 60 * 1000;
 
 /**
  * `GET /api/health`. Public and unauthenticated, so it carries a generous per-address limit:

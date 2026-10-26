@@ -1,4 +1,10 @@
-import type { Page, PublicCompany, PublicJob, PublicJobSummary } from "@pitchperfect/shared";
+import {
+  DAY_MS,
+  type Page,
+  type PublicCompany,
+  type PublicJob,
+  type PublicJobSummary,
+} from "@pitchperfect/shared";
 import {
   SEED_COMPANIES,
   SEED_JOBS,
@@ -22,7 +28,6 @@ export interface DemoJob {
 
 /** The newest listing's date; each earlier one in the seed is a day older. */
 const NEWEST_PUBLISHED_AT = Date.UTC(2026, 9, 1);
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A 24-character hex id, the shape the app expects of an api id. */
 const hexId = (n: number) => n.toString(16).padStart(24, "0");

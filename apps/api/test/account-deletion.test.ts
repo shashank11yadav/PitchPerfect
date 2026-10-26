@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import request from "supertest";
 import { afterEach, describe, expect, it } from "vitest";
-import { utcMonth } from "@pitchperfect/shared";
+import { HOUR_MS, utcMonth } from "@pitchperfect/shared";
 import {
   Application,
   AuthToken,
@@ -42,7 +42,6 @@ afterEach(() => {
 
 const files = () => mongoose.connection.collection("resumes.files");
 const chunks = () => mongoose.connection.collection("resumes.chunks");
-const HOUR_MS = 60 * 60 * 1000;
 
 describe("DELETE /api/me as a student", () => {
   async function studentWithEverything() {

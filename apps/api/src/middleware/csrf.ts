@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { CookieOptions, Request, RequestHandler, Response } from "express";
 import { doubleCsrf } from "csrf-csrf";
-import { LIMITS } from "@pitchperfect/shared";
+import { DAY_MS, LIMITS } from "@pitchperfect/shared";
 import type { Config } from "../config.js";
 import { ForbiddenError } from "../errors.js";
 import { sessionUserId } from "./session.js";
@@ -11,7 +11,6 @@ const CSRF_COOKIE = "pp.csrf";
 const ANONYMOUS_ID_COOKIE = "pp.aid";
 
 const ANONYMOUS_ID_PATTERN = /^[0-9a-f]{64}$/;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 function anonymousIdOf(req: Request): string | undefined {
   const value: unknown = (req.cookies as Record<string, unknown> | undefined)?.[

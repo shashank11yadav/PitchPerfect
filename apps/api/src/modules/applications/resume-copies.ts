@@ -1,11 +1,10 @@
 import mongoose, { type QueryFilter, type Types } from "mongoose";
-import { LIMITS } from "@pitchperfect/shared";
+import { DAY_MS, LIMITS } from "@pitchperfect/shared";
 import type { ApplicationAttrs } from "../../db/models/application.js";
 import { Application, StudentProfile } from "../../db/models/index.js";
 import { copyResume, deleteResume } from "../../services/files.js";
 import { anyOf, OPEN_STATUSES } from "./closing.js";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const GRACE_MS = LIMITS.resumeAccessGraceDays * DAY_MS;
 
 /** Holds its own résumé copy (null and missing don't). */

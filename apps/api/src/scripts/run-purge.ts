@@ -1,16 +1,16 @@
 import mongoose from "mongoose";
-import { LIMITS } from "@pitchperfect/shared";
+import { HOUR_MS, LIMITS, MINUTE_MS } from "@pitchperfect/shared";
 import { Application, AuthToken, PracticeAttempt } from "../db/models/index.js";
 import { expiredCopies, removeResumeCopies } from "../modules/applications/resume-copies.js";
 import { removeStalePlaceholders } from "../modules/practice/quota.js";
 
 /** A session still `active` this long after it started can never finish: its turn limit plus an hour. */
-const STALE_ACTIVE_MS = LIMITS.sessionSeconds * 1000 + 60 * 60 * 1000;
+const STALE_ACTIVE_MS = LIMITS.sessionSeconds * 1000 + HOUR_MS;
 /**
  * A session start that has been planning this long crashed; its placeholder is removed and its
  * session given back.
  */
-const STALE_PLACEHOLDER_MS = 5 * 60 * 1000;
+const STALE_PLACEHOLDER_MS = 5 * MINUTE_MS;
 
 export interface PurgeResult {
   attemptsDeleted: number;

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LIMITS, SUPPORT_LINE } from "@pitchperfect/shared";
+import { LIMITS, MINUTE_MS, SUPPORT_LINE } from "@pitchperfect/shared";
 import { PracticeAttempt, UsageDay } from "../src/db/models/index.js";
 import { useTestDb } from "./helpers/db.js";
 import { errorOf } from "./helpers/error-body.js";
@@ -17,7 +17,6 @@ const LIMIT = 50_000;
 const harness = usePracticeHarness({ env: { PRACTICE_STUDENT_DAILY_TOKEN_LIMIT: String(LIMIT) } });
 
 const CRISIS = "Honestly some days I just want to end my life.";
-const MINUTE_MS = 60 * 1000;
 
 afterEach(() => {
   vi.restoreAllMocks();

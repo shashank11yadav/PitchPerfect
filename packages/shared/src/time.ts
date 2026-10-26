@@ -1,3 +1,7 @@
+export const MINUTE_MS = 60_000;
+export const HOUR_MS = 60 * MINUTE_MS;
+export const DAY_MS = 24 * HOUR_MS;
+
 /** Start of the UTC day `offset` days from `now`'s. */
 export const utcDay = (now: Date, offset = 0) =>
   new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offset));

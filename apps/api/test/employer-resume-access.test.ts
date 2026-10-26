@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import type request from "supertest";
 import { describe, expect, it } from "vitest";
-import { LIMITS, type EmployerApplicationView, type Page } from "@pitchperfect/shared";
+import { DAY_MS, LIMITS, type EmployerApplicationView, type Page } from "@pitchperfect/shared";
 import { Application } from "../src/db/models/index.js";
 import { makeTestApp } from "./helpers/app.js";
 import { useTestDb } from "./helpers/db.js";
@@ -14,7 +14,6 @@ useTestDb();
 
 const { app } = makeTestApp();
 
-const DAY_MS = 86_400_000;
 const GRACE_MS = LIMITS.resumeAccessGraceDays * DAY_MS;
 
 const binary = (res: request.Response, done: (error: Error | null, body: Buffer) => void): void => {

@@ -3,6 +3,7 @@ import type { Router } from "express";
 import mongoose from "mongoose";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DAY_MS, HOUR_MS, MINUTE_MS } from "@pitchperfect/shared";
 import {
   AuthToken,
   Company,
@@ -25,9 +26,6 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const MINUTE_MS = 60 * 1000;
-const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
 const NEW_PASSWORD = "copper-meadow-signal-58";
 
 function extraRoutes(router: Router): void {

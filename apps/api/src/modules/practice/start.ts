@@ -1,4 +1,5 @@
 import {
+  DAY_MS,
   LIMITS,
   type CoachPlanRequest,
   type StartedSession,
@@ -22,7 +23,6 @@ import {
 import { coachOf, sessionEndsAt, type PracticeDeps } from "./service.js";
 import { estimateFailedPlan } from "./text.js";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 /** Job text sent to the planner is clipped to this many characters. */
 const JOB_TEXT_MAX_CHARS = 4000;
 

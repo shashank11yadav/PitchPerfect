@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { doubleCsrf } from "csrf-csrf";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LIMITS, type Role } from "@pitchperfect/shared";
+import { DAY_MS, LIMITS, type Role } from "@pitchperfect/shared";
 import { User } from "../src/db/models/index.js";
 import {
   loadUser,
@@ -29,7 +29,6 @@ afterEach(() => {
 });
 
 const ORIGIN = TEST_ORIGIN;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const keyFromHeader = (req: Request) => req.get("x-test-key") ?? "none";
 

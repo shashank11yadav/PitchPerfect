@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import mongoose from "mongoose";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { HOUR_MS } from "@pitchperfect/shared";
 import { AuthToken } from "../db/models/index.js";
 import { ValidationError } from "../errors.js";
 import { useTestDb } from "../../test/helpers/db.js";
@@ -12,7 +13,6 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const HOUR_MS = 60 * 60 * 1000;
 const newUserId = () => new mongoose.Types.ObjectId().toString();
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 

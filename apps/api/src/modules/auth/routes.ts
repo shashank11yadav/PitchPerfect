@@ -1,6 +1,8 @@
 import { Router, type Request } from "express";
 import {
   ForgotPasswordSchema,
+  HOUR_MS,
+  MINUTE_MS,
   ResetPasswordSchema,
   SigninSchema,
   SignupSchema,
@@ -14,8 +16,6 @@ import { authHandlers } from "./handlers.js";
 import { fromKnownDevice } from "./known-device.js";
 import { warnSigninLimited, type AuthDeps } from "./service.js";
 
-const MINUTE_MS = 60 * 1000;
-const HOUR_MS = 60 * MINUTE_MS;
 /** Failed sign-ins are counted over 15 minutes; a blocked client waits out the window. */
 const SIGNIN_FAILURE_WINDOW_MS = 15 * MINUTE_MS;
 

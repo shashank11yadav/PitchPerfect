@@ -1,13 +1,16 @@
 import { Router } from "express";
-import { AttemptListQuerySchema, StartPracticeSchema, TurnSchema } from "@pitchperfect/shared";
+import {
+  AttemptListQuerySchema,
+  MINUTE_MS,
+  StartPracticeSchema,
+  TurnSchema,
+} from "@pitchperfect/shared";
 import { requireConsent, requireRole, requireVerified } from "../../middleware/auth.js";
 import { byIp, byUser, rateLimit } from "../../middleware/rate-limit.js";
 import { IdParamSchema, validate } from "../../middleware/validate.js";
 import { practicePartnerOf } from "../../services/coach-probe.js";
 import { practiceHandlers } from "./handlers.js";
 import type { PracticeDeps } from "./service.js";
-
-const MINUTE_MS = 60 * 1000;
 
 /**
  * `/api/practice/*` per docs/api.md. Every route but the public partner disclosure is for the

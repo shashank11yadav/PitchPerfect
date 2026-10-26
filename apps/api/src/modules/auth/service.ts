@@ -1,7 +1,9 @@
 import { randomInt } from "node:crypto";
 import type { Types } from "mongoose";
 import {
+  HOUR_MS,
   LIMITS,
+  MINUTE_MS,
   slugify,
   type AuthMe,
   type PublicUser,
@@ -40,8 +42,6 @@ export interface AuthDeps {
   mailer: Mailer;
 }
 
-const MINUTE_MS = 60 * 1000;
-const HOUR_MS = 60 * MINUTE_MS;
 const VERIFY_TTL_MS = LIMITS.verifyTokenHours * HOUR_MS;
 const RESET_TTL_MS = LIMITS.resetTokenMinutes * MINUTE_MS;
 const DUPLICATE_KEY_CODE = 11000;

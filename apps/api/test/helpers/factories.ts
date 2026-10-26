@@ -1,4 +1,4 @@
-import { slugify, utcMonth } from "@pitchperfect/shared";
+import { DAY_MS, slugify, utcMonth } from "@pitchperfect/shared";
 import mongoose from "mongoose";
 import {
   Application,
@@ -166,7 +166,7 @@ export function createAttempt(
     // Set here rather than by the schema default, which reads the clock before fake timers.
     startedAt,
     transcript: practiceTranscript(4, startedAt),
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + DAY_MS),
     ...overrides,
   });
 }

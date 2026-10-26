@@ -2,13 +2,16 @@ import { Router } from "express";
 import {
   ApplicationStatusUpdateSchema,
   CompanyUpdateSchema,
+  DAY_MS,
   EmployerApplicationListQuerySchema,
   EmployerJobListQuerySchema,
+  HOUR_MS,
   InterviewSchema,
   JobInputSchema,
   JobStatusUpdateSchema,
   JobUpdateSchema,
   LIMITS,
+  MINUTE_MS,
 } from "@pitchperfect/shared";
 import { requireRole, requireVerified } from "../../middleware/auth.js";
 import { byUser, rateLimit } from "../../middleware/rate-limit.js";
@@ -20,9 +23,6 @@ import { dashboardHandlers } from "./dashboard.handlers.js";
 import { jobsHandlers } from "./jobs.handlers.js";
 import { refuseSuspended, requireVerifiedCompany, withCompany } from "./ownership.js";
 
-const MINUTE_MS = 60 * 1000;
-const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
 const WRITES_PER_MINUTE = 60;
 
 /**

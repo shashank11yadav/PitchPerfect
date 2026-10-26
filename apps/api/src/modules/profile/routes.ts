@@ -4,6 +4,7 @@ import {
   ChangePasswordSchema,
   DeleteAccountSchema,
   EmployerProfileUpdateSchema,
+  HOUR_MS,
   PracticeConsentSchema,
   StudentProfileUpdateSchema,
 } from "@pitchperfect/shared";
@@ -14,8 +15,6 @@ import { validate } from "../../middleware/validate.js";
 import type { CoachProbe } from "../../services/coach-probe.js";
 import type { AuthDeps } from "../auth/service.js";
 import { profileHandlers } from "./handlers.js";
-
-const HOUR_MS = 60 * 60 * 1000;
 
 /** The profile body is checked against the signed-in user's own role. */
 function validateProfileByRole(): RequestHandler {

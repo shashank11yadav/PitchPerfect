@@ -1,12 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { JobListQuerySchema, pageQuery } from "@pitchperfect/shared";
+import { JobListQuerySchema, MINUTE_MS, pageQuery } from "@pitchperfect/shared";
 import { requireRole } from "../../middleware/auth.js";
 import { byIp, rateLimit } from "../../middleware/rate-limit.js";
 import { IdParamSchema, validate } from "../../middleware/validate.js";
 import { jobHandlers } from "./handlers.js";
 
-const MINUTE_MS = 60 * 1000;
 const SLUG_MAX_LENGTH = 100;
 
 export const SlugParamSchema = z.strictObject({ slug: z.string().min(1).max(SLUG_MAX_LENGTH) });

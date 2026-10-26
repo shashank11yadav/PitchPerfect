@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { Types } from "mongoose";
-import { LIMITS, PaySchema, type Role } from "@pitchperfect/shared";
+import { DAY_MS, LIMITS, PaySchema, type Role } from "@pitchperfect/shared";
 import {
   Application,
   Company,
@@ -32,7 +32,6 @@ import {
   type SeedJob,
 } from "@pitchperfect/shared/seed-data";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const TURN_GAP_MS = 45_000;
 const SESSION_MS = 6 * 60_000;
 

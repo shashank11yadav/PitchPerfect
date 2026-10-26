@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
-import { LIMITS } from "@pitchperfect/shared";
+import { DAY_MS, LIMITS } from "@pitchperfect/shared";
 import type { Config } from "../../config.js";
 
 /**
@@ -9,7 +9,6 @@ import type { Config } from "../../config.js";
  */
 export const DEVICE_COOKIE = "pp.device";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_AGE_MS = LIMITS.signinDeviceDays * DAY_MS;
 /** Allowance for clocks of several api instances that disagree slightly. */
 const CLOCK_SKEW_MS = 60 * 1000;

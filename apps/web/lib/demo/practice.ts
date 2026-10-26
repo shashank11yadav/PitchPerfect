@@ -14,6 +14,7 @@ import {
 import { FakeProvider } from "@pitchperfect/scripted-partner";
 import {
   CHECK_IN_LINE,
+  DAY_MS,
   LIMITS,
   maySignalSelfHarm,
   redactReply,
@@ -54,7 +55,6 @@ import { readDemoState, updateDemoState, type StoredAttempt } from "./store";
 
 const MIN_SCORED_TURNS = 2;
 const SESSION_MS = LIMITS.sessionSeconds * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 /** The coach's own per-call timeout; the scripted partner answers at once anyway. */
 const TIMEOUT_MS = 30_000;
 /** Job text handed to the planner is clipped as the api clips it. */
