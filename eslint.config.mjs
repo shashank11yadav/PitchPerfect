@@ -12,7 +12,6 @@ export default tseslint.config(
       "apps/web/out/**",
       "**/coverage/**",
       "**/node_modules/**",
-      ".private/**",
       "apps/coach/evals/results/**",
       "playwright-report/**",
       "test-results/**",

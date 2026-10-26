@@ -26,8 +26,7 @@
 **/*.pem
 **/*.key
 
-# Local-only notes and working files
-OneDrive*
+# Personal documents never belong in an image
 **/*.docx
 **/*.doc
 **/*.pdf
