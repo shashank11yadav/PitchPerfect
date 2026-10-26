@@ -63,6 +63,22 @@ describe("loadConfig", () => {
     });
   });
 
+  describe("TRUST_PROXY", () => {
+    it("takes a list of addresses and subnets, trimmed", () => {
+      expect(
+        loadConfig(devEnv({ TRUST_PROXY: " 10.0.0.0/8, fd00::/8 ,192.0.2.1" })).TRUST_PROXY,
+      ).toEqual(["10.0.0.0/8", "fd00::/8", "192.0.2.1"]);
+    });
+
+    // Trusting every hop lets any client write its own address into X-Forwarded-For.
+    it.each(["true", "TRUE", "*", "false", "yes", "1.5", "2 hops", "loopback", "10.0.0.0/33", ","])(
+      "rejects %j",
+      (value) => {
+        expect(() => loadConfig(devEnv({ TRUST_PROXY: value }))).toThrow(/TRUST_PROXY/);
+      },
+    );
+  });
+
   describe("an unset NODE_ENV", () => {
     const withoutNodeEnv = (env: NodeJS.ProcessEnv) => {
       const copy = { ...env };
@@ -142,6 +158,9 @@ describe("loadConfig", () => {
       expect(() => loadConfig(prodEnv({ TRUST_PROXY: "0" }))).toThrow(/TRUST_PROXY/);
       expect(() => loadConfig(prodEnv({ TRUST_PROXY: "" }))).toThrow(/TRUST_PROXY/);
       expect(loadConfig(prodEnv({ TRUST_PROXY: "2" })).TRUST_PROXY).toBe(2);
+      expect(loadConfig(prodEnv({ TRUST_PROXY: "10.0.0.0/8" })).TRUST_PROXY).toEqual([
+        "10.0.0.0/8",
+      ]);
     });
 
     it("requires a non-empty SMTP_HOST", () => {

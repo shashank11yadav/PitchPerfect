@@ -56,6 +56,8 @@ export function createApp(
 
   // Express's own production behaviour follows the config, where an unset NODE_ENV is production.
   app.set("env", config.NODE_ENV);
+  // A hop count or a list of proxy subnets, never `true`: `req.ip`, which the limiters key on, is
+  // then the address the last trusted proxy saw (docs/deploy.md).
   app.set("trust proxy", config.TRUST_PROXY);
   app.disable("x-powered-by");
 

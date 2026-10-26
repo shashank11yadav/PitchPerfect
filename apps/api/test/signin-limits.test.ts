@@ -1,4 +1,7 @@
+import type { Router } from "express";
+import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { byIp } from "../src/middleware/rate-limit.js";
 import { makeTestApp } from "./helpers/app.js";
 import { csrfAgent, type CsrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
@@ -18,8 +21,14 @@ const IP_FAILURES = 30;
 const EMAIL_FAILURES = 10;
 const FAILURE_WINDOW_MS = 15 * MINUTE_MS;
 
+function extraRoutes(router: Router): void {
+  router.get("/__test/ip-key", (req, res) => {
+    res.json({ key: byIp(req) });
+  });
+}
+
 // One trusted hop, so each test can pick the client address with X-Forwarded-For.
-const { app } = makeTestApp({ env: { TRUST_PROXY: "1" } });
+const { app } = makeTestApp({ env: { TRUST_PROXY: "1" }, extraRoutes });
 
 const signin = (agent: CsrfAgent, from: string, body: { email: string; password: string }) =>
   agent.post("/api/auth/signin").set("X-Forwarded-For", from).send(body);
@@ -149,5 +158,74 @@ describe("failed sign-ins to one email from many addresses", () => {
       await signin(agent, from, { email, password: WRONG_PASSWORD }).expect(401);
     }
     await signin(agent, "198.51.100.40", { email, password }).expect(200);
+  });
+});
+
+describe("the client address behind proxies (docs/deploy.md)", () => {
+  const CLIENT = "203.0.113.7";
+  const SPOOFS = ["198.51.100.1", "198.51.100.2", "198.51.100.3", "198.51.100.4", "10.0.0.1"];
+
+  /**
+   * Each documented deploy shape: its `TRUST_PROXY`, and the X-Forwarded-For the api receives when
+   * the client sent one of its own (`spoof`).
+   */
+  const SHAPES = [
+    // Vercel replaces the header with the client's address; the api host's router appends Vercel's.
+    [
+      "web on Vercel, api on Render or Fly.io",
+      "2",
+      (spoof: string) => `${spoof}, ${CLIENT}, 192.0.2.10`,
+    ],
+    // nginx appends the client's address; next start forwards the header as it came.
+    ["nginx (appending), then next start", "1", (spoof: string) => `${spoof}, ${CLIENT}`],
+    // nginx replaces the header with the client's address.
+    ["nginx (replacing), then next start", "1", () => CLIENT],
+  ] as const;
+
+  it.each(SHAPES)("%s: the limiter keys on the real client", async (_shape, trust, header) => {
+    const { app: shaped } = makeTestApp({ env: { TRUST_PROXY: trust }, extraRoutes });
+    const agent = await csrfAgent(shaped);
+    for (const spoof of SPOOFS) {
+      const res = await agent.agent.get("/api/__test/ip-key").set("X-Forwarded-For", header(spoof));
+      expect((res.body as { key: string }).key).toBe(CLIENT);
+    }
+
+    const { email } = await createStudent();
+    for (const spoof of SPOOFS) {
+      await agent
+        .post("/api/auth/signin")
+        .set("X-Forwarded-For", header(spoof))
+        .send({ email, password: WRONG_PASSWORD })
+        .expect(401);
+    }
+    const blocked = await agent
+      .post("/api/auth/signin")
+      .set("X-Forwarded-For", header("198.51.100.99"))
+      .send({ email, password: WRONG_PASSWORD });
+    expect(blocked.status).toBe(429);
+  });
+
+  it("lets the client choose its address when TRUST_PROXY is one hop too many", async () => {
+    const [, trust, header] = SHAPES[0];
+    const { app: tooTrusting } = makeTestApp({
+      env: { TRUST_PROXY: String(Number(trust) + 1) },
+      extraRoutes,
+    });
+    const res = await request(tooTrusting)
+      .get("/api/__test/ip-key")
+      .set("X-Forwarded-For", header("198.51.100.1"));
+    expect((res.body as { key: string }).key).toBe("198.51.100.1");
+  });
+
+  it("keys on the trusted subnet's client when TRUST_PROXY is a subnet list", async () => {
+    // supertest connects from loopback; the second hop is the platform router.
+    const { app: bySubnet } = makeTestApp({
+      env: { TRUST_PROXY: "127.0.0.1/8, ::1, 192.0.2.0/24" },
+      extraRoutes,
+    });
+    const res = await request(bySubnet)
+      .get("/api/__test/ip-key")
+      .set("X-Forwarded-For", `198.51.100.1, ${CLIENT}, 192.0.2.10`);
+    expect((res.body as { key: string }).key).toBe(CLIENT);
   });
 });
