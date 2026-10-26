@@ -49,7 +49,7 @@ export function authRoutes({ csrf, ...deps }: AuthRouteDeps): Router {
   });
   // Guessing one account's password from many addresses: cap that email's failures across all
   // addresses. It slows the email down for at most the window and never locks the account, so
-  // someone hammering an address can delay its owner by minutes, not shut them out (docs/limits.md).
+  // someone hammering an address can delay its owner by minutes, not shut them out (docs/roadmap.md).
   // Unknown emails are counted the same way, so the answer says nothing about which exist.
   const signinEmailFailures = rateLimit("signin-email-failures", {
     windowMs: SIGNIN_FAILURE_WINDOW_MS,

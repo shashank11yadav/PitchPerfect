@@ -37,7 +37,7 @@ Defined once as CSS variables in `apps/web/app/globals.css` and mapped into Tail
 | `--pp-shadow-float` | `0 32px 80px -24px rgb(13 19 56 / .55)`                                                                                                           | only a product window that overlaps a section edge, and the mobile menu |
 | spacing             | 4-px scale; public sections `py-32` desktop / `py-20` mobile; public page column `1360px` with 16/24/32 px margins (`WRAP`); app content `1200px` |                                                                         |
 
-Dark mode: not in v1 (documented in limits.md). Do not add partial dark styles.
+There is one light theme. Components use these tokens only, so a dark theme is a second token set ([roadmap.md](roadmap.md#platform)); don't add partial dark styles in the meantime.
 
 ## Art direction (public pages)
 

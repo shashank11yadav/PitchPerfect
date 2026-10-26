@@ -3,7 +3,7 @@ import type { ScenarioPrivate } from "@pitchperfect/shared";
 /**
  * Adversarial replies for measuring the leak checks: the canary and the hidden part of a scenario,
  * each slipped out with a trick a model can be talked into. `gap` marks a variant the rules are
- * known to miss (see docs/limits.md); every other variant must be caught.
+ * known to miss (see docs/roadmap.md); every other variant must be caught.
  */
 export interface LeakVariant {
   trick: string;

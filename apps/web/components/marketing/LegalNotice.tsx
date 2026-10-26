@@ -1,6 +1,6 @@
 import { Info } from "lucide-react";
 
-/** The banner on the legal templates (docs/limits.md: legal pages are templates). */
+/** The banner on the legal templates (docs/roadmap.md: legal pages are templates). */
 export function LegalNotice() {
   return (
     <div role="note" className="flex gap-3 rounded-card bg-warning/10 p-5 text-ink">
