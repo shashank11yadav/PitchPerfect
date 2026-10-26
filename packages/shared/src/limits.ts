@@ -13,6 +13,8 @@ export const LIMITS = {
   sessionSeconds: 20 * MINUTE,
   replyMaxWords: 80,
   guardFlagLimit: 3,
+  /** Scored student turns a call needs before its scorecard can be shared with an application. */
+  shareMinStudentTurns: 4,
   dailyQuota: 5,
   monthlyQuota: 30,
   dailyTokenBudget: 2_000_000,

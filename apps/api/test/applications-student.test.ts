@@ -13,6 +13,7 @@ import {
   createEmployer,
   createJob,
   createStudent,
+  practiceTranscript,
   signIn,
 } from "./helpers/factories.js";
 
@@ -197,6 +198,20 @@ describe("POST /api/jobs/:id/apply", () => {
     expect(res.status).toBe(400);
     expect(errorOf(res).code).toBe("validation_failed");
     expect(errorOf(res).fields).toHaveProperty("sharedAttemptId");
+    expect(await Application.countDocuments()).toBe(0);
+  });
+
+  it("refuses to attach a call with fewer than four scored turns", async () => {
+    const { job } = await openJob();
+    const { session, user } = await studentSession();
+    const short = await createAttempt(user._id, { transcript: practiceTranscript(3) });
+
+    const res = await session.post(applyPath(job)).send({ sharedAttemptId: short._id.toString() });
+
+    expect(res.status).toBe(400);
+    expect(errorOf(res).fields).toEqual({
+      sharedAttemptId: "Share a call with at least 4 of your turns. This one has 3.",
+    });
     expect(await Application.countDocuments()).toBe(0);
   });
 });
@@ -471,6 +486,32 @@ describe("PUT /api/applications/:id/scorecard", () => {
     expect(errorOf(res).code).toBe("validation_failed");
     expect(errorOf(res).fields).toHaveProperty("attemptId");
     expect((await Application.findById(application._id))?.sharedAttemptId).toBeUndefined();
+  });
+
+  it("refuses a call with fewer than four scored turns; flagged ones don't count", async () => {
+    const { session, user, application } = await ownApplication();
+    const transcript = practiceTranscript(4);
+    // A redirected line: it used a turn, but it was never scored.
+    const redirected = transcript.map((entry, index) =>
+      index < 2 ? { ...entry, flagged: true } : entry,
+    );
+    const short = await createAttempt(user._id, { transcript: redirected });
+
+    const res = await session.put(sharePath(application._id)).send({
+      attemptId: short._id.toString(),
+    });
+
+    expect(res.status).toBe(400);
+    expect(errorOf(res).fields).toEqual({
+      attemptId: "Share a call with at least 4 of your turns. This one has 3.",
+    });
+    expect((await Application.findById(application._id))?.sharedAttemptId).toBeUndefined();
+
+    const enough = await createAttempt(user._id);
+    const shared = await session.put(sharePath(application._id)).send({
+      attemptId: enough._id.toString(),
+    });
+    expect(shared.status).toBe(200);
   });
 
   it.each(["withdrawn", "closed"] as const)(

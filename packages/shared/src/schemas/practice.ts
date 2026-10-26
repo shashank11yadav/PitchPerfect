@@ -50,6 +50,14 @@ export const PRACTICE_PARTNER_KINDS = ["scripted", "live", "browser"] as const;
  */
 export type PracticePartnerKind = (typeof PRACTICE_PARTNER_KINDS)[number];
 
+/**
+ * Student turns that count toward a score: a flagged one (redirected by the guards, or cut off)
+ * used up a turn but is never scored.
+ */
+export const scoredStudentTurns = (
+  transcript: readonly { role: string; flagged?: boolean | undefined }[],
+): number => transcript.filter((entry) => entry.role === "student" && !entry.flagged).length;
+
 /** The kinds the api reports and a student's practice consent is given for. */
 export const REPORTED_PARTNER_KINDS = ["scripted", "live"] as const;
 export type ReportedPartnerKind = (typeof REPORTED_PARTNER_KINDS)[number];

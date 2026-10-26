@@ -101,7 +101,7 @@ export function dashboard(overrides: Partial<EmployerDashboard> = {}): EmployerD
   };
 }
 
-export function sharedScorecard(): SharedScorecardView {
+export function sharedScorecard(overrides: Partial<SharedScorecardView> = {}): SharedScorecardView {
   const dimension = (key: string, name: string) => ({
     key,
     score: 4,
@@ -111,6 +111,9 @@ export function sharedScorecard(): SharedScorecardView {
   return {
     skill: "pitching",
     completedAt: "2026-10-16T15:00:00.000Z",
+    studentTurns: 6,
+    partner: "live",
+    durationSeconds: 250,
     scorecard: {
       overall: 72,
       dimensions: [
@@ -133,5 +136,6 @@ export function sharedScorecard(): SharedScorecardView {
         improved: "We flag late loads early.",
       },
     } as SharedScorecardView["scorecard"],
+    ...overrides,
   };
 }

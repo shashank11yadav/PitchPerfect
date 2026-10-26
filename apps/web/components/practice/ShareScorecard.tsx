@@ -1,6 +1,6 @@
 "use client";
 
-import type { ApplicationStatus, StudentApplicationView } from "@pitchperfect/shared";
+import { LIMITS, type ApplicationStatus, type StudentApplicationView } from "@pitchperfect/shared";
 import Link from "next/link";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -18,11 +18,18 @@ const PAGE = 50;
 const jobName = (application: StudentApplicationView) =>
   `${application.job.title} at ${application.job.companyName}`;
 
+interface ShareScorecardProps {
+  attemptId: string;
+  /** The call's scored turns; it can be shared only with `LIMITS.shareMinStudentTurns` or more. */
+  studentTurns: number;
+}
+
 /**
  * Attach this scorecard to one of the student's open applications, or stop sharing it. The
- * employer sees the scores, the reasons and the quoted lines, not the whole transcript.
+ * employer sees the scores, the reasons and the quoted lines, not the whole transcript, along
+ * with the number of turns, the partner and the length of the call.
  */
-export function ShareScorecard({ attemptId }: { attemptId: string }) {
+export function ShareScorecard({ attemptId, studentTurns }: ShareScorecardProps) {
   const applications = useApi(`/me/applications?pageSize=${String(PAGE)}`, ApplicationsPage);
   const selectId = useId();
   const [choice, setChoice] = useState("");
@@ -43,6 +50,7 @@ export function ShareScorecard({ attemptId }: { attemptId: string }) {
     (application) => OPEN.includes(application.status) && application.sharedAttemptId !== attemptId,
   );
   const selected = open.find((application) => application.id === choice) ?? open[0];
+  const tooShort = studentTurns < LIMITS.shareMinStudentTurns;
 
   async function share(application: StudentApplicationView, share: boolean) {
     setBusy(application.id);
@@ -95,7 +103,13 @@ export function ShareScorecard({ attemptId }: { attemptId: string }) {
         </ul>
       )}
 
-      {selected ? (
+      {tooShort ? (
+        <p className="max-w-prose text-ink">
+          You can share a call once it has at least {LIMITS.shareMinStudentTurns} of your turns.
+          This one has {studentTurns}, which is too little for an employer to go on. Practice again
+          and share a longer call.
+        </p>
+      ) : selected ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <label htmlFor={selectId} className="text-small font-semibold text-ink">

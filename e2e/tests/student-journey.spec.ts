@@ -9,6 +9,7 @@ import { E2E_PASSWORD } from "../helpers/stack";
 const TURNS = [
   "Hi Sam, thanks for taking the call. I help operations teams cut the time they spend chasing late shipments. How do you track delays today?",
   "That makes sense. Teams like yours usually save about five hours a week once alerts go to the right person automatically. What would that time be worth to you?",
+  "Fair point on switching. Setup takes an afternoon and your team keeps the tools it already uses. Would that work for you?",
   "Could we book thirty minutes on Tuesday at 10am to walk through your current process and see if it fits?",
 ];
 
@@ -51,7 +52,10 @@ async function completeLesson(page: Page): Promise<void> {
   await expect(page.getByRole("status").filter({ hasText: "Marked as done." })).toBeVisible();
 }
 
-/** Accepts the practice notice, talks three turns by typing, and ends with a scorecard. */
+/**
+ * Accepts the practice notice, talks four turns by typing (the fewest a shared scorecard needs),
+ * and ends with a scorecard.
+ */
 async function practiceByText(page: Page): Promise<string> {
   await page.goto("/app/practice/pitching");
   const notice = page.getByRole("dialog", { name: "Before your first practice call" });
@@ -72,7 +76,7 @@ async function practiceByText(page: Page): Promise<string> {
     await expect(transcript).toHaveCount(1 + 2 * (index + 1));
     await expect(transcript.last()).not.toContainText("No reply came back");
   }
-  await expect(page.getByText("17 turns left")).toBeVisible();
+  await expect(page.getByText("16 turns left")).toBeVisible();
 
   await page.getByRole("button", { name: "End session" }).click();
   await page

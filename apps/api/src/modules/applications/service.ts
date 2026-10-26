@@ -1,9 +1,11 @@
 import mongoose from "mongoose";
-import type {
-  ApplicationStatus,
-  Page,
-  PageQuery,
-  StudentApplicationView,
+import {
+  LIMITS,
+  scoredStudentTurns,
+  type ApplicationStatus,
+  type Page,
+  type PageQuery,
+  type StudentApplicationView,
 } from "@pitchperfect/shared";
 import { sharesScorecard, toStudentApplicationView } from "../../db/mappers.js";
 import type { ApplicationAttrs } from "../../db/models/application.js";
@@ -75,16 +77,24 @@ async function viewOf(application: ApplicationDoc): Promise<StudentApplicationVi
 }
 
 /**
- * The attempt must be the student's own and finished; anyone else's looks like it doesn't exist.
- * `field` names the body field in the validation error.
+ * The attempt must be the student's own and finished, with at least `LIMITS.shareMinStudentTurns`
+ * scored turns, so an employer never sees a score that rests on a line or two. Anyone else's
+ * attempt looks like it doesn't exist. `field` names the body field in the validation error.
  */
 async function assertShareable(studentId: string, attemptId: string, field: string): Promise<void> {
   const attempt = await PracticeAttempt.findOne({ _id: attemptId, studentId })
-    .select("status")
+    .select("status transcript.role transcript.flagged")
     .lean();
   if (!attempt) throw new NotFoundError();
   if (attempt.status !== "completed") {
     throw new ValidationError({ [field]: "Finish that practice session before sharing it" });
+  }
+  const turns = scoredStudentTurns(attempt.transcript);
+  if (turns < LIMITS.shareMinStudentTurns) {
+    const least = String(LIMITS.shareMinStudentTurns);
+    throw new ValidationError({
+      [field]: `Share a call with at least ${least} of your turns. This one has ${String(turns)}.`,
+    });
   }
 }
 

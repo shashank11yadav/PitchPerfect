@@ -19,14 +19,27 @@ afterEach(() => {
 
 const ATTEMPT_ID = "65f1c0ffee00000000000b01";
 
-function show(applications = [application()], routes: Record<string, Route> = {}) {
+/** A scored call with `turns` student lines, each answered. */
+function callWith(turns: number) {
+  const transcript = Array.from({ length: turns }, (_, index) => [
+    { role: "student" as const, text: `Student line ${String(index + 1)}.` },
+    { role: "partner" as const, text: "Go on." },
+  ]).flat();
+  return completedAttempt({ transcript: [...completedAttempt().transcript, ...transcript] });
+}
+
+function show(
+  applications = [application()],
+  routes: Record<string, Route> = {},
+  attempt = callWith(3),
+) {
   const fetchMock = serveApi({
     "GET /api/auth/csrf": csrf,
     "GET /api/me/applications?pageSize=50": () =>
       jsonResponse(pageOf(applications, applications.length, 50)),
     ...routes,
   });
-  render(<Scorecard attempt={completedAttempt()} />);
+  render(<Scorecard attempt={attempt} />);
   return fetchMock;
 }
 
@@ -101,6 +114,29 @@ describe("Scorecard", () => {
     });
     const last = fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT").at(-1);
     expect(bodyOf(last?.[1])).toEqual({ attemptId: null });
+  });
+
+  it("explains why a call with fewer than four turns can't be shared", async () => {
+    const fetchMock = show([application()], {}, callWith(2));
+    expect(
+      await screen.findByText(
+        /You can share a call once it has at least 4 of your turns. This one has 3,/,
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Share" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Application" })).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(0);
+  });
+
+  it("doesn't count redirected turns toward the four", async () => {
+    const attempt = callWith(3);
+    const flagged = completedAttempt({
+      transcript: attempt.transcript.map((entry, index) =>
+        index === 2 ? { ...entry, flagged: true } : entry,
+      ),
+    });
+    show([application()], {}, flagged);
+    expect(await screen.findByText(/This one has 3,/)).toBeVisible();
   });
 
   it("says what to do when there's no open application", async () => {

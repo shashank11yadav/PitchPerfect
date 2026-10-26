@@ -200,6 +200,32 @@ describe("ApplicantDrawer", () => {
     expect(callsTo(fetchMock, SCORECARD)).toBe(1);
   });
 
+  it("says how many turns the score rests on, who answered, and for how long", async () => {
+    setup(applicant({ hasSharedScorecard: true }));
+    const facts = await screen.findByText("Riley’s turns");
+    const list = facts.closest("dl");
+    if (!(list instanceof HTMLElement)) throw new Error("no facts list");
+    expect(list).toHaveTextContent("Riley’s turns6");
+    expect(list).toHaveTextContent("PartnerAI practice partner");
+    expect(list).toHaveTextContent("Call length4 min 10 s");
+    expect(screen.queryByText(/A short call/)).not.toBeInTheDocument();
+  });
+
+  it("marks a scripted call, and a short one shared before the minimum", async () => {
+    setup(applicant({ hasSharedScorecard: true }), {
+      [SCORECARD]: () =>
+        jsonResponse(
+          sharedScorecard({ studentTurns: 2, partner: "scripted", durationSeconds: 45 }),
+        ),
+    });
+    expect(await screen.findByText("Scripted demo partner")).toBeVisible();
+    expect(screen.getByText("45 s")).toBeVisible();
+    expect(screen.getByText(/fixed set of lines/)).toBeVisible();
+    expect(
+      screen.getByText(/A short call: Riley shared it before a scorecard needed at least 4 turns/),
+    ).toBeVisible();
+  });
+
   it("doesn't ask for a scorecard that wasn't shared", () => {
     const { fetchMock } = setup();
     expect(screen.getByText("No scorecard shared")).toBeVisible();

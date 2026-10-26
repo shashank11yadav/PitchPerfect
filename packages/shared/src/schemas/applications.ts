@@ -7,6 +7,7 @@ import {
 import type { Scorecard } from "../rubric.js";
 import type { SkillSlug } from "../skills.js";
 import { httpsUrl, objectId, pageQuery } from "./common.js";
+import type { ReportedPartnerKind } from "./practice.js";
 
 export const ApplySchema = z.strictObject({ sharedAttemptId: objectId().optional() });
 export type Apply = z.infer<typeof ApplySchema>;
@@ -84,9 +85,17 @@ export interface EmployerRecentApplication extends EmployerApplicationView {
   jobTitle: string;
 }
 
-/** What an employer sees of a scorecard the student chose to share. */
+/**
+ * What an employer sees of a scorecard the student chose to share, with what the score rests on:
+ * the scored student turns, which partner ran the call, and how long it lasted. A card shared
+ * before the minimum of `LIMITS.shareMinStudentTurns` turns can have fewer.
+ */
 export interface SharedScorecardView {
   scorecard: Scorecard;
   skill: SkillSlug;
   completedAt: string | null;
+  studentTurns: number;
+  partner: ReportedPartnerKind;
+  /** From the start of the call to its last line; null for a call with no lines. */
+  durationSeconds: number | null;
 }

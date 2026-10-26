@@ -2,6 +2,7 @@ import type { Types } from "mongoose";
 import {
   isMeetingServiceHost,
   MEETING_SERVICE_NAMES,
+  scoredStudentTurns,
   type ApplicationStatus,
   type EmployerApplicationListQuery,
   type EmployerApplicationView,
@@ -44,7 +45,7 @@ export async function applicantViews(
             application,
             user,
             profile,
-            sharesScorecard(application, completed),
+            resumeAccessOpen(application) && sharesScorecard(application, completed),
             resumeAccessOpen(application) &&
               appliedResumeId(application, profile.resumeFileId) !== null,
           ),
@@ -188,21 +189,31 @@ export async function scheduleInterview(
   return viewOf(updated);
 }
 
-/** The scorecard the student shared with this application, if it is still there and finished. */
+/**
+ * The scorecard the student shared with this application, if it is still there and finished and
+ * the employer's access window (the résumé's) is open, with what it rests on: the scored student
+ * turns, the partner that ran the call, and how long the call lasted.
+ */
 export async function sharedScorecard(application: ApplicationDoc): Promise<SharedScorecardView> {
   const notShared = () => new NotFoundError("No scorecard has been shared", "not_shared");
-  if (!application.sharedAttemptId) throw notShared();
+  if (!application.sharedAttemptId || !resumeAccessOpen(application)) throw notShared();
   const attempt = await PracticeAttempt.findOne({
     _id: application.sharedAttemptId,
     studentId: application.studentId,
     status: "completed",
   })
-    .select("skill scorecard endedAt")
+    .select("skill scorecard provider transcript startedAt endedAt")
     .lean();
   if (!attempt?.scorecard) throw notShared();
+  const lastLine = attempt.transcript.at(-1)?.at;
   return {
     scorecard: attempt.scorecard,
     skill: attempt.skill,
     completedAt: attempt.endedAt?.toISOString() ?? null,
+    studentTurns: scoredStudentTurns(attempt.transcript),
+    partner: attempt.provider === "fake" ? "scripted" : "live",
+    durationSeconds: lastLine
+      ? Math.round((lastLine.getTime() - attempt.startedAt.getTime()) / 1000)
+      : null,
   };
 }

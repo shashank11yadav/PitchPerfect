@@ -1,6 +1,6 @@
 "use client";
 
-import { getSkill, type AttemptView } from "@pitchperfect/shared";
+import { getSkill, scoredStudentTurns, type AttemptView } from "@pitchperfect/shared";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -67,11 +67,15 @@ export function Scorecard({ attempt, onPracticeAgain }: ScorecardProps) {
               Share with an application
             </h2>
             <p className="max-w-prose text-ink">
-              The employer sees the scores, the reasons and the lines quoted here, not the whole
-              transcript. You can stop sharing at any time.
+              The employer sees the scores, the reasons and the lines quoted here, plus how many
+              turns you took, which partner you talked to and how long the call ran. They don’t see
+              the whole transcript. You can stop sharing at any time.
             </p>
           </div>
-          <ShareScorecard attemptId={attempt.id} />
+          <ShareScorecard
+            attemptId={attempt.id}
+            studentTurns={scoredStudentTurns(attempt.transcript)}
+          />
         </Card>
       )}
     </div>

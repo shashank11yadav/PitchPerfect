@@ -119,11 +119,32 @@ export function createApplication(
   });
 }
 
-/** A finished practice attempt for `studentId`, unless `overrides` say otherwise. */
+/**
+ * `turns` student lines, each answered by the partner 30 s later, starting at `startedAt`: what
+ * a call with that many scored turns stores.
+ */
+export function practiceTranscript(turns: number, startedAt: Date = new Date()) {
+  const at = (step: number) => new Date(startedAt.getTime() + step * 30_000);
+  return Array.from({ length: turns }, (_, index) => [
+    {
+      role: "student" as const,
+      text: `Fictional student line ${String(index + 1)}.`,
+      at: at(2 * index + 1),
+      flagged: false,
+    },
+    { role: "partner" as const, text: "Go on.", at: at(2 * index + 2), flagged: false },
+  ]).flat();
+}
+
+/**
+ * A finished practice attempt for `studentId` with four scored turns (the fewest that can be
+ * shared), unless `overrides` say otherwise.
+ */
 export function createAttempt(
   studentId: mongoose.Types.ObjectId,
   overrides: Partial<PracticeAttemptAttrs> = {},
 ) {
+  const startedAt = overrides.startedAt ?? new Date();
   return PracticeAttempt.create({
     studentId,
     skill: "pitching",
@@ -139,7 +160,8 @@ export function createAttempt(
     provider: "fake",
     model: "fake-1",
     // Set here rather than by the schema default, which reads the clock before fake timers.
-    startedAt: new Date(),
+    startedAt,
+    transcript: practiceTranscript(4, startedAt),
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     ...overrides,
   });

@@ -10,7 +10,14 @@ import { Application, PracticeAttempt } from "../src/db/models/index.js";
 import { makeTestApp } from "./helpers/app.js";
 import { useTestDb } from "./helpers/db.js";
 import { errorOf } from "./helpers/error-body.js";
-import { createApplication, createAttempt, createJob, createStudent } from "./helpers/factories.js";
+import type { PracticeAttemptAttrs } from "../src/db/models/practice-attempt.js";
+import {
+  createApplication,
+  createAttempt,
+  createJob,
+  createStudent,
+  practiceTranscript,
+} from "./helpers/factories.js";
 import { tinyPdf } from "./helpers/pdf.js";
 import { employerSession, studentSession } from "./helpers/sessions.js";
 
@@ -441,10 +448,14 @@ describe("GET /api/employer/applications/:id/resume", () => {
 });
 
 describe("GET /api/employer/applications/:id/scorecard", () => {
-  async function shared(attemptStatus: "completed" | "active", withScorecard = true) {
+  async function shared(
+    attemptStatus: "completed" | "active",
+    withScorecard = true,
+    attemptFields: Partial<PracticeAttemptAttrs> = {},
+  ) {
     const context = await setup();
     const student = await createStudent();
-    const attempt = await createAttempt(student.user._id);
+    const attempt = await createAttempt(student.user._id, attemptFields);
     await PracticeAttempt.updateOne(
       { _id: attempt._id },
       {
@@ -474,8 +485,60 @@ describe("GET /api/employer/applications/:id/scorecard", () => {
       scorecard,
       skill: "objections",
       completedAt: "2026-05-01T12:00:00.000Z",
+      // Four turns, each answered 30 s later: the last reply came four minutes in.
+      studentTurns: 4,
+      partner: "scripted",
+      durationSeconds: 240,
     });
     expect(JSON.stringify(res.body)).not.toMatch(/transcript|scenarioPrivate|hiddenObjections/);
+  });
+
+  it("says which partner ran the call and counts only scored turns", async () => {
+    const transcript = practiceTranscript(5).map((entry, index) =>
+      index === 0 ? { ...entry, flagged: true } : entry,
+    );
+    const { session, application } = await shared("completed", true, {
+      provider: "openai",
+      transcript,
+    });
+
+    const res = await session.agent.get(`/api/employer/applications/${application.id}/scorecard`);
+
+    expect(res.body).toMatchObject({ studentTurns: 4, partner: "live", durationSeconds: 300 });
+  });
+
+  it("still shows a card shared before the four-turn minimum, with its turn count", async () => {
+    const { session, application } = await shared("completed", true, {
+      transcript: practiceTranscript(2),
+    });
+
+    const res = await session.agent.get(`/api/employer/applications/${application.id}/scorecard`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ studentTurns: 2, durationSeconds: 120 });
+  });
+
+  it("follows the résumé window: gone 7 days after the application was decided", async () => {
+    const { session, application, job } = await shared("completed");
+    const decided = (days: number) =>
+      Application.updateOne(
+        { _id: application._id },
+        { $set: { status: "rejected", endedAt: new Date(Date.now() - days * 86_400_000) } },
+      );
+    const path = `/api/employer/applications/${application.id}/scorecard`;
+    const listed = async () =>
+      pageOf(await session.agent.get(`/api/employer/jobs/${job.id}/applications?status=rejected`))
+        .items[0];
+
+    await decided(6);
+    expect((await session.agent.get(path)).status).toBe(200);
+    expect(await listed()).toMatchObject({ hasSharedScorecard: true });
+
+    await decided(8);
+    const res = await session.agent.get(path);
+    expect(res.status).toBe(404);
+    expect(errorOf(res).code).toBe("not_shared");
+    expect(await listed()).toMatchObject({ hasSharedScorecard: false });
   });
 
   it("answers 404 not_found for a withdrawn application, even with a stale share", async () => {

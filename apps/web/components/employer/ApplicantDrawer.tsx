@@ -3,7 +3,6 @@
 import {
   APPLICATION_TRANSITIONS,
   canTransition,
-  getSkill,
   LIMITS,
   type ApplicationStatus,
   type EmployerApplicationView,
@@ -12,20 +11,18 @@ import { Bookmark, Download } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { InterviewSlot } from "@/components/jobs/InterviewSlot";
-import { ScorecardDetails } from "@/components/practice/ScorecardDetails";
 import { StatusPill } from "@/components/student/StatusPill";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { LoadError, Loading } from "@/components/ui/LoadState";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { EMPLOYER_API_MESSAGES, OneApplicant, SharedScorecard } from "@/lib/employer-api";
+import { EMPLOYER_API_MESSAGES, OneApplicant } from "@/lib/employer-api";
 import { formatInterviewTime, formatLocalDate } from "@/lib/local-time";
 import { useSession } from "@/lib/session";
-import { useApi } from "@/lib/use-api";
 import { formMessage } from "@/lib/use-form";
 import { InterviewDialog } from "./InterviewDialog";
+import { SharedScorecardPanel } from "./SharedScorecardPanel";
 
 type SettableStatus = "shortlisted" | "hired" | "rejected";
 
@@ -104,46 +101,6 @@ function ResumeAccess({
         </p>
       )}
     </>
-  );
-}
-
-/** The scorecard the student attached, read-only. Asked for only when one was shared. */
-function SharedScorecardPanel({
-  applicationId,
-  firstName,
-}: {
-  applicationId: string;
-  firstName: string;
-}) {
-  const shared = useApi(
-    `/employer/applications/${encodeURIComponent(applicationId)}/scorecard`,
-    SharedScorecard,
-  );
-  if (shared.state === "loading") return <Loading label="Loading the scorecard" lines={4} />;
-  if (shared.state === "error") {
-    if (shared.error instanceof ApiError && shared.error.status === 404) {
-      return <p className="text-ink">No scorecard shared</p>;
-    }
-    return <LoadError what="the scorecard" onRetry={shared.reload} />;
-  }
-  const { scorecard, skill, completedAt } = shared.data;
-  const { title, weighted } = getSkill(skill);
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="max-w-prose text-small text-ink">
-        {firstName} attached this scorecard from a {title.toLowerCase()} practice call with the
-        practice partner{completedAt ? `, ${formatLocalDate(completedAt)}` : ""}. The quotes are
-        their own words from that call.
-      </p>
-      <div className="overflow-hidden rounded-card border border-border">
-        <ScorecardDetails
-          scorecard={scorecard}
-          skillTitle={title}
-          weighted={weighted}
-          headingLevel="h4"
-        />
-      </div>
-    </div>
   );
 }
 
