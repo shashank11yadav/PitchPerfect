@@ -20,9 +20,9 @@ Defined once as CSS variables in `apps/web/app/globals.css` and mapped into Tail
 | `--pp-blue-600`     | `#3447b8`                                                                                                                                         | primary hover                                                           |
 | `--pp-blue-50`      | `#eef1fc`                                                                                                                                         | selected/soft backgrounds, the "soft" section ground                    |
 | `--pp-blue-100`     | `#dbe1fa`                                                                                                                                         | highlighter behind quoted words (`.pp-mark`), selection                 |
-| `--pp-blue-300`     | `#6f82e6`                                                                                                                                         | light stop of the hero shader and its static fallback only              |
+| `--pp-blue-300`     | `#6f82e6`                                                                                                                                         | light stop of the hero grain only                                       |
 | `--pp-navy`         | `#2d3c90`                                                                                                                                         | headings on light, hero/footer backgrounds                              |
-| `--pp-navy-900`     | `#1d275e`                                                                                                                                         | shader shadow stop, dark text on soft blue                              |
+| `--pp-navy-900`     | `#1d275e`                                                                                                                                         | hero grain shadow stop, dark text on soft blue                          |
 | `--pp-navy-300`     | `#737fbd`                                                                                                                                         | display-size text only (3.8:1 on white), e.g. inactive stage words      |
 | `--pp-ink`          | `#212529`                                                                                                                                         | body text                                                               |
 | `--pp-muted`        | `#6c757d`                                                                                                                                         | secondary text (≥ 4.5:1 on white; use `--pp-ink` on `--pp-surface-2`)   |
@@ -50,7 +50,7 @@ icon-card grids.
   page keeps putting a sentence next to its proof. The home page's live piece, the evidence explorer,
   lets a visitor pick a rubric line and see the exact words it's based on marked in the transcript.
 - **Signature details:** a word-sized voice pill (the practice room's mic and level meter on a
-  slow grain shader) set just after "Get hired.", the highlighter mark on quoted words, the five
+  slow drifting grain) set just after "Get hired.", the highlighter mark on quoted words, the five
   call stages stacked in display type on the students page, and the staircase of verification
   steps on the employers page.
 - **Pictures don't repeat:** each page shows its own moment of the product. Home has Maya's
@@ -63,7 +63,7 @@ icon-card grids.
   blue, navy, and brand blue only for the closing call to action), and sections are told apart by
   ground, never by rules or shadows.
 - **House rules:** no labels above headings, no index numbers (order is shown by position or a real
-  `<ol>`), no gradients except the shader and its fallback, no glass, no emoji, headings at most two
+  `<ol>`), no gradients except the hero grain, no glass, no emoji, headings at most two
   lines at every width, running text in full ink at 16 px or more, one primary button per screen with
   the second action as a plain text link.
 
@@ -106,7 +106,7 @@ Each component is implemented once:
 
 ## Motion
 
-- **Hero shader:** Paper Shaders' grain gradient in the brand blues, mounted with the core `ShaderMount` into a `<span>` (so the voice control can sit inline in the h1), loaded with a dynamic import after the text renders. `components/marketing/grain-gradient.ts` builds the uniforms, so the chunk carries only that shader. The WebGL 2 support probe releases its context straight away. Under reduced motion, without WebGL 2, on the server and while it loads, the same strip is a static CSS gradient (`.pp-shader-fallback`). The library pauses it off screen and in hidden tabs. It needs no workers, blobs or eval, so the CSP is unchanged.
+- **Hero grain:** the voice control inline in the h1 sits on a grainy field of the brand blues (`.pp-grain` in `app/globals.css`), all CSS. A colour layer twice the strip's size drifts and turns over 9 s, alternating (a transform, so the compositor runs it with no script and no repaint per frame), under an SVG noise tile. Under reduced motion the field stands still.
 - **Entrances:** `components/motion/in-view.tsx` (adapted from Motion Primitives) staggers a section's parts in as it first scrolls into view: 24 px rise with opacity, 700 ms, ease-out `cubic-bezier(.22,1,.36,1)`. Server HTML and anything already on screen render finished, so nothing waits for scripts and nothing flickers; `useEntryReveal` decides.
 - **Streamed reply:** in the public previews, the last partner reply arrives letter by letter (`text-effect.tsx`), over a transparent copy that keeps its space and gives screen readers the sentence once. The live practice room shows the reply exactly as it streams (the api sends it in bursts while it checks the text) and then swaps in the checked final text; it adds no typing effect of its own.
 - **Feedback:** buttons scale to 0.97 on press (`.pp-press`); text links show their underline on hover (`.pp-link`); the voice meters breathe.
@@ -119,7 +119,7 @@ Each component is implemented once:
 - All interactions work with a keyboard. In the practice room, Space holds-to-talk when focus is on the mic button, and Enter sends.
 - New partner replies are announced via an `aria-live="polite"` region. Speaking can be muted, and captions are always shown.
 - Colour is never the only signal: score bands also have labels, and status pills have text.
-- `prefers-reduced-motion` disables count-ups, entrances, the streamed reply, the shader and transitions.
+- `prefers-reduced-motion` disables count-ups, entrances, the streamed reply, the hero grain and transitions.
 - The score ring shows its final value on the server and when it is already on screen; it only counts up from 0 if it was still off screen after hydration.
 - Contrast is checked with axe in Playwright (`@axe-core/playwright`) on every public page and the main app pages. There must be zero serious or critical violations.
 

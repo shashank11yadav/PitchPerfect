@@ -5,7 +5,7 @@
   --pp-blue: #3f56d2;
   --pp-blue-600: #3447b8;
   --pp-blue-50: #eef1fc;
-  /* Tints of the brand blue: a highlighter for quoted words, and the shader's light stop. */
+  /* Tints of the brand blue: a highlighter for quoted words, and the hero grain's light stop. */
   --pp-blue-100: #dbe1fa;
   --pp-blue-300: #6f82e6;
   /* A navy tint for display-size text only (3.8:1 on white, so large text, never body copy). */
@@ -171,10 +171,56 @@
 }
 
 @layer components {
-  /* The static stand-in for the hero's grain shader: reduced motion, no WebGL, and first paint. */
-  .pp-shader-fallback {
-    background-color: var(--pp-blue);
-    background-image: radial-gradient(90% 140% at 100% 0%, var(--pp-blue-300) 0%, transparent 60%);
+  /*
+   * The hero's voice strip: a grainy field of the brand blues that drifts slowly while motion is
+   * allowed. The colour layer is twice the strip's size and only moves (a compositor animation, so
+   * no script and no repaint per frame); the grain is an SVG noise tile laid over it. Under reduced
+   * motion it is the same field, still.
+   */
+  .pp-grain {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: var(--pp-navy);
+  }
+
+  .pp-grain::before,
+  .pp-grain::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .pp-grain::before {
+    inset: -50%;
+    background-image:
+      radial-gradient(
+        25% 38% at 30% 40%,
+        color-mix(in srgb, var(--pp-blue-300) 60%, transparent) 0%,
+        transparent 100%
+      ),
+      radial-gradient(
+        38% 55% at 68% 58%,
+        color-mix(in srgb, var(--pp-blue) 85%, transparent) 0%,
+        transparent 100%
+      ),
+      radial-gradient(40% 55% at 50% 25%, var(--pp-navy-900) 0%, transparent 100%);
+  }
+
+  /* Contrast-stretched grey noise, overlaid: light and dark specks, like film grain. */
+  .pp-grain::after {
+    inset: 0;
+    opacity: 0.5;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='2 0 0 0 -0.5 2 0 0 0 -0.5 2 0 0 0 -0.5 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size: 120px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pp-grain::before {
+      animation: pp-drift 9s ease-in-out infinite alternate;
+    }
   }
 
   /* A voice level meter: bars that breathe while motion is allowed. */
@@ -233,6 +279,15 @@
   [data-reveal] * {
     opacity: 1 !important;
     transform: none !important;
+  }
+}
+
+@keyframes pp-drift {
+  from {
+    transform: translate(-18%, -8%) rotate(0deg);
+  }
+  to {
+    transform: translate(18%, 8%) rotate(12deg);
   }
 }
 
