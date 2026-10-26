@@ -4,9 +4,9 @@
 
 PitchPerfect is a platform where students and early-career candidates (18+) train for tech-sales roles and connect with employers hiring for them. Its core is **a practice partner the student pitches to by voice, which plays a realistic buyer and then scores the pitch.** Around it sit short lessons, a job board and a two-sided student/employer app.
 
-It is a **portfolio-grade demo**: fully working and deployable, with seeded demo data, not a production launch with real users.
+It runs end to end, deploys with documented steps, and ships with fictional seed data for demos.
 
-In the product, the partner is labelled for what is really answering: an **"AI practice partner"** when a live model runs it, a **"Scripted demo partner"** when the scripted provider does (the public demo always uses that one). Users are told the buyer is automated either way, and with a live model the privacy page names the LLM provider that processes transcripts. Naming the provider as a runtime dependency (SDK package, env var, adapter module) is fine.
+In the product, the partner is labelled for what is really answering: an **"AI practice partner"** when a live model runs it, a **"Scripted demo partner"** when the scripted provider does (the public demo always uses that one). Users are told the buyer is automated either way, and with a live model the privacy page names the LLM provider that processes transcripts.
 
 ## 2. Goals
 
@@ -20,10 +20,10 @@ In the product, the partner is labelled for what is really answering: an **"AI p
 ## 3. Non-goals
 
 - Native mobile apps. The web app is responsive and works well on phones.
-- Paid speech services (server-side STT/TTS) in v1.
+- Paid speech services (server-side STT/TTS). Browser speech keeps audio off PitchPerfect's servers.
 - Video lessons. Lessons are short written pages (§6.3).
-- Payments, subscriptions, messaging between users, admin console UI (an admin CLI script is enough).
-- Production-launch work: binding legal text (privacy and terms are clearly-marked templates), an operations runbook, GDPR export/data-location work, and multi-member company teams. Scale-only concerns are documented in `docs/limits.md` instead of built.
+- Payments, subscriptions, messaging between users, and an admin console UI (the admin CLI covers operations).
+- Launch-stage work such as counsel-reviewed legal text, data export and multi-member company teams. These and the scaling steps are planned in [docs/roadmap.md](../roadmap.md).
 - Users under 18.
 
 ## 4. Anti-goals (failure even if it "works")
@@ -70,14 +70,14 @@ PitchPerfect/
 ### 6.2 Accounts and auth
 
 - **Roles:** `student`, `employer`. One `User` collection with a `role` field, plus role-specific profile documents, so sign-in and sessions are one code path for both roles.
-- **Sign up:** email + password (min 12 chars, checked against a breached-password list via a k-anonymity range query, or a bundled list of common passwords if offline). Students must tick an **"I am 18 or older"** confirmation. Email verification is required before practice or applying. Each employer creates their **own** company record, one employer per company in v1, with no invites or teams, so one employer can never take over another's company.
-- **Employer verification (lightweight, demo-appropriate):** a company is marked **verified** automatically when the employer's verified email domain matches the company website's domain. Otherwise it stays **unverified** until approved with the admin CLI (`npm run admin -- approve-company <id>`). Jobs from unverified companies show an "Unverified employer" badge, are `noindex`, and are left out of the sitemap and `JobPosting` structured data. The admin CLI can also suspend a company, which hides its jobs.
+- **Sign up:** email + password (min 12 chars, checked against a breached-password list via a k-anonymity range query, or a bundled list of common passwords if offline). Students must tick an **"I am 18 or older"** confirmation. Email verification is required before practice or applying. Each employer creates their **own** company record, one employer per company with no invites or teams, so one employer can never take over another's company.
+- **Employer verification:** a company is marked **verified** automatically when the employer's verified email domain matches the company website's registrable domain (free and disposable mail domains never match). Renaming the company or moving its website to another domain drops the badge until an admin approves it again. Otherwise it stays **unverified** until approved with the admin CLI (`npm run admin -- approve-company <id>`). Jobs from unverified companies show an "Unverified employer" badge, are `noindex`, and are left out of the sitemap and `JobPosting` structured data. The admin CLI can also suspend a company, which hides its jobs.
 - **Sessions:** server-side sessions stored in MongoDB, with an opaque session ID in an `httpOnly; Secure; SameSite=Lax` cookie. Rolling expiry is 7 days, absolute expiry 30 days. Logout destroys the session server-side. No JWTs in the browser.
 - **CSRF:** SameSite=Lax plus an Origin/Referer check on every state-changing request, plus a double-submit CSRF token (`x-csrf-token`) on every non-GET request.
 - **Password reset:** a 32-byte random token stored **hashed**, single use, expiring after 30 minutes. The link is built from `APP_URL`, never from the Host header. The response is the same whether or not the email exists.
-- **Rate limits:** sign-in 5/min per IP+email with exponential backoff; sign-up 3/hour per IP; reset 3/hour per email. Counters are stored in MongoDB.
+- **Rate limits:** sign-in 5/min per IP+email, plus failed sign-ins capped at 30 per 15 min per IP and 10 per 15 min per email (a wait, never a lockout); sign-up 3/hour per IP; reset 3/hour per email. Counters are stored in MongoDB and shared by every api instance.
 - **Data minimization:** students give name, email, school, major, graduation year, target role/industry and state. **Race, gender, date of birth and phone are not collected.** Employers give name, work email, job title and company.
-- **Uploads:** students can upload one résumé PDF. It is validated by magic bytes and capped at 2 MB, stored in GridFS under a random ID, and served only to the owner and to employers whose job the student applied to. Profile photos aren't part of v1.
+- **Uploads:** students can upload one résumé PDF. It is validated by magic bytes and capped at 2 MB, stored in GridFS under a random ID, and served only to the owner and to employers whose job the student applied to, from a copy made when they applied. Profile photos are not collected.
 - **Account deletion:**
   - **Student:** removes the user, sessions, applications, saved jobs, practice attempts and résumé.
   - **Employer:** removes the user, their company, its jobs and interviews. Open applications to those jobs are marked "closed (employer left)", and affected applicants get an email.
@@ -115,7 +115,7 @@ PitchPerfect/
 
 **Flow:**
 
-1. **Start:** the student picks a skill (and optionally a job). The api checks auth, email verification and quota, then calls `coach POST /v1/plan` with skill + job context + student target role. The coach returns a **scenario**: buyer persona (name, title, company type, personality, 2–3 hidden objections, what would convince them) and an opening line. The scenario is stored by the api; the hidden fields are never sent to the browser.
+1. **Start:** the student picks a skill (and optionally a job). The api checks auth, email verification, practice consent, quota and token caps, then calls `coach POST /v1/plan` with skill + job context + student target role. The coach returns a **scenario**: buyer persona (name, title, company type, personality, 2–3 hidden objections, what would convince them) and an opening line. The scenario is stored by the api; the hidden fields are never sent to the browser.
 2. **Turns:** the browser captures speech, transcribes it in-browser, shows the transcript for the student to edit, and sends it to `api POST /api/practice/sessions/:id/turns`. The api appends it and calls `coach POST /v1/turn` with the scenario + transcript so far. The coach returns the persona's reply (≤ 80 words) plus a stage marker (opening, discovery, pitch, objection, close). Replies stream to the browser (SSE via the api) and are spoken with `speechSynthesis`.
 3. **End:** the student ends the session, or it auto-ends at the turn or time cap. The api calls `coach POST /v1/score`, which returns a **scorecard** validated against a zod schema:
    - Rubric dimensions, each scored 1–5 with a one-sentence justification quoting the student's words: Clarity, Value & relevance, Structure, Discovery questions, Objection handling, Confidence & language, Call to action.
@@ -125,17 +125,18 @@ PitchPerfect/
    - The skill-specific dimension is weighted higher (e.g. Objection handling for that skill).
 4. Results are saved as a `PracticeAttempt` (studentId, skill, jobId?, scenario public fields, transcript, scorecard, model/provider used, token counts, timestamps).
 
-**Provider adapter:** `LlmProvider` interface with `chatStream` (streaming), `structured` (zod-validated) and an optional `moderate`, implemented for OpenAI and Anthropic in the coach, plus the deterministic scripted provider in `packages/scripted-partner`. It is selected by env at startup and fails fast with a clear error if the selected provider's key or model IDs are missing. No provider names appear in prompts; the privacy page names the provider that processes transcripts.
+**Provider adapter:** an `LlmProvider` interface with `chatStream` (streaming) and `structured` (zod-validated), implemented for OpenAI and Anthropic in the coach, plus the deterministic scripted provider in `packages/scripted-partner`. A separate `Moderator` interface checks replies: the OpenAI moderation endpoint, or a classifier call through the configured model. It is selected by env at startup and fails fast with a clear error if the selected provider's key or model IDs are missing. No provider names appear in prompts; the privacy page names the provider that processes transcripts.
 
 **Guardrails (coach + api):**
 
 - **Input:** ≤ 1,000 characters per turn, ≤ 20 student turns per session, session lifetime ≤ 20 min. Control characters are stripped. Student text is always passed inside a delimited data block, never concatenated into instructions.
 - **Off-topic and jailbreak handling:** the system prompt pins the persona to the sales scenario. A cheap pre-check (rules + a small classification call) flags attempts to extract instructions, change role, or request harmful/sexual/violent/illegal content. Flagged turns get an in-character redirect, and 3 confirmed attacks end the session with a neutral notice.
-- **Output:** replies are checked for system-prompt leakage (canary token in the prompt; if it appears in output, the reply is dropped and regenerated once), length-capped, and run through the provider's moderation endpoint where available, otherwise through the rule filter.
+- **Output:** replies stream one checked sentence at a time. Local reply rules and leak checks (the canary token, the persona's rule text and the hidden scenario, read through look-alike letters and encodings) run on every provider, a leak is regenerated once, each sentence is moderated before it is sent, and anything withdrawn after it was shown is replaced with a `retract` event. Replies are length-capped.
+- **Student in crisis:** a turn that signals suicide or self-harm gets an out-of-character support message with crisis resources, never a redirect or a strike, ahead of every limit.
 - **PII:** emails, phone numbers, card numbers, Social Security numbers and IBANs are redacted from transcripts before they are sent to the provider and before storage.
-- **Cost:** per-student quota (default 5 sessions/day, 30/month, env-configurable). A global daily token budget makes the api refuse new sessions with a friendly message once it is exceeded. Per-request timeout 30 s, one retry with backoff, and a circuit breaker on provider errors.
+- **Cost:** per-student quota (default 5 sessions/day, 30/month, env-configurable) and a per-student daily token cap. A global daily token budget makes the api refuse new sessions with a friendly message once it is reached. Every provider call is metered, including failed, retried and aborted ones. Per-request timeout 30 s, one retry with backoff, and a circuit breaker on provider errors.
 - **Privacy:** logs record IDs, timings, token counts and outcome codes only, never transcript text. Transcripts are kept 180 days, then removed by a TTL index, with a scheduled purge job as a backstop. Students can delete any attempt.
-- **Evaluation:** `apps/coach/evals/` contains ~30 scripted conversations (strong, mediocre, weak, and adversarial ones such as off-topic chatter and jailbreak attempts) with expected score bands and guardrail outcomes. `npm run eval -w apps/coach` runs them against a real provider (manual, needs a key). Unit tests run against the fake provider in CI.
+- **Evaluation:** `apps/coach/evals/` contains 31 scripted conversations (strong, mediocre, weak, and adversarial ones such as off-topic chatter and jailbreak attempts) with expected score bands and guardrail outcomes. `npm run eval -w apps/coach` runs them against a real provider (manual, needs a key). Unit tests run against the fake provider in CI.
 
 **Voice UX:**
 
@@ -145,7 +146,7 @@ PitchPerfect/
 - Keyboard shortcuts: Space for push-to-talk, Enter to send. Screen-reader announcements for new replies.
 - If mic permission is denied or STT is unavailable, it switches to text mode with an explanation.
 - **Honest privacy copy:** PitchPerfect never uploads or stores audio. However, the browser's own speech recognition may send audio to the browser vendor (Google for Chrome, Apple for Safari, Microsoft for Edge). The practice room says so next to the mic toggle and links to the privacy page. Where the browser offers on-device recognition, it is preferred automatically. Text mode is always one click away for anyone who prefers it.
-- **First-session consent:** before a student's first practice session, a one-time notice explains three things: what the partner is (an AI, or the scripted demo), where transcripts go (the configured LLM provider, our own server, or nowhere outside the browser tab) and how long they are kept, and voice handling works as described above. The student must accept before starting. Acceptance is stored with a timestamp.
+- **First-session consent:** before a student's first practice session, a notice explains what the partner is (an AI, or the scripted demo), where transcripts go (the configured LLM provider, our own server, or nowhere outside the browser tab) and how long they are kept, and how voice is handled. The student must accept before starting. Acceptance is stored with a timestamp and the kind of partner the notice described, and the notice comes back if the deployment's partner changes.
 
 ### 6.5 Security baseline (all services)
 
@@ -160,7 +161,7 @@ PitchPerfect/
 ### 6.6 Design system
 
 - **Look:** clean, airy, confident. A white/`#f8f9fa` base, brand blue `#3f56d2` for primary actions and highlights, navy `#2d3c90` for headers, footers and hero gradients, Poppins headings and Manrope body. Rounded 12–16 px cards, soft shadows and generous spacing. The PitchPerfect wordmark and icon in the same palette (SVG, plus generated favicon/PWA sizes).
-- **Legal pages:** `/privacy` and `/terms` are complete, readable templates covering the real data flows (accounts, résumés, transcripts, LLM provider, browser speech, retention, deletion, 18+). Each carries a visible banner saying it is a demo template, not legal advice.
+- **Legal pages:** `/privacy` and `/terms` are complete, readable templates covering the real data flows (accounts, résumés, transcripts, LLM provider, browser speech, retention, deletion, 18+). Each carries a visible banner marking it as a template, not legal advice.
 - **Components** (one shared set): Button, Input/Field with label + error, Select, Card, Badge, Tabs, Modal, Toast, EmptyState, Skeleton, DataTable, Navbar (public) and AppShell (role-aware: one component with links passed in), Footer, SkillGrid, ScoreRing, RubricBar.
 - **Accessibility:** WCAG 2.2 AA. Every input has a visible label, focus rings are visible, contrast is checked, and everything works by keyboard. `prefers-reduced-motion` is respected.
 - **Responsive:** mobile-first. Dashboards collapse to a bottom tab bar on phones.

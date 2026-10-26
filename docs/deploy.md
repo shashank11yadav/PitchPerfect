@@ -1,6 +1,6 @@
 # Deployment
 
-Deploying the full stack is a manual, deliberate step; no workflow deploys it. The one automatic deploy is the static demo on GitHub Pages ([below](#github-pages-demo)).
+The full stack is deployed by hand with the steps below. The one automatic deploy is the static demo on GitHub Pages ([below](#github-pages-demo)).
 
 ## Topology
 
@@ -60,7 +60,7 @@ docker build -f apps/web/Dockerfile --build-arg API_ORIGIN=https://api.example.t
 - Each image has a `HEALTHCHECK`: api `GET /api/health`, coach `GET /healthz`, web `GET /`.
 - web is the Next.js standalone server (`NEXT_OUTPUT=standalone` at build time). Other builds, including Vercel's and the one `next start` uses in CI, keep the normal output.
 
-`docker compose --profile full up --build -d` runs all three locally with MongoDB and Mailpit. That stack is a demo over plain http: it overrides `NODE_ENV` to `development` and uses `dev-only-` placeholder secrets, which the services refuse in production. Nothing sits in front of web, so a client can set the address the api sees (see [below](#trust_proxy-the-number-of-trusted-hops)). Don't deploy it as it is.
+`docker compose --profile full up --build -d` runs all three locally with MongoDB and Mailpit. That stack is for local use over plain http: it overrides `NODE_ENV` to `development` and uses `dev-only-` placeholder secrets, which the services refuse in production. Nothing sits in front of web, so a client can set the address the api sees (see [below](#trust_proxy-the-number-of-trusted-hops)). Don't deploy it as it is.
 
 ## The web proxy
 
@@ -92,7 +92,7 @@ The api's per-IP rate limits key on `req.ip`, which Express reads from `X-Forwar
 - **Too high** (or trusting every hop, which is why `true` and `*` are refused at startup) and the api takes an address the client wrote into the header as the client, so a client can pick a new address per request and get around the per-IP limits on sign-in and sign-up. One too many is enough: in the appending row, `2` makes the key whatever the client wrote.
 - **Too low** and the api sees a proxy's address as the client, so all users share one rate-limit bucket. `0` also means `Secure` cookies never work, and production refuses it.
 - If your proxies' addresses are fixed or sit in a private range, list them instead of counting: `TRUST_PROXY=10.0.0.0/8,fd00::/8` trusts each hop from the right while its address is inside those subnets, and the first address outside them is the client. Only whole numbers and comma-separated addresses or CIDR subnets are accepted.
-- The Vercel row rests on how Vercel and the api host handle the header today. Run the spoofing check in [Steps](#steps) (step 6) after every change to the topology.
+- The Vercel row depends on how Vercel and the api host handle the header. Run the spoofing check in [Steps](#steps) (step 6) after every change to the topology.
 
 ## Environment variables
 
@@ -105,7 +105,7 @@ Notes that don't fit in an `.env.example` line:
 - `COACH_PROVIDER` (coach) decides what the web app tells users about the partner, through `practicePartner` on `/api/practice/partner` and `/api/practice/quota`: `fake` is disclosed as a scripted demo that sends nothing to an AI provider; anything else, and a coach that can't be reached, as a live AI model.
 - `COACH_MODERATOR` (coach) picks what checks each sentence of a live partner's reply before it is shown ([practice-partner.md](practice-partner.md#output-moderation)): `openai` (the OpenAI moderation endpoint, needs `OPENAI_API_KEY`, and works with either provider), `model` (a short classifier call through `COACH_MODEL` on the configured provider), or `none`. Leave it unset for the safe default: `openai` when `OPENAI_API_KEY` is set, otherwise `model`, and `none` for `COACH_PROVIDER=fake`. In production the coach refuses to start with a live provider and `none`, and `openai` is refused with `fake` because the scripted partner is disclosed as sending nothing to an AI provider. The startup log line names the moderator in use.
 - `COACH_MODERATION_TIMEOUT_MS` (coach, default `5000`) is how long one moderation check may take. A check that times out or fails withholds the sentence and the student sees the fallback line, so keep it well under `COACH_TIMEOUT_MS`.
-- `GET /api/health` is liveness only (`status`, and whether the database and the coach answer). It is limited to 120 requests a minute per address (counted in memory per instance, so it keeps answering when the database is down), with the coach probe cached for 30 s. Point platform health checks at it as often as every few seconds from a single prober; only a flood is refused.
+- `GET /api/health` is liveness only: `status`, and whether the database and the coach answer. Point platform health checks at it; a single prober every few seconds stays well under its limit of 120 requests a minute per address ([api.md](api.md#health)).
 - `NODE_ENV` (api and coach): unset or empty counts as `production`, with every production check and secure default (`Secure` cookies, HSTS, refusing `dev-only-` secrets, an explicit `COACH_PROVIDER`, a moderator for a live provider). Development is opt-in: the `dev`, `seed`, `admin` and `purge` npm scripts, docker compose and the e2e stack set `NODE_ENV=development` themselves. The web app leaves HSTS out and allows `'unsafe-eval'` only under `next dev`, which sets `NODE_ENV=development`.
 
 ## Rollback
