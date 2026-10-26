@@ -6,6 +6,7 @@ import * as emails from "../../services/email-templates.js";
 import { sendSafely, type MailFailureLog } from "../../services/mailer.js";
 import { hashToken, invalidTokenError, newLinkToken } from "../../services/tokens.js";
 import { appLink, isDuplicateKey, verifyOwnedCompany, type AuthDeps } from "../auth/service.js";
+import { holdOwnerEmail } from "../employer/hold.js";
 import { upsertRow } from "../practice/quota.js";
 import { requireCurrentPassword } from "./credentials.js";
 
@@ -57,12 +58,23 @@ export async function requestEmailChange(
   void sendSafely(deps.mailer, { to: input.newEmail, ...content }, log, "change_email");
 }
 
-/** Drops the badge of the employer's verified company; confirming the new address may restore it. */
-async function dropCompanyBadge(ownerId: Types.ObjectId): Promise<void> {
+/**
+ * Before an employer's address changes: a verified company loses the badge, which confirming the
+ * new address may restore, and a suspended company's hold keeps the old address.
+ */
+async function beforeEmployerMoves(
+  deps: AuthDeps,
+  ownerId: Types.ObjectId,
+  oldEmail: string,
+): Promise<void> {
   await Company.updateOne(
     { ownerId, verification: "verified" },
     { $set: { verification: "unverified" } },
   );
+  const suspended = await Company.findOne({ ownerId, verification: "suspended" })
+    .select("verifiedDomain")
+    .lean();
+  if (suspended) await holdOwnerEmail(deps.config, suspended, oldEmail);
 }
 
 /**
@@ -71,8 +83,8 @@ async function dropCompanyBadge(ownerId: Types.ObjectId): Promise<void> {
  * still be free: if it has an account by now, the change is dropped, that address gets the notice
  * a taken address gets, and the link answers like an expired one. Following the link proves the
  * inbox, so the new address is confirmed at once, and an employer's company keeps or regains the
- * badge only if it matches (`verifyOwnedCompany`). Links sent to the old address stop working, and
- * the old address is told.
+ * badge only if it matches (`verifyOwnedCompany`); a suspended company's hold keeps the old address.
+ * Links sent to the old address stop working, and the old address is told.
  */
 export async function confirmEmailChange(
   deps: AuthDeps,
@@ -97,7 +109,7 @@ export async function confirmEmailChange(
   }
 
   const userId = user._id.toString();
-  if (user.role === "employer") await dropCompanyBadge(user._id);
+  if (user.role === "employer") await beforeEmployerMoves(deps, user._id, user.email);
   try {
     const moved = await User.updateOne(
       { _id: user._id, email: user.email },

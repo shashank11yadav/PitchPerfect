@@ -141,7 +141,9 @@ const appSections = (partner: "live" | "scripted"): readonly LegalSection[] => [
           A verified badge means your work email matches your company’s website. Changing the
           company’s name or moving its website to another domain removes the badge until we approve
           the company again. It is not an endorsement. We may suspend a company, which hides its
-          jobs everywhere.
+          jobs everywhere. Until we lift a suspension, the owner’s email can’t open a new employer
+          account and no new company on its verified domain gets the badge, even if the account is
+          deleted.
         </li>
       </ul>
     ),

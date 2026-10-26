@@ -4,11 +4,13 @@ import {
   AuthToken,
   Company,
   EmailChange,
+  EmployerHold,
   PracticeAttempt,
   PracticeHold,
   PracticeStart,
   User,
 } from "../db/models/index.js";
+import { holdSuspendedCompany, isDomainHeld, releaseHold } from "../modules/employer/hold.js";
 import { registrableDomain, verificationForCompany } from "../services/company-verification.js";
 
 /** Where the admin CLI writes: normal output and problems. */
@@ -58,6 +60,22 @@ async function migrate(_args: readonly string[], io: AdminIo): Promise<void> {
   io.out(
     `Verified domain recorded for ${String(recorded)} ${recorded === 1 ? "company" : "companies"}`,
   );
+  const held = await holdSuspendedCompanies();
+  io.out(`Hold added for ${String(held)} suspended ${held === 1 ? "company" : "companies"}`);
+}
+
+/** Gives every suspended company a hold, including those suspended before holds were kept. */
+async function holdSuspendedCompanies(): Promise<number> {
+  const companies = await Company.find({ verification: "suspended" })
+    .select("verifiedDomain")
+    .lean();
+  let added = 0;
+  for (const company of companies) {
+    if (await EmployerHold.exists({ companyId: company._id })) continue;
+    await holdSuspendedCompany(company);
+    added += 1;
+  }
+  return added;
 }
 
 /**
@@ -127,6 +145,11 @@ async function approveCompany([reference = ""]: readonly string[], io: AdminIo):
   if (verifiedDomain === null) {
     throw new AdminError(`${company.name}'s website (${company.website}) has no company domain`);
   }
+  if (await isDomainHeld(verifiedDomain)) {
+    throw new AdminError(
+      `${verifiedDomain} is held for a suspended company; see list-holds, and lift-hold first`,
+    );
+  }
   await Company.updateOne(
     { _id: company._id, verification: "unverified" },
     {
@@ -144,17 +167,21 @@ async function suspendCompany([reference = ""]: readonly string[], io: AdminIo):
     return;
   }
   await Company.updateOne({ _id: company._id }, { verification: "suspended" });
+  // Held at once, before anything else can happen to the company, such as its owner leaving.
+  await holdSuspendedCompany(company);
   io.out(`Suspended ${company.name} (${company.slug}); its jobs are now hidden`);
 }
 
 /**
- * Back to `verified` only if the company has no `verificationLockedReason` and the owner's
- * confirmed email still matches the website; else `unverified`, waiting for approve-company.
+ * Lifts the company's hold, then goes back to `verified` only if the company has no
+ * `verificationLockedReason` and the owner's confirmed email still matches the website; else
+ * `unverified`, waiting for approve-company.
  */
 async function unsuspendCompany([reference = ""]: readonly string[], io: AdminIo): Promise<void> {
   const company = await findCompany(reference);
   if (company.verification !== "suspended")
     throw new AdminError(`${company.name} is not suspended`);
+  await releaseHold(company._id);
   const owner = await User.findById(company.ownerId).select("email emailVerifiedAt").lean();
   const matches =
     company.verificationLockedReason === undefined &&
@@ -168,6 +195,46 @@ async function unsuspendCompany([reference = ""]: readonly string[], io: AdminIo
     { $set: { verification, ...(verifiedDomain !== null && { verifiedDomain }) } },
   );
   io.out(`Unsuspended ${company.name} (${company.slug}): now ${verification}`);
+}
+
+/** Every hold: id, domain, how many emails, and the company it is for or that it was deleted. */
+async function listHolds(_args: readonly string[], io: AdminIo): Promise<void> {
+  const holds = await EmployerHold.find().sort({ createdAt: 1 }).lean();
+  if (holds.length === 0) {
+    io.out("No employer holds");
+    return;
+  }
+  const companies = await Company.find({
+    _id: mongoose.trusted({ $in: holds.flatMap((hold) => hold.companyId ?? []) }),
+  })
+    .select("slug")
+    .lean();
+  const slugOf = new Map(companies.map((company) => [company._id.toString(), company.slug]));
+  io.out(`${String(holds.length)} employer ${holds.length === 1 ? "hold" : "holds"}:`);
+  for (const hold of holds) {
+    const emails = hold.emailKeys.length;
+    const slug = hold.companyId && slugOf.get(hold.companyId.toString());
+    const owner = slug ? `company ${slug}` : "account deleted";
+    const since = hold.createdAt.toISOString().slice(0, 10);
+    io.out(
+      `${hold._id.toString()}  ${hold.domain ?? "no domain"}  ${String(emails)} ${emails === 1 ? "email" : "emails"}  ${owner}  since ${since}`,
+    );
+  }
+}
+
+/**
+ * Lifts holds by id or by domain, so their emails can open employer accounts and their domain can
+ * verify companies again. A suspended company that still exists is lifted with unsuspend-company.
+ */
+async function liftHold([reference = ""]: readonly string[], io: AdminIo): Promise<void> {
+  const filter = OBJECT_ID.test(reference) ? { _id: reference } : { domain: reference };
+  const holds = await EmployerHold.find(filter).select("companyId").lean();
+  if (holds.length === 0) throw new AdminError(`No hold matches "${reference}"`);
+  if (holds.some((hold) => hold.companyId !== undefined)) {
+    throw new AdminError(`"${reference}" is held for a suspended company; use unsuspend-company`);
+  }
+  const { deletedCount } = await EmployerHold.deleteMany(filter);
+  io.out(`Lifted ${String(deletedCount)} ${deletedCount === 1 ? "hold" : "holds"}`);
 }
 
 const COMMANDS: Record<string, Command> = {
@@ -191,6 +258,16 @@ const COMMANDS: Record<string, Command> = {
     params: ["id|slug"],
     summary: "Lift a suspension and re-check the owner's email domain, unless renamed or moved",
     run: unsuspendCompany,
+  },
+  "list-holds": {
+    params: [],
+    summary: "List the holds kept for suspended companies",
+    run: listHolds,
+  },
+  "lift-hold": {
+    params: ["id|domain"],
+    summary: "Let a deleted suspended company's emails and domain back in",
+    run: liftHold,
   },
 };
 

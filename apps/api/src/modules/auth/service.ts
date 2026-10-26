@@ -34,6 +34,7 @@ import { sendSafely, type MailFailureLog, type Mailer } from "../../services/mai
 import { checkPassword, PASSWORD_PROBLEM_MESSAGES } from "../../services/password-policy.js";
 import { hashPassword, verifyAgainstDummy, verifyPassword } from "../../services/passwords.js";
 import { consumeToken, createToken, invalidTokenError, peekToken } from "../../services/tokens.js";
+import { isDomainHeld, isEmailHeld } from "../employer/hold.js";
 import { restoreLedger } from "../practice/ledger-hold.js";
 
 type CompanyInput = Extract<Signup, { role: "employer" }>["company"];
@@ -145,10 +146,17 @@ async function removeAccount(userId: Types.ObjectId): Promise<void> {
   await User.deleteOne({ _id: userId });
 }
 
+/** Tells a held address (a suspended company's owner) that it can't open an employer account. */
+async function warnHeldEmployer(deps: AuthDeps, log: MailFailureLog, email: string) {
+  const content = emails.employerSignupHeld();
+  await sendSafely(deps.mailer, { to: email, ...content }, log, "signup_employer_held");
+}
+
 /**
  * Creates the account (user, role profile, company for employers) and emails a verification
  * link. Does not sign in. An address that already has an account gets a warning email instead,
- * and the caller sees exactly the same result, so signup can't be used to test for accounts.
+ * and an employer sign-up from an address a suspended company holds gets a notice instead; the
+ * caller sees exactly the same result, so signup can't be used to test for either.
  */
 export async function signUp(deps: AuthDeps, log: MailFailureLog, input: Signup): Promise<void> {
   await assertPasswordAllowed(deps.config, input.password, input.email);
@@ -156,6 +164,10 @@ export async function signUp(deps: AuthDeps, log: MailFailureLog, input: Signup)
   const passwordHash = await hashPassword(input.password);
   if (await User.exists({ email: input.email })) {
     await warnExistingAccount(deps, log, input.email);
+    return;
+  }
+  if (input.role === "employer" && (await isEmailHeld(deps.config, input.email))) {
+    await warnHeldEmployer(deps, log, input.email);
     return;
   }
 
@@ -193,7 +205,8 @@ export async function signUp(deps: AuthDeps, log: MailFailureLog, input: Signup)
  * shares a registrable domain with its website, and records that domain as the one the badge
  * vouches for. Only `unverified` companies without a `verificationLockedReason` are promoted: a
  * company that lost the badge by a rename or domain move waits for an admin, a suspended company
- * stays suspended, and nothing is ever downgraded here.
+ * stays suspended, a domain a suspended company holds (`EmployerHold`) verifies nobody, and nothing
+ * is ever downgraded here.
  */
 export async function verifyOwnedCompany(userId: string, email: string): Promise<void> {
   const company = await Company.findOne({ ownerId: userId })
@@ -202,9 +215,11 @@ export async function verifyOwnedCompany(userId: string, email: string): Promise
   if (company?.verification !== "unverified" || company.verificationLockedReason) return;
   const emailDomain = email.slice(email.lastIndexOf("@") + 1);
   if (verificationForCompany(emailDomain, company.website) !== "verified") return;
+  const verifiedDomain = registrableDomain(company.website);
+  if (await isDomainHeld(verifiedDomain)) return;
   await Company.updateOne(
     { _id: company._id, verification: "unverified", verificationLockedReason: null },
-    { $set: { verification: "verified", verifiedDomain: registrableDomain(company.website) } },
+    { $set: { verification: "verified", verifiedDomain } },
   );
 }
 

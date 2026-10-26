@@ -17,6 +17,7 @@ import { deleteResume } from "../../services/files.js";
 import type { LinkingMailer, MailFailureLog, Mailer } from "../../services/mailer.js";
 import { anyOf, closeOpenApplications, type ClosingJob } from "../applications/closing.js";
 import { removeResumeCopies } from "../applications/resume-copies.js";
+import { detachHold, holdOwnerEmail } from "../employer/hold.js";
 import { holdLedger } from "../practice/ledger-hold.js";
 
 interface DeletionDeps {
@@ -57,18 +58,27 @@ async function closeApplications(
   await closeOpenApplications(mail, log, company, jobs, "employer_left");
 }
 
-async function deleteEmployerData(mail: LinkingMailer, log: MailFailureLog, userId: string) {
-  const company = await Company.findOne({ ownerId: userId }).select("name").lean();
+async function deleteEmployerData(deps: DeletionDeps, log: MailFailureLog, userId: string) {
+  const company = await Company.findOne({ ownerId: userId })
+    .select("name verification verifiedDomain")
+    .lean();
+  // A suspended company's owner email and domain stay held, so deleting doesn't start it over.
+  const held = company?.verification === "suspended";
+  if (held) {
+    const user = await User.findById(userId).select("email").lean();
+    if (user) await holdOwnerEmail(deps.config, company, user.email);
+  }
   if (company) {
     const jobs = await Job.find({ companyId: company._id }).select("title").lean();
     const jobIds = jobs.map((job) => job._id);
-    await closeApplications(mail, log, company, jobs);
+    await closeApplications(deps, log, company, jobs);
     await Promise.all([
       SavedJob.deleteMany({ jobId: anyOf(jobIds) }),
       PracticeAttempt.updateMany({ jobId: anyOf(jobIds) }, { $unset: { jobId: 1 } }),
     ]);
     await Job.deleteMany({ companyId: company._id });
     await Company.deleteOne({ _id: company._id });
+    if (held) await detachHold(company._id);
   }
   await EmployerProfile.deleteOne({ userId });
 }

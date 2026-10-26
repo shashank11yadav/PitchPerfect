@@ -252,6 +252,11 @@ const appSections = (partner: "live" | "scripted"): readonly LegalSection[] => [
           then deleted automatically. If you sign up again with the same email that month, your new
           account picks it up.
         </li>
+        <li>
+          If we suspend a company and its owner deletes the account, a keyed hash of the owner’s
+          email address and the company’s verified web domain stay until we lift the hold, so the
+          company can’t start over under a new account. No name, email or account is kept.
+        </li>
         <li>Everything else: until you delete it or delete your account.</li>
       </ul>
     ),
@@ -275,7 +280,8 @@ const appSections = (partner: "live" | "scripted"): readonly LegalSection[] => [
           <li>
             <strong>Employers:</strong> deleting your account removes your account, your company,
             its jobs and its interviews. Open applications to those jobs are closed, and the
-            applicants are told by email.
+            applicants are told by email. If we suspended your company, a keyed hash of your email
+            and the company’s verified domain are kept until we lift the hold.
           </li>
         </ul>
       </>

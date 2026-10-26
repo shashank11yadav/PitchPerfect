@@ -147,6 +147,21 @@ export function signupAttemptExistingAccount(signinLink: string, resetLink: stri
 }
 
 /**
+ * Sent instead of a verification link when an address held for a suspended company tries to open
+ * an employer account. The sign-up answer itself is the same as for anyone else.
+ */
+export function employerSignupHeld(): EmailContent {
+  return render(`Your ${BRAND} employer sign-up`, {
+    heading: "We couldn't open an employer account",
+    paragraphs: [
+      `Someone just tried to create a ${BRAND} employer account with this email address. A company this address belonged to was suspended, so no new employer account can be opened with it, and nothing was created.`,
+      `If you think this is a mistake, contact the ${BRAND} team.`,
+    ],
+    footnotes: ["If it wasn't you, you can ignore this email."],
+  });
+}
+
+/**
  * Sent to an address that already has an account when another account asks to move to it. The
  * person who asked sees the same answer as for a free address and gets nothing.
  */
