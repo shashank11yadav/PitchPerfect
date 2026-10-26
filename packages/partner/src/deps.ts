@@ -2,6 +2,7 @@ import type { Usage } from "@pitchperfect/shared";
 import type { ZodType } from "zod";
 import { containsCanary } from "./guardrails/canary.js";
 import { CircuitBreaker, withRetry, withTimeout } from "./guardrails/circuit-breaker.js";
+import { meteredProvider } from "./metering.js";
 import type { PromptInput } from "./prompts/blocks.js";
 import {
   createUsageMeter,
@@ -11,7 +12,8 @@ import {
   type UsageMeter,
 } from "./provider.js";
 
-type Meter = ReturnType<typeof createUsageMeter>;
+/** A usage meter that can also say what it has summed. */
+export type Meter = ReturnType<typeof createUsageMeter>;
 
 /** What the engine reads from the host's configuration (the coach's env, or fixed demo values). */
 export interface PartnerConfig {
@@ -34,14 +36,17 @@ export interface PracticeDeps {
   breaker: CircuitBreaker;
 }
 
-/** 5 retryable failures within 60 s open the breaker for 30 s (docs/practice-partner.md). */
+/**
+ * 5 retryable failures within 60 s open the breaker for 30 s (docs/practice-partner.md). Every call
+ * through the provider is metered, with an estimate when the provider reports nothing.
+ */
 export function createPracticeDeps(
   config: PartnerConfig,
   provider: LlmProvider,
   moderator?: Moderator,
 ): PracticeDeps {
   const breaker = new CircuitBreaker({ failures: 5, windowMs: 60_000, openMs: 30_000 });
-  return { provider, moderator, config, breaker };
+  return { provider: meteredProvider(provider), moderator, config, breaker };
 }
 
 /**

@@ -1,4 +1,10 @@
-import { CoachTurnEvent, SKILL_SLUGS, STAGES, type CoachTurnRequest } from "@pitchperfect/shared";
+import {
+  CoachTurnEvent,
+  LIMITS,
+  SKILL_SLUGS,
+  STAGES,
+  type CoachTurnRequest,
+} from "@pitchperfect/shared";
 import type { FastifyInstance } from "fastify";
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
@@ -171,7 +177,12 @@ describe("POST /v1/turn", () => {
     });
     const { events } = await turn(provider);
     expect(events.map((e) => e.event)).toEqual(["error"]);
-    expect(events[0]?.data).toEqual({ type: "error", code: "upstream_error" });
+    // The provider refused the guard call, so nothing was spent.
+    expect(events[0]?.data).toEqual({
+      type: "error",
+      code: "upstream_error",
+      usage: { provider: "fake", model: "fake", inputTokens: 0, outputTokens: 0 },
+    });
     expect(provider.streamCalls).toBe(0);
   });
 
@@ -340,8 +351,18 @@ describe("POST /v1/turn", () => {
     const provider = scripted({ failBeforeFirst: 3 });
     const { events } = await turn(provider);
     expect(events.map((e) => e.event)).toEqual(["error"]);
-    expect(events[0]?.data).toEqual({ type: "error", code: "upstream_error" });
+    expect(events[0]?.data).toMatchObject({ type: "error", code: "upstream_error" });
     expect(provider.streamCalls).toBe(2);
+  });
+
+  it("reports what the failed attempts used with the error, so the api can charge it", async () => {
+    const provider = scripted({ failBeforeFirst: 3 });
+    const { events } = await turn(provider);
+    const error = CoachTurnEvent.parse(events[0]?.data);
+    if (error.type !== "error") throw new Error(`expected an error, got ${error.type}`);
+    // Both streams broke before reporting, so each is charged the full reply cap.
+    expect(error.usage?.outputTokens).toBeGreaterThanOrEqual(2 * LIMITS.maxTokensReply);
+    expect(error.usage?.inputTokens).toBeGreaterThan(0);
   });
 
   it("does not retry after the first chunk; it reports an error and ends", async () => {
@@ -352,7 +373,7 @@ describe("POST /v1/turn", () => {
       failAfterFirst: true,
     });
     const { events } = await turn(provider);
-    expect(events.at(-1)?.data).toEqual({ type: "error", code: "upstream_error" });
+    expect(events.at(-1)?.data).toMatchObject({ type: "error", code: "upstream_error" });
     expect(named(events, "done")).toHaveLength(0);
     expect(provider.streamCalls).toBe(1);
   });

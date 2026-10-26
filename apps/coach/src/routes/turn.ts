@@ -5,6 +5,7 @@ import {
   runTurn,
   sanitizeInput,
   turnErrorCode,
+  usageOf,
   type PracticeDeps,
   type TurnContext,
   type TurnOutcome,
@@ -50,7 +51,11 @@ export function turnRoute(app: FastifyInstance, deps: PracticeDeps): void {
       } else {
         request.log.error({ err: error }, "turn failed");
       }
-      if (!signal.aborted) await sink.send({ type: "error", code: turnErrorCode(error) });
+      if (!signal.aborted) {
+        // What the guard, the reply and the checks used before the failure, so the api charges it.
+        const usage = usageOf(deps, ctx.meter, "turn");
+        await sink.send({ type: "error", code: turnErrorCode(error), usage });
+      }
     } finally {
       sink.close();
       // The generic "request completed" line covers status and timing; this adds the turn's result.

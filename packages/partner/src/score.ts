@@ -7,7 +7,7 @@ import {
   type CoachScoreResponse,
   type TranscriptEntry,
 } from "@pitchperfect/shared";
-import { structuredWithRepair, usageOf, type PracticeDeps } from "./deps.js";
+import { structuredWithRepair, usageOf, type Meter, type PracticeDeps } from "./deps.js";
 import { ruleCheck } from "./guardrails/guard-rules.js";
 import { usableEntries } from "./prompts/blocks.js";
 import { buildScorePrompt } from "./prompts/scorer.js";
@@ -37,12 +37,14 @@ const withSuspectsFlagged = (transcript: readonly TranscriptEntry[]): Transcript
 /**
  * Grades one finished call: the model scores the transcript, then any quote the student did not
  * say is dropped and `overall` is computed from the dimension scores. Flagged and suspect student
- * lines are left out of what is graded.
+ * lines are left out of what is graded. Usage goes to `meter` as well, so a host can charge what a
+ * failed score used.
  */
 export async function scoreTranscript(
   deps: PracticeDeps,
   request: CoachScoreRequest,
   signal: AbortSignal,
+  meter: Meter = createUsageMeter(),
 ): Promise<CoachScoreResponse> {
   const req = { ...request, transcript: withSuspectsFlagged(request.transcript) };
   const studentTurns = usableEntries(req.transcript)
@@ -50,7 +52,6 @@ export async function scoreTranscript(
     .map((entry) => entry.text);
   if (studentSentences(studentTurns).length === 0) throw new NotEnoughTurnsError();
 
-  const meter = createUsageMeter();
   const graded = await structuredWithRepair(
     deps,
     {

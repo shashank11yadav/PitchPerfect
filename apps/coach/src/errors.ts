@@ -1,3 +1,4 @@
+import type { Usage } from "@pitchperfect/shared";
 import type { FastifyError, FastifyInstance } from "fastify";
 import { ProviderError } from "./providers/index.js";
 
@@ -24,6 +25,20 @@ export class CoachError extends Error {
 export const validationFailed = () =>
   new CoachError(400, "validation_failed", "The request body is not valid");
 
+/**
+ * A plan or score whose provider failed, with what its calls had used by then. The error body
+ * reports `usage` next to `error`, so the api can charge tokens a failed call still spent.
+ */
+export class MeteredFailure extends Error {
+  constructor(
+    readonly failure: ProviderError,
+    readonly usage: Usage,
+  ) {
+    super(failure.message, { cause: failure });
+    this.name = "MeteredFailure";
+  }
+}
+
 /** `practice_unavailable` (circuit open) is 503; every other provider failure is 502. */
 function providerFailure(error: ProviderError): CoachError {
   return error.code === "practice_unavailable"
@@ -37,7 +52,10 @@ export function registerErrorHandling(app: FastifyInstance): void {
     return reply.code(404).send({ error: { code, message, requestId: request.id } });
   });
 
-  app.setErrorHandler((error: FastifyError | CoachError | ProviderError, request, reply) => {
+  type Thrown = FastifyError | CoachError | ProviderError | MeteredFailure;
+  app.setErrorHandler((thrown: Thrown, request, reply) => {
+    const usage = thrown instanceof MeteredFailure ? { usage: thrown.usage } : {};
+    const error = thrown instanceof MeteredFailure ? thrown.failure : thrown;
     if (error instanceof ProviderError || error instanceof CoachError) {
       const known = error instanceof ProviderError ? providerFailure(error) : error;
       if (error instanceof ProviderError) {
@@ -46,6 +64,7 @@ export function registerErrorHandling(app: FastifyInstance): void {
       }
       return reply.code(known.statusCode).send({
         error: { code: known.code, message: known.message, requestId: request.id },
+        ...usage,
       });
     }
 

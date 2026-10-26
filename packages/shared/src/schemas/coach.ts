@@ -123,6 +123,20 @@ export const CoachTurnEvent = z.discriminatedUnion("type", [
    * crisis resources, sent instead of a reply or a redirect; it is never a strike.
    */
   z.strictObject({ type: z.literal("support"), text: z.string(), usage: UsageSchema }),
-  z.strictObject({ type: z.literal("error"), code: z.string().min(1) }),
+  /** `usage`: what the turn's provider calls had used before it failed. */
+  z.strictObject({
+    type: z.literal("error"),
+    code: z.string().min(1),
+    usage: UsageSchema.optional(),
+  }),
 ]);
 export type CoachTurnEvent = z.infer<typeof CoachTurnEvent>;
+
+/**
+ * The body of a coach error. A plan or score that failed after calling the provider also reports
+ * what those calls used, so the api can charge it.
+ */
+export const CoachErrorBodySchema = z.object({
+  error: z.object({ code: z.string() }),
+  usage: UsageSchema.optional(),
+});

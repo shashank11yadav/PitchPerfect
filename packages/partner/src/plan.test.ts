@@ -59,8 +59,10 @@ describe("a planned scenario that fails the check", () => {
 
   it("is replaced by a safe scenario for the skill that names the job's title", async () => {
     let flagged = 0;
-    const plan = await planScenario(deps(ssn.scenario), planRequest(ssn.job), signal(), () => {
-      flagged += 1;
+    const plan = await planScenario(deps(ssn.scenario), planRequest(ssn.job), signal(), {
+      onFallback: () => {
+        flagged += 1;
+      },
     });
     expect(flagged).toBe(1);
     expect(plan.scenarioPublic.companyType).toContain(ssn.job.title);
@@ -81,8 +83,10 @@ describe("a planned scenario that fails the check", () => {
         deps({ scenarioPublic, scenarioPrivate }),
         request,
         signal(),
-        () => {
-          flagged = true;
+        {
+          onFallback: () => {
+            flagged = true;
+          },
         },
       );
       expect(flagged).toBe(false);
@@ -146,8 +150,10 @@ describe("seeded jobs", () => {
 
       let flagged = false;
       const shaped = scenarioFrom(job);
-      const plan = await planScenario(deps(shaped), request, signal(), () => {
-        flagged = true;
+      const plan = await planScenario(deps(shaped), request, signal(), {
+        onFallback: () => {
+          flagged = true;
+        },
       });
       expect(flagged).toBe(false);
       expect(plan.scenarioPublic).toEqual(shaped.scenarioPublic);

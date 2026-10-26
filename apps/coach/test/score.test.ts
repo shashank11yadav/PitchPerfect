@@ -160,4 +160,15 @@ describe("POST /v1/score", () => {
     expect(res.statusCode).toBe(502);
     expect(res.json()).toMatchObject({ error: { code: "upstream_error" } });
   });
+
+  it("reports the usage of both rejected scorecards with the error", async () => {
+    const rejected = { overall: 1 };
+    const provider = new FakeProvider({ overrides: { score: () => rejected } });
+    const res = await post(start(provider), "/v1/score", request());
+    const { usage } = res.json<{ usage: { inputTokens: number; outputTokens: number } }>();
+    // The provider reported real figures for both calls (about four characters a token), so
+    // nothing is estimated.
+    expect(usage.outputTokens).toBe(2 * Math.ceil(JSON.stringify(rejected).length / 4));
+    expect(usage.inputTokens).toBeGreaterThan(0);
+  });
 });

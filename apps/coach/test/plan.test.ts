@@ -158,6 +158,22 @@ describe("POST /v1/plan", () => {
     expect(provider.calls).toBe(2);
   });
 
+  it("reports what a failed plan used next to the error", async () => {
+    const provider = failingProvider(() => new ProviderError("timeout"));
+    const res = await post(start(provider), "/v1/plan", { skill: "pitching" });
+    expect(res.statusCode).toBe(502);
+    // Neither timed-out call reported usage, so each is charged the plan's output cap.
+    expect(res.json()).toMatchObject({
+      usage: { provider: "fake", model: "fake", outputTokens: 2 * LIMITS.maxTokensPlan },
+    });
+  });
+
+  it("reports no usage for a plan the provider refused", async () => {
+    const provider = failingProvider(() => new ProviderError("rate_limited"));
+    const res = await post(start(provider), "/v1/plan", { skill: "pitching" });
+    expect(res.json()).toMatchObject({ usage: { inputTokens: 0, outputTokens: 0 } });
+  });
+
   it("answers 503 practice_unavailable once the circuit breaker opens", async () => {
     const provider = failingProvider(() => new ProviderError("upstream_unavailable"));
     const instance = start(provider);

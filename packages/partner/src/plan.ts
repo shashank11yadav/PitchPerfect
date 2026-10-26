@@ -1,5 +1,5 @@
 import { LIMITS, type CoachPlanRequest, type CoachPlanResponse } from "@pitchperfect/shared";
-import { structuredWithRepair, usageOf, type PracticeDeps } from "./deps.js";
+import { structuredWithRepair, usageOf, type Meter, type PracticeDeps } from "./deps.js";
 import { failsScenarioCheck } from "./guardrails/scenario-check.js";
 import { buildPlanPrompt, PlanSchema } from "./prompts/persona-plan.js";
 import { createUsageMeter } from "./provider.js";
@@ -15,18 +15,24 @@ function failsCheck({ scenarioPublic, scenarioPrivate }: Scenario): boolean {
   return fields.some(failsScenarioCheck);
 }
 
+interface PlanOptions {
+  /** Where the plan's usage is summed; a host passes its own to charge a plan that failed. */
+  meter?: Meter;
+  /** Told when the planned scenario failed the check and the safe one is used. */
+  onFallback?: () => void;
+}
+
 /**
  * A persona and hidden objections for one practice session. Employer job text can steer the
  * planner, so the planned scenario is checked before it is used; one that fails is replaced by a
- * fixed safe scenario for the skill and the job's title (`onFallback` is told).
+ * fixed safe scenario for the skill and the job's title.
  */
 export async function planScenario(
   deps: PracticeDeps,
   req: CoachPlanRequest,
   signal: AbortSignal,
-  onFallback?: () => void,
+  { meter = createUsageMeter(), onFallback }: PlanOptions = {},
 ): Promise<CoachPlanResponse> {
-  const meter = createUsageMeter();
   let scenario: Scenario = await structuredWithRepair(
     deps,
     {
