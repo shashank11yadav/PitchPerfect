@@ -33,3 +33,5 @@ Conventional commits: `type(scope): summary`. The types are `feat`, `fix`, `refa
 ## Dependency updates
 
 Dependabot opens weekly pull requests for npm (grouped into one) and for GitHub Actions. It skips semver-major bumps of `@types/node`, which follows the Node 22 runtime in `.nvmrc`, and of `typescript`; do those by hand. Merge its pull requests with "Rebase and merge": a squash merge adds a co-author trailer to the commit.
+
+The api resolves one MongoDB driver: an `overrides` entry in the root `package.json` makes `mongodb-memory-server-core` use the root `mongodb` devDependency, which matches the driver mongoose pins. Bump `mongodb` together with mongoose, and check that `npm ls mongodb` shows a single version.

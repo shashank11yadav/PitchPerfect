@@ -64,6 +64,9 @@
     },
     "@next/eslint-plugin-next": {
       "fast-glob": "npm:tinyglobby@0.2.17"
+    },
+    "mongodb-memory-server-core": {
+      "mongodb": "$mongodb"
     }
   }
 }
