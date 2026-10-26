@@ -37,7 +37,7 @@ apps/
       server.ts             connects DB, starts listening
       config.ts             env parsing with zod (fails fast)
       db/                   mongoose connection + models/
-      middleware/           session, csrf, origin-check, rate-limit, auth guards, error handler, validate
+      middleware/           session, csrf, origin-check, proxy-guard, rate-limit (+ its MongoDB store), auth guards, upload, request-id, validate, not-found, error handler
       modules/
         auth/               signup, verify, signin, signout, forgot/reset, me
         profile/            profile, email/password change, résumé, account deletion, consent
@@ -46,7 +46,8 @@ apps/
         applications/       apply, withdraw, student list
         employer/           company, jobs CRUD, applicant pipeline, interviews, dashboard
         practice/           sessions, turns (SSE proxy), end/score, attempts, quota
-      services/             mailer, password-policy, html-sanitizer, coach-client, coach-probe, company-verification, files (GridFS)
+        health/             GET /api/health: database, coach probe, partner kind
+      services/             mailer, email-templates, passwords, password-policy, tokens, html-sanitizer, coach-client, coach-probe, company-verification, files (GridFS)
       scripts/              CLI entries (seed, admin, purge-expired), their run-*.ts logic, and the --demo accounts and company
     test/                   integration tests (supertest + mongodb-memory-server)
     Dockerfile              api image; also runs the compiled scripts
@@ -54,8 +55,8 @@ apps/
     src/
       app.ts, server.ts, config.ts, errors.ts, logger.ts
       auth/                 hmac.ts (signature verification), guard.ts (every route but /healthz needs one)
-      providers/            openai.ts, anthropic.ts, sdk-provider.ts, json-schema.ts, index.ts (selection by COACH_PROVIDER)
-      routes/               plan.ts, turn.ts, score.ts, health.ts (thin wrappers over packages/partner), sse.ts
+      providers/            openai.ts, anthropic.ts, openai-moderator.ts, sdk-provider.ts, json-schema.ts, index.ts (selection by COACH_PROVIDER)
+      routes/               plan.ts, turn.ts, score.ts, health.ts (thin wrappers over packages/partner), sse.ts, support.ts (body parsing, client abort)
     evals/                  scripted conversations + runner
     test/
     Dockerfile              practice partner image (never given a public port)
@@ -64,11 +65,11 @@ packages/
     src/
       provider.ts           the LlmProvider interface, task tags, usage meter, ProviderError
       deps.ts               provider + circuit breaker, retry and timeout per call, structured-output repair
-      prompts/              persona-plan.ts, persona-turn.ts, scorer.ts, guard.ts, blocks.ts, fixed-lines.ts, skill-guides.ts
-      guardrails/           input.ts, guard-rules.ts, output.ts, canary.ts, canonical.ts, leak-scan.ts, circuit-breaker.ts
+      prompts/              persona-plan.ts, persona-turn.ts, scorer.ts, guard.ts, moderation.ts, blocks.ts, fixed-lines.ts, skill-guides.ts
+      guardrails/           input.ts, guard-rules.ts, self-harm.ts, output.ts, reply-rules.ts, moderator.ts, canary.ts, canonical.ts, leak-scan.ts, scenario-check.ts, circuit-breaker.ts; guard-corpus.ts, leak-corpus.ts and injected-jobs.ts are test corpora
       fake/                 the scripted provider: persona, intents, voices, scorecard
       scoring/              verify-quotes.ts (evidence must be a verbatim student quote)
-      plan.ts, turn/, score.ts  the three steps of a session, without a transport
+      plan.ts, turn/, score.ts  the three steps of a session, without a transport; safe-scenario.ts is the fallback persona
   shared/
     src/
       skills.ts             the 8 skills (slug, title, summary, weighted rubric dimension)
@@ -79,7 +80,9 @@ packages/
       pii.ts                redactPii and redactTurn (emails, phones, cards, SSNs, IBANs)
       text.ts, time.ts      slugify and turn-text helpers; UTC day/month helpers for quotas
       env.ts, hmac.ts       server-only env parsing and request signing (the ./env and ./hmac subpaths)
+      meeting-links.ts      the video call services an interview link may point at
       seed-data.ts          the fictional companies and jobs (api seed, static demo board; the ./seed-data subpath)
+      zod-config.ts         jitless zod, so schemas parse under the web CSP
       index.ts
 e2e/                        Playwright suites: tests/ (full stack), pages/ (static demo), smoke/ (a deployed site); screenshots.ts for the README images
 docs/                       docs, design/product-design.md, and images/ for the README screenshots
