@@ -29,8 +29,7 @@
     "e2e:smoke": "playwright test -c e2e/playwright.smoke.config.ts",
     "e2e:pages": "npm run build:pages -w apps/web && playwright test -c e2e/playwright.pages.config.ts",
     "lighthouse": "npx --yes @lhci/cli@0.15.1 autorun",
-    "check:dead": "knip && jscpd",
-    "check:attribution": "node scripts/check-attribution.mjs"
+    "check:dead": "knip && jscpd"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

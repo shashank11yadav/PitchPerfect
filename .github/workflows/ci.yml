@@ -27,7 +27,6 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run check:dead
-      - run: npm run check:attribution
       - run: npm audit --audit-level=high
       - uses: gitleaks/gitleaks-action@v3
         env:

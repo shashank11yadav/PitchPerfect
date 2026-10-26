@@ -83,7 +83,7 @@ packages/
       index.ts
 e2e/                        Playwright suites: tests/ (full stack), pages/ (static demo), smoke/ (a deployed site); screenshots.ts for the README images
 docs/                       docs, design/product-design.md, and images/ for the README screenshots
-scripts/                    start-mongo.sh (CI), pre-commit.sh, check-attribution.mjs
+scripts/                    start-mongo.sh (CI), pre-commit.sh
 .github/                    workflows/ci.yml (checks), workflows/pages.yml (static demo deploy), dependabot.yml
 docker-compose.yml          MongoDB and Mailpit; the `full` profile adds web, api and coach
 ```
