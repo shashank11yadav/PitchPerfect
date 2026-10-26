@@ -61,7 +61,7 @@ export function createApp(
   app.set("trust proxy", config.TRUST_PROXY);
   app.disable("x-powered-by");
 
-  app.use(requestId);
+  app.use(requestId(config.PROXY_SHARED_SECRET));
   app.use(
     pinoHttp({
       logger: createLogger(config.LOG_LEVEL, deps.logStream),

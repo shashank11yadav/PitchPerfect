@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { COACH_PROBE_TTL_MS } from "../src/services/coach-probe.js";
 import { makeTestApp } from "./helpers/app.js";
 import { useTestDb } from "./helpers/db.js";
-import { prodEnv } from "./helpers/env.js";
+import { PROD_PROXY_SECRET, prodEnv } from "./helpers/env.js";
 import { FakeCoachClient } from "./helpers/fake-coach.js";
 
 useTestDb();
@@ -88,16 +88,31 @@ describe("GET /api/health", () => {
     expect(res.headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   });
 
-  it("echoes a well-formed incoming request id and replaces a malformed one", async () => {
+  it("ignores a request id the client chose, however well-formed", async () => {
     const { app } = makeTestApp();
-    const kept = await request(app).get("/api/health").set("x-request-id", "client-req-12345");
-    const replaced = await request(app)
-      .get("/api/health")
-      .set("x-request-id", "bad id\twith space");
+    const res = await request(app).get("/api/health").set("x-request-id", "client-req-12345");
 
-    expect(kept.headers["x-request-id"]).toBe("client-req-12345");
-    expect(replaced.headers["x-request-id"]).not.toBe("bad id\twith space");
-    expect(replaced.headers["x-request-id"]).toMatch(/^[\w-]{8,64}$/);
+    expect(res.headers["x-request-id"]).not.toBe("client-req-12345");
+    expect(res.headers["x-request-id"]).toMatch(/^[\w-]{8,64}$/);
+  });
+
+  it("keeps a well-formed request id only from the web proxy, which sends the proxy secret", async () => {
+    const { app } = makeTestApp({ env: prodEnv() });
+    const fromProxy = (id: string, secret = PROD_PROXY_SECRET) =>
+      request(app).get("/api/health").set("x-pp-proxy", secret).set("x-request-id", id);
+
+    const kept = await fromProxy("proxy-req-12345");
+    const malformed = await fromProxy("bad id\twith space");
+    const forged = await fromProxy("forged-req-12345", "q".repeat(48));
+    const noSecret = await request(app).get("/api/health").set("x-request-id", "client-req-12345");
+
+    expect(kept.headers["x-request-id"]).toBe("proxy-req-12345");
+    for (const res of [malformed, forged, noSecret]) {
+      expect(["bad id\twith space", "forged-req-12345", "client-req-12345"]).not.toContain(
+        res.headers["x-request-id"],
+      );
+      expect(res.headers["x-request-id"]).toMatch(/^[\w-]{8,64}$/);
+    }
   });
 
   it("sends HSTS only in production", async () => {
