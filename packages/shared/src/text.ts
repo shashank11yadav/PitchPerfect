@@ -3,6 +3,11 @@
 const CONTROL_CHARS = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/g;
 // Any whitespace except newline.
 const HORIZONTAL_SPACE_RUNS = /[^\S\n]+/g;
+// Every C0 and C1 control character and DEL, line breaks and tabs included.
+// eslint-disable-next-line no-control-regex -- matching control characters is the point
+const ANY_CONTROL_CHAR = /[\u0000-\u001F\u007F-\u009F]/g;
+// Whitespace runs, including the Unicode line and paragraph separators.
+const WHITESPACE_RUNS = /\s+/g;
 // Characters that render as nothing: every format character (Cf: zero-width characters, bidi
 // controls, the soft hyphen, the BOM, U+2060–2064, tag characters), the rest of the tag block,
 // variation selectors, the combining grapheme joiner, and the Hangul fillers.
@@ -17,6 +22,16 @@ const INVISIBLE_CHARS =
  */
 export function normalizeTurnText(text: string): string {
   return stripInvisible(text.replace(CONTROL_CHARS, "")).replace(HORIZONTAL_SPACE_RUNS, " ").trim();
+}
+
+/**
+ * Text that must stay on one line, such as a company name, a job title or a value put into an
+ * email: every line break, tab and other control character becomes a space, invisible characters
+ * go, runs of spaces collapse to one, and the ends are trimmed. A newline in a company name can't
+ * then start a paragraph of its own in an email.
+ */
+export function singleLine(text: string): string {
+  return stripInvisible(text.replace(ANY_CONTROL_CHAR, " ")).replace(WHITESPACE_RUNS, " ").trim();
 }
 
 /**

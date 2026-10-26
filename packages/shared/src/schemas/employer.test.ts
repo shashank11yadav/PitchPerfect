@@ -37,4 +37,11 @@ describe("CompanyUpdateSchema", () => {
       }),
     ).toEqual({ name: "Acme", pitch: "We make widgets. See you" });
   });
+
+  it("keeps the name on one line", () => {
+    expect(
+      CompanyUpdateSchema.parse({ name: "Acme\n\nACTION NEEDED: confirm at https://evil.example" }),
+    ).toEqual({ name: "Acme ACTION NEEDED: confirm at https://evil.example" });
+    expect(CompanyUpdateSchema.safeParse({ name: "\r\n\u2028" }).success).toBe(false);
+  });
 });

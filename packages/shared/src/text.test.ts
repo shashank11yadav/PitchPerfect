@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countChars, normalizeTurnText, slugify, stripInvisible } from "./text.js";
+import { countChars, normalizeTurnText, singleLine, slugify, stripInvisible } from "./text.js";
 
 describe("normalizeTurnText", () => {
   it("strips control characters, collapses spaces, and trims", () => {
@@ -21,6 +21,27 @@ describe("normalizeTurnText", () => {
   it("strips invisible characters before collapsing spaces", () => {
     expect(normalizeTurnText("Hi\u200b \u200bthere\u2060 ")).toBe("Hi there");
     expect(normalizeTurnText("\u200b".repeat(10))).toBe("");
+  });
+});
+
+describe("singleLine", () => {
+  it("turns every line break into one space", () => {
+    expect(singleLine("Acme\n\nACTION NEEDED: confirm at https://evil.example")).toBe(
+      "Acme ACTION NEEDED: confirm at https://evil.example",
+    );
+    for (const lineBreak of ["\r\n", "\r", "\u000b", "\u000c", "\u0085", "\u2028", "\u2029"]) {
+      expect(singleLine(`one${lineBreak}two`), JSON.stringify(lineBreak)).toBe("one two");
+    }
+  });
+
+  it("drops other control and invisible characters, collapses spaces, and trims", () => {
+    expect(singleLine("\u0000 Ac\u200bme\u0007\t\tDemo\u001b[31m  Co \u007f")).toBe(
+      "Acme Demo [31m Co",
+    );
+  });
+
+  it("keeps accents, emoji and punctuation", () => {
+    expect(singleLine("Café “Demo” & Co. 😀")).toBe("Café “Demo” & Co. 😀");
   });
 });
 

@@ -121,6 +121,20 @@ describe("JobInputSchema", () => {
     });
   });
 
+  it("keeps the title, location and skills on one line", () => {
+    const parsed = JobInputSchema.parse({
+      ...job(),
+      title: "Sales intern\n\nACTION NEEDED: reply",
+      location: "Boston,\r\nMA",
+      skills: ["Cold\u2028calling"],
+    });
+    expect(parsed).toMatchObject({
+      title: "Sales intern ACTION NEEDED: reply",
+      location: "Boston, MA",
+      skills: ["Cold calling"],
+    });
+  });
+
   it("rejects a title that is only invisible characters", () => {
     expect(JobInputSchema.safeParse({ ...job(), title: "\u200b\u200b\u200b\u200b" }).success).toBe(
       false,

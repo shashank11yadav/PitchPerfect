@@ -1,4 +1,4 @@
-import { LIMITS, type CompanyVerification } from "@pitchperfect/shared";
+import { LIMITS, singleLine, type CompanyVerification } from "@pitchperfect/shared";
 
 export interface EmailContent {
   subject: string;
@@ -38,8 +38,16 @@ const HTML_ESCAPES: Record<string, string> = {
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char);
 
-/** Subjects can include user text; line breaks there could inject headers. */
-const oneLine = (value: string) => value.replace(/[\r\n]+/g, " ").trim();
+/** After these, a zero-width space keeps a mail client from reading a URL or domain as a link. */
+const LINK_PUNCTUATION = /[.:@]/g;
+
+/**
+ * A value someone typed (a company name, a job title) as an email body shows it: on one line
+ * (`singleLine`), so it can't start a paragraph of its own, and with a zero-width space after every
+ * ".", ":" and "@", so no mail client turns a URL or domain in it into a link. `render` escapes it
+ * for html like any other text. Subjects take the value through `singleLine` alone.
+ */
+const userText = (value: string) => singleLine(value).replace(LINK_PUNCTUATION, "$&\u200b");
 
 function render(subject: string, body: EmailBody): EmailContent {
   const { heading, paragraphs, action, secondary, footnotes = [] } = body;
@@ -67,7 +75,7 @@ function render(subject: string, body: EmailBody): EmailContent {
   const html = [
     "<!doctype html>",
     '<html lang="en"><head><meta charset="utf-8">',
-    `<title>${escapeHtml(oneLine(subject))}</title></head>`,
+    `<title>${escapeHtml(singleLine(subject))}</title></head>`,
     '<body style="margin:0;padding:24px;background:#f5f6fb;font-family:Arial,Helvetica,sans-serif;color:#1c1f2e">',
     '<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:8px;padding:32px">',
     `<p style="margin:0 0 24px;font-size:20px;font-weight:700;color:${BRAND_NAVY}">${BRAND}</p>`,
@@ -80,7 +88,7 @@ function render(subject: string, body: EmailBody): EmailContent {
     "</div></body></html>",
   ].join("");
 
-  return { subject: oneLine(subject), text, html };
+  return { subject: singleLine(subject), text, html };
 }
 
 export function verifyEmail(link: string): EmailContent {
@@ -177,14 +185,15 @@ export function interviewScheduled(details: {
 }): EmailContent {
   const when = `${UTC_DATE_TIME.format(details.startsAtUtc)} UTC`;
   const host = new URL(details.meetingUrl).hostname;
+  const company = userText(details.company);
   const standing =
     details.companyVerification === "verified"
-      ? `${details.company} is a verified company on ${BRAND}: it controls ${details.companyDomain}.`
-      : `${details.company} is not verified on ${BRAND}.`;
+      ? `${company} is a verified company on ${BRAND}: it controls ${details.companyDomain}.`
+      : `${company} is not verified on ${BRAND}.`;
   return render(`Interview scheduled: ${details.jobTitle} at ${details.company}`, {
     heading: "You have an interview",
     paragraphs: [
-      `${details.company} invited you to interview for ${details.jobTitle}.`,
+      `${company} invited you to interview for ${userText(details.jobTitle)}.`,
       `When: ${when}. Check the time in your own time zone before you join.`,
       `The meeting link opens ${host}.`,
       standing,
@@ -203,14 +212,13 @@ export function applicationsClosed(details: {
   jobTitles: string[];
   company: string;
 }): EmailContent {
-  const titles = LIST.format(details.jobTitles);
   const plural = details.jobTitles.length > 1;
-  return render(`Applications closed: ${titles}`, {
+  return render(`Applications closed: ${LIST.format(details.jobTitles)}`, {
     heading: plural
       ? "These jobs are no longer taking applications"
       : "This job is no longer taking applications",
     paragraphs: [
-      `${details.company} closed applications for ${titles}. Thanks for applying.`,
+      `${userText(details.company)} closed applications for ${LIST.format(details.jobTitles.map(userText))}. Thanks for applying.`,
       `There are more roles on ${BRAND} whenever you're ready.`,
     ],
   });

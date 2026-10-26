@@ -34,6 +34,18 @@ describe("profile update schemas", () => {
     expect(StudentProfileUpdateSchema.safeParse({ major: "m".repeat(121) }).success).toBe(false);
     expect(StudentProfileUpdateSchema.safeParse({ major: "  " }).success).toBe(false);
   });
+
+  it("keep single-line fields on one line and reject line breaks in names", () => {
+    expect(EmployerProfileUpdateSchema.parse({ jobTitle: "Recruiter\n\nACTION NEEDED" })).toEqual({
+      jobTitle: "Recruiter ACTION NEEDED",
+    });
+    expect(StudentProfileUpdateSchema.parse({ school: "State\r\nU" })).toEqual({
+      school: "State U",
+    });
+    for (const firstName of ["Ann\nACTION", "Ann Lee", "Ann\tLee"]) {
+      expect(EmployerProfileUpdateSchema.safeParse({ firstName }).success, firstName).toBe(false);
+    }
+  });
 });
 
 describe("practice consent schema", () => {

@@ -146,6 +146,53 @@ describe("email templates", () => {
     expect(email.subject).not.toMatch(/[\r\n]/);
   });
 
+  describe("user-supplied values", () => {
+    const INJECTED = "Acme\n\nACTION NEEDED: confirm at https://evil.example";
+    const rendered = () => [
+      applicationsClosed({ jobTitles: ["Sales\r\nintern"], company: INJECTED }),
+      interviewScheduled({
+        jobTitle: "Sales\u2028intern",
+        company: INJECTED,
+        companyVerification: "verified",
+        companyDomain: "acme-demo.example",
+        startsAtUtc: new Date("2026-04-07T15:30:00Z"),
+        meetingUrl: "https://us02web.zoom.us/j/123",
+      }),
+    ];
+
+    it("stay on the line they were put on, in text, html and the subject", () => {
+      for (const email of rendered()) {
+        const lines = email.text.split("\n");
+        expect(lines.filter((line) => line.includes("ACTION NEEDED"))).toHaveLength(
+          lines.filter((line) => line.includes("Acme")).length,
+        );
+        expect(lines.some((line) => line.trimStart().startsWith("ACTION NEEDED"))).toBe(false);
+        expect(email.text).not.toMatch(/Sales[\r\n\u2028]+intern/);
+        expect(email.html).not.toMatch(/[\r\n\u2028]/);
+        expect(email.html).not.toMatch(/>\s*ACTION NEEDED/);
+        expect(email.subject).not.toMatch(/[\r\n\u2028]/);
+      }
+    });
+
+    it("never carry a link a mail client could pick out of the text or the html body", () => {
+      for (const email of rendered()) {
+        for (const body of [email.text, email.html.slice(email.html.indexOf("<body"))]) {
+          expect(body).not.toMatch(/https?:\/\/evil/);
+          expect(body).not.toMatch(/evil\.example/);
+        }
+        expect(email.html).not.toMatch(/href="[^"]*evil/);
+      }
+    });
+
+    it("still read as the words that were typed", () => {
+      const [closed] = rendered();
+      const visible = (closed?.text ?? "").replaceAll("\u200b", "");
+      expect(visible).toContain(
+        "Acme ACTION NEEDED: confirm at https://evil.example closed applications for Sales intern.",
+      );
+    });
+  });
+
   it("brands every email and has an html document", () => {
     for (const email of [verifyEmail(VERIFY_LINK), resetPassword(RESET_LINK)]) {
       expect(email.html).toMatch(/^<!doctype html>/i);
