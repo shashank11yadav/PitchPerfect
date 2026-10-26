@@ -2,12 +2,19 @@ import type { CompanyVerification } from "@pitchperfect/shared";
 import { BadgeCheck, CircleAlert } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 
-/** Whether the employer proved it owns its domain. Anything short of verified reads as unverified. */
+/**
+ * Whether the employer proved it owns its domain. A verified badge names that domain ("Verified ·
+ * acme-demo.example"), so a big name on someone else's domain is plain to see. Anything short of
+ * verified reads as unverified.
+ */
 export function CompanyBadge({
   verification,
+  domain,
   onDark = false,
 }: {
   verification: CompanyVerification;
+  /** The registrable domain the badge vouches for: `verifiedDomain` from the api. */
+  domain: string | null;
   /** On navy the tinted badge would vanish, so it sits on a white chip there. */
   onDark?: boolean;
 }) {
@@ -15,7 +22,9 @@ export function CompanyBadge({
     verification === "verified" ? (
       <Badge tone="success">
         <BadgeCheck aria-hidden="true" className="size-3.5" />
-        Verified company
+        <span className="min-w-0 [overflow-wrap:anywhere]">
+          {domain ? `Verified · ${domain}` : "Verified company"}
+        </span>
       </Badge>
     ) : (
       <Badge tone="warning">

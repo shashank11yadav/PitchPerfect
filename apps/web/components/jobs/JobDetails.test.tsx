@@ -41,7 +41,7 @@ describe("JobDetails", () => {
 
   it("marks a verified company and links its website and LinkedIn safely", () => {
     render(<JobDetails job={publicJob()} company={publicCompany()} />);
-    expect(screen.getAllByText("Verified company").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Verified · quarrow-logistics.example")).toHaveLength(2);
     expect(screen.queryByText("Unverified employer")).not.toBeInTheDocument();
     for (const name of [/website/i, /linkedin/i]) {
       const link = screen.getByRole("link", { name });
@@ -51,11 +51,23 @@ describe("JobDetails", () => {
     }
   });
 
+  it("names the verified domain next to a big name, so a name on someone else's domain shows", () => {
+    const company = publicCompany({ name: "Google LLC", verifiedDomain: "acme-demo.example" });
+    const job = publicJob({
+      company: { ...publicJob().company, name: "Google LLC", verifiedDomain: "acme-demo.example" },
+    });
+    render(<JobDetails job={job} company={company} />);
+    expect(screen.getAllByText("Verified · acme-demo.example")).toHaveLength(2);
+    expect(screen.getByText(/confirmed a work email on/)).toHaveTextContent(
+      "confirmed a work email on acme-demo.example",
+    );
+  });
+
   it("shows the unverified badge and a caution when the company isn't verified", () => {
     const { job, company } = unverifiedListing();
     render(<JobDetails job={job} company={company} />);
     expect(screen.getAllByText("Unverified employer").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Verified company")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Verified/)).not.toBeInTheDocument();
     expect(screen.getByText(/hasn.t confirmed an email/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /linkedin/i })).not.toBeInTheDocument();
     // An unchecked employer's own website isn't linked; it's shown as text to look up.

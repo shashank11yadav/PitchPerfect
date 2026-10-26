@@ -32,7 +32,7 @@ export function VerificationBanner({ verification, website, className }: Verific
   const copy: Record<CompanyVerification, { title: string; body: ReactNode }> = {
     verified: {
       title: "Verified",
-      body: "Students see a “Verified company” badge on your jobs, so they know the posting comes from someone who works there.",
+      body: "Students see a “Verified” badge with your domain on your jobs, so they know the posting comes from someone with an email there.",
     },
     unverified: {
       title: "Not verified yet",

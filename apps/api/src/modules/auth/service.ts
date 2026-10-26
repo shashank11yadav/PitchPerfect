@@ -25,7 +25,7 @@ import {
 } from "../../db/models/index.js";
 import { InvalidCredentialsError, UnauthenticatedError, ValidationError } from "../../errors.js";
 import type { SessionIdentity } from "../../middleware/session.js";
-import { verificationForCompany } from "../../services/company-verification.js";
+import { registrableDomain, verificationForCompany } from "../../services/company-verification.js";
 import * as emails from "../../services/email-templates.js";
 import { sendSafely, type MailFailureLog, type Mailer } from "../../services/mailer.js";
 import { checkPassword, PASSWORD_PROBLEM_MESSAGES } from "../../services/password-policy.js";
@@ -184,17 +184,21 @@ export async function signUp(deps: AuthDeps, log: MailFailureLog, input: Signup)
 
 /**
  * Now that the employer has proved they own their address, verifies their company if the email
- * shares a registrable domain with its website. Only `unverified` companies are promoted: a
- * suspended company stays suspended, and nothing is ever downgraded here.
+ * shares a registrable domain with its website, and records that domain as the one the badge
+ * vouches for. Only `unverified` companies without a `verificationLockedReason` are promoted: a
+ * company that lost the badge by a rename or domain move waits for an admin, a suspended company
+ * stays suspended, and nothing is ever downgraded here.
  */
 async function verifyOwnedCompany(userId: string, email: string): Promise<void> {
-  const company = await Company.findOne({ ownerId: userId }).select("website verification").lean();
-  if (company?.verification !== "unverified") return;
+  const company = await Company.findOne({ ownerId: userId })
+    .select("website verification verificationLockedReason")
+    .lean();
+  if (company?.verification !== "unverified" || company.verificationLockedReason) return;
   const emailDomain = email.slice(email.lastIndexOf("@") + 1);
   if (verificationForCompany(emailDomain, company.website) !== "verified") return;
   await Company.updateOne(
-    { _id: company._id, verification: "unverified" },
-    { $set: { verification: "verified" } },
+    { _id: company._id, verification: "unverified", verificationLockedReason: null },
+    { $set: { verification: "verified", verifiedDomain: registrableDomain(company.website) } },
   );
 }
 

@@ -13,6 +13,7 @@ import {
 import type { ApplicationAttrs } from "../../src/db/models/application.js";
 import type { JobAttrs } from "../../src/db/models/job.js";
 import type { PracticeAttemptAttrs } from "../../src/db/models/practice-attempt.js";
+import { registrableDomain } from "../../src/services/company-verification.js";
 import { sanitizeJobHtml } from "../../src/services/html-sanitizer.js";
 import { hashPassword } from "../../src/services/passwords.js";
 import { withCsrf, type CsrfAgent, type TestAgent } from "./csrf.js";
@@ -70,12 +71,15 @@ interface EmployerOptions extends AccountOptions {
 export async function createEmployer(options: EmployerOptions = {}) {
   const account = await createUser("employer", options);
   const name = options.companyName ?? "Acme Demo Co";
+  const website = options.website ?? "https://www.acme-demo.example";
+  const verified = options.companyVerified !== false;
   const company = await Company.create({
     ownerId: account.user._id,
     name,
     slug: slugify(name, uniqueId().slice(-6)),
-    website: options.website ?? "https://www.acme-demo.example",
-    verification: options.companyVerified === false ? "unverified" : "verified",
+    website,
+    verification: verified ? "verified" : "unverified",
+    verifiedDomain: verified ? (registrableDomain(website) ?? undefined) : undefined,
   });
   const profile = await EmployerProfile.create({
     userId: account.user._id,

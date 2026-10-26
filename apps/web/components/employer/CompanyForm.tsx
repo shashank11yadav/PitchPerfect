@@ -172,7 +172,7 @@ export function CompanyForm() {
         <div className="min-w-0">
           <h2 className="text-h3 [overflow-wrap:anywhere]">{current.name}</h2>
           <div className="mt-1">
-            <CompanyBadge verification={current.verification} />
+            <CompanyBadge verification={current.verification} domain={current.verifiedDomain} />
           </div>
         </div>
       </div>

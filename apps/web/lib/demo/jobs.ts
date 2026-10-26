@@ -36,6 +36,7 @@ const COMPANIES: readonly PublicCompany[] = SEED_COMPANIES.map((company, index) 
   pitch: company.pitch,
   logoUrl: null,
   verification: company.verification,
+  verifiedDomain: company.verification === "verified" ? company.host : null,
 }));
 
 export const DEMO_JOBS: readonly DemoJob[] = SEED_JOBS.flatMap((seed, index) => {
@@ -58,6 +59,7 @@ export const DEMO_JOBS: readonly DemoJob[] = SEED_JOBS.flatMap((seed, index) => 
       slug: company.slug,
       logoUrl: company.logoUrl,
       verification: company.verification,
+      verifiedDomain: company.verifiedDomain,
     },
   };
   return [{ job, company }];

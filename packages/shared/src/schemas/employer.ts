@@ -36,6 +36,8 @@ export const PublicCompanySchema = z.object({
   pitch: z.string(),
   logoUrl: z.string().nullable(),
   verification: z.enum(COMPANY_VERIFICATION),
+  /** The registrable domain the badge vouches for, e.g. "acme-demo.example"; null unless verified. */
+  verifiedDomain: z.string().nullable(),
 });
 export type PublicCompany = z.infer<typeof PublicCompanySchema>;
 

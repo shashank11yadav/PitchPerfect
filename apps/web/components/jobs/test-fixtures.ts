@@ -24,6 +24,7 @@ export function jobSummary(overrides: Partial<PublicJobSummary> = {}): PublicJob
       slug: "quarrow-logistics-software",
       logoUrl: null,
       verification: "verified",
+      verifiedDomain: "quarrow-logistics.example",
     },
     ...overrides,
   };
@@ -48,6 +49,7 @@ export function publicCompany(overrides: Partial<PublicCompany> = {}): PublicCom
     pitch: "Route planning and proof-of-delivery software for regional freight carriers.",
     logoUrl: null,
     verification: "verified",
+    verifiedDomain: "quarrow-logistics.example",
     ...overrides,
   };
 }
@@ -62,11 +64,18 @@ export function unverifiedListing() {
     linkedinUrl: null,
     pitch: "Simple card and invoice payments for freelancers and very small shops.",
     verification: "unverified",
+    verifiedDomain: null,
   });
   const job = publicJob({
     slug: "inside-sales-associate-d4e5f6",
     title: "Inside sales associate",
-    company: { name: company.name, slug: company.slug, logoUrl: null, verification: "unverified" },
+    company: {
+      name: company.name,
+      slug: company.slug,
+      logoUrl: null,
+      verification: "unverified",
+      verifiedDomain: null,
+    },
   });
   return { job, company };
 }

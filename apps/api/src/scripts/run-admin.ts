@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import * as models from "../db/models/index.js";
 import { AuthToken, Company, PracticeAttempt, PracticeStart, User } from "../db/models/index.js";
-import { verificationForCompany } from "../services/company-verification.js";
+import { registrableDomain, verificationForCompany } from "../services/company-verification.js";
 
 /** Where the admin CLI writes: normal output and problems. */
 export interface AdminIo {
@@ -46,6 +46,32 @@ async function migrate(_args: readonly string[], io: AdminIo): Promise<void> {
     if (!ttl) throw new AdminError(`${model.collection.name}: the expiry (TTL) index is missing`);
   }
   io.out(`TTL indexes present on ${TTL_MODELS.map((model) => model.collection.name).join(", ")}`);
+  const recorded = await recordVerifiedDomains();
+  io.out(
+    `Verified domain recorded for ${String(recorded)} ${recorded === 1 ? "company" : "companies"}`,
+  );
+}
+
+/**
+ * Records the domain of each company verified before domains were recorded: its website's
+ * registrable domain, which a domain move would have taken the badge from. A later rename then
+ * locks the company even if an email change drops the badge first.
+ */
+async function recordVerifiedDomains(): Promise<number> {
+  const companies = await Company.find({ verification: "verified", verifiedDomain: null })
+    .select("website")
+    .lean();
+  let recorded = 0;
+  for (const company of companies) {
+    const verifiedDomain = registrableDomain(company.website);
+    if (verifiedDomain === null) continue;
+    const result = await Company.updateOne(
+      { _id: company._id, verification: "verified", verifiedDomain: null },
+      { $set: { verifiedDomain } },
+    );
+    recorded += result.modifiedCount;
+  }
+  return recorded;
 }
 
 async function listUnverified(_args: readonly string[], io: AdminIo): Promise<void> {
@@ -67,12 +93,19 @@ async function listUnverified(_args: readonly string[], io: AdminIo): Promise<vo
   );
   for (const company of companies) {
     const owner = emailOf.get(company.ownerId.toString()) ?? "unknown owner";
+    const locked = company.verificationLockedReason
+      ? `  lost the badge: ${company.verificationLockedReason}`
+      : "";
     io.out(
-      `${company._id.toString()}  ${company.slug}  ${company.name}  ${company.website}  ${owner}`,
+      `${company._id.toString()}  ${company.slug}  ${company.name}  ${company.website}  ${owner}${locked}`,
     );
   }
 }
 
+/**
+ * The only way back to `verified` for a company that lost the badge by a rename or domain move:
+ * clears `verificationLockedReason` and records the website's domain as the one the badge vouches for.
+ */
 async function approveCompany([reference = ""]: readonly string[], io: AdminIo): Promise<void> {
   const company = await findCompany(reference);
   if (company.verification === "suspended") {
@@ -82,11 +115,18 @@ async function approveCompany([reference = ""]: readonly string[], io: AdminIo):
     io.out(`${company.name} is already verified`);
     return;
   }
+  const verifiedDomain = registrableDomain(company.website);
+  if (verifiedDomain === null) {
+    throw new AdminError(`${company.name}'s website (${company.website}) has no company domain`);
+  }
   await Company.updateOne(
     { _id: company._id, verification: "unverified" },
-    { verification: "verified" },
+    {
+      $set: { verification: "verified", verifiedDomain },
+      $unset: { verificationLockedReason: 1 },
+    },
   );
-  io.out(`Approved ${company.name} (${company.slug}): now verified`);
+  io.out(`Approved ${company.name} (${company.slug}): now verified for ${verifiedDomain}`);
 }
 
 async function suspendCompany([reference = ""]: readonly string[], io: AdminIo): Promise<void> {
@@ -99,18 +139,26 @@ async function suspendCompany([reference = ""]: readonly string[], io: AdminIo):
   io.out(`Suspended ${company.name} (${company.slug}); its jobs are now hidden`);
 }
 
-/** Back to `verified` only if the owner's confirmed email still matches the website; else `unverified`. */
+/**
+ * Back to `verified` only if the company has no `verificationLockedReason` and the owner's
+ * confirmed email still matches the website; else `unverified`, waiting for approve-company.
+ */
 async function unsuspendCompany([reference = ""]: readonly string[], io: AdminIo): Promise<void> {
   const company = await findCompany(reference);
   if (company.verification !== "suspended")
     throw new AdminError(`${company.name} is not suspended`);
   const owner = await User.findById(company.ownerId).select("email emailVerifiedAt").lean();
   const matches =
+    company.verificationLockedReason === undefined &&
     owner?.emailVerifiedAt != null &&
     verificationForCompany(owner.email.slice(owner.email.lastIndexOf("@") + 1), company.website) ===
       "verified";
-  const verification = matches ? "verified" : "unverified";
-  await Company.updateOne({ _id: company._id, verification: "suspended" }, { verification });
+  const verifiedDomain = matches ? registrableDomain(company.website) : null;
+  const verification = verifiedDomain === null ? "unverified" : "verified";
+  await Company.updateOne(
+    { _id: company._id, verification: "suspended" },
+    { $set: { verification, ...(verifiedDomain !== null && { verifiedDomain }) } },
+  );
   io.out(`Unsuspended ${company.name} (${company.slug}): now ${verification}`);
 }
 
@@ -133,7 +181,7 @@ const COMMANDS: Record<string, Command> = {
   },
   "unsuspend-company": {
     params: ["id|slug"],
-    summary: "Lift a suspension and re-check the owner's email domain",
+    summary: "Lift a suspension and re-check the owner's email domain, unless renamed or moved",
     run: unsuspendCompany,
   },
 };

@@ -2,16 +2,21 @@ import type { CompanyVerification } from "@pitchperfect/shared";
 import { disposableEmailBlocklist } from "disposable-email-domains-js";
 import emailProviders from "email-providers";
 import { getDomain } from "tldts";
+import { ALIAS_MAIL_DOMAINS } from "./alias-mail-domains.js";
 
 let freeMailDomains: Set<string> | undefined;
 
 /**
  * Domains where anyone can get an address, so they prove nothing about a company: the free mail
- * providers from `email-providers` and the throwaway ones from `disposable-email-domains-js`, both
- * lowercase. Loaded on first use.
+ * providers from `email-providers`, the throwaway ones from `disposable-email-domains-js`, and the
+ * alias and forwarding services in `ALIAS_MAIL_DOMAINS`, all lowercase. Loaded on first use.
  */
 function freeMailDomainList(): Set<string> {
-  freeMailDomains ??= new Set([...emailProviders, ...disposableEmailBlocklist()]);
+  freeMailDomains ??= new Set([
+    ...emailProviders,
+    ...disposableEmailBlocklist(),
+    ...ALIAS_MAIL_DOMAINS,
+  ]);
   return freeMailDomains;
 }
 
@@ -24,8 +29,8 @@ export const registrableDomain = (hostOrUrl: string): string | null =>
   getDomain(hostOrUrl.trim().toLowerCase(), { allowPrivateDomains: true });
 
 /**
- * True when the email domain, or any parent of it down to its registrable domain, is a free or
- * disposable mail domain: "mail.yahoo.co.uk" is caught by "yahoo.co.uk".
+ * True when the email domain, or any parent of it down to its registrable domain, is a free,
+ * disposable or alias mail domain: "mail.yahoo.co.uk" is caught by "yahoo.co.uk".
  */
 function isFreeMail(emailDomain: string, registrable: string): boolean {
   const labels = emailDomain.trim().toLowerCase().replace(/\.$/, "").split(".");
@@ -45,8 +50,8 @@ export function sameCompanyDomain(a: string, b: string): boolean {
 }
 
 /**
- * A company is verified at sign-up when the employer's email shares a registrable domain with the
- * company website. Free-mail and disposable addresses never verify.
+ * A company is verified when the employer's confirmed email shares a registrable domain with the
+ * company website. Free-mail, disposable and alias addresses never verify.
  */
 export function verificationForCompany(
   emailDomain: string,
@@ -57,4 +62,18 @@ export function verificationForCompany(
   if (fromEmail === null || fromWebsite === null) return "unverified";
   if (isFreeMail(emailDomain, fromEmail)) return "unverified";
   return fromEmail === fromWebsite ? "verified" : "unverified";
+}
+
+/**
+ * The domain a company's badge vouches for: the one recorded at verification, or for a company
+ * verified before domains were recorded, its website's registrable domain (a domain move drops the
+ * badge, so the two agree). Null unless the company is verified.
+ */
+export function badgeDomain(company: {
+  verification: CompanyVerification;
+  verifiedDomain?: string | null;
+  website: string;
+}): string | null {
+  if (company.verification !== "verified") return null;
+  return company.verifiedDomain ?? registrableDomain(company.website);
 }

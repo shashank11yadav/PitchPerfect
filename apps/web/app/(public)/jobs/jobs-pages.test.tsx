@@ -111,14 +111,18 @@ describe("/jobs", () => {
     expect(fetchMock).toHaveBeenCalledWith(`${API}/api/jobs?page=1&pageSize=20`, expect.anything());
   });
 
-  it("marks listings from unverified employers", async () => {
+  it("marks listings from unverified employers, and names the domain of verified ones", async () => {
     const { job } = unverifiedListing();
     serve({ "/api/jobs?page=1&pageSize=20": () => json(page([jobSummary(), job])) });
     await renderJobs();
     const [verifiedRow, unverifiedRow] = screen.getAllByRole("article");
     if (!verifiedRow || !unverifiedRow) throw new Error("expected two listings");
     expect(within(verifiedRow).queryByText("Unverified employer")).toBeNull();
+    expect(
+      within(verifiedRow).getByText("Verified · quarrow-logistics.example"),
+    ).toBeInTheDocument();
     expect(within(unverifiedRow).getByText("Unverified employer")).toBeInTheDocument();
+    expect(within(unverifiedRow).queryByText(/^Verified/)).toBeNull();
   });
 
   it("says when nothing matches and how to widen the search", async () => {

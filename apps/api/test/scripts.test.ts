@@ -383,6 +383,29 @@ describe("runAdmin", () => {
     expect(text).not.toContain("Paused Co");
   });
 
+  it("migrate records the domain of a verified company that has none", async () => {
+    const { company } = await createEmployer({ website: "https://www.acme-demo.example/about" });
+    await Company.updateOne({ _id: company._id }, { $unset: { verifiedDomain: 1 } });
+    const unverified = await createEmployer({ companyVerified: false });
+    const run = capture();
+
+    expect(await runAdmin(["migrate"], run.io)).toBe(0);
+
+    expect((await Company.findById(company._id).lean())?.verifiedDomain).toBe("acme-demo.example");
+    expect((await Company.findById(unverified.company._id).lean())?.verifiedDomain).toBeUndefined();
+    expect(run.text()).toMatch(/verified domain recorded for 1 company/i);
+  });
+
+  it("list-unverified says why a company lost the badge", async () => {
+    const { company } = await createEmployer({ companyVerified: false, companyName: "Renamed Co" });
+    await Company.updateOne({ _id: company._id }, { verificationLockedReason: "renamed" });
+    const run = capture();
+
+    expect(await runAdmin(["list-unverified"], run.io)).toBe(0);
+
+    expect(run.text()).toMatch(/Renamed Co.*lost the badge: renamed/);
+  });
+
   it("list-unverified says so when there are none", async () => {
     const run = capture();
     expect(await runAdmin(["list-unverified"], run.io)).toBe(0);

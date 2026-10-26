@@ -15,6 +15,19 @@ describe("JobCard", () => {
     );
   });
 
+  it("shows the domain a verified company's badge vouches for", () => {
+    const job = jobSummary();
+    render(
+      <JobCard
+        job={{
+          ...job,
+          company: { ...job.company, name: "Google LLC", verifiedDomain: "acme-demo.example" },
+        }}
+      />,
+    );
+    expect(screen.getByText("Google LLC")).toHaveTextContent("Verified · acme-demo.example");
+  });
+
   it("takes an app link, heading level and the smaller compact size", () => {
     render(
       <JobCard

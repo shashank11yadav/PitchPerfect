@@ -56,6 +56,7 @@ const companyInput = (ownerId = oid(), slug = "acme-labs") => ({
   website: "https://acme.example.test",
   pitch: "We sell widgets.",
   verification: "verified" as const,
+  verifiedDomain: "example.test",
 });
 
 const jobSnapshot = { title: "SDR", companyName: "Acme Labs" };
@@ -351,6 +352,7 @@ describe("view mappers", () => {
       pitch: "We sell widgets.",
       logoUrl: null,
       verification: "verified",
+      verifiedDomain: "example.test",
     });
     const view = toPublicJob(job, company);
     expect(view).toEqual({
@@ -371,7 +373,13 @@ describe("view mappers", () => {
       skills: ["calling"],
       publishedAt: "2026-01-02T03:04:05.000Z",
       descriptionHtml: "<p>Call people.</p>",
-      company: { name: "Acme Labs", slug: "acme-labs", logoUrl: null, verification: "verified" },
+      company: {
+        name: "Acme Labs",
+        slug: "acme-labs",
+        logoUrl: null,
+        verification: "verified",
+        verifiedDomain: "example.test",
+      },
     });
   });
 

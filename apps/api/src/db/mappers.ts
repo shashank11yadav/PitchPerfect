@@ -14,6 +14,7 @@ import type {
   StudentApplicationView,
   StudentProfileView,
 } from "@pitchperfect/shared";
+import { badgeDomain } from "../services/company-verification.js";
 import type { ApplicationAttrs } from "./models/application.js";
 import type { CompanyAttrs } from "./models/company.js";
 import type { EmployerProfileAttrs } from "./models/employer-profile.js";
@@ -75,6 +76,7 @@ export function toPublicCompany(company: Persisted<CompanyAttrs>): PublicCompany
     pitch: company.pitch,
     logoUrl: company.logoUrl ?? null,
     verification: company.verification,
+    verifiedDomain: badgeDomain(company),
   };
 }
 
@@ -95,7 +97,7 @@ export function toPublicJobSummary(
   job: Persisted<JobAttrs>,
   company: Persisted<CompanyAttrs>,
 ): PublicJobSummary {
-  const { name, slug, logoUrl, verification } = toPublicCompany(company);
+  const { name, slug, logoUrl, verification, verifiedDomain } = toPublicCompany(company);
   return {
     id: job._id.toString(),
     slug: job.slug,
@@ -106,7 +108,7 @@ export function toPublicJobSummary(
     pay: toJobPay(job.pay),
     skills: [...job.skills],
     publishedAt: iso(job.publishedAt),
-    company: { name, slug, logoUrl, verification },
+    company: { name, slug, logoUrl, verification, verifiedDomain },
   };
 }
 

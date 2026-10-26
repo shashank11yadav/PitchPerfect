@@ -43,8 +43,8 @@ const FEATURES: Statement[] = [
 
 const VERIFY_STEPS = [
   "Sign up with your work email, and add your company’s name and website.",
-  "Confirm the email with the one-time link we send. Free and throwaway email providers never count as a company domain.",
-  "If the email’s domain matches the website’s, you’re verified. Unverified listings still go live, with a badge.",
+  "Confirm the email with the one-time link we send. Free, throwaway and alias email providers never count as a company domain.",
+  "If the email’s domain matches the website’s, you’re verified, and your badge names that domain. Unverified listings still go live, with a badge.",
 ];
 
 /** Each step starts further in than the last, so the three read as a sequence without numbers. */

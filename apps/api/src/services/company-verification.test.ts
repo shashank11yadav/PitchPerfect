@@ -65,4 +65,31 @@ describe("verificationForCompany", () => {
   ])("never verifies the free-mail domain %s, even against its own website", (domain) => {
     expect(verificationForCompany(domain, `https://www.${domain}`)).toBe("unverified");
   });
+
+  it.each([
+    "duck.com",
+    "fastmail.com",
+    "fastmail.fm",
+    "mozmail.com",
+    "tutanota.com",
+    "tuta.io",
+    "tuta.com",
+    "pm.me",
+    "proton.me",
+    "protonmail.com",
+    "passmail.net",
+    "simplelogin.com",
+    "slmail.me",
+    "aleeas.com",
+    "anonaddy.com",
+    "anonaddy.me",
+    "addy.io",
+    "privaterelay.appleid.com",
+    "hey.com",
+    "33mail.com",
+    "forwardemail.net",
+  ])("never verifies the alias or forwarding domain %s, even against its own website", (domain) => {
+    expect(verificationForCompany(domain, `https://${domain}`)).toBe("unverified");
+    expect(verificationForCompany(`relay.${domain}`, `https://www.${domain}`)).toBe("unverified");
+  });
 });

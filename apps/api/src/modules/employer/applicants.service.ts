@@ -13,7 +13,11 @@ import {
 import { sharesScorecard, toEmployerApplicationView } from "../../db/mappers.js";
 import { Application, PracticeAttempt, StudentProfile, User } from "../../db/models/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../errors.js";
-import { registrableDomain, sameCompanyDomain } from "../../services/company-verification.js";
+import {
+  badgeDomain,
+  registrableDomain,
+  sameCompanyDomain,
+} from "../../services/company-verification.js";
 import * as emails from "../../services/email-templates.js";
 import { sendSafely, type MailFailureLog, type Mailer } from "../../services/mailer.js";
 import { anyOf, OPEN_STATUSES } from "../applications/closing.js";
@@ -180,7 +184,7 @@ export async function scheduleInterview(
       jobTitle: job.title,
       company: company.name,
       companyVerification: company.verification,
-      companyDomain: registrableDomain(company.website) ?? new URL(company.website).hostname,
+      companyDomain: badgeDomain(company) ?? new URL(company.website).hostname,
       startsAtUtc,
       meetingUrl,
     });

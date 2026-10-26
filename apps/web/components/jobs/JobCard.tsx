@@ -42,7 +42,10 @@ export function JobCard({
         </Heading>
         <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-ink">
           {job.company.name}
-          <CompanyBadge verification={job.company.verification} />
+          <CompanyBadge
+            verification={job.company.verification}
+            domain={job.company.verifiedDomain}
+          />
         </p>
         {job.skills.length > 0 && (
           <p className="mt-2 text-small text-muted">

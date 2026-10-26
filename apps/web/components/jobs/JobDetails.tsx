@@ -66,8 +66,14 @@ function CompanyNote({ company }: { company: PublicCompany }) {
   if (company.verification === "verified") {
     return (
       <p>
-        Verified means the employer confirmed a work email on the company’s own website domain. It
-        tells you who posted the job. It isn’t a recommendation.
+        Verified means the employer confirmed a work email on{" "}
+        {company.verifiedDomain ? (
+          <span className="font-semibold">{company.verifiedDomain}</span>
+        ) : (
+          "the company’s own website domain"
+        )}
+        . It tells you who posted the job and which domain they control, not that the name is
+        theirs. It isn’t a recommendation.
       </p>
     );
   }
@@ -134,7 +140,11 @@ export function JobDetails({
               </Title>
               <p className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-lede font-semibold">
                 {company.name}
-                <CompanyBadge verification={company.verification} onDark={variant === "page"} />
+                <CompanyBadge
+                  verification={company.verification}
+                  domain={company.verifiedDomain}
+                  onDark={variant === "page"}
+                />
               </p>
             </div>
             <div className="self-end lg:col-span-4 lg:col-start-9">
@@ -207,7 +217,7 @@ export function JobDetails({
           <div className="flex flex-col gap-6 text-ink lg:col-span-6 lg:col-start-7">
             {company.pitch && <p className="text-statement">{company.pitch}</p>}
             <div className="flex flex-col items-start gap-3">
-              <CompanyBadge verification={company.verification} />
+              <CompanyBadge verification={company.verification} domain={company.verifiedDomain} />
               <div className="max-w-[56ch]">
                 <CompanyNote company={company} />
               </div>

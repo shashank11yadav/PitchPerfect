@@ -219,6 +219,7 @@ describe("PublicJobSummaryPageSchema", () => {
       slug: "quarrow-logistics-software",
       logoUrl: null,
       verification: "verified",
+      verifiedDomain: "quarrow-logistics.example",
     },
   });
 
@@ -259,6 +260,7 @@ describe("PublicJobDetailResponseSchema", () => {
         slug: "quarrow-logistics-software",
         logoUrl: null,
         verification: "verified",
+        verifiedDomain: "quarrow-logistics.example",
       },
     },
     company: {
@@ -270,6 +272,7 @@ describe("PublicJobDetailResponseSchema", () => {
       pitch: "Route planning for regional carriers.",
       logoUrl: null,
       verification: "verified",
+      verifiedDomain: "quarrow-logistics.example",
     },
   });
 

@@ -68,6 +68,7 @@ describe("GET /api/jobs", () => {
       "name",
       "slug",
       "verification",
+      "verifiedDomain",
     ]);
   });
 

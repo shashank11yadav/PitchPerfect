@@ -263,9 +263,22 @@ const UNITED_STATES = /\b(?:USA?|U\.S\.(?:A\.?)?|United States(?: of America)?)(
 const applicantCountryOf = (location: string): string | undefined =>
   UNITED_STATES.test(location) ? "US" : undefined;
 
+/**
+ * The company's website, when it sits on the domain its badge vouches for; search engines then
+ * tie the posting to that site. Null otherwise, so a name is never linked to a site it hasn't proved.
+ */
+function verifiedWebsite(company: PublicCompany): string | null {
+  const domain = company.verifiedDomain;
+  if (!domain || !URL.canParse(company.website)) return null;
+  const { protocol, hostname } = new URL(company.website);
+  const onDomain = hostname === domain || hostname.endsWith(`.${domain}`);
+  return protocol === "https:" && onDomain ? company.website : null;
+}
+
 /** `JobPosting` for a job page. Only call it for jobs of verified companies. */
 export function jobPostingJsonLd(job: PostedJob, company: PublicCompany) {
   const salary = baseSalary(job.pay);
+  const website = verifiedWebsite(company);
   const country = job.workplace === "remote" ? applicantCountryOf(job.location) : undefined;
   const location =
     job.workplace === "remote"
@@ -291,7 +304,7 @@ export function jobPostingJsonLd(job: PostedJob, company: PublicCompany) {
     hiringOrganization: {
       "@type": "Organization",
       name: company.name,
-      sameAs: company.website,
+      ...(website && { sameAs: website }),
       ...(company.logoUrl && { logo: company.logoUrl }),
     },
     ...location,

@@ -102,6 +102,7 @@ describe("jobPostingJsonLd", () => {
     pitch: "Routing software for regional carriers.",
     logoUrl: "https://quarrow.example/logo.png",
     verification: "verified",
+    verifiedDomain: "quarrow.example",
   };
   const job = (overrides: Partial<PublicJob> = {}): PublicJob => ({
     id: "65f1c0ffee0000000000abcd",
@@ -126,8 +127,25 @@ describe("jobPostingJsonLd", () => {
       slug: company.slug,
       logoUrl: company.logoUrl,
       verification: company.verification,
+      verifiedDomain: company.verifiedDomain,
     },
     ...overrides,
+  });
+
+  it("links the company's website only when it is on the verified domain", () => {
+    const sameAs = (overrides: Partial<PublicCompany>) =>
+      (
+        seo.jobPostingJsonLd(job(), { ...company, ...overrides }).hiringOrganization as {
+          sameAs?: string;
+        }
+      ).sameAs;
+
+    expect(sameAs({ website: "https://careers.quarrow.example/jobs" })).toBe(
+      "https://careers.quarrow.example/jobs",
+    );
+    expect(sameAs({ website: "https://www.google.example" })).toBeUndefined();
+    expect(sameAs({ website: "https://notquarrow.example" })).toBeUndefined();
+    expect(sameAs({ verifiedDomain: null })).toBeUndefined();
   });
 
   it("maps an onsite full-time job with a pay range", () => {

@@ -77,7 +77,7 @@ function CompanyLine({ job }: { job: SampleJob }) {
   return (
     <p className="mt-1 flex flex-wrap items-center gap-2 text-small text-ink">
       {job.company.name}
-      <CompanyBadge verification={job.company.verification} />
+      <CompanyBadge verification={job.company.verification} domain={job.company.host} />
     </p>
   );
 }

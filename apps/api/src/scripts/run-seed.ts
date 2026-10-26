@@ -158,6 +158,7 @@ async function seedCompany(
         website: `https://${seed.host}`,
         pitch: seed.pitch,
         verification: seed.verification,
+        ...(seed.verification === "verified" && { verifiedDomain: seed.host }),
       }),
   );
   await ensureEmployerProfile(id, seed.employer.jobTitle);

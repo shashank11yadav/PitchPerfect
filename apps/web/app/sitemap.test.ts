@@ -15,7 +15,13 @@ const summary = (slug: string, verification: PublicJobSummary["company"]["verifi
   pay: { type: "unpaid" },
   skills: [],
   publishedAt: "2026-10-01T12:00:00.000Z",
-  company: { name: "Quarrow Logistics Software", slug: "quarrow", logoUrl: null, verification },
+  company: {
+    name: "Quarrow Logistics Software",
+    slug: "quarrow",
+    logoUrl: null,
+    verification,
+    verifiedDomain: verification === "verified" ? "quarrow.example" : null,
+  },
 });
 
 const page = (items: unknown[], pageNumber: number, total: number) =>

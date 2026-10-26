@@ -49,6 +49,7 @@ function asListing(job: EmployerJob, company: PublicCompany): PublicJob {
       slug: company.slug,
       logoUrl: company.logoUrl,
       verification: company.verification,
+      verifiedDomain: company.verifiedDomain,
     },
   };
 }
