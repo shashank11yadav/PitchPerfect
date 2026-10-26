@@ -8,7 +8,6 @@ import {
   unverifiedListing,
 } from "@/components/jobs/test-fixtures";
 import JobPage, { generateMetadata } from "./[slug]/page";
-import JobsLoading from "./loading";
 import JobsPage, { metadata as jobsMetadata } from "./page";
 
 const NOT_FOUND = new Error("NEXT_NOT_FOUND");
@@ -141,11 +140,6 @@ describe("/jobs", () => {
     expect(screen.getByRole("heading", { name: /couldn.t load the jobs/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Try again" })).toHaveAttribute("href", "/jobs?q=sdr");
     expect(screen.getByRole("search")).toBeInTheDocument();
-  });
-
-  it("has a loading state that says what it's waiting for", () => {
-    render(<JobsLoading />);
-    expect(screen.getByRole("status")).toHaveTextContent(/loading jobs/i);
   });
 });
 

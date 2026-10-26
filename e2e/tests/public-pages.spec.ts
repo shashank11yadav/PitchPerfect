@@ -39,6 +39,23 @@ async function expectCanonical(page: Page, path: string): Promise<void> {
   expect(url.pathname.replace(/\/$/, "")).toBe(path.replace(/\/$/, ""));
 }
 
+/** A search crawler, which Next answers with the whole page in one response. */
+const GOOGLEBOT = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+
+/**
+ * The page as served, before any script runs, split at `</head>`: the title and description a
+ * crawler reads must be in the head, and nothing in the body may carry its own.
+ */
+async function servedHead(page: Page, path: string, userAgent?: string) {
+  const response = await page.request.get(path, {
+    ...(userAgent && { headers: { "user-agent": userAgent } }),
+  });
+  const html = await response.text();
+  const end = html.indexOf("</head>");
+  expect(end, `${path} has a </head>`).toBeGreaterThan(0);
+  return { status: response.status(), head: html.slice(0, end), body: html.slice(end) };
+}
+
 async function robots(page: Page): Promise<string | null> {
   const meta = page.locator('meta[name="robots"]');
   return (await meta.count()) > 0 ? meta.getAttribute("content") : null;
@@ -78,4 +95,26 @@ test("an unverified company's job is noindex and has no JobPosting", async ({ pa
   await expect(page.locator("h1")).toHaveCount(1);
   expect(await robots(page)).toContain("noindex");
   expect(await jsonLdTypes(page)).not.toContain("JobPosting");
+});
+
+test("a job page is sent whole, with its title and description in <head>", async ({ page }) => {
+  const job = await publicJob("verified");
+  for (const userAgent of [undefined, GOOGLEBOT]) {
+    const { status, head, body } = await servedHead(page, `/jobs/${job.slug}`, userAgent);
+    expect(status).toBe(200);
+    expect(head).toMatch(new RegExp(`<title>[^<]*${job.title}`));
+    expect(head).toContain('<meta name="description"');
+    expect(body).not.toContain("<title>");
+    expect(body).not.toContain('<meta name="description"');
+  }
+});
+
+test("an unknown job slug is a 404, with its title in <head>", async ({ page }) => {
+  for (const userAgent of [undefined, GOOGLEBOT]) {
+    const { status, head, body } = await servedHead(page, "/jobs/no-such-job-here", userAgent);
+    expect(status).toBe(404);
+    expect(head).toContain("<title>");
+    expect(head).toContain('<meta name="robots" content="noindex');
+    expect(body).not.toContain("<title>");
+  }
 });
