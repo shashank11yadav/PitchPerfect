@@ -188,7 +188,12 @@ describe("CoachTurnEvent", () => {
     const events = [
       { type: "delta", text: "Hel" },
       { type: "done", stage: "pitch", finalText: "Hello.", usage: usage() },
-      { type: "redirect", text: "Let's stay on the sales scenario.", usage: usage() },
+      {
+        type: "redirect",
+        text: "Let's stay on the sales scenario.",
+        strike: false,
+        usage: usage(),
+      },
       { type: "error", code: "upstream_error" },
     ];
     for (const event of events) {
@@ -203,5 +208,11 @@ describe("CoachTurnEvent", () => {
         .success,
     ).toBe(false);
     expect(CoachTurnEvent.safeParse({ type: "delta", text: "x", extra: 1 }).success).toBe(false);
+  });
+
+  it("needs a redirect to say whether it was a strike", () => {
+    expect(CoachTurnEvent.safeParse({ type: "redirect", text: "x", usage: usage() }).success).toBe(
+      false,
+    );
   });
 });

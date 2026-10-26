@@ -107,7 +107,13 @@ export const CoachTurnEvent = z.discriminatedUnion("type", [
     finalText: z.string(),
     usage: UsageSchema,
   }),
-  z.strictObject({ type: z.literal("redirect"), text: z.string(), usage: UsageSchema }),
+  z.strictObject({
+    type: z.literal("redirect"),
+    text: z.string(),
+    /** True only for a confirmed attack; it counts toward the guard-flag limit. */
+    strike: z.boolean(),
+    usage: UsageSchema,
+  }),
   z.strictObject({ type: z.literal("error"), code: z.string().min(1) }),
 ]);
 export type CoachTurnEvent = z.infer<typeof CoachTurnEvent>;

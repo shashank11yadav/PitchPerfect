@@ -107,7 +107,7 @@ SSE events from `/turns` (each `data:` line is JSON):
 
 - `event: delta` → `{ text }` (partial partner reply)
 - `event: done` → `{ stage: "opening" | "discovery" | "pitch" | "objection" | "close", turnsLeft, finalText }`. `finalText` is the stored, checked reply, and the client replaces the streamed text with it.
-- `event: redirect` → `{ text }` (guardrail in-character redirect; turn counted as flagged)
+- `event: redirect` → `{ text }` (guardrail in-character redirect; turn counted as flagged, and as a strike only when the guards confirmed an attack)
 - `event: ended` → `{ reason: "guard_limit" | "turn_limit" | "expired" }`
 - `event: error` → `{ code }`
 
@@ -115,7 +115,7 @@ Turn rules:
 
 - `turnsLeft` = 20 − student turns so far, flagged ones included. The 20th turn's `done` is followed by `ended {reason: "turn_limit"}`; the attempt stays `active` so it can still be ended and scored. Later turns answer only `ended` and never reach the coach.
 - After 20 minutes a turn answers only `ended {reason: "expired"}`; ending still scores.
-- The third `redirect` is followed by `ended {reason: "guard_limit"}` and the attempt becomes `ended_by_guard`.
+- The third strike is followed by `ended {reason: "guard_limit"}` and the attempt becomes `ended_by_guard`. A redirect is a strike when the coach's event says `strike: true`: a suspect line a second check confirmed as an attack ([practice-partner.md](practice-partner.md#guardrails-packagespartnersrcguardrails)).
 - Student text is normalized, clipped, and PII-redacted before it is stored or forwarded (the partner's reply and redirect lines are redacted too). Only the final reply is stored, never the streamed deltas.
 - A turn the coach started but never finished (the client left mid-reply, or an `error` event) still counts: the student's text is stored with `flagged: true` and no partner reply, and an estimated usage is charged to the attempt and today's `usagedays` (input ≈ request characters / 4, output = the 200-token reply cap). A client gone before the turn starts, or a coach that refuses the call outright, costs nothing. The attempt is free for the next turn either way.
 - The coach receives the transcript with flagged entries marked `flagged: true` (counted as used turns, never replayed to the model), at most the 40 most recent entries.
@@ -159,12 +159,12 @@ Base: `COACH_URL` (e.g. `http://coach:4100`). Every request carries:
 - `x-pp-signature`: hex HMAC-SHA256 of `${timestamp}.${METHOD}.${path}.${rawBody}` with `COACH_SHARED_SECRET`, where `METHOD` is the uppercase HTTP method and `path` is the request path exactly as sent, without the query string (e.g. `/v1/plan`). An empty body signs as an empty string.
   Coach rejects if the signature is wrong or `|now − timestamp| > 60`.
 
-| Method | Path        | Body (shared schema)                                                                                      | Response                                                                                        |
-| ------ | ----------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| GET    | `/healthz`  | — (unsigned allowed)                                                                                      | `{ status: "ok", provider }`                                                                    |
-| POST   | `/v1/plan`  | `CoachPlanRequest` `{ skill, targetRole?, industry?, job?: { title, descriptionText, skills[] } }`        | `CoachPlanResponse` `{ scenarioPublic, scenarioPrivate, usage }`                                |
-| POST   | `/v1/turn`  | `CoachTurnRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[], studentText, currentStage? }` | SSE: `delta {text}`, `done {stage, finalText, usage}`, `redirect {text, usage}`, `error {code}` |
-| POST   | `/v1/score` | `CoachScoreRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[] }`                            | `CoachScoreResponse` `{ scorecard: Scorecard, usage }`                                          |
+| Method | Path        | Body (shared schema)                                                                                      | Response                                                                                                |
+| ------ | ----------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| GET    | `/healthz`  | — (unsigned allowed)                                                                                      | `{ status: "ok", provider }`                                                                            |
+| POST   | `/v1/plan`  | `CoachPlanRequest` `{ skill, targetRole?, industry?, job?: { title, descriptionText, skills[] } }`        | `CoachPlanResponse` `{ scenarioPublic, scenarioPrivate, usage }`                                        |
+| POST   | `/v1/turn`  | `CoachTurnRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[], studentText, currentStage? }` | SSE: `delta {text}`, `done {stage, finalText, usage}`, `redirect {text, strike, usage}`, `error {code}` |
+| POST   | `/v1/score` | `CoachScoreRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[] }`                            | `CoachScoreResponse` `{ scorecard: Scorecard, usage }`                                                  |
 
 `usage` = `{ provider, model, inputTokens, outputTokens }`; api adds it to the attempt and to `usagedays`.
 

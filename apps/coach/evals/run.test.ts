@@ -125,7 +125,7 @@ describe("runEvals", () => {
     expect(report.results[0]?.pass).toBe(false);
   });
 
-  it("ends the session after three redirects and sends nothing more", async () => {
+  it("ends the session after three strikes and sends nothing more", async () => {
     const persistent = EvalCaseSchema.parse({
       id: "unit-ended",
       skill: "pitching",

@@ -148,8 +148,10 @@ async function relayTurn(
         return { outcome: "done", stage, usage: event.usage };
       }
       case "redirect": {
+        // Every redirected turn is flagged; only a confirmed attack counts toward the limit.
         const text = redactPii(event.text);
-        const endedByGuard = attempt.guardFlags + 1 >= LIMITS.guardFlagLimit;
+        const guardFlags = event.strike ? 1 : 0;
+        const endedByGuard = attempt.guardFlags + guardFlags >= LIMITS.guardFlagLimit;
         const partner = { role: "partner" as const, text, at: new Date() };
         await PracticeAttempt.updateOne(
           { _id: attempt._id, status: "active" },
@@ -162,7 +164,7 @@ async function relayTurn(
                 ],
               },
             },
-            $inc: { guardFlags: 1, ...tokensOf(event.usage) },
+            $inc: { guardFlags, ...tokensOf(event.usage) },
             ...(endedByGuard ? { $set: { status: "ended_by_guard", endedAt: new Date() } } : {}),
           },
         );

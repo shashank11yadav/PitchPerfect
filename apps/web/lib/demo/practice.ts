@@ -330,8 +330,9 @@ export async function runDemoTurn(
           break;
         }
         case "redirect": {
+          // Every redirected turn is flagged; only a confirmed attack counts toward the limit.
           const line = redactPii(event.text);
-          const guardFlags = stored.guardFlags + 1;
+          const guardFlags = stored.guardFlags + (event.strike ? 1 : 0);
           const endedByGuard = guardFlags >= LIMITS.guardFlagLimit;
           const partner: TranscriptEntry = {
             role: "partner",

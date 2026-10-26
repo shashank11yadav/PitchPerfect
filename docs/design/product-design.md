@@ -128,7 +128,7 @@ PitchPerfect/
 **Guardrails (coach + api):**
 
 - **Input:** ≤ 1,000 characters per turn, ≤ 20 student turns per session, session lifetime ≤ 20 min. Control characters are stripped. Student text is always passed inside a delimited data block, never concatenated into instructions.
-- **Off-topic and jailbreak handling:** the system prompt pins the persona to the sales scenario. A cheap pre-check (rules + a small classification call) flags attempts to extract instructions, change role, or request harmful/sexual/violent/illegal content. Flagged turns get an in-character redirect, and 3 flags end the session with a neutral notice.
+- **Off-topic and jailbreak handling:** the system prompt pins the persona to the sales scenario. A cheap pre-check (rules + a small classification call) flags attempts to extract instructions, change role, or request harmful/sexual/violent/illegal content. Flagged turns get an in-character redirect, and 3 confirmed attacks end the session with a neutral notice.
 - **Output:** replies are checked for system-prompt leakage (canary token in the prompt; if it appears in output, the reply is dropped and regenerated once), length-capped, and run through the provider's moderation endpoint where available, otherwise through the rule filter.
 - **PII:** emails, phone numbers and card-like numbers are redacted from transcripts before they are sent to the provider and before storage.
 - **Cost:** per-student quota (default 5 sessions/day, 30/month, env-configurable). A global daily token budget makes the api refuse new sessions with a friendly message once it is exceeded. Per-request timeout 30 s, one retry with backoff, and a circuit breaker on provider errors.
