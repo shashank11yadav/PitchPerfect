@@ -89,6 +89,30 @@ describe("redactPii", () => {
     ["617–555–0100", "[phone]"],
     ["my cell is 6175550100", "my cell is [phone]"],
     ["6175550100", "[phone]"],
+    ["card 4111.1111.1111.1111", "card [number]"],
+    ["4111.1111.1111.1111, exp 04/29", "[number], exp 04/29"],
+    ["amex 3782.822463.10005", "amex [number]"],
+    ["my social is 123456789", "my social is [ssn]"],
+    ["123456789 is my social", "[ssn] is my social"],
+    ["123456789 (my SSN)", "[ssn] (my SSN)"],
+    ["my soc sec is 123456789", "my soc sec is [ssn]"],
+    ["SS number 123456789", "SS number [ssn]"],
+    [
+      "my social security number for the tax form is 123456789",
+      "my social security number for the tax form is [ssn]",
+    ],
+    ["my tax id is 912345678", "my tax id is [ssn]"],
+    ["my social is 987654321", "my social is [ssn]"],
+    ["jane dot doe at gmail dot com", "[email]"],
+    ["write to Jane Dot Doe AT Example DOT Test today", "write to [email] today"],
+    ["jane(at)gmail(dot)com", "[email]"],
+    ["jane [at] gmail", "[email]"],
+    ["reach me: j.doe {at} example [dot] test", "reach me: [email]"],
+    ["jane <at> gmail.com, thanks", "[email], thanks"],
+    ["email me at jane at gmail dot com", "email me at [email]"],
+    ["jane at gmail.com", "[email]"],
+    ["jane @ gmail dot com", "[email]"],
+    ["sam_ops at routewise dot co dot uk", "[email]"],
   ])("redacts %j", (text, expected) => {
     expect(redactPii(text)).toBe(expected);
   });
@@ -116,6 +140,30 @@ describe("redactPii", () => {
     "FY 2024–2026 2027 2028",
     "Ask about plan GB12 when you renew.",
     "zip 02110, ext 1234, 3 users",
+    "192.168.1.10",
+    "the gateway is 203.0.113.254",
+    "text me if 198.51.100.200 goes down",
+    "servers 10.0.0.1 and 172.16.254.100:8080",
+    "3.14159",
+    "pi is 3.141592653589",
+    "$1,299.99",
+    "$12345678.99 in pipeline",
+    "12.5%",
+    "churn fell from 0.0123456789 to 0.02",
+    "4111.1111.1111.1112",
+    "Our social media reach is 123456789 people",
+    "social media budget: 123456789",
+    "On social we have 123456789 followers.",
+    "We sell to 123456789 people; our social team is small.",
+    "We're at acme dot io",
+    "Find us at routewise.example",
+    "look at routewise dot com for pricing",
+    "Our pricing is at routewise dot com",
+    "Meet me at the office at 10",
+    "I used to work at Gmail",
+    "Sam at Acme runs the pilot",
+    "the email is in the doc",
+    "that's a dot com company",
   ])("leaves %j alone", (text) => {
     expect(redactPii(text)).toBe(text);
   });
@@ -130,6 +178,9 @@ describe("redactPii", () => {
     redactPii("a".repeat(100_000));
     redactPii("1 ".repeat(50_000));
     redactPii("a.".repeat(50_000) + "@");
+    redactPii("jane dot ".repeat(12_000) + "at");
+    redactPii("a [at] ".repeat(14_000));
+    redactPii("1.".repeat(50_000));
     expect(Date.now() - start).toBeLessThan(1000);
   });
 });
