@@ -103,6 +103,10 @@ test("the board says once that its jobs are samples, and no sample goes to searc
   expect(target).not.toMatch(/demo\d/);
   await page.goto(target);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  // Its company is a sample: no verified badge, and no link to a website that doesn't exist.
+  await expect(page.getByText("Sample company").first()).toBeVisible();
+  await expect(page.getByText(/^Verified/)).toHaveCount(0);
+  await expect(page.locator('main a[href*=".example"]')).toHaveCount(0);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   const jsonLd = await page.locator('script[type="application/ld+json"]').allTextContents();
   expect(jsonLd.join("\n")).not.toContain("JobPosting");
@@ -111,6 +115,24 @@ test("the board says once that its jobs are samples, and no sample goes to searc
   const sitemap = await (await page.request.get(at("sitemap.xml"))).text();
   expect(sitemap).toContain("/PitchPerfect/jobs/</loc>");
   expect(sitemap).not.toMatch(/\/jobs\/[a-z0-9-]+\/<\/loc>/);
+});
+
+test("the privacy policy and terms describe the demo, not the full app", async ({ page }) => {
+  await page.goto(at("privacy/"));
+  const privacy = page.getByRole("main");
+  await expect(privacy).toContainText("This demo has no accounts and no server of ours.");
+  await expect(privacy).toContainText("The demo sets no cookies");
+  await expect(privacy).toContainText("this tab’s session storage");
+  await expect(privacy).not.toContainText("pp.sid");
+  await expect(privacy).not.toContainText("email delivery service");
+  await expect(privacy).not.toContainText("database providers");
+  // The page sets no cookie of its own.
+  expect(await page.context().cookies()).toEqual([]);
+
+  await page.goto(at("terms/"));
+  const terms = page.getByRole("main");
+  await expect(terms).toContainText("The demo has no accounts");
+  await expect(terms).not.toContainText("Post real, open roles");
 });
 
 test("a lesson renders and leads into its practice room", async ({ page }) => {

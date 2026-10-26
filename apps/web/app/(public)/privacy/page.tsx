@@ -15,7 +15,9 @@ export default async function PrivacyPage() {
         title="Privacy policy"
         lead={
           <p>
-            What PitchPerfect collects, who processes it, how long it’s kept, and how to delete it.
+            {partner === "browser"
+              ? "What this demo keeps, where it keeps it, and who else sees anything."
+              : "What PitchPerfect collects, who processes it, how long it’s kept, and how to delete it."}
           </p>
         }
       />

@@ -75,14 +75,17 @@ export const PUBLIC_PAGES = {
   privacy: {
     title: "Privacy policy",
     path: "/privacy",
-    description:
-      "How PitchPerfect handles accounts, résumés, practice transcripts and speech: what we collect, who processes it, how long we keep it, and how to delete it.",
+    // The static demo has no accounts and keeps practice in the tab; its policy says only that.
+    description: PAGES_EXPORT
+      ? "What this PitchPerfect demo keeps and where: no accounts, no cookies and no server of its own. Practice runs and stays in your browser tab until you close it."
+      : "How PitchPerfect handles accounts, résumés, practice transcripts and speech: what we collect, who processes it, how long we keep it, and how to delete it.",
   },
   terms: {
     title: "Terms of use",
     path: "/terms",
-    description:
-      "The rules for using PitchPerfect: accounts for people 18 and older, fair use of the practice partner, job postings, applications and account deletion.",
+    description: PAGES_EXPORT
+      ? "The rules for using the PitchPerfect demo: a scripted practice partner that runs in your browser, its session limits, and the sample jobs on its board."
+      : "The rules for using PitchPerfect: accounts for people 18 and older, fair use of the practice partner, job postings, applications and account deletion.",
   },
 } as const satisfies Record<string, PageSeo>;
 

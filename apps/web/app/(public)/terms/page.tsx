@@ -13,7 +13,13 @@ export default async function TermsPage() {
     <>
       <PageHero
         title="Terms of use"
-        lead={<p>The rules for using PitchPerfect as a student or an employer.</p>}
+        lead={
+          <p>
+            {partner === "browser"
+              ? "The rules for using this demo of PitchPerfect."
+              : "The rules for using PitchPerfect as a student or an employer."}
+          </p>
+        }
       />
       <LegalDocument updated={LEGAL_UPDATED} sections={termsSections(partner)} />
     </>

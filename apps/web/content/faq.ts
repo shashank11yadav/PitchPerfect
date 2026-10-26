@@ -1,4 +1,4 @@
-import { LIMITS } from "@pitchperfect/shared";
+import { LIMITS, type PracticePartnerKind } from "@pitchperfect/shared";
 import type { FaqItem } from "@/lib/seo";
 import { COPY_LIMITS as L, SESSION_LENGTH, SESSION_QUOTA } from "./limits";
 
@@ -32,12 +32,12 @@ export const HOME_FAQ: readonly FaqItem[] = [
   {
     question: "Who can sign up?",
     answer:
-      "Anyone 18 or older. Students sign up to practice and apply for jobs. Employers sign up with a work email to post roles and review applicants.",
+      "Anyone 18 or older. Students sign up to practice and apply for jobs. Employers sign up to post roles and review applicants, and an email on the company’s own domain verifies the company.",
   },
 ];
 
-/** Questions on the how-it-works page: the practice session itself. */
-export const PRACTICE_FAQ: readonly FaqItem[] = [
+/** Questions on the how-it-works page: the practice session itself, for the partner that runs. */
+export const practiceFaq = (partner: PracticePartnerKind): readonly FaqItem[] => [
   {
     question: "How long is a practice session?",
     answer: `${sentence(SESSION_LENGTH)} You can end it early, and it’s scored on what you said up to then.`,
@@ -58,8 +58,7 @@ export const PRACTICE_FAQ: readonly FaqItem[] = [
   },
   {
     question: "What happens to my voice?",
-    answer:
-      "PitchPerfect never gets your audio. Your browser turns speech into text, and some browsers do that by sending the audio to their maker (Google, Apple or Microsoft). Only the text reaches us.",
+    answer: `PitchPerfect never gets your audio. Your browser turns speech into text, and some browsers do that by sending the audio to their maker (Google, Apple or Microsoft). ${partner === "browser" ? "In this demo the text stays in your browser tab too." : "Only the text reaches us."}`,
   },
   {
     question: "What if I go off topic?",

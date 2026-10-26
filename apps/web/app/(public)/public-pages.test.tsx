@@ -8,7 +8,9 @@ import EmployersPage, { metadata as employers } from "./employers/page";
 import HowItWorksPage, { metadata as howItWorks } from "./how-it-works/page";
 import PublicLayout from "./layout";
 import HomePage, { metadata as home } from "./page";
+import { practiceFaq } from "@/content/faq";
 import { privacySections } from "@/content/privacy";
+import { termsSections } from "@/content/terms";
 import PrivacyPage, { metadata as privacy } from "./privacy/page";
 import StudentsPage, { metadata as students } from "./students/page";
 import TermsPage, { metadata as terms } from "./terms/page";
@@ -302,9 +304,65 @@ describe("the legal pages describe the partner that is really running", () => {
     const security = privacySections("browser").find((section) => section.id === "security");
     const { container } = render(<>{security?.body}</>);
     expect(container).toHaveTextContent(
-      "runs in your browser tab, so nothing you say to it leaves",
+      "run in your browser tab, so nothing you type to them leaves",
     );
     expect(container).not.toHaveTextContent("cannot be reached from the internet");
+  });
+
+  it("the demo's privacy policy describes only what the static demo does", () => {
+    const sections = privacySections("browser");
+    const { container } = render(
+      <>
+        {sections.map((section) => (
+          <section key={section.id}>{section.body}</section>
+        ))}
+      </>,
+    );
+    expect(container).toHaveTextContent("This demo has no accounts and no server of ours.");
+    expect(container).toHaveTextContent("this tab’s session storage");
+    expect(container).toHaveTextContent("The demo sets no cookies");
+    expect(container).toHaveTextContent("GitHub Pages hosts the demo.");
+    expect(container).toHaveTextContent("No one else.");
+    // Nothing of the full app: no accounts, cookies, email, database, résumés or AI provider.
+    for (const fullApp of [
+      /pp\.sid|pp\.csrf|pp\.device/,
+      /email delivery service|database providers|breached-password/,
+      /résumé|employer sees/i,
+      /AI provider \(|deleted after \d+ days/,
+      /No one\. The scripted partner/,
+    ]) {
+      expect(container).not.toHaveTextContent(fullApp);
+    }
+    expect(sections.map((section) => section.id)).not.toContain("retention");
+  });
+
+  it("the demo's terms leave out accounts, employers and applications", () => {
+    const sections = termsSections("browser");
+    expect(sections.map((section) => section.id)).toEqual([
+      "about",
+      "practice-partner",
+      "sample-jobs",
+      "disclaimers",
+      "changes",
+    ]);
+    const { container } = render(
+      <>
+        {sections.map((section) => (
+          <section key={section.id}>{section.body}</section>
+        ))}
+      </>,
+    );
+    expect(container).toHaveTextContent("The demo has no accounts");
+    expect(container).toHaveTextContent("In this demo it runs in your browser");
+    expect(container).not.toHaveTextContent(/creating an account|Post real, open roles/);
+  });
+
+  it("the practice questions say where the demo's text goes", () => {
+    const voice = (partner: "browser" | "scripted") =>
+      practiceFaq(partner).find((item) => item.question === "What happens to my voice?")?.answer;
+    expect(voice("browser")).toContain("In this demo the text stays in your browser tab too.");
+    expect(voice("browser")).not.toContain("reaches us");
+    expect(voice("scripted")).toContain("Only the text reaches us.");
   });
 
   it("terms call the partner scripted when the coach runs the demo, and AI when it doesn’t", async () => {

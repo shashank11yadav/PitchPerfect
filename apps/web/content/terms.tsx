@@ -3,8 +3,90 @@ import type { LegalSection } from "@/components/marketing/LegalDocument";
 import { CONTACT } from "./legal";
 import { COPY_LIMITS as L } from "./limits";
 
-/** The terms of use template; the partner section matches whichever partner is running. */
-export const termsSections = (partner: PracticePartnerKind): readonly LegalSection[] => [
+/**
+ * The terms of use template; the partner section matches whichever partner is running. The static
+ * demo (partner `browser`) has no accounts, employers or applications, so its terms keep only what
+ * applies there.
+ */
+export const termsSections = (partner: PracticePartnerKind): readonly LegalSection[] =>
+  partner === "browser"
+    ? [DEMO_ABOUT, practicePartner(partner), SAMPLE_JOBS, DISCLAIMERS, CHANGES]
+    : appSections(partner);
+
+const DEMO_ABOUT: LegalSection = {
+  id: "about",
+  title: "About these terms",
+  body: (
+    <p>
+      These terms apply when you use this PitchPerfect demo. “We” means whoever operates it. The
+      demo has no accounts; by using it you agree to these terms and to the privacy policy.
+    </p>
+  ),
+};
+
+const SAMPLE_JOBS: LegalSection = {
+  id: "sample-jobs",
+  title: "Sample jobs",
+  body: (
+    <p>
+      The jobs and companies on the demo’s board are samples, made up to show how PitchPerfect
+      works. They aren’t real openings, you can’t apply to them, and their websites don’t exist.
+    </p>
+  ),
+};
+
+const DISCLAIMERS: LegalSection = {
+  id: "disclaimers",
+  title: "Disclaimers and liability",
+  body: (
+    <p>
+      PitchPerfect is provided as it is, without warranties of any kind, and may change or stop. To
+      the extent the law allows, we are not liable for indirect losses, or for decisions made by
+      employers or candidates using the service.
+    </p>
+  ),
+};
+
+const CHANGES: LegalSection = {
+  id: "changes",
+  title: "Changes and contact",
+  body: (
+    <p>
+      If these terms change, we will update the date at the top of this page. Questions go to{" "}
+      {CONTACT}.
+    </p>
+  ),
+};
+
+/** The partner, its limits and fair use, for whichever partner is running. */
+const practicePartner = (partner: PracticePartnerKind): LegalSection => ({
+  id: "practice-partner",
+  title: partner === "live" ? "The AI practice partner" : "The practice partner",
+  body: (
+    <>
+      <p>
+        {partner === "live"
+          ? "The practice partner is an AI, not a person."
+          : partner === "scripted"
+            ? "The practice partner is scripted, not a person. It runs on our server and picks its lines from a fixed set."
+            : "The practice partner is scripted, not a person. In this demo it runs in your browser and picks its lines from a fixed set."}{" "}
+        The buyers it plays, and the companies they work for, are invented. Its replies and
+        scorecards are generated automatically and can be wrong. Treat them as practice feedback,
+        not as professional, legal or career advice, and not as a prediction of any hiring decision.
+      </p>
+      <p>
+        Each session is capped at {L.turns} of your turns, {L.minutes} minutes, and {L.characters}{" "}
+        characters per turn. There are also daily and monthly limits on how many sessions you can
+        start. Please keep sessions about sales practice. Don’t try to make the partner reveal its
+        instructions, play a different role, or produce harmful content. Sessions that keep going
+        off track are ended.
+      </p>
+    </>
+  ),
+});
+
+/** The full app's terms: accounts, employers, job posts and applications. */
+const appSections = (partner: "live" | "scripted"): readonly LegalSection[] => [
   {
     id: "about",
     title: "About these terms",
@@ -29,32 +111,7 @@ export const termsSections = (partner: PracticePartnerKind): readonly LegalSecti
       </ul>
     ),
   },
-  {
-    id: "practice-partner",
-    title: partner === "live" ? "The AI practice partner" : "The practice partner",
-    body: (
-      <>
-        <p>
-          {partner === "live"
-            ? "The practice partner is an AI, not a person."
-            : partner === "scripted"
-              ? "The practice partner is scripted, not a person. It runs on our server and picks its lines from a fixed set."
-              : "The practice partner is scripted, not a person. In this demo it runs in your browser and picks its lines from a fixed set."}{" "}
-          The buyers it plays, and the companies they work for, are invented. Its replies and
-          scorecards are generated automatically and can be wrong. Treat them as practice feedback,
-          not as professional, legal or career advice, and not as a prediction of any hiring
-          decision.
-        </p>
-        <p>
-          Each session is capped at {L.turns} of your turns, {L.minutes} minutes, and {L.characters}{" "}
-          characters per turn. There are also daily and monthly limits on how many sessions you can
-          start. Please keep sessions about sales practice. Don’t try to make the partner reveal its
-          instructions, play a different role, or produce harmful content. Sessions that keep going
-          off track are ended.
-        </p>
-      </>
-    ),
-  },
+  practicePartner(partner),
   {
     id: "your-content",
     title: "Your content",
@@ -123,25 +180,6 @@ export const termsSections = (partner: PracticePartnerKind): readonly LegalSecti
       </p>
     ),
   },
-  {
-    id: "disclaimers",
-    title: "Disclaimers and liability",
-    body: (
-      <p>
-        PitchPerfect is provided as it is, without warranties of any kind, and may change or stop.
-        To the extent the law allows, we are not liable for indirect losses, or for decisions made
-        by employers or candidates using the service.
-      </p>
-    ),
-  },
-  {
-    id: "changes",
-    title: "Changes and contact",
-    body: (
-      <p>
-        If these terms change, we will update the date at the top of this page. Questions go to{" "}
-        {CONTACT}.
-      </p>
-    ),
-  },
+  DISCLAIMERS,
+  CHANGES,
 ];

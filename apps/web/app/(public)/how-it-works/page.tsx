@@ -10,7 +10,7 @@ import { ScorecardPreview } from "@/components/marketing/ScorecardPreview";
 import { Section, SectionTitle } from "@/components/marketing/Section";
 import { ScoreBands, StageStory } from "@/components/marketing/SessionStages";
 import { StatementRows, type Statement } from "@/components/marketing/StatementRows";
-import { PRACTICE_FAQ } from "@/content/faq";
+import { practiceFaq } from "@/content/faq";
 import { SESSION_LENGTH } from "@/content/limits";
 import { practicePartnerKind } from "@/lib/practice-partner";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
@@ -45,7 +45,10 @@ const safeguards = (partner: PracticePartnerKind): Statement[] => [
   },
   {
     title: "Session limits",
-    body: "Daily and monthly limits on new sessions keep the partner quick for everyone.",
+    body:
+      partner === "browser"
+        ? "Each call has a cap on turns and minutes, and the demo counts the calls you start in this tab against the same daily and monthly limits as the full site."
+        : "Daily and monthly limits on new sessions keep the partner quick for everyone.",
   },
 ];
 
@@ -137,7 +140,7 @@ export default async function HowItWorksPage() {
         </div>
       </Section>
 
-      <Faq heading="Questions about practice" items={PRACTICE_FAQ} />
+      <Faq heading="Questions about practice" items={practiceFaq(partner)} />
       <CtaBand />
     </>
   );

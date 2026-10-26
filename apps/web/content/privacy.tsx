@@ -6,12 +6,30 @@ import { BROWSER_PARTNER_NOTICE, SCRIPTED_PARTNER_NOTICE } from "./partner-notic
 
 const AI_PROVIDER = "our AI provider (OpenAI or Anthropic, depending on configuration)";
 
+/** What the scripted partner and the in-browser demo replace in a turn before keeping it. */
+const REDACTED =
+  "email addresses, phone numbers, card and bank account numbers, and Social Security numbers";
+
+const SPEECH_RECOGNITION =
+  "Some browsers recognize speech by sending the audio to their maker (Google, Apple or Microsoft), under that company’s own privacy terms. Where your browser offers on-device recognition, it is used automatically.";
+
+const READ_ALOUD = (
+  <p>
+    The partner’s replies are read aloud by your browser’s own speech voices. Text mode is always
+    available if you would rather not use your microphone.
+  </p>
+);
+
 /**
- * The privacy policy template. It must match the data flows in docs/security.md, so the parts
- * about the practice partner depend on which one is running: a live model behind an AI provider,
- * or the scripted demo persona that never leaves our server.
+ * The privacy policy template. It must match the data flows in docs/security.md, so it depends on
+ * which partner is running: a live model behind an AI provider, the scripted persona on our
+ * server, or the static demo (docs/deploy.md), which has no server and keeps everything in the tab.
  */
-export const privacySections = (partner: PracticePartnerKind): readonly LegalSection[] => [
+export const privacySections = (partner: PracticePartnerKind): readonly LegalSection[] =>
+  partner === "browser" ? DEMO_SECTIONS : appSections(partner);
+
+/** The full app's policy: accounts, a server, a database and an email service. */
+const appSections = (partner: "live" | "scripted"): readonly LegalSection[] => [
   {
     id: "summary",
     title: "The short version",
@@ -20,10 +38,9 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         <li>We keep what you give us to run your account, your practice and your applications.</li>
         <li>
           {partner === "live"
-            ? `Your practice turns go to ${AI_PROVIDER}, which plays the buyer and scores the session. Transcripts are deleted after ${L.retentionDays} days.`
-            : partner === "scripted"
-              ? `${SCRIPTED_PARTNER_NOTICE} Transcripts are deleted after ${L.retentionDays} days.`
-              : BROWSER_PARTNER_NOTICE}
+            ? `Your practice turns go to ${AI_PROVIDER}, which plays the buyer and scores the session.`
+            : SCRIPTED_PARTNER_NOTICE}{" "}
+          Transcripts are deleted after {L.retentionDays} days.
         </li>
         <li>
           We never get your audio. Your browser turns speech into text, and only the text reaches
@@ -118,15 +135,10 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
       <>
         <p>
           Voice practice uses your browser’s built-in speech recognition. PitchPerfect never
-          receives or stores audio; only the text you choose to send reaches us. Some browsers
-          recognize speech by sending the audio to their maker (Google, Apple or Microsoft), under
-          that company’s own privacy terms. Where your browser offers on-device recognition, it is
-          used automatically.
+          receives or stores audio; only the text you choose to send reaches us.{" "}
+          {SPEECH_RECOGNITION}
         </p>
-        <p>
-          The partner’s replies are read aloud by your browser’s own speech voices. Text mode is
-          always available if you would rather not use your microphone.
-        </p>
+        {READ_ALOUD}
       </>
     ),
   },
@@ -135,27 +147,18 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
     title: "Who else processes your data",
     body: (
       <ul>
-        {partner === "browser" && (
-          <li>
-            <strong>No one.</strong> The scripted partner and the scorer run in this browser tab,
-            and your practice turns stay in the tab, with email addresses, phone numbers, card and
-            bank account numbers, and Social Security numbers replaced by placeholders.
-          </li>
-        )}
         {partner === "scripted" && (
           <li>
             <strong>No AI provider.</strong> The scripted partner runs on our server. Your practice
-            turns are stored with your session, with email addresses, phone numbers, card and bank
-            account numbers, and Social Security numbers replaced by placeholders.
+            turns are stored with your session, with {REDACTED} replaced by placeholders.
           </li>
         )}
         {partner === "live" && (
           <li>
             <strong>{AI_PROVIDER}</strong> receives the text of your practice turns, the scenario
             and, if you practiced for a job, that job’s title, description and skills. Before
-            anything is sent, email addresses, phone numbers, card and bank account numbers, and
-            Social Security numbers are replaced with placeholders. We don’t add your name or email
-            address, but anything you say in a session is sent as you said it.
+            anything is sent, {REDACTED} are replaced with placeholders. We don’t add your name or
+            email address, but anything you say in a session is sent as you said it.
           </li>
         )}
         <li>
@@ -285,12 +288,8 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
       <p>
         Passwords are hashed with argon2id. Sessions use secure, HTTP-only cookies. Every request is
         checked so people can only reach their own data, and employers can only reach applications
-        to their own jobs. Résumés are only ever downloaded, never shown in the browser.{" "}
-        {partner === "browser"
-          ? "In this demo the practice partner runs in your browser tab, so nothing you say to it leaves your device."
-          : "The practice partner service cannot be reached from the internet."}{" "}
-        No system is perfectly secure; if you find a security problem, please report it privately to{" "}
-        {CONTACT}, not in a public issue.
+        to their own jobs. Résumés are only ever downloaded, never shown in the browser. The
+        practice partner service cannot be reached from the internet. {SECURITY_REPORTS}
       </p>
     ),
   },
@@ -300,8 +299,8 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
     body: (
       <p>
         PitchPerfect is for people 18 or older. Students confirm their age when they sign up, and
-        employers sign up with a work email. If we learn that an account belongs to someone younger,
-        we delete it.
+        the terms of use require it of everyone. If we learn that an account belongs to someone
+        younger, we delete it.
       </p>
     ),
   },
@@ -317,14 +316,156 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
       </p>
     ),
   },
+  CHANGES,
+];
+
+const SECURITY_REPORTS = (
+  <>
+    No system is perfectly secure; if you find a security problem, please report it privately to{" "}
+    {CONTACT}, not in a public issue.
+  </>
+);
+
+const CHANGES: LegalSection = {
+  id: "changes",
+  title: "Changes and contact",
+  body: (
+    <p>
+      If this policy changes, we will update the date at the top of this page. For questions about
+      your data, contact {CONTACT}.
+    </p>
+  ),
+};
+
+/**
+ * The static demo's policy. It has no accounts, no server of its own and no cookies: GitHub Pages
+ * serves its files, the partner and the scorer run in the tab, and what it remembers lives in the
+ * tab's session storage (lib/demo/store.ts), apart from two voice settings in local storage.
+ */
+const DEMO_SECTIONS: readonly LegalSection[] = [
   {
-    id: "changes",
-    title: "Changes and contact",
+    id: "summary",
+    title: "The short version",
+    body: (
+      <ul>
+        <li>
+          This demo has no accounts and no server of ours. GitHub Pages serves its pages, and
+          nothing you type is sent anywhere.
+        </li>
+        <li>{BROWSER_PARTNER_NOTICE}</li>
+        <li>
+          We never get your audio. Your browser turns speech into text, and some browsers send the
+          audio to their own speech service (Google, Apple, or Microsoft) to do that.
+        </li>
+        <li>There are no cookies, no analytics and no tracking.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "who-we-are",
+    title: "Who we are",
     body: (
       <p>
-        If this policy changes, we will update the date at the top of this page. For questions about
-        your data, contact {CONTACT}.
+        PitchPerfect is open-source software for practicing sales conversations and hiring for
+        entry-level sales roles. This site is its demo: the practice room, the lessons and a job
+        board of sample listings, without accounts. In this policy, “we” means whoever operates the
+        demo. To reach us, contact {CONTACT}.
       </p>
     ),
   },
+  {
+    id: "what-the-demo-keeps",
+    title: "What the demo keeps",
+    body: (
+      <>
+        <p>The demo keeps these in this tab’s session storage, in your browser only:</p>
+        <ul>
+          <li>
+            <strong>Practice sessions:</strong> the skill, the job if you practiced for one, the
+            buyer scenario, what you and the partner said, and your scorecard. Before a turn is
+            kept, {REDACTED} are replaced with placeholders.
+          </li>
+          <li>
+            <strong>The practice notice:</strong> when you accepted it.
+          </li>
+          <li>
+            <strong>Lessons:</strong> which ones you finished.
+          </li>
+        </ul>
+        <p>
+          Your browser deletes all of it when you close the tab, and you can delete any practice
+          session from your history before then. If your browser blocks storage, the demo holds them
+          in the page instead, and they go when you reload it.
+        </p>
+        <p>
+          Two settings, the partner’s voice and whether it is muted, are kept in your browser’s
+          local storage so they last between visits. They never leave your browser, and clearing
+          this site’s data removes them.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "speech",
+    title: "Speech and audio",
+    body: (
+      <>
+        <p>
+          Voice practice uses your browser’s built-in speech recognition. The demo never receives or
+          stores audio, and the text stays in this tab. {SPEECH_RECOGNITION}
+        </p>
+        {READ_ALOUD}
+      </>
+    ),
+  },
+  {
+    id: "processors",
+    title: "Who else sees your data",
+    body: (
+      <ul>
+        <li>
+          <strong>GitHub Pages</strong> hosts the demo. Like any web host, it receives your IP
+          address and browser details when it serves a page, under GitHub’s own privacy statement.
+          It never receives what you type or say.
+        </li>
+        <li>
+          <strong>Your browser’s speech service</strong>, if your browser uses one for voice
+          practice, as described above.
+        </li>
+        <li>No one else. The demo has no AI provider, email service, database or analytics.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "cookies",
+    title: "Cookies",
+    body: (
+      <p>
+        The demo sets no cookies and loads no third-party scripts. There are no advertising,
+        analytics or tracking cookies.
+      </p>
+    ),
+  },
+  {
+    id: "sample-jobs",
+    title: "Sample jobs",
+    body: (
+      <p>
+        The jobs and companies on the demo’s board are samples, made up to show how PitchPerfect
+        works. You can’t apply to them, so nothing you do here reaches an employer.
+      </p>
+    ),
+  },
+  {
+    id: "security",
+    title: "How we protect it",
+    body: (
+      <p>
+        The practice partner and the scorer run in your browser tab, so nothing you type to them
+        leaves your device, and the site’s content security policy keeps every request the pages
+        make on the demo’s own address. {SECURITY_REPORTS}
+      </p>
+    ),
+  },
+  CHANGES,
 ];
