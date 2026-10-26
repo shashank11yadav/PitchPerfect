@@ -403,6 +403,25 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     expect(stored?.transcript[1]?.text).toBe("Write to me at [email] instead.");
   });
 
+  it("relays a retract and stores only the final reply", async () => {
+    const { session, attemptId } = await activeAttempt();
+    const usage = { provider: "fake", model: "fake", inputTokens: 1, outputTokens: 1 } as const;
+    const fallback = "Sorry, I lost my train of thought for a second. Could you say that again?";
+    vi.spyOn(harness.coach, "turn").mockImplementation(async function* () {
+      await Promise.resolve();
+      yield { type: "delta", text: "That sounds fine. " };
+      yield { type: "retract", text: fallback };
+      yield { type: "done", stage: "pitch", finalText: fallback, usage };
+    });
+
+    const { events } = await sendTurn(session, attemptId, "Hello there");
+
+    expect(events.map((event) => event.event)).toEqual(["delta", "retract", "done"]);
+    expect(events[1]?.data).toEqual({ text: fallback });
+    const stored = await attemptOf(attemptId);
+    expect(stored?.transcript.map((entry) => entry.text)).toEqual(["Hello there", fallback]);
+  });
+
   it("ends a session that has run past 20 minutes", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { session, attemptId } = await activeAttempt();

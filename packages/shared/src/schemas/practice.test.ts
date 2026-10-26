@@ -72,6 +72,7 @@ describe("PracticeEvent", () => {
   it("accepts each event the browser receives from /turns", () => {
     const events = [
       { type: "delta", text: "Go" },
+      { type: "retract", text: "Sorry, could you say that again?" },
       { type: "done", stage: "pitch", turnsLeft: 0, finalText: "Go on." },
       { type: "redirect", text: "Let's get back to it." },
       { type: "ended", reason: "guard_limit" },

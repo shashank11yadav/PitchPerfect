@@ -98,9 +98,13 @@ export const CoachScoreResponseSchema = z.strictObject({
 });
 export type CoachScoreResponse = z.infer<typeof CoachScoreResponseSchema>;
 
-/** Events the coach streams for `/v1/turn`. */
+/**
+ * Events the coach streams for `/v1/turn`. Every `delta` has passed the output check. `retract`
+ * withdraws everything streamed so far in the turn, and its `text` is shown in its place.
+ */
 export const CoachTurnEvent = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("delta"), text: z.string() }),
+  z.strictObject({ type: z.literal("retract"), text: z.string() }),
   z.strictObject({
     type: z.literal("done"),
     stage: StageSchema,

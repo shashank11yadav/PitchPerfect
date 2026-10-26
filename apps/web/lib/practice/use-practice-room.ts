@@ -167,13 +167,18 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
 
   /**
    * Applies a stream event. Errors never get here: `send` handles them, since it knows whether
-   * the reply had started.
+   * the reply had started. Only the checked final text is spoken, never the deltas, so a
+   * retracted sentence is never read out.
    */
   const onEvent = useCallback(
     (event: PracticeEvent) => {
       switch (event.type) {
         case "delta":
           dispatch({ type: "delta", text: event.text });
+          return;
+        case "retract":
+          cancel();
+          dispatch(event);
           return;
         case "done":
           dispatch(event);
@@ -188,7 +193,7 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
           return;
       }
     },
-    [speakReply],
+    [cancel, speakReply],
   );
 
   /**
@@ -230,7 +235,8 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
       busy.current = null;
     };
     const handle = (event: PracticeEvent) => {
-      if (event.type === "delta") replying = true;
+      // A retract replaces the reply mid-turn; like a delta, it doesn't decide the turn.
+      if (event.type === "delta" || event.type === "retract") replying = true;
       else {
         settled = true;
         // The turn is decided; a Send or End right after this must not be dropped.

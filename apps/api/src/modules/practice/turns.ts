@@ -123,6 +123,10 @@ async function relayTurn(
       case "delta":
         stream.send({ type: "delta", text: event.text });
         break;
+      case "retract":
+        // The coach withdrew what it had streamed; the browser swaps it for this text.
+        stream.send({ type: "retract", text: redactPii(event.text) });
+        break;
       case "error":
         // Only codes the browser knows are passed on.
         throw event.code === "practice_unavailable"

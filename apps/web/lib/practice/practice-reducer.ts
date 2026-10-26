@@ -90,6 +90,8 @@ export type RoomAction =
   | { type: "speech_error"; code: SpeechErrorCode }
   | { type: "send" }
   | { type: "delta"; text: string }
+  /** The partner's text so far in this turn was withdrawn; `text` replaces it. */
+  | { type: "retract"; text: string }
   | { type: "done"; stage: Stage; turnsLeft: number; finalText: string }
   | { type: "redirect"; text: string }
   | { type: "ended"; reason: EndedReason }
@@ -324,6 +326,10 @@ export function practiceReducer(state: RoomState, action: RoomAction): RoomState
     case "delta":
       if (!inTurn(state)) return state;
       return { ...state, status: "streaming", streamingText: state.streamingText + action.text };
+    case "retract":
+      if (!inTurn(state)) return state;
+      // Nothing of the withdrawn text stays on screen, only its replacement.
+      return { ...state, status: "streaming", streamingText: action.text };
     case "done":
       if (!inTurn(state)) return state;
       return {

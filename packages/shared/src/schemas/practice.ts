@@ -92,6 +92,8 @@ export type EndedReason = (typeof ENDED_REASONS)[number];
  */
 export const PracticeEvent = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("delta"), text: z.string() }),
+  /** The partner's text so far in this turn is withdrawn; `text` is shown in its place. */
+  z.strictObject({ type: z.literal("retract"), text: z.string() }),
   z.strictObject({
     type: z.literal("done"),
     stage: z.enum(STAGES),

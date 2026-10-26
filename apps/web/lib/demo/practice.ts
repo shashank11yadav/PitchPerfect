@@ -312,6 +312,9 @@ export async function runDemoTurn(
         case "delta":
           onEvent({ type: "delta", text: event.text });
           break;
+        case "retract":
+          onEvent({ type: "retract", text: redactPii(event.text) });
+          break;
         case "done": {
           const finalText = redactPii(event.finalText);
           const stage = laterStage(view.stage, event.stage);

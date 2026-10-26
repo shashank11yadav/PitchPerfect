@@ -163,6 +163,31 @@ describe("practiceReducer: a turn", () => {
     expect(done.transcript).toHaveLength(3);
   });
 
+  it("takes withdrawn text off screen at once and keeps only the safe line", () => {
+    const fallback = "Sorry, I lost my train of thought for a second. Could you say that again?";
+    const streaming = run(
+      readyRoom({ draft: "What does it cost?" }),
+      { type: "send" },
+      { type: "delta", text: "Fair question. " },
+    );
+    const retracted = run(streaming, { type: "retract", text: fallback });
+    expect(retracted).toMatchObject({ status: "streaming", streamingText: fallback });
+
+    const done = run(retracted, {
+      type: "done",
+      stage: "pitch",
+      turnsLeft: 19,
+      finalText: fallback,
+    });
+    expect(done.transcript.at(-1)).toEqual({ role: "partner", text: fallback });
+    expect(JSON.stringify(done)).not.toContain("Fair question");
+  });
+
+  it("ignores a retract outside a turn", () => {
+    const ready = readyRoom();
+    expect(run(ready, { type: "retract", text: "Anything." })).toBe(ready);
+  });
+
   it("announces the final reply once, whether or not it streamed", () => {
     const quiet = run(
       readyRoom({ draft: "Hello" }),

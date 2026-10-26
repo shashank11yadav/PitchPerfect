@@ -92,6 +92,56 @@ describe("usePracticeRoom", () => {
     expect(stream).toHaveBeenCalledTimes(2);
   });
 
+  it("speaks only the checked final reply, never a delta or retracted text", () => {
+    const spoken: string[] = [];
+    const cancel = vi.fn();
+    vi.stubGlobal("speechSynthesis", {
+      speak: (utterance: { text: string }) => spoken.push(utterance.text),
+      cancel,
+      getVoices: () => [],
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    });
+    vi.stubGlobal(
+      "SpeechSynthesisUtterance",
+      class {
+        lang = "";
+        voice: unknown = null;
+        constructor(readonly text: string) {}
+      },
+    );
+    const fallback = "Sorry, I lost my train of thought for a second. Could you say that again?";
+    const turn = pendingTurn();
+    const { result } = room();
+    act(() => {
+      result.current.setMode("voice");
+      result.current.editDraft("What does it cost?");
+    });
+    act(() => {
+      result.current.send();
+    });
+    cancel.mockClear();
+    act(() => {
+      turn.emit({ type: "delta", text: "Fair question. " });
+      turn.emit({ type: "retract", text: fallback });
+    });
+    expect(spoken).toEqual([]);
+    expect(cancel).toHaveBeenCalled();
+    expect(result.current.state.streamingText).toBe(fallback);
+
+    // A retract doesn't end the turn, so the room is still busy until `done`.
+    act(() => {
+      result.current.editDraft("Next");
+      result.current.send();
+    });
+    expect(stream).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      turn.emit({ type: "done", stage: "pitch", turnsLeft: 19, finalText: fallback });
+    });
+    expect(spoken).toEqual([fallback]);
+  });
+
   it("counts the turn as used when the api answers with an error event", () => {
     const turn = pendingTurn();
     const { result } = room();
