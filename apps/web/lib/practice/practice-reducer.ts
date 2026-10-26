@@ -129,7 +129,7 @@ export const END_NOTICES: Record<RoomEndReason, string> = {
   turn_limit: "That was your last turn. End the session to get your scorecard.",
   expired: "The 20 minutes are up. End the session to get your scorecard.",
   guard_limit:
-    "This session ended because several messages were off the call. Your other sessions aren’t affected. Start a new session when you’re ready.",
+    "This session ended because several messages tried to get the partner to break its rules. Your other sessions aren’t affected. Start a new session when you’re ready.",
   abandoned:
     "This session wasn’t scored. A scorecard needs at least two of your replies, so start a new session and keep going a little longer.",
   replaced: "You started a new call in another tab, so this one stopped. It wasn’t scored.",

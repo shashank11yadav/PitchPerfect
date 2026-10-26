@@ -27,7 +27,7 @@ function UnscoredAttempt({ attempt }: { attempt: AttemptView }) {
   const reason = unscoredReason(attempt);
   const why =
     reason === "guard_limit"
-      ? "This session ended early because several messages were off the call."
+      ? "This session ended early because several messages tried to get the partner to break its rules."
       : reason === "replaced"
         ? "This call stopped when you started a new one, so it wasn’t scored."
         : END_NOTICES.abandoned;
