@@ -66,6 +66,7 @@ describe("GET /api/jobs", () => {
     expect(Object.keys(item?.company ?? {}).sort()).toEqual([
       "logoUrl",
       "name",
+      "sample",
       "slug",
       "verification",
       "verifiedDomain",
