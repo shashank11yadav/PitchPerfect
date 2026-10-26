@@ -71,17 +71,21 @@ function Transcript({ state, persona }: { state: RoomState; persona: string }) {
           ),
         )}
       </ul>
-      {/* New replies are read out from here as they arrive; finished ones join the list above. */}
-      <div aria-live="polite" aria-busy={replying} data-live="reply">
-        {replying && (
-          <TranscriptBubble
-            as="div"
-            from="partner"
-            speaker={persona}
-            text={state.streamingText}
-            pending
-          />
-        )}
+      {/*
+        A reply streams in here, outside the live region: a sentence on screen can still be taken
+        back by a retract, so it is never read out. Finished replies join the list above.
+      */}
+      {replying && (
+        <TranscriptBubble
+          as="div"
+          from="partner"
+          speaker={persona}
+          text={state.streamingText}
+          pending
+        />
+      )}
+      {/* Reads out each reply once, when it is final (`done`), and support messages by name. */}
+      <div aria-live="polite" data-live="reply">
         <p className="sr-only">{announcementOf(state, persona)}</p>
       </div>
       {/* Room for the reply box and tab bar that stay over the bottom of the screen. */}

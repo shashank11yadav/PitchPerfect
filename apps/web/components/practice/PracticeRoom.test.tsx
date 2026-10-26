@@ -108,9 +108,9 @@ describe("PracticeRoom", () => {
     turn.emit({ type: "delta", text: "Doing what" });
     const live = document.querySelector('[aria-live="polite"][data-live="reply"]');
     if (!(live instanceof HTMLElement)) throw new Error("no live region");
-    expect(live).toHaveTextContent("An hour? Doing what");
-    // Busy while the reply arrives, so screen readers wait for the whole thing.
-    expect(live).toHaveAttribute("aria-busy", "true");
+    // Shown as it streams, but nothing is read out until the reply is final.
+    expect(screen.getByText("An hour? Doing what")).toBeInTheDocument();
+    expect(live).not.toHaveTextContent("An hour?");
 
     turn.emit({
       type: "done",
@@ -122,13 +122,41 @@ describe("PracticeRoom", () => {
       turn.finish();
       await Promise.resolve();
     });
-    expect(live).toHaveAttribute("aria-busy", "false");
     // Read out once, the checked final text with who said it.
     expect(live.textContent).toBe("Dana Ruiz said: An hour? Doing what, exactly?");
     expect(screen.getByRole("list", { name: "Transcript" })).toHaveTextContent(
       "Dana Ruiz said: An hour? Doing what, exactly?",
     );
     expect(screen.getByText("19 turns left")).toBeInTheDocument();
+  });
+
+  it("never reads out a sentence that is taken back", async () => {
+    const user = userEvent.setup();
+    const turn = controlStream();
+    render(<PracticeRoom attempt={activeAttempt()} />);
+    const live = document.querySelector('[aria-live="polite"][data-live="reply"]');
+    if (!(live instanceof HTMLElement)) throw new Error("no live region");
+    const announced: string[] = [];
+
+    await user.type(screen.getByRole("textbox", { name: "Your turn" }), "Hello there{Enter}");
+    turn.emit({ type: "delta", text: "My cell is on the card. " });
+    announced.push(live.textContent);
+    turn.emit({ type: "retract", text: "Sorry, could you say that again?" });
+    announced.push(live.textContent);
+    turn.emit({
+      type: "done",
+      stage: "opening",
+      turnsLeft: 19,
+      finalText: "Sorry, could you say that again?",
+    });
+    await act(async () => {
+      turn.finish();
+      await Promise.resolve();
+    });
+
+    // Neither the withdrawn sentence nor its replacement is read out before the reply is final.
+    expect(announced.join(" ")).not.toMatch(/My cell|Sorry/);
+    expect(live.textContent).toBe("Dana Ruiz said: Sorry, could you say that again?");
   });
 
   it.each([
