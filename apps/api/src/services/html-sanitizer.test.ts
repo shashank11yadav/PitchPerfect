@@ -1,3 +1,4 @@
+import { parseFragment, serialize } from "parse5";
 import { describe, expect, it } from "vitest";
 import { htmlToPlainText, sanitizeJobHtml } from "./html-sanitizer.js";
 
@@ -30,7 +31,7 @@ describe("sanitizeJobHtml", () => {
 
   it("keeps the allowed tags", () => {
     const html =
-      "<h3>A</h3><h4>B</h4><p>x<br />y <strong>s</strong> <em>e</em> <u>u</u></p>" +
+      "<h3>A</h3><h4>B</h4><p>x<br>y <strong>s</strong> <em>e</em> <u>u</u></p>" +
       "<ul><li>one</li></ul><ol><li>two</li></ol><blockquote>q</blockquote>";
     expect(sanitizeJobHtml(html)).toBe(html);
   });
@@ -47,6 +48,31 @@ describe("sanitizeJobHtml", () => {
 
   it("removes tags that are not on the allowlist but keeps their text", () => {
     expect(sanitizeJobHtml("<div><h1>Big</h1><span>small</span></div>")).toBe("Bigsmall");
+  });
+
+  /** What an HTML parser (a browser) builds from `html`, written back out. */
+  const reparsed = (html: string) => serialize(parseFragment(html));
+
+  it.each([
+    ["an unclosed paragraph", "<p>a", "<p>a</p>"],
+    ["unclosed inline tags", "<p><strong>a<em>b", "<p><strong>a<em>b</em></strong></p>"],
+    [
+      "mis-nested inline tags",
+      "<strong><em>a</strong>b</em>",
+      "<strong><em>a</em></strong><em>b</em>",
+    ],
+    ["a list item without an end tag", "<ul><li>a<li>b</ul>", "<ul><li>a</li><li>b</li></ul>"],
+    [
+      "a paragraph opened inside an unwrapped link",
+      '<p><a href="/x">a<p>b</a>c</p>',
+      "<p>a</p><p>bc</p>",
+    ],
+    ["a heading opened inside a heading", "<h3>a<h4>b</h4></h3>", "<h3>a</h3><h4>b</h4>"],
+    ["stray end tags", "a</strong>b</p>", "ab"],
+  ])("stores %s as balanced, well-formed HTML", (_case, dirty, clean) => {
+    const out = sanitizeJobHtml(dirty);
+    expect(out).toBe(clean);
+    expect(reparsed(out)).toBe(out);
   });
 
   it("is idempotent", () => {
