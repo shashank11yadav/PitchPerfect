@@ -112,4 +112,10 @@ describe("GET /api/health", () => {
     const res = await request(prod.app).get("/api/health");
     expect(res.headers["strict-transport-security"]).toContain("max-age=");
   });
+
+  it("sends HSTS when NODE_ENV is unset, which counts as production", async () => {
+    const unset = makeTestApp({ env: prodEnv({ NODE_ENV: undefined }) });
+    const res = await request(unset.app).get("/api/health");
+    expect(res.headers["strict-transport-security"]).toContain("max-age=");
+  });
 });

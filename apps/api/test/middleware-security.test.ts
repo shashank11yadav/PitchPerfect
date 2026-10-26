@@ -358,9 +358,12 @@ describe("sessions", () => {
     expect(Math.abs(lifetimeMs - LIMITS.sessionRollingDays * DAY_MS)).toBeLessThan(60_000);
   });
 
-  it("marks cookies Secure in production", async () => {
+  it.each([
+    ["in production", "production"],
+    ["when NODE_ENV is unset", undefined],
+  ])("marks cookies Secure %s", async (_label, nodeEnv) => {
     const prod = makeTestApp({
-      env: prodEnv({ TRUST_PROXY: "1" }),
+      env: prodEnv({ TRUST_PROXY: "1", NODE_ENV: nodeEnv }),
       extraRoutes,
     });
     const user = await makeUser();

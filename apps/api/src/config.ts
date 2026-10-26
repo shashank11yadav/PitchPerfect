@@ -7,6 +7,7 @@ import {
   parseConfig,
   port,
   secret,
+  unsetIfEmpty,
 } from "@pitchperfect/shared/env";
 import { z } from "zod";
 
@@ -23,7 +24,8 @@ const PRODUCTION_SECRETS = [
 
 const envSchema = z
   .object({
-    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    // Unset means production: development and test behaviour must be asked for.
+    NODE_ENV: unsetIfEmpty(z.enum(["development", "test", "production"]).default("production")),
     PORT: port(4000),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])

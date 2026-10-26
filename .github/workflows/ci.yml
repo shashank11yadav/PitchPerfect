@@ -100,6 +100,8 @@ jobs:
       # /jobs renders the seeded job board, so the api (and the practice partner it checks) runs too.
       - name: Seed and start the api and practice partner
         env:
+          # An unset NODE_ENV is production, which refuses these placeholder secrets and plain http.
+          NODE_ENV: development
           MONGODB_URI: mongodb://localhost:27017/pitchperfect-lighthouse
           APP_URL: http://localhost:3000
           SESSION_SECRET: dev-only-ci-session-secret-000000000000000

@@ -54,6 +54,8 @@ export function createApp(
   const { config } = deps;
   const app = express();
 
+  // Express's own production behaviour follows the config, where an unset NODE_ENV is production.
+  app.set("env", config.NODE_ENV);
   app.set("trust proxy", config.TRUST_PROXY);
   app.disable("x-powered-by");
 

@@ -63,6 +63,30 @@ describe("loadConfig", () => {
     });
   });
 
+  describe("an unset NODE_ENV", () => {
+    const withoutNodeEnv = (env: NodeJS.ProcessEnv) => {
+      const copy = { ...env };
+      delete copy.NODE_ENV;
+      return copy;
+    };
+
+    it("is production, so the production checks apply", () => {
+      const env = withoutNodeEnv(devEnv());
+      expect(() => loadConfig(env)).toThrow(ConfigError);
+      for (const name of ["SESSION_SECRET", "APP_URL", "TRUST_PROXY"]) {
+        expect(() => loadConfig(env)).toThrow(new RegExp(name));
+      }
+    });
+
+    it("gives a complete production env the production settings", () => {
+      for (const env of [withoutNodeEnv(prodEnv()), prodEnv({ NODE_ENV: "" })]) {
+        const config = loadConfig(env);
+        expect(config.NODE_ENV).toBe("production");
+        expect(config.isProd).toBe(true);
+      }
+    });
+  });
+
   it("throws a ConfigError when MONGODB_URI is missing", () => {
     const env = devEnv();
     delete env.MONGODB_URI;
