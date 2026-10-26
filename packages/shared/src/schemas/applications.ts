@@ -59,6 +59,11 @@ export interface EmployerApplicationView {
   appliedAt: string;
   savedByEmployer: boolean;
   student: { firstName: string; lastName: string; school: string; major: string; gradYear: number };
+  /**
+   * Whether the employer can download a résumé for this application now: one was attached, and
+   * the application is open or ended less than `LIMITS.resumeAccessGraceDays` ago (never once
+   * withdrawn).
+   */
   hasResume: boolean;
   hasSharedScorecard: boolean;
   interview: InterviewView | null;

@@ -9,8 +9,10 @@ import { sharesScorecard, toStudentApplicationView } from "../../db/mappers.js";
 import type { ApplicationAttrs } from "../../db/models/application.js";
 import { Application, Company, Job, PracticeAttempt } from "../../db/models/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../errors.js";
+import { deleteResume } from "../../services/files.js";
 import { isDuplicateKey } from "../auth/service.js";
 import { findListedJob } from "../jobs/service.js";
+import { copyProfileResume, removeResumeCopies } from "./resume-copies.js";
 import { transitionApplication } from "./transitions.js";
 
 type ApplicationDoc = Parameters<typeof toStudentApplicationView>[0];
@@ -90,9 +92,9 @@ export type ApplyResult =
   { created: true; application: StudentApplicationView } | { created: false };
 
 /**
- * Applies to a listed job. The upsert is atomic: with parallel requests exactly one inserts and the
- * rest get `created: false`. An existing application of any status, withdrawn included, counts, so
- * a student can't re-apply after withdrawing.
+ * Applies to a listed job with a copy of the student's current résumé, which the application
+ * keeps when the student later uploads another. The copy is removed again if no application was
+ * created.
  */
 export async function applyToJob(
   studentId: string,
@@ -103,11 +105,34 @@ export async function applyToJob(
   if (sharedAttemptId !== undefined) {
     await assertShareable(studentId, sharedAttemptId, "sharedAttemptId");
   }
+  // Saves copying the résumé for a repeated click; the upsert below still decides races.
+  if (await Application.exists({ jobId, studentId })) return { created: false };
 
+  const resumeFileId = await copyProfileResume(studentId);
+  let inserted: ApplicationDoc | null = null;
+  try {
+    inserted = await insertApplication(studentId, { job, company }, resumeFileId, sharedAttemptId);
+  } finally {
+    if (!inserted && resumeFileId) await deleteResume(resumeFileId);
+  }
+  return inserted ? { created: true, application: await viewOf(inserted) } : { created: false };
+}
+
+/**
+ * The new application, or null when one already exists. The upsert is atomic: with parallel
+ * requests exactly one inserts. An existing application of any status, withdrawn included,
+ * counts, so a student can't re-apply after withdrawing.
+ */
+async function insertApplication(
+  studentId: string,
+  { job, company }: Awaited<ReturnType<typeof findListedJob>>,
+  resumeFileId: mongoose.Types.ObjectId | null,
+  sharedAttemptId?: string,
+): Promise<ApplicationDoc | null> {
   const now = new Date();
   try {
     const result = await Application.findOneAndUpdate(
-      { jobId, studentId },
+      { jobId: job._id, studentId },
       {
         $setOnInsert: {
           status: "applied",
@@ -115,6 +140,7 @@ export async function applyToJob(
           savedByEmployer: false,
           jobSnapshot: { title: job.title, companyName: company.name },
           ...(sharedAttemptId === undefined ? {} : { sharedAttemptId }),
+          resumeFileId,
           // Set by hand: automatic timestamps would also touch `updatedAt` on an existing one.
           createdAt: now,
           updatedAt: now,
@@ -122,11 +148,11 @@ export async function applyToJob(
       },
       { upsert: true, returnDocument: "after", includeResultMetadata: true, timestamps: false },
     );
-    if (result.lastErrorObject?.updatedExisting || !result.value) return { created: false };
-    return { created: true, application: await viewOf(result.value) };
+    if (result.lastErrorObject?.updatedExisting) return null;
+    return result.value;
   } catch (error) {
     // A parallel request inserted between our match and our insert.
-    if (isDuplicateKey(error, "jobId")) return { created: false };
+    if (isDuplicateKey(error, "jobId")) return null;
     throw error;
   }
 }
@@ -146,7 +172,10 @@ export async function listStudentApplications(
   return { items: await viewsOf(applications), page, pageSize, total };
 }
 
-/** Withdraws the student's own application (404 for anyone else's) and unshares any scorecard. */
+/**
+ * Withdraws the student's own application (404 for anyone else's), unshares any scorecard, and
+ * deletes the application's résumé copy.
+ */
 export async function withdrawApplication(
   studentId: string,
   applicationId: string,
@@ -159,11 +188,15 @@ export async function withdrawApplication(
   // Guarded on the status we checked, so an employer's change in between isn't overwritten.
   const updated = await Application.findOneAndUpdate(
     { _id: applicationId, studentId, status: from },
-    { $set: { status: application.status }, $unset: { sharedAttemptId: "", interview: "" } },
+    {
+      $set: { status: application.status, endedAt: new Date() },
+      $unset: { sharedAttemptId: "", interview: "" },
+    },
     { returnDocument: "after" },
   ).lean();
   if (!updated)
     throw new ConflictError("conflict", "That application just changed. Refresh and try again");
+  await removeResumeCopies({ _id: updated._id });
   return viewOf(updated);
 }
 

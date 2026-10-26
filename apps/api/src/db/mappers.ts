@@ -210,13 +210,15 @@ export function toEmployerJob(job: Persisted<JobAttrs>, applicantCount: number):
 
 /**
  * What an employer may know about an applicant. Copies named fields only: no email, no ids.
- * `hasSharedScorecard` is whether the shared attempt still exists and is completed.
+ * `hasSharedScorecard` is whether the shared attempt still exists and is completed; `hasResume`
+ * is whether the employer can download a résumé for it right now.
  */
 export function toEmployerApplicationView(
   application: Persisted<ApplicationAttrs>,
   user: Pick<UserAttrs, "name">,
-  profile: Pick<StudentProfileAttrs, "school" | "major" | "gradYear" | "resumeFileId">,
+  profile: Pick<StudentProfileAttrs, "school" | "major" | "gradYear">,
   hasSharedScorecard: boolean,
+  hasResume: boolean,
 ): EmployerApplicationView {
   return {
     id: application._id.toString(),
@@ -230,7 +232,7 @@ export function toEmployerApplicationView(
       major: profile.major,
       gradYear: profile.gradYear,
     },
-    hasResume: profile.resumeFileId != null,
+    hasResume,
     hasSharedScorecard,
     interview: application.interview
       ? {

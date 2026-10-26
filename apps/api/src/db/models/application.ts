@@ -23,6 +23,14 @@ export interface ApplicationAttrs {
   savedByEmployer: boolean;
   sharedAttemptId?: Types.ObjectId;
   interview?: { startsAt: Date; meetingUrl: string };
+  /**
+   * The application's own copy of the résumé the student had when they applied. `null` means it
+   * carries none (none uploaded, withdrawn, deleted by the student, or past the access window).
+   * Missing only on applications made before copies existed, which use the profile's résumé.
+   */
+  resumeFileId?: Types.ObjectId | null;
+  /** When the application stopped being open: decided, withdrawn or closed. */
+  endedAt?: Date;
   /** Set by mongoose timestamps. */
   createdAt: Date;
   updatedAt: Date;
@@ -54,6 +62,8 @@ const applicationSchema = new Schema<ApplicationAttrs>(
     savedByEmployer: { type: Boolean, default: false },
     sharedAttemptId: { type: Schema.Types.ObjectId, ref: "PracticeAttempt" },
     interview: interviewSchema,
+    resumeFileId: Schema.Types.ObjectId,
+    endedAt: Date,
   },
   schemaOptions(),
 );

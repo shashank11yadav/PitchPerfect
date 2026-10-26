@@ -1,7 +1,13 @@
 export type ErrorFields = Record<string, string>;
 
 export type ValidationCode = "validation_failed" | "invalid_token" | "invalid_transition";
-export type ForbiddenCode = "forbidden" | "csrf_failed" | "email_not_verified" | "consent_required";
+export type ForbiddenCode =
+  | "forbidden"
+  | "csrf_failed"
+  | "email_not_verified"
+  | "consent_required"
+  | "company_unverified"
+  | "company_suspended";
 export type NotFoundCode = "not_found" | "not_shared";
 export type ConflictCode = "conflict" | "email_taken" | "already_applied";
 

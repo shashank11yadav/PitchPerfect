@@ -30,7 +30,7 @@ Deploying the full stack is a manual, deliberate step; no workflow deploys it. T
    - If `COACH_PROVIDER` is a real provider (`openai` or `anthropic`), run `npm run eval -w apps/coach` once with the production model ids (`COACH_MODEL`, `COACH_SCORING_MODEL`) and record the pass rate before go-live. The runner refuses `fake`; see `apps/coach/evals/README.md`.
    - Check that `/api/health` reports the partner you meant to deploy: `practicePartner` is `scripted` only for `COACH_PROVIDER=fake`, and the web copy follows it.
    - Run the [security checklist](security.md#pre-release-security-checklist).
-7. **Schedule the purge job:** run `node dist/scripts/purge-expired.js` daily from the api image (a cron job on the host with the api's environment; `npm run purge:prod -w apps/api` outside a container). It removes expired tokens and attempts as a backstop for the TTL indexes, marks sessions that were left `active` long past the 20-minute limit as abandoned, and removes `starting` placeholders of session starts that never finished (older than 5 minutes).
+7. **Schedule the purge job:** run `node dist/scripts/purge-expired.js` daily from the api image (a cron job on the host with the api's environment; `npm run purge:prod -w apps/api` outside a container). It removes expired tokens and attempts as a backstop for the TTL indexes, marks sessions that were left `active` long past the 20-minute limit as abandoned, removes `starting` placeholders of session starts that never finished (older than 5 minutes), and deletes applications' résumé copies more than 7 days after the application was decided or closed.
 
 ## GitHub Pages demo
 

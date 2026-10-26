@@ -11,6 +11,7 @@ import { toEmployerProfileView, toPublicUser, toStudentProfileView } from "../..
 import { EmployerProfile, StudentProfile, User } from "../../db/models/index.js";
 import { NotFoundError, UnauthenticatedError } from "../../errors.js";
 import { assertPdf, deleteResume, saveResume } from "../../services/files.js";
+import { removeResumeCopies } from "../applications/resume-copies.js";
 
 /** The user and role profile as the client should now show them. */
 export interface ProfileResult<Profile> {
@@ -106,12 +107,16 @@ export async function resumeFileIdOf(userId: string): Promise<mongoose.Types.Obj
   return profile.resumeFileId;
 }
 
-/** Removes the résumé if there is one. */
+/**
+ * Removes the résumé if there is one, and the copies on applications already sent: deleting it
+ * takes it back from every employer. (A new upload leaves those copies alone.)
+ */
 export async function removeResume(userId: string): Promise<void> {
   const previous = await StudentProfile.findOneAndUpdate(
     { userId },
     { $unset: { resumeFileId: 1 } },
     { returnDocument: "before", projection: { resumeFileId: 1 } },
   ).lean();
+  await removeResumeCopies({ studentId: userId });
   if (previous?.resumeFileId) await deleteResume(previous.resumeFileId);
 }

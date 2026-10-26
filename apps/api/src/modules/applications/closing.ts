@@ -99,7 +99,10 @@ export async function closeOpenApplications(
   await Application.updateMany(
     // Guarded on status, so an application decided in the meantime isn't closed over the decision.
     { _id: targeted, status: anyOf(OPEN_STATUSES) },
-    { $set: { status: "closed", closedReason: reason }, $unset: { interview: 1 } },
+    {
+      $set: { status: "closed", closedReason: reason, endedAt: new Date() },
+      $unset: { interview: 1 },
+    },
   );
   // Only the rows this run actually closed: anything decided in the meantime keeps its status.
   const closed = await Application.find({ _id: targeted, status: "closed", closedReason: reason })

@@ -20,6 +20,11 @@ export interface RateLimitOptions {
    * Either way only a hash of the key is kept, never the address itself.
    */
   store?: "mongo" | "memory";
+  /**
+   * Count only requests that succeed: a refused one (any 4xx or 5xx, the 429 itself included) is
+   * taken back off the counter. For limits on what a request does, such as emails sent.
+   */
+  successfulOnly?: boolean;
 }
 
 const hashed = (key: string) => createHash("sha256").update(key).digest("hex");
@@ -45,6 +50,7 @@ export function rateLimit(name: string, options: RateLimitOptions): RequestHandl
     ...(options.store === "memory"
       ? { keyGenerator: (req: Request) => hashed(options.key(req)) }
       : { keyGenerator: options.key, store: createRateLimitStore(name) }),
+    skipFailedRequests: options.successfulOnly ?? false,
     standardHeaders: "draft-8",
     legacyHeaders: false,
     handler: (req, _res, next) => {

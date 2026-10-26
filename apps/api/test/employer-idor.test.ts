@@ -20,7 +20,7 @@ interface RouteCase {
   body?: object;
 }
 
-const INTERVIEW = { startsAt: "2099-01-01T10:00:00Z", meetingUrl: "https://meet.example/a" };
+const INTERVIEW = { startsAt: "2099-01-01T10:00:00Z", meetingUrl: "https://zoom.us/j/a" };
 
 /** Every route that takes an id. The test below fails if the router has one that isn't listed. */
 const ID_ROUTES: RouteCase[] = [

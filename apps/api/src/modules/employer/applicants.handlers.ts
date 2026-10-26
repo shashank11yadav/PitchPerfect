@@ -7,10 +7,10 @@ import type {
 import { getInput, type IdParamSchema } from "../../middleware/validate.js";
 import { streamResume } from "../../services/files.js";
 import type { Mailer } from "../../services/mailer.js";
-import { resumeFileIdOf } from "../profile/service.js";
 import {
   assertNotWithdrawn,
   listApplicants,
+  resumeForEmployer,
   scheduleInterview,
   setApplicationStatus,
   setSaved,
@@ -65,8 +65,7 @@ export function applicantsHandlers(deps: { mailer: Mailer }) {
 
     resume: (async (_req, res) => {
       const { application } = await owned(res);
-      assertNotWithdrawn(application);
-      await streamResume(await resumeFileIdOf(application.studentId.toString()), res);
+      await streamResume(await resumeForEmployer(application), res);
     }) satisfies RequestHandler,
 
     scorecard: (async (_req, res) => {

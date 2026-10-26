@@ -1,17 +1,22 @@
-import type {
-  ApplicationStatus,
-  EmployerApplicationListQuery,
-  EmployerApplicationView,
-  Interview,
-  Page,
-  SharedScorecardView,
+import type { Types } from "mongoose";
+import {
+  isMeetingServiceHost,
+  MEETING_SERVICE_NAMES,
+  type ApplicationStatus,
+  type EmployerApplicationListQuery,
+  type EmployerApplicationView,
+  type Interview,
+  type Page,
+  type SharedScorecardView,
 } from "@pitchperfect/shared";
 import { sharesScorecard, toEmployerApplicationView } from "../../db/mappers.js";
 import { Application, PracticeAttempt, StudentProfile, User } from "../../db/models/index.js";
-import { ConflictError, NotFoundError } from "../../errors.js";
+import { ConflictError, NotFoundError, ValidationError } from "../../errors.js";
+import { registrableDomain, sameCompanyDomain } from "../../services/company-verification.js";
 import * as emails from "../../services/email-templates.js";
 import { sendSafely, type MailFailureLog, type Mailer } from "../../services/mailer.js";
-import { anyOf } from "../applications/closing.js";
+import { anyOf, OPEN_STATUSES } from "../applications/closing.js";
+import { appliedResumeId, resumeAccessOpen } from "../applications/resume-copies.js";
 import { completedAttemptIds } from "../applications/service.js";
 import { transitionApplication } from "../applications/transitions.js";
 import type { ApplicationDoc, CompanyDoc, JobDoc } from "./ownership.js";
@@ -40,6 +45,8 @@ export async function applicantViews(
             user,
             profile,
             sharesScorecard(application, completed),
+            resumeAccessOpen(application) &&
+              appliedResumeId(application, profile.resumeFileId) !== null,
           ),
         ]
       : [];
@@ -82,10 +89,12 @@ export async function setApplicationStatus(
 ): Promise<EmployerApplicationView> {
   const from = application.status;
   transitionApplication(application, to, "employer");
+  // A decision ends the application, which starts the résumé's grace period.
+  const ended = OPEN_STATUSES.includes(to) ? {} : { endedAt: new Date() };
   const updated = await Application.findOneAndUpdate(
     { _id: application._id, status: from },
     // Only the interview endpoint sets `interview`, so any status set here ends the slot.
-    { $set: { status: to }, $unset: { interview: 1 } },
+    { $set: { status: to, ...ended }, $unset: { interview: 1 } },
     { returnDocument: "after" },
   ).lean();
   if (!updated) throw changedMeanwhile();
@@ -97,6 +106,42 @@ export function assertNotWithdrawn(application: ApplicationDoc): void {
   if (application.status === "withdrawn") throw new NotFoundError();
 }
 
+/**
+ * The résumé file this employer may download for the application: the copy made when the student
+ * applied, while the application is open and for the grace period after it ended. 404 otherwise,
+ * the same as for an application without one.
+ */
+export async function resumeForEmployer(application: ApplicationDoc): Promise<Types.ObjectId> {
+  const none = () => new NotFoundError("No résumé to download");
+  if (!resumeAccessOpen(application)) throw none();
+  const profile =
+    application.resumeFileId === undefined
+      ? await StudentProfile.findOne({ userId: application.studentId })
+          .select("resumeFileId")
+          .lean()
+      : null;
+  const fileId = appliedResumeId(application, profile?.resumeFileId);
+  if (!fileId) throw none();
+  return fileId;
+}
+
+/**
+ * A meeting link must open a known video call service (or a subdomain of one) or the company's
+ * own domain; anything else is a `meetingUrl` field error. The schema already made it an https URL
+ * without credentials.
+ */
+function assertMeetingLink(company: CompanyDoc, meetingUrl: string): void {
+  const { hostname } = new URL(meetingUrl);
+  const allowed =
+    !hostname.endsWith(".") &&
+    (isMeetingServiceHost(hostname) || sameCompanyDomain(hostname, company.website));
+  if (allowed) return;
+  const domain = registrableDomain(company.website);
+  throw new ValidationError({
+    meetingUrl: `Use a ${MEETING_SERVICE_NAMES} link${domain ? `, or one on ${domain}` : ""}`,
+  });
+}
+
 /** A private bookmark: setting it again changes nothing, and the student's `updatedAt` stays put. */
 export async function setSaved(application: ApplicationDoc, saved: boolean): Promise<void> {
   await Application.updateOne(
@@ -106,7 +151,10 @@ export async function setSaved(application: ApplicationDoc, saved: boolean): Pro
   );
 }
 
-/** Schedules (or reschedules) the interview, moves the application to `interview`, and emails the student. */
+/**
+ * Schedules (or reschedules) the interview, moves the application to `interview`, and emails the
+ * student. The link must open a known video call service or the company's own domain.
+ */
 export async function scheduleInterview(
   mailer: Mailer,
   log: MailFailureLog,
@@ -114,6 +162,7 @@ export async function scheduleInterview(
   { application, job }: { application: ApplicationDoc; job: JobDoc },
   { startsAt, meetingUrl }: Interview,
 ): Promise<EmployerApplicationView> {
+  assertMeetingLink(company, meetingUrl);
   const from = application.status;
   transitionApplication(application, "interview", "employer");
   const startsAtUtc = new Date(startsAt);
@@ -129,6 +178,8 @@ export async function scheduleInterview(
     const content = emails.interviewScheduled({
       jobTitle: job.title,
       company: company.name,
+      companyVerification: company.verification,
+      companyDomain: registrableDomain(company.website) ?? new URL(company.website).hostname,
       startsAtUtc,
       meetingUrl,
     });

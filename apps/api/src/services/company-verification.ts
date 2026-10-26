@@ -20,7 +20,7 @@ function freeMailDomainList(): Set<string> {
  * including private suffixes, so "acme.github.io" is its own domain rather than "github.io".
  * Null for IP addresses, bare suffixes, and anything unparsable.
  */
-const registrableDomain = (hostOrUrl: string): string | null =>
+export const registrableDomain = (hostOrUrl: string): string | null =>
   getDomain(hostOrUrl.trim().toLowerCase(), { allowPrivateDomains: true });
 
 /**

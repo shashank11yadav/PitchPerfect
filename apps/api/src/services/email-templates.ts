@@ -1,4 +1,4 @@
-import { LIMITS } from "@pitchperfect/shared";
+import { LIMITS, type CompanyVerification } from "@pitchperfect/shared";
 
 export interface EmailContent {
   subject: string;
@@ -145,18 +145,32 @@ const UTC_DATE_TIME = new Intl.DateTimeFormat("en-US", {
   hourCycle: "h23",
 });
 
+/**
+ * The invite says in plain text where the link really goes and whether the company is verified,
+ * so a student can tell a real invite from a look-alike before clicking.
+ */
 export function interviewScheduled(details: {
   jobTitle: string;
   company: string;
+  companyVerification: CompanyVerification;
+  /** The registrable domain the company's badge vouches for, e.g. "acme-demo.example". */
+  companyDomain: string;
   startsAtUtc: Date;
   meetingUrl: string;
 }): EmailContent {
   const when = `${UTC_DATE_TIME.format(details.startsAtUtc)} UTC`;
+  const host = new URL(details.meetingUrl).hostname;
+  const standing =
+    details.companyVerification === "verified"
+      ? `${details.company} is a verified company on ${BRAND}: it controls ${details.companyDomain}.`
+      : `${details.company} is not verified on ${BRAND}.`;
   return render(`Interview scheduled: ${details.jobTitle} at ${details.company}`, {
     heading: "You have an interview",
     paragraphs: [
       `${details.company} invited you to interview for ${details.jobTitle}.`,
       `When: ${when}. Check the time in your own time zone before you join.`,
+      `The meeting link opens ${host}.`,
+      standing,
     ],
     action: { label: "Join the meeting", url: details.meetingUrl },
     footnotes: [

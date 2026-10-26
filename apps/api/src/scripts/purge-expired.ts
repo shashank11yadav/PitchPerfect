@@ -8,5 +8,8 @@ await runCli(async () => {
   console.log(`Stale active attempts abandoned: ${String(result.attemptsAbandoned)}`);
   console.log(`Applications detached from deleted attempts: ${String(result.sharesCleared)}`);
   console.log(`Unfinished session starts removed: ${String(result.placeholdersDeleted)}`);
+  console.log(
+    `Résumé copies past the employer access window removed: ${String(result.resumesRemoved)}`,
+  );
   return 0;
 });

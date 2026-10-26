@@ -12,6 +12,7 @@ import {
   StudentProfile,
   User,
 } from "../src/db/models/index.js";
+import { saveResume } from "../src/services/files.js";
 import { sanitizeJobHtml } from "../src/services/html-sanitizer.js";
 import { verifyPassword } from "../src/services/passwords.js";
 import { runAdmin, type AdminIo } from "../src/scripts/run-admin.js";
@@ -22,9 +23,11 @@ import {
   createApplication,
   createAttempt,
   createEmployer,
+  createJob,
   createStarts,
   createStudent,
 } from "./helpers/factories.js";
+import { tinyPdf } from "./helpers/pdf.js";
 
 useTestDb();
 
@@ -593,6 +596,41 @@ describe("runPurge", () => {
     expect(reloaded?.status).toBe("applied");
   });
 
+  it("deletes résumé copies once the employer's access window has passed", async () => {
+    const { company } = await createEmployer();
+    const job = await createJob(company._id);
+    const graceMinutes = LIMITS.resumeAccessGraceDays * 24 * 60;
+    const withCopy = async (status: "shortlisted" | "rejected" | "closed", ended: Date) => {
+      const { user } = await createStudent();
+      const application = await createApplication({
+        jobId: job._id,
+        studentId: user._id,
+        status,
+        resumeFileId: await saveResume(user._id, tinyPdf()),
+      });
+      // Older applications have no `endedAt`; their last change stands in for it.
+      const set = status === "closed" ? { updatedAt: ended } : { endedAt: ended, updatedAt: ended };
+      await Application.updateOne({ _id: application._id }, { $set: set }, { timestamps: false });
+      return application._id;
+    };
+    const expired = await withCopy("rejected", minutesAgo(graceMinutes + 1));
+    const olderExpired = await withCopy("closed", minutesAgo(graceMinutes + 1));
+    const recent = await withCopy("rejected", minutesAgo(graceMinutes - 1));
+    const open = await withCopy("shortlisted", minutesAgo(graceMinutes * 3));
+
+    const result = await runPurge(NOW);
+
+    expect(result.resumesRemoved).toBe(2);
+    const copyOf = async (id: mongoose.Types.ObjectId) =>
+      (await Application.findById(id).lean())?.resumeFileId;
+    expect(await copyOf(expired)).toBeNull();
+    expect(await copyOf(olderExpired)).toBeNull();
+    expect(await copyOf(recent)).toBeInstanceOf(mongoose.Types.ObjectId);
+    expect(await copyOf(open)).toBeInstanceOf(mongoose.Types.ObjectId);
+    expect(await mongoose.connection.collection("resumes.files").countDocuments()).toBe(2);
+    expect((await runPurge(NOW)).resumesRemoved).toBe(0);
+  });
+
   it("reports zero counts on an empty database and is safe to repeat", async () => {
     const empty = {
       attemptsDeleted: 0,
@@ -600,6 +638,7 @@ describe("runPurge", () => {
       tokensDeleted: 0,
       sharesCleared: 0,
       placeholdersDeleted: 0,
+      resumesRemoved: 0,
     };
     expect(await runPurge(NOW)).toEqual(empty);
     expect(await runPurge(NOW)).toEqual(empty);

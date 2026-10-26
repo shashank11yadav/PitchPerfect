@@ -22,12 +22,34 @@ export async function assertPdf(buffer: Buffer): Promise<void> {
   if (detected?.mime !== PDF_MIME) throw new UnsupportedFileError("Upload a PDF file");
 }
 
+const randomFileName = () => `${randomBytes(FILE_NAME_BYTES).toString("hex")}.pdf`;
+
 /** Stores the PDF in GridFS under a random name (never the uploaded one) and returns its id. */
 export async function saveResume(ownerId: Types.ObjectId, buffer: Buffer): Promise<Types.ObjectId> {
-  const upload = bucket().openUploadStream(`${randomBytes(FILE_NAME_BYTES).toString("hex")}.pdf`, {
-    metadata: { ownerId },
-  });
+  const upload = bucket().openUploadStream(randomFileName(), { metadata: { ownerId } });
   await pipeline(Readable.from([buffer]), upload);
+  return upload.id;
+}
+
+/**
+ * Copies a stored résumé to a new file of the same owner, so the copy stays as it is when the
+ * original is replaced. Null when the original is already gone; a copy that fails part-way is
+ * removed.
+ */
+export async function copyResume(
+  fileId: Types.ObjectId,
+  ownerId: Types.ObjectId,
+): Promise<Types.ObjectId | null> {
+  const files = bucket();
+  if (!(await files.find({ _id: fileId }).hasNext())) return null;
+  const upload = files.openUploadStream(randomFileName(), { metadata: { ownerId } });
+  try {
+    await pipeline(files.openDownloadStream(fileId), upload);
+  } catch (error) {
+    // Removes whatever chunks were written; it reports "not found" when no file document was.
+    await files.delete(upload.id).catch(() => undefined);
+    throw error;
+  }
   return upload.id;
 }
 

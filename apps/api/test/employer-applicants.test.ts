@@ -175,7 +175,7 @@ describe("PATCH /api/employer/applications/:id", () => {
     const shortlisted = await patch(session, application.id, "shortlisted");
     await session
       .post(`/api/employer/applications/${application.id}/interview`)
-      .send({ startsAt: inFuture(), meetingUrl: "https://meet.example/a" })
+      .send({ startsAt: inFuture(), meetingUrl: "https://zoom.us/j/a" })
       .expect(200);
     const hired = await patch(session, application.id, "hired");
 
@@ -202,7 +202,7 @@ describe("PATCH /api/employer/applications/:id", () => {
       const { application } = await apply("shortlisted");
       await session
         .post(`/api/employer/applications/${application.id}/interview`)
-        .send({ startsAt: inFuture(), meetingUrl: "https://meet.example/a" })
+        .send({ startsAt: inFuture(), meetingUrl: "https://zoom.us/j/a" })
         .expect(200);
 
       const res = await patch(session, application.id, to);
@@ -295,7 +295,7 @@ describe("POST /api/employer/applications/:id/interview", () => {
 
     const res = await schedule(session, application.id, {
       startsAt: "2099-11-02T15:00:00-05:00",
-      meetingUrl: "https://meet.example/room?x=1&y=2",
+      meetingUrl: "https://zoom.us/j/room?x=1&y=2",
     });
 
     expect(res.status).toBe(200);
@@ -303,7 +303,7 @@ describe("POST /api/employer/applications/:id/interview", () => {
       status: "interview",
       interview: {
         startsAt: "2099-11-02T20:00:00.000Z",
-        meetingUrl: "https://meet.example/room?x=1&y=2",
+        meetingUrl: "https://zoom.us/j/room?x=1&y=2",
       },
     });
     const stored = await Application.findById(application._id).lean();
@@ -314,7 +314,7 @@ describe("POST /api/employer/applications/:id/interview", () => {
     expect(message?.subject).toContain("Field rep");
     expect(message?.text).toContain("20:00 UTC");
     expect(message?.text).toContain("November 2, 2099");
-    expect(message?.text).toContain("https://meet.example/room?x=1&y=2");
+    expect(message?.text).toContain("https://zoom.us/j/room?x=1&y=2");
     expect(message?.html).toContain("x=1&amp;y=2");
     expect(message?.text).toContain("Applied Dynamics");
   });
@@ -324,18 +324,18 @@ describe("POST /api/employer/applications/:id/interview", () => {
     const { application } = await apply("shortlisted");
     await schedule(session, application.id, {
       startsAt: inFuture(3),
-      meetingUrl: "https://meet.example/a",
+      meetingUrl: "https://zoom.us/j/a",
     }).expect(200);
 
     const res = await schedule(session, application.id, {
       startsAt: "2099-01-05T10:00:00Z",
-      meetingUrl: "https://meet.example/b",
+      meetingUrl: "https://zoom.us/j/b",
     });
 
     expect(res.status).toBe(200);
     expect(viewOf(res).interview).toEqual({
       startsAt: "2099-01-05T10:00:00.000Z",
-      meetingUrl: "https://meet.example/b",
+      meetingUrl: "https://zoom.us/j/b",
     });
     expect(mailer.sent).toHaveLength(2);
   });
@@ -346,7 +346,7 @@ describe("POST /api/employer/applications/:id/interview", () => {
 
     const past = await schedule(session, application.id, {
       startsAt: "2020-01-01T10:00:00Z",
-      meetingUrl: "https://meet.example/a",
+      meetingUrl: "https://zoom.us/j/a",
     });
     const http = await schedule(session, application.id, {
       startsAt: inFuture(),
@@ -354,7 +354,7 @@ describe("POST /api/employer/applications/:id/interview", () => {
     });
     const noOffset = await schedule(session, application.id, {
       startsAt: "2099-01-01T10:00:00",
-      meetingUrl: "https://meet.example/a",
+      meetingUrl: "https://zoom.us/j/a",
     });
 
     expect(past.status).toBe(400);
@@ -372,7 +372,7 @@ describe("POST /api/employer/applications/:id/interview", () => {
       const { application } = await apply(status);
       const res = await schedule(session, application.id, {
         startsAt: inFuture(),
-        meetingUrl: "https://meet.example/a",
+        meetingUrl: "https://zoom.us/j/a",
       });
       expect(res.status).toBe(400);
       expect(errorOf(res).code).toBe("invalid_transition");
@@ -387,7 +387,7 @@ describe("POST /api/employer/applications/:id/interview", () => {
     try {
       const res = await schedule(session, application.id, {
         startsAt: inFuture(),
-        meetingUrl: "https://meet.example/a",
+        meetingUrl: "https://zoom.us/j/a",
       });
       expect(res.status).toBe(200);
     } finally {
@@ -522,7 +522,7 @@ describe("GET /api/employer/dashboard", () => {
     const foreign = await createJob(other.company._id);
     const future = new Date(Date.now() + 86_400_000);
     const past = new Date(Date.now() - 86_400_000);
-    const meetingUrl = "https://meet.example/x";
+    const meetingUrl = "https://zoom.us/j/x";
     const rows: [typeof active, Partial<Parameters<typeof createApplication>[0]>][] = [
       [active, { status: "applied" }],
       [active, { status: "shortlisted" }],

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { LIMITS } from "@pitchperfect/shared";
 import { Application, AuthToken, PracticeAttempt } from "../db/models/index.js";
+import { expiredCopies, removeResumeCopies } from "../modules/applications/resume-copies.js";
 import { removeStalePlaceholders } from "../modules/practice/quota.js";
 
 /** A session still `active` this long after it started can never finish: its turn limit plus an hour. */
@@ -19,12 +20,15 @@ export interface PurgeResult {
   sharesCleared: number;
   /** `starting` placeholders left behind by session starts that never finished. */
   placeholdersDeleted: number;
+  /** Résumé copies of applications that ended longer ago than the employer's access window. */
+  resumesRemoved: number;
 }
 
 /**
  * The backstop for the TTL indexes: removes expired attempts and spent or expired tokens, frees
- * applications from attempts that are gone, marks long-dead `active` sessions abandoned, and removes
- * placeholders of session starts that never finished, giving their sessions back.
+ * applications from attempts that are gone, marks long-dead `active` sessions abandoned, removes
+ * placeholders of session starts that never finished, giving their sessions back, and deletes
+ * résumé copies employers can no longer open.
  * Runs on the open Mongoose connection; safe to repeat.
  */
 export async function runPurge(now: Date): Promise<PurgeResult> {
@@ -58,11 +62,14 @@ export async function runPurge(now: Date): Promise<PurgeResult> {
     new Date(now.getTime() - STALE_PLACEHOLDER_MS),
   );
 
+  const resumesRemoved = await removeResumeCopies(expiredCopies(now));
+
   return {
     attemptsDeleted: attempts.deletedCount,
     tokensDeleted: tokens.deletedCount,
     attemptsAbandoned: abandoned.modifiedCount,
     sharesCleared: detached.modifiedCount,
     placeholdersDeleted,
+    resumesRemoved,
   };
 }

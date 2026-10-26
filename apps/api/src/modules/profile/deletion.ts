@@ -14,10 +14,13 @@ import {
 import { deleteResume } from "../../services/files.js";
 import type { MailFailureLog, Mailer } from "../../services/mailer.js";
 import { anyOf, closeOpenApplications, type ClosingJob } from "../applications/closing.js";
+import { removeResumeCopies } from "../applications/resume-copies.js";
 
 async function deleteStudentData(userId: string): Promise<void> {
   const profile = await StudentProfile.findOne({ userId }).select("resumeFileId").lean();
   if (profile?.resumeFileId) await deleteResume(profile.resumeFileId);
+  // Before the applications go, or their résumé copies would be left with nothing pointing at them.
+  await removeResumeCopies({ studentId: userId });
   await Promise.all([
     PracticeAttempt.deleteMany({ studentId: userId }),
     // The quota ledger goes too: a deleted account's id is never reused, so it guards nothing.

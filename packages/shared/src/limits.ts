@@ -62,6 +62,12 @@ export const LIMITS = {
   jobSearchMaxLength: 100,
   payMax: 10_000_000,
 
+  // Employer access to applicants
+  /** How long an employer can still download a résumé after the application is decided or closed. */
+  resumeAccessGraceDays: 7,
+  interviewInvitesPerHour: 20,
+  interviewInvitesPerApplicationPerDay: 3,
+
   // Scenario and scorecard text
   personaNameMaxLength: 60,
   personaTextMaxLength: 200,

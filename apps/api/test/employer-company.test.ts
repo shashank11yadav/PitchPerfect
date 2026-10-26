@@ -181,19 +181,20 @@ describe("PATCH /api/employer/company", () => {
     expect(companyOf(res).verification).toBe("unverified");
   });
 
-  it("never touches a suspended company", async () => {
+  it("refuses edits from a suspended company and leaves it suspended", async () => {
     const { session, company } = await employerSession(app, { email: MATCHING_EMAIL });
     await Company.updateOne({ _id: company._id }, { $set: { verification: "suspended" } });
 
     const res = await session
       .patch("/api/employer/company")
       .send({ website: "https://www.acme-demo.example/about" });
-    const other = await session
-      .patch("/api/employer/company")
-      .send({ website: "https://other-demo.example" });
 
-    expect(companyOf(res).verification).toBe("suspended");
-    expect(companyOf(other).verification).toBe("suspended");
+    expect(res.status).toBe(403);
+    expect(errorOf(res).code).toBe("company_suspended");
+    expect(await Company.findById(company._id).lean()).toMatchObject({
+      website: "https://www.acme-demo.example",
+      verification: "suspended",
+    });
   });
 
   it("never verifies on a free-mail address", async () => {

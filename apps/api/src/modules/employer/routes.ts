@@ -8,6 +8,7 @@ import {
   JobInputSchema,
   JobStatusUpdateSchema,
   JobUpdateSchema,
+  LIMITS,
 } from "@pitchperfect/shared";
 import { requireRole, requireVerified } from "../../middleware/auth.js";
 import { byUser, rateLimit } from "../../middleware/rate-limit.js";
@@ -17,15 +18,18 @@ import { applicantsHandlers } from "./applicants.handlers.js";
 import { companyHandlers } from "./company.handlers.js";
 import { dashboardHandlers } from "./dashboard.handlers.js";
 import { jobsHandlers } from "./jobs.handlers.js";
-import { withCompany } from "./ownership.js";
+import { refuseSuspended, requireVerifiedCompany, withCompany } from "./ownership.js";
 
 const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
 const WRITES_PER_MINUTE = 60;
 
 /**
  * `/api/employer/*` per docs/api.md. Everything needs an employer with a company; writes also
  * need a verified email and count against a per-user limit. Resources are looked up through the
- * ownership helpers, so another company's ids are indistinguishable from missing ones.
+ * ownership helpers, so another company's ids are indistinguishable from missing ones. A suspended
+ * company can only read its own company profile.
  */
 export function employerRoutes(deps: { mailer: Mailer }): Router {
   const jobs = jobsHandlers(deps);
@@ -36,11 +40,30 @@ export function employerRoutes(deps: { mailer: Mailer }): Router {
     key: byUser,
   });
   const write = [requireVerified, writeLimit];
+  // Invites email a link to a student, so only sent ones count, per employer and per applicant.
+  const inviteLimits = [
+    rateLimit("interview-invites", {
+      windowMs: HOUR_MS,
+      limit: LIMITS.interviewInvitesPerHour,
+      key: byUser,
+      successfulOnly: true,
+    }),
+    rateLimit("interview-invites-application", {
+      windowMs: DAY_MS,
+      limit: LIMITS.interviewInvitesPerApplicationPerDay,
+      key: (req) => `${byUser(req)}:${String(req.params.id)}`,
+      successfulOnly: true,
+    }),
+  ];
 
   const router = Router();
   router.use(requireRole("employer"), withCompany);
 
+  // The only route a suspended company keeps, so the employer area can say why it is closed.
   router.get("/company", companyHandlers.get);
+  // Every route registered below this line is closed to a suspended company.
+  router.use(refuseSuspended);
+
   router.patch("/company", write, validate({ body: CompanyUpdateSchema }), companyHandlers.update);
   router.get("/dashboard", dashboardHandlers.get);
 
@@ -78,6 +101,8 @@ export function employerRoutes(deps: { mailer: Mailer }): Router {
   router.post(
     "/applications/:id/interview",
     write,
+    requireVerifiedCompany,
+    inviteLimits,
     validate({ params: IdParamSchema, body: InterviewSchema }),
     applicants.interview,
   );

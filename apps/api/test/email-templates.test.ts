@@ -45,6 +45,8 @@ describe("email templates", () => {
     const email = interviewScheduled({
       jobTitle: "Sales <script>alert(1)</script> rep",
       company: 'Acme & "Demo" Co',
+      companyVerification: "verified",
+      companyDomain: "acme-demo.example",
       startsAtUtc: new Date("2026-04-07T15:30:00Z"),
       meetingUrl: 'https://meet.example.test/room?a=1&b="2"',
     });
@@ -57,6 +59,26 @@ describe("email templates", () => {
     expect(email.text).toContain("15:30 UTC");
     expect(email.text).toContain("April 7, 2026");
     expect(email.subject).not.toMatch(/[\r\n]/);
+  });
+
+  it("interviewScheduled names the link's host and the company's standing in plain text", () => {
+    const invite = (companyVerification: "verified" | "unverified") =>
+      interviewScheduled({
+        jobTitle: "Account executive",
+        company: "Acme Demo Co",
+        companyVerification,
+        companyDomain: "acme-demo.example",
+        startsAtUtc: new Date("2026-04-07T15:30:00Z"),
+        meetingUrl: "https://us02web.zoom.us/j/123?pwd=abc",
+      });
+
+    const verified = invite("verified");
+    expect(verified.text).toContain("The meeting link opens us02web.zoom.us.");
+    expect(verified.html).toContain("The meeting link opens us02web.zoom.us.");
+    expect(verified.text).toContain(
+      "Acme Demo Co is a verified company on PitchPerfect: it controls acme-demo.example.",
+    );
+    expect(invite("unverified").text).toContain("Acme Demo Co is not verified on PitchPerfect.");
   });
 
   it("emailChanged tells the old address about the change and carries no link", () => {
