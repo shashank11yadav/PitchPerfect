@@ -1,6 +1,6 @@
 import {
   LIMITS,
-  redactPii,
+  redactReply,
   redactTurn,
   STAGES,
   type CoachTurnRequest,
@@ -142,7 +142,7 @@ async function relayTurn(
         break;
       case "retract":
         // The coach withdrew what it had streamed; the browser swaps it for this text.
-        stream.send({ type: "retract", text: redactPii(event.text) });
+        stream.send({ type: "retract", text: redactReply(event.text) });
         break;
       case "error":
         progress.reported = event.usage;
@@ -152,7 +152,7 @@ async function relayTurn(
           : new UpstreamError();
       case "done": {
         // Only the checked final reply is stored, never the raw deltas.
-        const finalText = redactPii(event.finalText);
+        const finalText = redactReply(event.finalText);
         const stage = laterStage(attempt.stage, event.stage);
         const partner = { role: "partner" as const, text: finalText, at: new Date() };
         await PracticeAttempt.updateOne(
@@ -183,7 +183,7 @@ async function relayTurn(
       }
       case "redirect": {
         // Every redirected turn is flagged; only a confirmed attack counts toward the limit.
-        const text = redactPii(event.text);
+        const text = redactReply(event.text);
         const guardFlags = event.strike ? 1 : 0;
         const endedByGuard = attempt.guardFlags + guardFlags >= LIMITS.guardFlagLimit;
         const partner = { role: "partner" as const, text, at: new Date() };

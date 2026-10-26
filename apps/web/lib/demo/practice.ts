@@ -16,7 +16,7 @@ import {
   CHECK_IN_LINE,
   LIMITS,
   maySignalSelfHarm,
-  redactPii,
+  redactReply,
   redactTurn,
   secondsUntil,
   signalsSelfHarm,
@@ -332,10 +332,10 @@ export async function runDemoTurn(
           onEvent({ type: "delta", text: event.text });
           break;
         case "retract":
-          onEvent({ type: "retract", text: redactPii(event.text) });
+          onEvent({ type: "retract", text: redactReply(event.text) });
           break;
         case "done": {
-          const finalText = redactPii(event.finalText);
+          const finalText = redactReply(event.finalText);
           const stage = laterStage(view.stage, event.stage);
           const partner: TranscriptEntry = {
             role: "partner",
@@ -353,7 +353,7 @@ export async function runDemoTurn(
         }
         case "redirect": {
           // Every redirected turn is flagged; only a confirmed attack counts toward the limit.
-          const line = redactPii(event.text);
+          const line = redactReply(event.text);
           const guardFlags = stored.guardFlags + (event.strike ? 1 : 0);
           const endedByGuard = guardFlags >= LIMITS.guardFlagLimit;
           const partner: TranscriptEntry = {

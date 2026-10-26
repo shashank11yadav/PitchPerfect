@@ -460,6 +460,25 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     expect(stored?.transcript[1]?.text).toBe("Write to me at [email] instead.");
   });
 
+  it("redacts personal data in a retract and the stored reply, and keeps a clean reply as sent", async () => {
+    const { session, attemptId } = await activeAttempt();
+    const usage = { provider: "fake", model: "fake", inputTokens: 1, outputTokens: 1 } as const;
+    const clean = "好的！请问价格是多少？";
+    vi.spyOn(harness.coach, "turn").mockImplementation(async function* () {
+      await Promise.resolve();
+      yield { type: "delta", text: "好的！" };
+      yield { type: "retract", text: "Call me on 617 555 0100." };
+      yield { type: "done", stage: "pitch", finalText: clean, usage };
+    });
+
+    const { events } = await sendTurn(session, attemptId, "Hello there");
+
+    expect(events[1]?.data).toEqual({ text: "Call me on [phone]." });
+    expect(events[2]?.data).toMatchObject({ finalText: clean });
+    const stored = await attemptOf(attemptId);
+    expect(stored?.transcript[1]?.text).toBe(clean);
+  });
+
   it("relays a retract and stores only the final reply", async () => {
     const { session, attemptId } = await activeAttempt();
     const usage = { provider: "fake", model: "fake", inputTokens: 1, outputTokens: 1 } as const;

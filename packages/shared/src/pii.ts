@@ -324,7 +324,23 @@ function redactToken(
  * they are. Full-width characters and other scripts' digits are matched, and kept, as ASCII.
  */
 export function redactPii(text: string): string {
-  return foldForMatching(text)
+  return redactFolded(foldForMatching(text));
+}
+
+/**
+ * A partner reply as it is shown, spoken and stored: personal data redacted as `redactPii` does.
+ * A reply with nothing to redact comes back exactly as written, so the full-width punctuation of a
+ * Chinese or Japanese reply is kept.
+ */
+export function redactReply(text: string): string {
+  const folded = foldForMatching(text);
+  const redacted = redactFolded(folded);
+  return redacted === folded ? text : redacted;
+}
+
+/** The redactions `redactPii` makes, on text already folded to ASCII. */
+function redactFolded(folded: string): string {
+  return folded
     .replace(EMAIL, "[email]")
     .replace(BRACKETED_EMAIL, "[email]")
     .replace(SPOKEN_EMAIL, redactSpokenEmail)

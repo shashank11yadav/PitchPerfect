@@ -12,11 +12,14 @@ const STAGE_MARKER = /^\[\[\s*stage\s*:\s*([a-z]*)\s*\]\]$/i;
 const OPEN_MARKER = new RegExp(`\\[(?:\\[[^[\\]]{0,${String(MARKER_CHARS)}}\\]?)?$`);
 /** At the end of the stream: a marker cut off by the token limit, e.g. "[[stage:obj". */
 const CUT_MARKER = new RegExp(`\\[\\[[^[\\]]{0,${String(MARKER_CHARS)}}\\]?$`);
-const WORD = /[\p{L}\p{N}]+/gu;
+/** Scripts written without spaces between words: each character is counted as a word. */
+const UNSPACED = "\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}";
+const WORD = new RegExp(`[${UNSPACED}]|(?:(?![${UNSPACED}])[\\p{L}\\p{N}])+`, "gu");
 
 /**
  * Words held back while streaming, so a 5-word run of the instructions is caught before it shows,
- * and a canary spelled out one character at a time is caught before half of it does.
+ * and a canary spelled out one character at a time is caught before half of it does. In Chinese
+ * and Japanese, each character counts as a word.
  */
 export const HOLD_WORDS = 8;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LIMITS } from "./limits.js";
-import { redactPii, redactTurn } from "./pii.js";
+import { redactPii, redactReply, redactTurn } from "./pii.js";
 import { countChars } from "./text.js";
 
 describe("redactPii", () => {
@@ -182,6 +182,23 @@ describe("redactPii", () => {
     redactPii("a [at] ".repeat(14_000));
     redactPii("1.".repeat(50_000));
     expect(Date.now() - start).toBeLessThan(1000);
+  });
+});
+
+describe("redactReply", () => {
+  it("redacts what redactPii redacts", () => {
+    expect(redactReply("Call me on 617 555 0100 or a.b@x.io.")).toBe(
+      "Call me on [phone] or [email].",
+    );
+    expect(redactReply("电话：６１７５５５０１００。")).toBe(
+      redactPii("电话：６１７５５５０１００。"),
+    );
+  });
+
+  it("returns text with nothing to redact exactly as written, full-width forms included", () => {
+    for (const text of ["好的！请问价格是多少？", "Ｏｋ，下周见。", "We run 40 trucks a day."]) {
+      expect(redactReply(text)).toBe(text);
+    }
   });
 });
 

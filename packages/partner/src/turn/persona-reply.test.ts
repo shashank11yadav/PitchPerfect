@@ -302,6 +302,59 @@ describe("the shape of what is streamed", () => {
   });
 });
 
+describe("a reply in Chinese or Japanese", () => {
+  it("streams sentence by sentence while the model is still writing", async () => {
+    const text =
+      "您好，我是王经理。我们每天配送两百单，司机经常迟到。你们的系统能解决这个问题吗？价格大概是多少？我们下周可以再谈。はい、分かりました。";
+    const provider = streaming([[...Array.from(text), "[[stage:pitch]]"]]);
+    const pulledAt: number[] = [];
+    const deps = createPracticeDeps({ COACH_TIMEOUT_MS: 5_000 }, provider);
+    const events: CoachTurnEvent[] = [];
+    const result = await personaReply(
+      {
+        skill: "pitching",
+        scenarioPublic,
+        scenarioPrivate: LEAK_SCENARIO,
+        transcript: [],
+        studentText: "您好，我们的软件能帮您规划路线。",
+      },
+      {
+        deps,
+        signal: signal(),
+        meter: createUsageMeter(),
+        sink: {
+          send(event) {
+            if (event.type === "delta") pulledAt.push(provider.pulled);
+            events.push(event);
+            return Promise.resolve();
+          },
+        },
+      },
+    );
+    expect(result).toMatchObject({ outcome: "done", text });
+    expect(events.map((event) => (event.type === "delta" ? event.text : "")).join("")).toBe(text);
+    // The first sentences are sent long before the last characters arrive.
+    expect(pulledAt.length).toBeGreaterThan(3);
+    expect(pulledAt[0]).toBeLessThan(text.length / 2);
+  });
+});
+
+describe("personal data in a reply", () => {
+  it("is never streamed, spoken or stored", async () => {
+    const { result, wire, shown } = await reply(
+      streaming([
+        "Sure, my cell is 617 555 0100 if you need it. Or write to jane [at] acme, she handles it. Talk soon. [[stage:pitch]]",
+      ]),
+    );
+    expect(result.outcome).toBe("done");
+    expect(result.text).toBe(
+      "Sure, my cell is [phone] if you need it. Or write to [email], she handles it. Talk soon.",
+    );
+    expect(shown).toBe(result.text);
+    expect(wire).not.toMatch(/617|555|acme|jane/);
+  });
+});
+
 describe("a secret split across the partner's replies", () => {
   const before = (...partner: string[]): TranscriptEntry[] =>
     partner.flatMap((text) => [

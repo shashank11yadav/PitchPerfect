@@ -37,6 +37,13 @@ describe("ReplyFilter", () => {
     }
   });
 
+  it("holds back the last 8 characters of Chinese or Japanese, which has no spaces", () => {
+    const text = "您好，我是王经理。我们每天配送两百单。";
+    const { emitted, filter } = run([text]);
+    expect(emitted).toBe("您好，我是王经理。我");
+    expect(filter.finish()).toBe("们每天配送两百单。");
+  });
+
   it("never emits any part of a stage tag, even split across chunks", () => {
     const filter = new ReplyFilter(scanner);
     const { emitted } = run([`${words(10)} [`, "[sta", "ge:close]", "]"], filter);

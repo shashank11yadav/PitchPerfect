@@ -12,6 +12,8 @@ export const LIMITS = {
   transcriptEntryMaxLength: 2000,
   sessionSeconds: 20 * MINUTE,
   replyMaxWords: 80,
+  /** A partner reply's length in characters, so very long words and unbroken strings are cut too. */
+  replyMaxChars: 600,
   guardFlagLimit: 3,
   /** Scored student turns a call needs before its scorecard can be shared with an application. */
   shareMinStudentTurns: 4,
