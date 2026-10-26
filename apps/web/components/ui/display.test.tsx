@@ -4,6 +4,7 @@ import { Badge } from "./Badge";
 import { Card } from "./Card";
 import { EmptyState } from "./EmptyState";
 import { JsonLd } from "./JsonLd";
+import { PointerText } from "./PointerText";
 import { Skeleton } from "./Skeleton";
 import { Spinner } from "./Spinner";
 
@@ -32,6 +33,12 @@ describe("display primitives", () => {
     );
     expect(screen.getByRole("heading", { level: 2, name: "No attempts yet" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Start practice" })).toBeInTheDocument();
+  });
+
+  it("PointerText server-renders both wordings and leaves the choice to a media query", () => {
+    render(<PointerText fine="Hold Space to talk" coarse="Hold the mic to talk" />);
+    expect(screen.getByText("Hold Space to talk")).toHaveClass("pointer-coarse:hidden");
+    expect(screen.getByText("Hold the mic to talk")).toHaveClass("hidden", "pointer-coarse:inline");
   });
 
   it("Skeleton is hidden from assistive tech", () => {

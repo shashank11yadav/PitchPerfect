@@ -4,6 +4,7 @@ import { CompanyBadge } from "@/components/jobs/CompanyBadge";
 import { PersonaCard } from "@/components/practice/PersonaCard";
 import { RubricBar } from "@/components/practice/RubricBar";
 import { Badge } from "@/components/ui/Badge";
+import { PointerText } from "@/components/ui/PointerText";
 import { DISCOVERY_MOMENT, SAMPLE_SCORECARD, SAMPLE_SKILL_TITLE } from "./sample-session";
 
 /*
@@ -53,7 +54,9 @@ export function PracticeFragment() {
         <span className="flex size-11 shrink-0 items-center justify-center rounded-pill bg-primary text-white">
           <Mic className="size-5" />
         </span>
-        <span className="text-small text-ink">Hold Space to talk, or type</span>
+        <span className="text-small text-ink">
+          <PointerText fine="Hold Space to talk, or type" coarse="Hold the mic to talk, or type" />
+        </span>
       </div>
     </div>
   );

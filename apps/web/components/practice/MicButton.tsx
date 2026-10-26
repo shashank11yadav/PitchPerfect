@@ -2,6 +2,7 @@
 
 import { Mic } from "lucide-react";
 import type { KeyboardEvent } from "react";
+import { PointerText } from "@/components/ui/PointerText";
 import { cn } from "@/lib/cn";
 
 const LEVELS = ["h-2", "h-4", "h-6", "h-3", "h-5"];
@@ -88,8 +89,11 @@ export function MicButton({
         ))}
       </span>
       <p id="mic-hint" className="sr-only">
-        Hold Space or press and hold to talk. What you say goes into the reply box, and nothing is
-        sent until you choose Send.
+        <PointerText
+          fine="Hold Space or press and hold to talk."
+          coarse="Press and hold to talk."
+        />{" "}
+        What you say goes into the reply box, and nothing is sent until you choose Send.
       </p>
     </div>
   );

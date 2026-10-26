@@ -2,6 +2,7 @@ import { Clock, MessagesSquare, Mic, Send } from "lucide-react";
 import { PersonaCard } from "@/components/practice/PersonaCard";
 import { StageStepper } from "@/components/practice/StageStepper";
 import { TranscriptBubble } from "@/components/practice/TranscriptBubble";
+import { PointerText } from "@/components/ui/PointerText";
 import { cn } from "@/lib/cn";
 import { OBJECTION_MOMENT, turnsLeft, type RoomMoment } from "./sample-session";
 
@@ -95,7 +96,7 @@ export function PracticeRoomPreview({
           ))}
         </span>
         <span className="min-w-0 flex-1 truncate rounded-control border border-border px-3 py-2 text-small text-muted">
-          Hold Space to talk, or type
+          <PointerText fine="Hold Space to talk, or type" coarse="Hold the mic, or type" />
         </span>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary-soft text-primary">
           <Send className="size-4" />
