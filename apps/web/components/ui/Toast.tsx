@@ -128,7 +128,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   dismiss(id);
                 }}
                 aria-label="Dismiss"
-                className="-m-1 rounded-control p-1 text-muted hover:text-ink"
+                className="-m-3 flex size-11 shrink-0 items-center justify-center rounded-control text-muted hover:text-ink"
               >
                 <X aria-hidden="true" className="size-4" />
               </button>

@@ -167,7 +167,7 @@ export function Navbar({ links = PUBLIC_NAV }: NavbarProps) {
           onClick={() => {
             setOpen((value) => !value);
           }}
-          className="-mr-2 rounded-control p-2 text-ink md:hidden"
+          className="-mr-2.5 rounded-control p-2.5 text-ink md:hidden"
         >
           {open ? (
             <X aria-hidden="true" className="size-6" />

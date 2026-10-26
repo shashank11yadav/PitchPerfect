@@ -137,7 +137,8 @@ function SkillsInput({ skills, onChange, error }: SkillsInputProps) {
                 onClick={() => {
                   onChange(skills.filter((existing) => existing !== skill));
                 }}
-                className="rounded-pill p-1 text-muted hover:bg-white hover:text-ink"
+                // A 44 px tap target around the small icon, without making the chip taller.
+                className="relative rounded-pill p-1 text-muted after:absolute after:-inset-[11px] hover:bg-white hover:text-ink"
               >
                 <X aria-hidden="true" className="size-3.5" />
               </button>

@@ -100,7 +100,7 @@ export function AppShell({ links, title, account, children }: AppShellProps) {
             onClick={() => {
               setMenuOpen((open) => !open);
             }}
-            className="-ml-2 rounded-control p-2 text-ink md:hidden"
+            className="-ml-2.5 rounded-control p-2.5 text-ink md:hidden"
           >
             {menuOpen ? (
               <X aria-hidden="true" className="size-6" />
