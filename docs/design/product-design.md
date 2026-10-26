@@ -6,7 +6,7 @@ PitchPerfect is a platform where students and early-career candidates (18+) trai
 
 It is a **portfolio-grade demo**: fully working and deployable, with seeded demo data, not a production launch with real users.
 
-In the product, the practice feature is honestly called an **"AI practice partner"**: users are told the buyer is automated, and the privacy page names the LLM provider that processes transcripts. Naming the provider as a runtime dependency (SDK package, env var, adapter module) is fine.
+In the product, the partner is labelled for what is really answering: an **"AI practice partner"** when a live model runs it, a **"Scripted demo partner"** when the scripted provider does (the public demo always uses that one). Users are told the buyer is automated either way, and with a live model the privacy page names the LLM provider that processes transcripts. Naming the provider as a runtime dependency (SDK package, env var, adapter module) is fine.
 
 ## 2. Goals
 
@@ -143,7 +143,7 @@ PitchPerfect/
 - Keyboard shortcuts: Space for push-to-talk, Enter to send. Screen-reader announcements for new replies.
 - If mic permission is denied or STT is unavailable, it switches to text mode with an explanation.
 - **Honest privacy copy:** PitchPerfect never uploads or stores audio. However, the browser's own speech recognition may send audio to the browser vendor (Google for Chrome, Apple for Safari, Microsoft for Edge). The practice room says so next to the mic toggle and links to the privacy page. Where the browser offers on-device recognition, it is preferred automatically. Text mode is always one click away for anyone who prefers it.
-- **First-session consent:** before a student's first practice session, a one-time notice explains three things: the partner is an AI, transcripts are processed by the configured LLM provider and kept for 180 days, and voice handling works as described above. The student must accept before starting. Acceptance is stored with a timestamp.
+- **First-session consent:** before a student's first practice session, a one-time notice explains three things: what the partner is (an AI, or the scripted demo), where transcripts go (the configured LLM provider, our own server, or nowhere outside the browser tab) and how long they are kept, and voice handling works as described above. The student must accept before starting. Acceptance is stored with a timestamp.
 
 ### 6.5 Security baseline (all services)
 

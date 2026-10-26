@@ -80,12 +80,12 @@ icon-card grids.
   - Sticky plain white bar: logo, Students, Employers, How it works, Jobs, then Sign in and a primary "Sign up".
   - Home hero: flat navy, the tagline at hero size with the voice pill inline after "Get hired." (word-sized on desktop, at least 40 px tall on phones), one lead sentence, "Start practicing" plus an "I'm hiring" text link, and the practice room rising out of the navy into the white section below.
   - Inner page heroes: flat navy, the title on the left and the lead at the opposite end of its baseline.
-  - The close of every page is a brand-blue band; the footer is navy with the logo, links and legal line.
+  - The close of every page is a brand-blue band; the footer is navy with the logo, links, the legal line and "Built by Shashank Yadav" with his GitHub and website.
 - **App (student and employer):**
   - Desktop: left sidebar with icon + label, a top bar with page title and account menu, and content in cards.
   - Mobile: a bottom tab bar (max 5 items) and a top bar.
 - **Practice room:**
-  - A persona card (AI badge, name, title, company type, personality chips).
+  - A persona card (a badge for what is answering: AI, scripted demo, or sample on the marketing pages; name, title, company type, personality chips).
   - A transcript panel (student right in blue, partner left in white, captions always visible).
   - A bottom control dock: a large push-to-talk button with level meter, an editable interim transcript, a send button, a type toggle, a voice picker, mute, and End session.
   - Progress along the top: stage stepper, turns left, time left.

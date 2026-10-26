@@ -2,28 +2,28 @@
 
 Practice the sales call out loud before the real one, then apply with the scorecard.
 
-PitchPerfect is a practice and hiring site for entry-level sales jobs. A student reads a short lesson on one skill, then runs the call by voice or text with an AI practice partner that plays the buyer. When the call ends they get a scorecard that quotes what they actually said. Employers post roles and, if a candidate chooses to share one, read that scorecard next to the application.
+PitchPerfect is a practice and hiring site for entry-level sales jobs. A student reads a short lesson on one skill, then runs the call by voice or text with a practice partner that plays the buyer: a live model from OpenAI or Anthropic when a key is set, or a scripted partner when it isn't. When the call ends they get a scorecard that quotes what they actually said. Employers post roles and, if a candidate chooses to share one, read that scorecard next to the application.
 
 > Status: portfolio project. It runs end to end on your machine with seeded demo data; deployment steps are in [docs/deploy.md](docs/deploy.md).
 >
-> **Live demo:** https://shashank11yadav.github.io/PitchPerfect/ is a static build on GitHub Pages. You can run a practice call (the scripted partner and the scorer run in your browser), read the lessons and browse the job board; accounts, applying and the employer tools need the api and database, so they are only in the full app.
+> **Live demo:** https://shashank11yadav.github.io/PitchPerfect/ is a static build on GitHub Pages. You can run a practice call with the scripted partner (it and the scorer run in your browser, since Pages can't run a live model), read the lessons and browse the job board; accounts, applying and the employer tools need the api and database, so they are only in the full app.
 
 ## What's inside
 
-| Area          | What it does                                                                                                                                                                                              |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Learn**     | Eight short lessons, one per core skill: introducing yourself, pitching, objection handling, probing and discovery, referrals and networking, next steps, asking for the business, interpersonal skills.  |
-| **Practice**  | Pick a skill (or a real job posting), pitch by voice or text to an AI buyer persona with hidden objections, then get a 7-dimension scorecard with strengths, improvements, and a rewritten stronger line. |
-| **Jobs**      | Public job board. Students save, apply, optionally share a scorecard, and track status.                                                                                                                   |
-| **Employers** | Company profile, job posting with a safe rich-text editor, applicant pipeline (shortlist, interview, hire, not a fit), interview scheduling, dashboard.                                                   |
+| Area          | What it does                                                                                                                                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Learn**     | Eight short lessons, one per core skill: introducing yourself, pitching, objection handling, probing and discovery, referrals and networking, next steps, asking for the business, interpersonal skills. |
+| **Practice**  | Pick a skill (or a real job posting), pitch by voice or text to a buyer persona with hidden objections, then get a 7-dimension scorecard with strengths, improvements, and a rewritten stronger line.    |
+| **Jobs**      | Public job board. Students save, apply, optionally share a scorecard, and track status.                                                                                                                  |
+| **Employers** | Company profile, job posting with a safe rich-text editor, applicant pipeline (shortlist, interview, hire, not a fit), interview scheduling, dashboard.                                                  |
 
 ## Screenshots
 
-Taken with `npx tsx e2e/screenshots.ts` from a local production build (`npm run build`, then `next start`) running the `fake` practice partner, the demo data, and the default practice limits.
+Taken with `npx tsx e2e/screenshots.ts` from the containers (`docker compose --profile full up --build -d`) with the demo data and the default practice limits. No key is set there, so the partner is the scripted one and the practice room labels it "Scripted demo partner"; with a live model the badge reads "AI practice partner". The call on the home page is a sample, labelled "Sample buyer".
 
 ![Home page: the headline "Practice your pitch. Get hired." beside a sample practice call](docs/images/home.png)
 
-![Practice room two turns into a pitching call, with the buyer's profile, the stage tracker, and the reply box](docs/images/practice-room.png)
+![Practice room two turns into a pitching call, with the buyer's profile labelled "Scripted demo partner", the stage tracker, and the reply box](docs/images/practice-room.png)
 
 ![Scorecard for a pitching call: 72 out of 100, with a 1 to 5 score, a reason and a quoted line for each of the seven rubric lines](docs/images/scorecard.png)
 
