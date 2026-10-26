@@ -108,25 +108,32 @@ describe("createHttpCoachClient: health", () => {
 });
 
 describe("createHttpCoachClient: practice calls", () => {
-  it("signs the exact body it sends", async () => {
-    let seen: { headers: IncomingMessage["headers"]; body: string; url?: string } | undefined;
+  it("signs the exact body it sends, with a fresh nonce for every call", async () => {
+    const seen: { headers: IncomingMessage["headers"]; body: string; url?: string }[] = [];
     const url = await listen((req, body, res) => {
-      seen = { headers: req.headers, body, url: req.url };
+      seen.push({ headers: req.headers, body, url: req.url });
       respond(400, { error: { code: "not_enough_turns" } })(req, body, res);
     });
 
-    await expect(clientFor(url).score(scoreRequest)).rejects.toBeInstanceOf(NotEnoughTurnsError);
+    const client = clientFor(url);
+    await expect(client.score(scoreRequest)).rejects.toBeInstanceOf(NotEnoughTurnsError);
+    await expect(client.score(scoreRequest)).rejects.toBeInstanceOf(NotEnoughTurnsError);
 
-    expect(seen?.url).toBe("/v1/score");
-    expect(seen?.headers["content-type"]).toBe("application/json");
-    expect(JSON.parse(seen?.body ?? "")).toEqual(scoreRequest);
-    const timestamp = Number(seen?.headers["x-pp-timestamp"]);
+    const [first, second] = seen;
+    expect(first?.url).toBe("/v1/score");
+    expect(first?.headers["content-type"]).toBe("application/json");
+    expect(JSON.parse(first?.body ?? "")).toEqual(scoreRequest);
+    const nonce = String(first?.headers["x-pp-nonce"]);
+    expect(nonce).toMatch(/^[0-9a-f]{32}$/);
     const expected = signRequest(
       SECRET,
-      { method: "POST", path: "/v1/score", body: seen?.body ?? "" },
-      timestamp,
+      { method: "POST", path: "/v1/score", body: first?.body ?? "" },
+      Number(first?.headers["x-pp-timestamp"]),
+      nonce,
     );
-    expect(seen?.headers["x-pp-signature"]).toBe(expected["x-pp-signature"]);
+    expect(first?.headers["x-pp-signature"]).toBe(expected["x-pp-signature"]);
+    // The same request sent again is signed anew, so the coach never takes it for a replay.
+    expect(second?.headers["x-pp-nonce"]).not.toBe(nonce);
   });
 
   it("maps 503 practice_unavailable to PracticeUnavailableError", async () => {

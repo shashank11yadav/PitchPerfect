@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { verifySignature } from "./hmac.js";
+import { NonceCache } from "./nonces.js";
 
 declare module "fastify" {
   interface FastifyContextConfig {
@@ -25,7 +26,9 @@ const sentPath = (request: FastifyRequest) => (request.raw.url ?? "").split("?",
  * Requires every request, except routes marked `config: { public: true }`, to carry a valid HMAC
  * signature over its raw body. The raw text is kept by the content-type parsers, verified in
  * `preValidation` (before any handler), and only then parsed as JSON, so unsigned callers cannot
- * reach the JSON parser or a handler.
+ * reach the JSON parser or a handler. Each signed nonce is accepted once: a replay within the
+ * signature window is a 401 like any bad signature. When the nonce cache is full, a signed request
+ * gets 503 `practice_unavailable` rather than going through unchecked.
  */
 export function requireSignedRequests(app: FastifyInstance, secret: string): void {
   app.removeAllContentTypeParsers();
@@ -40,19 +43,30 @@ export function requireSignedRequests(app: FastifyInstance, secret: string): voi
   app.addContentTypeParser("application/json", keepRaw, parser);
   app.addContentTypeParser("*", keepRaw, parser);
 
+  const nonces = new NonceCache();
   app.addHook("preValidation", async (request, reply) => {
     if (request.routeOptions.config.public) return;
 
     const raw = typeof request.body === "string" ? request.body : "";
-    if (
-      !verifySignature(
-        secret,
-        request.headers,
-        { method: request.method, path: sentPath(request), body: raw },
-        Date.now() / 1000,
-      )
-    ) {
+    const nowSec = Date.now() / 1000;
+    const signed = verifySignature(
+      secret,
+      request.headers,
+      { method: request.method, path: sentPath(request), body: raw },
+      nowSec,
+    );
+    const seen = signed && nonces.remember(signed.nonce, signed.expiresSec, nowSec);
+    if (!seen || seen === "replayed") {
       return reply.code(401).send({ error: { code: "unauthenticated" } });
+    }
+    if (seen === "full") {
+      return reply.code(503).send({
+        error: {
+          code: "practice_unavailable",
+          message: "The practice partner is unavailable right now",
+          requestId: request.id,
+        },
+      });
     }
     if (raw === "") {
       request.body = undefined;

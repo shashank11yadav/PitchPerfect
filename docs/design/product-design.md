@@ -111,7 +111,7 @@ PitchPerfect/
 
 ### 6.4 Pitch-practice service ("coach")
 
-**Shape:** `apps/coach` is its own process with its own package.json, Dockerfile, env and tests. It is **never exposed publicly**. Only `apps/api` calls it, over HTTP, using an HMAC-signed request (shared secret `COACH_SHARED_SECRET`, signature over the timestamp, method, path and body, 60 s replay window). The coach has no database access: the api owns persistence and passes in whatever context the coach needs.
+**Shape:** `apps/coach` is its own process with its own package.json, Dockerfile, env and tests. It is **never exposed publicly**. Only `apps/api` calls it, over HTTP, using an HMAC-signed request (shared secret `COACH_SHARED_SECRET`, signature over the timestamp, a per-request nonce, method, path and body; a ±60 s window, and each nonce accepted once). The coach has no database access: the api owns persistence and passes in whatever context the coach needs.
 
 **Flow:**
 

@@ -92,6 +92,36 @@ describe("request authentication", () => {
     }
   });
 
+  it("rejects a replayed signed request with 401, and takes two identical requests signed apart", async () => {
+    const instance = build();
+    const send = (headers: Record<string, string>) =>
+      instance.inject({
+        method: "POST",
+        url: "/v1/plan",
+        headers: { "content-type": "application/json", ...headers },
+        payload: body,
+      });
+    const headers = sign("/v1/plan", body);
+    expect((await send(headers)).statusCode).toBe(200);
+    const replayed = await send(headers);
+    expect(replayed.statusCode).toBe(401);
+    expect(replayed.json()).toEqual({ error: { code: "unauthenticated" } });
+    // The same body in the same second, signed again, is a new request.
+    expect((await send(sign("/v1/plan", body))).statusCode).toBe(200);
+  });
+
+  it("rejects a request signed without a nonce", async () => {
+    const withoutNonce: Record<string, string> = { ...sign("/v1/plan", body) };
+    delete withoutNonce["x-pp-nonce"];
+    const res = await build().inject({
+      method: "POST",
+      url: "/v1/plan",
+      headers: { "content-type": "application/json", ...withoutNonce },
+      payload: body,
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
   it("rejects a body that differs from the one that was signed", async () => {
     const headers = sign("/v1/plan", body);
     const res = await build().inject({
