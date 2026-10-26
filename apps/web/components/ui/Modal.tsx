@@ -30,8 +30,8 @@ interface ModalProps {
  * A modal dialog: focus moves in on open, Tab and Shift+Tab stay inside, Escape and the close
  * button call `onClose`, and focus returns to whatever had it before, unless that is gone or the
  * page has already moved focus somewhere on purpose. The page behind stops scrolling; a dialog
- * taller than the screen (a phone, or a phone with its keyboard up) scrolls inside itself, so its
- * heading and its buttons can both be reached.
+ * taller than the screen (a phone, or a phone with its keyboard up) scrolls inside itself, and its
+ * buttons, in `ModalActions`, stay pinned to its bottom edge while the rest scrolls.
  */
 export function Modal({ open, onClose, title, description, children, className }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -50,7 +50,9 @@ export function Modal({ open, onClose, title, description, children, className }
 
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const [first] = bodyRef.current ? focusableIn(bodyRef.current) : [];
-    (first ?? focusableIn(dialog)[0] ?? dialog).focus();
+    // Without scrolling, so the dialog opens on its heading even when the first control is a
+    // button in the pinned `ModalActions` bar, which is in view wherever the body is scrolled.
+    (first ?? focusableIn(dialog)[0] ?? dialog).focus({ preventScroll: true });
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -105,7 +107,8 @@ export function Modal({ open, onClose, title, description, children, className }
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          "max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-card bg-surface p-6 shadow-card-hover focus:outline-none",
+          // The scroll padding keeps a focused control clear of the pinned `ModalActions` bar.
+          "max-h-[calc(100dvh-2rem)] w-full max-w-lg scroll-pb-36 overflow-y-auto overscroll-contain rounded-card bg-surface p-6 shadow-card-hover focus:outline-none sm:scroll-pb-24",
           className,
         )}
       >
@@ -133,5 +136,19 @@ export function Modal({ open, onClose, title, description, children, className }
       </div>
     </div>,
     document.body,
+  );
+}
+
+/**
+ * A dialog's buttons, last in its content: they stick to the bottom of the dialog while the body
+ * scrolls under them, so they are in view on a short screen without scrolling. The bar spans the
+ * dialog's padding and sticks to its outer edge (a sticky offset counts from inside the padding),
+ * so it covers what scrolls beneath it. On a phone the main action is on top.
+ */
+export function ModalActions({ children }: { children: ReactNode }) {
+  return (
+    <div className="sticky -bottom-6 -mx-6 -mb-6 flex flex-col-reverse gap-3 border-t border-border bg-surface px-6 py-4 sm:flex-row sm:justify-end">
+      {children}
+    </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { formMessage } from "@/lib/use-form";
 import { Button } from "./Button";
-import { Modal } from "./Modal";
+import { Modal, ModalActions } from "./Modal";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -60,14 +60,14 @@ export function ConfirmDialog({
         <p role="alert" className="text-danger empty:sr-only">
           {problem}
         </p>
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <ModalActions>
           <Button variant="secondary" onClick={close} disabled={busy}>
             {cancelLabel}
           </Button>
           <Button variant={tone} loading={busy} onClick={() => void confirm()}>
             {confirmLabel}
           </Button>
-        </div>
+        </ModalActions>
       </div>
     </Modal>
   );

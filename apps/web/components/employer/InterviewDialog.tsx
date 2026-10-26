@@ -11,7 +11,7 @@ import { FormAlert } from "@/components/auth/form-parts";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
+import { Modal, ModalActions } from "@/components/ui/Modal";
 import { apiFetch } from "@/lib/api";
 import { EMPLOYER_API_MESSAGES, OneApplicant } from "@/lib/employer-api";
 import {
@@ -128,14 +128,14 @@ function InterviewFields({
       </Field>
       <p className="text-small text-muted">{LIMITS_NOTE}</p>
       <FormAlert message={formError} />
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <ModalActions>
         <Button variant="secondary" onClick={onClose} disabled={submitting}>
           Cancel
         </Button>
         <Button type="submit" loading={submitting}>
           {rescheduling ? "Send the new time" : "Send invite"}
         </Button>
-      </div>
+      </ModalActions>
     </form>
   );
 }

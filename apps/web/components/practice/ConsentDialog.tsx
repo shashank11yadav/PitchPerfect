@@ -4,7 +4,7 @@ import { LIMITS, type PracticePartnerKind } from "@pitchperfect/shared";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
+import { Modal, ModalActions } from "@/components/ui/Modal";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { formMessage } from "@/lib/use-form";
@@ -69,10 +69,19 @@ export function ConsentDialog({
         if (!busy) onClose();
       }}
       title={renewal ? "Before your next practice call" : "Before your first practice call"}
+      // The privacy link sits up here, so the first control in the body is a button in the pinned
+      // bar: the notice opens on its heading with focus on "Not now", not scrolled to its end.
       description={
-        renewal
-          ? "This notice has changed since you accepted it. Read it again before you go on."
-          : "Three things to know. You’ll only see this once."
+        <>
+          {renewal
+            ? "This notice has changed since you accepted it. Read it again before you go on."
+            : "Three things to know. You’ll only see this once."}{" "}
+          The details are in our{" "}
+          <Link href="/privacy" className="pp-link rounded-control font-semibold text-primary">
+            privacy policy
+          </Link>
+          .
+        </>
       }
     >
       <div className="flex flex-col gap-5">
@@ -122,24 +131,17 @@ export function ConsentDialog({
             PitchPerfect never receives or stores audio, and you can type every turn instead.
           </li>
         </ul>
-        <p className="text-small text-ink">
-          The details are in our{" "}
-          <Link href="/privacy" className="pp-link rounded-control font-semibold text-primary">
-            privacy policy
-          </Link>
-          .
-        </p>
         <p role="alert" className="text-small text-danger empty:sr-only">
           {problem}
         </p>
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <ModalActions>
           <Button variant="secondary" onClick={onClose} disabled={busy}>
             Not now
           </Button>
           <Button loading={busy} onClick={() => void accept()}>
             I understand
           </Button>
-        </div>
+        </ModalActions>
       </div>
     </Modal>
   );

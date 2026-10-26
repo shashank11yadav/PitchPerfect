@@ -51,6 +51,15 @@ describe("ConsentDialog", () => {
     );
   });
 
+  it("opens on its heading with focus on Not now, in the bar pinned to the dialog's bottom", () => {
+    render(<ConsentDialog open partner="browser" onClose={vi.fn()} onAccepted={vi.fn()} />);
+    const notNow = screen.getByRole("button", { name: "Not now" });
+    expect(notNow).toHaveFocus();
+    const bar = notNow.parentElement;
+    expect(bar).toHaveClass("sticky");
+    expect(bar).toContainElement(screen.getByRole("button", { name: "I understand" }));
+  });
+
   it("says the partner is scripted and stays on our server when the coach runs the demo", () => {
     render(<ConsentDialog open partner="scripted" onClose={vi.fn()} onAccepted={vi.fn()} />);
     const dialog = screen.getByRole("dialog", { name: "Before your first practice call" });
