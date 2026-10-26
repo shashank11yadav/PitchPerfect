@@ -92,7 +92,7 @@ const SCENARIO = {
 
 type Scenario = typeof SCENARIO;
 
-/** A clinic buyer, the reviewer's probe scenario. */
+/** A clinic buyer, for the single-line opening probes below. */
 const CLINIC: Scenario = {
   scenarioPublic: {
     personaName: "Ruth Lindgren",
@@ -358,7 +358,7 @@ describe("FakeProvider", () => {
     const NOT_A_PROPOSAL = /what day|when, and who|works\. send|is packed/i;
     const OBJECTION = /mid-quarter|already use/i;
 
-    // The reviewer's single-line probes, each from the opening of a call with a clinic buyer.
+    // Single-line probes, each from the opening of a call with a clinic buyer.
     it.each([
       ["How do patients book appointments today?", PROCESS_ANSWER, "not-close"],
       ["Let me introduce myself first. I'm Taylor from Brightdesk.", null, "not-close"],
