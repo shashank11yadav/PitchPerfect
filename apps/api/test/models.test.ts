@@ -333,6 +333,7 @@ describe("view mappers", () => {
       lastName: "Lovelace",
       emailVerifiedAt: "2026-01-01T00:00:00.000Z",
       practiceConsentAt: null,
+      practiceConsentPartner: null,
     });
     expect(Object.keys(view)).not.toContain("passwordHash");
   });

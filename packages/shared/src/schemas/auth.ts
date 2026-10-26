@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Role } from "../enums.js";
 import { currentPassword, emailField, httpsUrl, newPassword, tokenField } from "./common.js";
 import { companyFields, type PublicCompany } from "./employer.js";
+import type { PracticePartnerKind } from "./practice.js";
 import {
   employerFields,
   nameFields,
@@ -93,6 +94,12 @@ export interface PublicUser {
   emailVerifiedAt: string | null;
   /** Students only; `null` for employers and for students who have not consented. */
   practiceConsentAt: string | null;
+  /**
+   * The kind of partner the practice notice the student accepted described. `null` without a
+   * consent, and for a consent stored before the kind was kept, which is asked for again. The
+   * static demo's visitor accepts the `browser` notice.
+   */
+  practiceConsentPartner: PracticePartnerKind | null;
 }
 
 /** `GET /api/auth/me`: the signed-in user, their role profile, and (employers) their company. */

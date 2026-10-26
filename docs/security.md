@@ -55,7 +55,8 @@ The GitHub Pages site ([deploy.md](deploy.md#github-pages-demo)) is files only, 
   - The partner is an AI. When the coach runs `COACH_PROVIDER=fake`, the api reports `practicePartner: "scripted"` on `/api/health` and `/api/practice/quota`, and the notice, the persona badge, and the privacy and terms pages say instead that the partner is a scripted demo running on our server and that nothing is sent to an AI provider. A coach that is down or unknown is disclosed as live.
   - Transcripts are processed by the configured LLM provider and kept for 180 days (`PRACTICE_RETENTION_DAYS`; the copy reads the shared default, see docs/deploy.md).
   - The browser's speech recognition may send audio to the browser vendor (Google, Apple or Microsoft). PitchPerfect never receives or stores audio.
-- Acceptance is stored as `practiceConsentAt`.
+- Acceptance is stored as `practiceConsentAt` with `practiceConsentPartner`, the kind of partner (`scripted` or `live`) the notice the student read described. Every session start checks it against the partner the api reports now (the cached coach probe); when they differ, in particular when a scripted deployment moves to a live model, the start is refused with `403 consent_required` and the notice, worded for the current partner, opens again before the next call. The api also refuses an acceptance (`409`) for a notice that doesn't describe the current partner.
+- A consent stored before the kind was kept has no `practiceConsentPartner` and is asked for again whatever the partner. Both kinds have been possible since the coach's provider adapter landed (the live adapters and the scripted provider were added together, after the consent endpoint, and the provider is chosen per deployment), and the api never recorded which one a deployment ran, so no stored consent can be shown to have been given for the scripted partner only.
 
 ## Logging
 

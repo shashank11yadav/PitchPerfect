@@ -354,7 +354,11 @@ describe("PracticeRoom before the call", () => {
         const me = studentMe();
         return jsonResponse({
           ...me,
-          user: { ...me.user, practiceConsentAt: "2026-10-01T00:00:00.000Z" },
+          user: {
+            ...me.user,
+            practiceConsentAt: "2026-10-01T00:00:00.000Z",
+            practiceConsentPartner: "live",
+          },
         });
       },
       "GET /api/practice/quota": () => jsonResponse(quota),

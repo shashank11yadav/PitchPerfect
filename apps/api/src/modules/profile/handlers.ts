@@ -4,14 +4,16 @@ import type {
   ChangePasswordSchema,
   DeleteAccountSchema,
   EmployerProfileUpdateSchema,
+  PracticeConsentSchema,
   StudentProfileUpdateSchema,
 } from "@pitchperfect/shared";
 import { ValidationError } from "../../errors.js";
 import { userOf } from "../../middleware/auth.js";
 import { destroySession, regenerateSession } from "../../middleware/session.js";
 import { getInput } from "../../middleware/validate.js";
+import { practicePartnerOf } from "../../services/coach-probe.js";
 import { streamResume } from "../../services/files.js";
-import type { AuthDeps } from "../auth/service.js";
+import type { ProfileDeps } from "./routes.js";
 import { changeEmail, changePassword, requireCurrentPassword } from "./credentials.js";
 import { deleteAccount } from "./deletion.js";
 import {
@@ -26,7 +28,7 @@ import {
 const OK = { ok: true } as const;
 
 /** Thin handlers: read validated input, call the service, respond. */
-export function profileHandlers(deps: AuthDeps) {
+export function profileHandlers(deps: ProfileDeps) {
   const updateProfile: RequestHandler = async (_req, res) => {
     const { id, role } = userOf(res);
     if (role === "student") {
@@ -63,7 +65,9 @@ export function profileHandlers(deps: AuthDeps) {
   };
 
   const consent: RequestHandler = async (_req, res) => {
-    res.json({ practiceConsentAt: await recordPracticeConsent(userOf(res).id) });
+    const { body } = getInput<{ body: typeof PracticeConsentSchema }>(res);
+    const current = practicePartnerOf(await deps.coachProbe());
+    res.json(await recordPracticeConsent(userOf(res).id, body.partner, current));
   };
 
   const uploadResume: RequestHandler = async (req, res) => {

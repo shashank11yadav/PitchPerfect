@@ -108,8 +108,12 @@ describe("POST /api/me/practice-consent", () => {
     const { email, password, user } = await createStudent();
     const session = await signIn(request.agent(app), email, password);
 
-    const first = await session.post("/api/me/practice-consent").send({ accepted: true });
-    const second = await session.post("/api/me/practice-consent").send({ accepted: true });
+    const first = await session
+      .post("/api/me/practice-consent")
+      .send({ accepted: true, partner: "scripted" });
+    const second = await session
+      .post("/api/me/practice-consent")
+      .send({ accepted: true, partner: "scripted" });
 
     const stamp = (first.body as { practiceConsentAt: string }).practiceConsentAt;
     expect(first.status).toBe(200);
@@ -132,7 +136,9 @@ describe("POST /api/me/practice-consent", () => {
     const { email, password, user } = await createEmployer();
     const session = await signIn(request.agent(app), email, password);
 
-    const res = await session.post("/api/me/practice-consent").send({ accepted: true });
+    const res = await session
+      .post("/api/me/practice-consent")
+      .send({ accepted: true, partner: "scripted" });
 
     expect(res.status).toBe(403);
     expect((await User.findById(user._id))?.practiceConsentAt).toBeUndefined();
@@ -140,8 +146,12 @@ describe("POST /api/me/practice-consent", () => {
 
   it("requires a session", async () => {
     const anonymous = await csrfAgent(app);
-    expect((await anonymous.post("/api/me/practice-consent").send({ accepted: true })).status).toBe(
-      401,
-    );
+    expect(
+      (
+        await anonymous
+          .post("/api/me/practice-consent")
+          .send({ accepted: true, partner: "scripted" })
+      ).status,
+    ).toBe(401);
   });
 });

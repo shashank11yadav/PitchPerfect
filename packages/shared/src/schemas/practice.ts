@@ -50,6 +50,10 @@ export const PRACTICE_PARTNER_KINDS = ["scripted", "live", "browser"] as const;
  */
 export type PracticePartnerKind = (typeof PRACTICE_PARTNER_KINDS)[number];
 
+/** The kinds the api reports and a student's practice consent is given for. */
+export const REPORTED_PARTNER_KINDS = ["scripted", "live"] as const;
+export type ReportedPartnerKind = (typeof REPORTED_PARTNER_KINDS)[number];
+
 /** `GET /api/practice/quota`: sessions started today and this month (UTC), against the limits. */
 export interface PracticeQuota {
   dailyUsed: number;

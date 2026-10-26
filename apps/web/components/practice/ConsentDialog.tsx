@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { formMessage } from "@/lib/use-form";
 
@@ -16,6 +16,13 @@ interface ConsentDialogProps {
   onAccepted: () => void;
   /** What answers the call: a live model (the default) or the scripted demo partner. */
   partner?: PracticePartnerKind;
+  /**
+   * The student accepted an earlier notice, for another kind of partner or before the kind was
+   * kept, so this one asks again.
+   */
+  renewal?: boolean;
+  /** The api says another partner answers now than the one this notice describes. */
+  onPartnerChanged?: () => void;
 }
 
 /**
@@ -23,7 +30,14 @@ interface ConsentDialogProps {
  * (an AI model, the scripted demo on our server, or the scripted demo in this browser), where
  * transcripts go and how long they're kept, and what the browser does with your voice.
  */
-export function ConsentDialog({ open, onClose, onAccepted, partner = "live" }: ConsentDialogProps) {
+export function ConsentDialog({
+  open,
+  onClose,
+  onAccepted,
+  partner = "live",
+  renewal = false,
+  onPartnerChanged,
+}: ConsentDialogProps) {
   const { refresh } = useSession();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -32,11 +46,17 @@ export function ConsentDialog({ open, onClose, onAccepted, partner = "live" }: C
     setBusy(true);
     setProblem("");
     try {
-      await apiFetch("/me/practice-consent", { method: "POST", body: { accepted: true } });
+      await apiFetch("/me/practice-consent", { method: "POST", body: { accepted: true, partner } });
       await refresh();
       onAccepted();
     } catch (error) {
-      setProblem(formMessage(error));
+      if (error instanceof ApiError && error.code === "conflict") {
+        // The partner changed while the notice was open: show the notice for the new one.
+        onPartnerChanged?.();
+        setProblem("Your practice partner just changed, so this notice has too. Read it again.");
+      } else {
+        setProblem(formMessage(error));
+      }
     } finally {
       setBusy(false);
     }
@@ -48,8 +68,12 @@ export function ConsentDialog({ open, onClose, onAccepted, partner = "live" }: C
       onClose={() => {
         if (!busy) onClose();
       }}
-      title="Before your first practice call"
-      description="Three things to know. You’ll only see this once."
+      title={renewal ? "Before your next practice call" : "Before your first practice call"}
+      description={
+        renewal
+          ? "This notice has changed since you accepted it. Read it again before you go on."
+          : "Three things to know. You’ll only see this once."
+      }
     >
       <div className="flex flex-col gap-5">
         <ul className="flex flex-col gap-4 text-ink">

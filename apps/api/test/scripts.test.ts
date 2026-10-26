@@ -138,6 +138,7 @@ describe("runSeed", () => {
     }
     expect(student?.ageConfirmedAt).toBeInstanceOf(Date);
     expect(student?.practiceConsentAt).toBeInstanceOf(Date);
+    expect(student?.practiceConsentPartner).toBe("scripted");
     expect(await StudentProfile.countDocuments({ userId: student?._id })).toBe(1);
     // The demo employer owns its own verified company and sees the demo student's application.
     const profile = await EmployerProfile.findOne({ userId: employer?._id }).lean();

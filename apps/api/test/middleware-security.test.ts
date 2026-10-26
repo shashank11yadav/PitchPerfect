@@ -66,7 +66,9 @@ function extraRoutes(router: Router): void {
   router.get("/__test/verified", requireVerified, (_req, res) => {
     res.json({ ok: true });
   });
-  router.get("/__test/consent", requireConsent, (_req, res) => {
+  // The partner answering is scripted, as the test coach is.
+  const scripted = () => Promise.resolve("scripted" as const);
+  router.get("/__test/consent", requireConsent(scripted), (_req, res) => {
     res.json({ ok: true });
   });
   router.get("/__test/user-twice", async (req, res) => {
@@ -103,6 +105,7 @@ async function makeUser({ role = "student", verified = true, consent = false }: 
     name: { first: "Test", last: "User" },
     emailVerifiedAt: verified ? new Date() : undefined,
     practiceConsentAt: consent ? new Date() : undefined,
+    practiceConsentPartner: consent ? "scripted" : undefined,
   });
   return user;
 }
@@ -585,7 +588,7 @@ describe("auth guards", () => {
 
     expect(res.body).toEqual({
       same: true,
-      keys: ["emailVerifiedAt", "id", "practiceConsentAt", "role"],
+      keys: ["emailVerifiedAt", "id", "practiceConsentAt", "practiceConsentPartner", "role"],
     });
   });
 

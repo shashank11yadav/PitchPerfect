@@ -48,7 +48,7 @@ const STUDENT_ROUTES: RouteCase[] = [
   { method: "put", path: "/me/resume" },
   { method: "get", path: "/me/resume" },
   { method: "delete", path: "/me/resume" },
-  { method: "post", path: "/me/practice-consent", body: { accepted: true } },
+  { method: "post", path: "/me/practice-consent", body: { accepted: true, partner: "scripted" } },
 ];
 
 /** Routes for any signed-in account, whatever its role. */
@@ -123,7 +123,7 @@ describe("student route table", () => {
       ...registered(applicationRoutes()),
       ...registered(jobRoutes()),
       ...registered(lessonRoutes()),
-      ...registered(profileRoutes({ config, mailer })),
+      ...registered(profileRoutes({ config, mailer, coachProbe: createCoachProbe(coach) })),
     ].sort();
     const accountRoutes = ACCOUNT_ROUTES.map(key).filter((route) => !route.includes("/auth/"));
     expect([...STUDENT_ROUTES.map(key), ...accountRoutes, ...PUBLIC_ROUTES].sort()).toEqual(routes);

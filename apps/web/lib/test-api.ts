@@ -38,6 +38,7 @@ export function meBody(role: Role, { verified = true } = {}) {
       lastName: "Hart",
       emailVerifiedAt: verified ? "2026-10-01T00:00:00.000Z" : null,
       practiceConsentAt: null,
+      practiceConsentPartner: null,
     },
     profile: {},
   };

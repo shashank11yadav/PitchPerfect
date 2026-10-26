@@ -402,6 +402,7 @@ describe("POST /api/auth/signin", () => {
         lastName: "Example",
         emailVerifiedAt: user.emailVerifiedAt?.toISOString(),
         practiceConsentAt: null,
+        practiceConsentPartner: null,
       },
     });
     expect(cookieHeader(res, "pp.sid")).toMatch(/^pp\.sid=s%3A/);

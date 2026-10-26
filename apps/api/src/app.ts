@@ -104,7 +104,7 @@ export function createApp(
 
   const api = express.Router();
   api.use(authRoutes({ config, mailer: deps.mailer, csrf }));
-  api.use(profileRoutes({ config, mailer: deps.mailer }));
+  api.use(profileRoutes({ config, mailer: deps.mailer, coachProbe }));
   api.use(lessonRoutes());
   api.use(jobRoutes());
   api.use(applicationRoutes());

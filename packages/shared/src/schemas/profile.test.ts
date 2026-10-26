@@ -37,11 +37,15 @@ describe("profile update schemas", () => {
 });
 
 describe("practice consent schema", () => {
-  it("accepts only accepted: true", () => {
-    expect(PracticeConsentSchema.safeParse({ accepted: true }).success).toBe(true);
-    expect(PracticeConsentSchema.safeParse({ accepted: false }).success).toBe(false);
-    expect(PracticeConsentSchema.safeParse({}).success).toBe(false);
-    expect(PracticeConsentSchema.safeParse({ accepted: true, extra: 1 }).success).toBe(false);
+  it("accepts only accepted: true, for one of the partner kinds the api reports", () => {
+    const valid = (body: object) => PracticeConsentSchema.safeParse(body).success;
+    expect(valid({ accepted: true, partner: "scripted" })).toBe(true);
+    expect(valid({ accepted: true, partner: "live" })).toBe(true);
+    expect(valid({ accepted: true })).toBe(false);
+    expect(valid({ accepted: true, partner: "browser" })).toBe(false);
+    expect(valid({ accepted: false, partner: "live" })).toBe(false);
+    expect(valid({})).toBe(false);
+    expect(valid({ accepted: true, partner: "live", extra: 1 })).toBe(false);
   });
 });
 

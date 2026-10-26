@@ -1,5 +1,10 @@
 import { model, Schema } from "mongoose";
-import { ROLES, type Role } from "@pitchperfect/shared";
+import {
+  REPORTED_PARTNER_KINDS,
+  ROLES,
+  type ReportedPartnerKind,
+  type Role,
+} from "@pitchperfect/shared";
 import { schemaOptions } from "../schema-options.js";
 
 export interface UserAttrs {
@@ -10,6 +15,11 @@ export interface UserAttrs {
   emailVerifiedAt?: Date;
   ageConfirmedAt?: Date;
   practiceConsentAt?: Date;
+  /**
+   * The kind of partner the accepted practice notice described. Missing on consents stored before
+   * it was kept; those are asked for again (docs/security.md, Age and consent).
+   */
+  practiceConsentPartner?: ReportedPartnerKind;
   /**
    * Bumped to end every session at once (password reset/change); sessions store their copy.
    * Missing on users stored before it existed, which counts as 0.
@@ -30,6 +40,7 @@ const userSchema = new Schema<UserAttrs>(
     emailVerifiedAt: Date,
     ageConfirmedAt: Date,
     practiceConsentAt: Date,
+    practiceConsentPartner: { type: String, enum: REPORTED_PARTNER_KINDS },
     sessionVersion: { type: Number, default: 0, min: 0 },
   },
   schemaOptions(["passwordHash"]),

@@ -44,6 +44,7 @@ export function toPublicUser(user: Persisted<UserAttrs>): PublicUser {
     lastName: user.name.last,
     emailVerifiedAt: iso(user.emailVerifiedAt),
     practiceConsentAt: iso(user.practiceConsentAt),
+    practiceConsentPartner: user.practiceConsentPartner ?? null,
   };
 }
 

@@ -1,6 +1,6 @@
 import type { Request, RequestHandler, Response } from "express";
 import mongoose from "mongoose";
-import type { Role } from "@pitchperfect/shared";
+import type { PracticePartnerKind, ReportedPartnerKind, Role } from "@pitchperfect/shared";
 import { User } from "../db/models/index.js";
 import { ForbiddenError, UnauthenticatedError } from "../errors.js";
 import { destroySession, sessionUserId, sessionVersionOf } from "./session.js";
@@ -11,6 +11,7 @@ interface SessionUser {
   role: Role;
   emailVerifiedAt: Date | null;
   practiceConsentAt: Date | null;
+  practiceConsentPartner: ReportedPartnerKind | null;
 }
 
 /** The user `requireAuth` (or any guard) loaded for this request. */
@@ -33,7 +34,7 @@ export async function loadUser(req: Request, res: Response): Promise<SessionUser
   if (userId === undefined) return null;
   const doc = mongoose.isValidObjectId(userId)
     ? await User.findById(userId)
-        .select("role emailVerifiedAt practiceConsentAt sessionVersion")
+        .select("role emailVerifiedAt practiceConsentAt practiceConsentPartner sessionVersion")
         .lean()
     : null;
   const revoked = (doc?.sessionVersion ?? 0) !== sessionVersionOf(req);
@@ -46,6 +47,7 @@ export async function loadUser(req: Request, res: Response): Promise<SessionUser
     role: doc.role,
     emailVerifiedAt: doc.emailVerifiedAt ?? null,
     practiceConsentAt: doc.practiceConsentAt ?? null,
+    practiceConsentPartner: doc.practiceConsentPartner ?? null,
   };
   res.locals.user = user;
   return user;
@@ -83,10 +85,30 @@ export const requireVerified: RequestHandler = guard((user) => {
     throw new ForbiddenError("email_not_verified", "Verify your email to continue");
 });
 
-/** Students only: they must have accepted the practice notice. */
-export const requireConsent: RequestHandler = guard((user) => {
-  if (user.role !== "student") throw new ForbiddenError("forbidden");
-  if (!user.practiceConsentAt) {
-    throw new ForbiddenError("consent_required", "Accept the practice notice to continue");
-  }
-});
+/**
+ * Students only: they must have accepted the practice notice for the kind of partner that answers
+ * now (`currentPartner`). A notice accepted for the other kind, or one stored before the kind was
+ * kept, is asked for again.
+ */
+export function requireConsent(currentPartner: () => Promise<PracticePartnerKind>): RequestHandler {
+  return async (req, res, next) => {
+    const user = await requireUser(req, res);
+    if (user.role !== "student") throw new ForbiddenError("forbidden");
+    if (!user.practiceConsentAt) {
+      throw new ForbiddenError("consent_required", "Accept the practice notice to continue");
+    }
+    if (!user.practiceConsentPartner) {
+      throw new ForbiddenError(
+        "consent_required",
+        "The practice notice has changed since you accepted it. Accept it again to continue",
+      );
+    }
+    if (user.practiceConsentPartner !== (await currentPartner())) {
+      throw new ForbiddenError(
+        "consent_required",
+        "The practice partner has changed. Accept the new practice notice to continue",
+      );
+    }
+    next();
+  };
+}

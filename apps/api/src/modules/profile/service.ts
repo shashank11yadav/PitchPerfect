@@ -2,14 +2,16 @@ import mongoose, { Types } from "mongoose";
 import type {
   EmployerProfileUpdate,
   EmployerProfileView,
+  PracticePartnerKind,
   PublicUser,
+  ReportedPartnerKind,
   ResumeInfo,
   StudentProfileUpdate,
   StudentProfileView,
 } from "@pitchperfect/shared";
 import { toEmployerProfileView, toPublicUser, toStudentProfileView } from "../../db/mappers.js";
 import { EmployerProfile, StudentProfile, User } from "../../db/models/index.js";
-import { NotFoundError, UnauthenticatedError } from "../../errors.js";
+import { ConflictError, NotFoundError, UnauthenticatedError } from "../../errors.js";
 import { assertPdf, deleteResume, saveResume } from "../../services/files.js";
 import { removeResumeCopies } from "../applications/resume-copies.js";
 
@@ -64,15 +66,35 @@ export async function updateEmployerProfile(
   return { user, profile: toEmployerProfileView(profile) };
 }
 
-/** Records consent the first time only; later calls return the original timestamp. */
-export async function recordPracticeConsent(userId: string): Promise<string> {
+/**
+ * Records that the student accepted the practice notice for `partner`. The notice must be the one
+ * for the partner that answers now (`current`), else `409`: the student read the other wording.
+ * The first acceptance for a kind is kept; accepting the notice for a new kind (or again after a
+ * consent stored without one) replaces it with a new timestamp.
+ */
+export async function recordPracticeConsent(
+  userId: string,
+  partner: ReportedPartnerKind,
+  current: PracticePartnerKind,
+): Promise<{ practiceConsentAt: string; practiceConsentPartner: ReportedPartnerKind }> {
+  if (partner !== current) {
+    throw new ConflictError(
+      "conflict",
+      "The practice partner has changed. Read the new notice and accept it again",
+    );
+  }
   await User.updateOne(
-    { _id: userId, practiceConsentAt: null },
-    { $set: { practiceConsentAt: new Date() } },
+    { _id: userId, practiceConsentPartner: mongoose.trusted({ $ne: partner }) },
+    { $set: { practiceConsentAt: new Date(), practiceConsentPartner: partner } },
   );
-  const user = await User.findById(userId).select("practiceConsentAt").lean();
-  if (!user?.practiceConsentAt) throw new UnauthenticatedError();
-  return user.practiceConsentAt.toISOString();
+  const user = await User.findById(userId)
+    .select("practiceConsentAt practiceConsentPartner")
+    .lean();
+  if (!user?.practiceConsentAt || !user.practiceConsentPartner) throw new UnauthenticatedError();
+  return {
+    practiceConsentAt: user.practiceConsentAt.toISOString(),
+    practiceConsentPartner: user.practiceConsentPartner,
+  };
 }
 
 /**

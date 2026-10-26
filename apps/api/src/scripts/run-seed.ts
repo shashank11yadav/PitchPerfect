@@ -128,7 +128,13 @@ function ensureUser(ctx: Context, spec: UserSpec): Promise<Types.ObjectId> {
       name,
       passwordHash: await hashPassword(password ?? randomBytes(32).toString("base64url")),
       emailVerifiedAt: ctx.now,
-      ...(role === "student" && { ageConfirmedAt: ctx.now, practiceConsentAt: ctx.now }),
+      // Seeded students accepted the scripted partner's notice; against a live model they are
+      // asked again before their first call.
+      ...(role === "student" && {
+        ageConfirmedAt: ctx.now,
+        practiceConsentAt: ctx.now,
+        practiceConsentPartner: "scripted",
+      }),
     }),
   );
 }

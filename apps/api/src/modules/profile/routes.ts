@@ -11,6 +11,7 @@ import { requireAuth, requireRole, userOf } from "../../middleware/auth.js";
 import { byUser, rateLimit } from "../../middleware/rate-limit.js";
 import { uploadResume } from "../../middleware/upload.js";
 import { validate } from "../../middleware/validate.js";
+import type { CoachProbe } from "../../services/coach-probe.js";
 import type { AuthDeps } from "../auth/service.js";
 import { profileHandlers } from "./handlers.js";
 
@@ -25,8 +26,13 @@ function validateProfileByRole(): RequestHandler {
   };
 }
 
+export interface ProfileDeps extends AuthDeps {
+  /** The cached coach health: a practice consent must be for the partner that answers now. */
+  coachProbe: CoachProbe;
+}
+
 /** `/api/me/*` per docs/api.md (lessons live in their own module). */
-export function profileRoutes(deps: AuthDeps): Router {
+export function profileRoutes(deps: ProfileDeps): Router {
   const handle = profileHandlers(deps);
   // These re-check the password, so they must not be a way to guess it: 5 tries an hour per user.
   const limit = (name: string) => rateLimit(name, { windowMs: HOUR_MS, limit: 5, key: byUser });

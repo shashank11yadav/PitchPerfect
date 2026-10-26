@@ -110,7 +110,11 @@ export async function practiceStudent(
 ) {
   const student = await createStudent({ verified: options.verified });
   if (options.consent !== false) {
-    await User.updateOne({ _id: student.user._id }, { practiceConsentAt: new Date() });
+    // The test coach runs the scripted partner.
+    await User.updateOne(
+      { _id: student.user._id },
+      { practiceConsentAt: new Date(), practiceConsentPartner: "scripted" },
+    );
   }
   const session = await signIn(request.agent(app), student.email, student.password);
   return { ...student, session };

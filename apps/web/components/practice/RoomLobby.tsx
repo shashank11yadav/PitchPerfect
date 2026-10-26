@@ -68,7 +68,11 @@ interface RoomLobbyProps {
  */
 export function RoomLobby({ skill, jobId, room, quota }: RoomLobbyProps) {
   const { user, refresh } = useSession();
-  const needsConsent = user?.practiceConsentAt == null;
+  const accepted = user?.practiceConsentAt == null ? null : user.practiceConsentPartner;
+  // A notice accepted for another kind of partner, or before the kind was kept, is asked again
+  // once the quota says which partner answers now.
+  const needsConsent = accepted == null || (quota.state === "ready" && accepted !== quota.partner);
+  const renewal = user?.practiceConsentAt != null;
   // The notice opens by itself while it's needed; after "Not now", Start opens it again.
   const [consentWanted, setConsentOpen] = useState(true);
   const consentOpen = needsConsent && consentWanted;
@@ -180,6 +184,8 @@ export function RoomLobby({ skill, jobId, room, quota }: RoomLobbyProps) {
 
       <ConsentDialog
         partner={quota.partner}
+        renewal={renewal}
+        onPartnerChanged={quota.reload}
         open={consentOpen}
         onClose={() => {
           setConsentOpen(false);

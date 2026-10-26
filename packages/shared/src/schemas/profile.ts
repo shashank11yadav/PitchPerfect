@@ -4,6 +4,7 @@ import { LIMITS } from "../limits.js";
 import type { SkillSlug } from "../skills.js";
 import { skillSlug } from "./coach.js";
 import { nameField, shortText } from "./common.js";
+import { REPORTED_PARTNER_KINDS } from "./practice.js";
 
 /** Allowed graduation years relative to the current (UTC) year. */
 export function gradYearRange(now: Date = new Date()): { min: number; max: number } {
@@ -55,8 +56,14 @@ export const EmployerProfileUpdateSchema = z
   .partial();
 export type EmployerProfileUpdate = z.infer<typeof EmployerProfileUpdateSchema>;
 
-/** `POST /api/me/practice-consent`: the student accepted the practice notice. */
-export const PracticeConsentSchema = z.strictObject({ accepted: z.literal(true) });
+/**
+ * `POST /api/me/practice-consent`: the student accepted the practice notice, worded for `partner`,
+ * the kind of partner the notice they read described.
+ */
+export const PracticeConsentSchema = z.strictObject({
+  accepted: z.literal(true),
+  partner: z.enum(REPORTED_PARTNER_KINDS),
+});
 export type PracticeConsent = z.infer<typeof PracticeConsentSchema>;
 
 /** `PUT /api/me/lessons/:skill`: mark a lesson done or not done. */

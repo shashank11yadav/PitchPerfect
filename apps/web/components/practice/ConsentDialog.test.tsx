@@ -92,7 +92,42 @@ describe("ConsentDialog", () => {
       expect(onAccepted).toHaveBeenCalled();
     });
     const post = fetchMock.mock.calls.find(([url]) => url === "/api/me/practice-consent");
-    expect(bodyOf(post?.[1])).toEqual({ accepted: true });
+    // The notice says which partner it was worded for.
+    expect(bodyOf(post?.[1])).toEqual({ accepted: true, partner: "live" });
+  });
+
+  it("asks again in its own words when an earlier notice was accepted", () => {
+    render(<ConsentDialog open renewal partner="live" onClose={vi.fn()} onAccepted={vi.fn()} />);
+    const dialog = screen.getByRole("dialog", { name: "Before your next practice call" });
+    expect(dialog).toHaveTextContent("This notice has changed since you accepted it.");
+    expect(dialog).toHaveTextContent(/Your practice partner is an AI/);
+    expect(dialog).not.toHaveTextContent(/only see this once/);
+  });
+
+  it("asks for the new notice when the partner changed while this one was open", async () => {
+    const user = userEvent.setup();
+    const onAccepted = vi.fn();
+    const onPartnerChanged = vi.fn();
+    serveApi({
+      "GET /api/auth/csrf": csrf,
+      "POST /api/me/practice-consent": () =>
+        errorResponse(409, "conflict", "The practice partner has changed"),
+    });
+    render(
+      <ConsentDialog
+        open
+        partner="scripted"
+        onClose={vi.fn()}
+        onAccepted={onAccepted}
+        onPartnerChanged={onPartnerChanged}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "I understand" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your practice partner just changed, so this notice has too. Read it again.",
+    );
+    expect(onPartnerChanged).toHaveBeenCalledTimes(1);
+    expect(onAccepted).not.toHaveBeenCalled();
   });
 
   it("keeps the dialog open and explains a failure", async () => {
@@ -118,7 +153,11 @@ describe("ConsentDialog", () => {
         const me = studentMe();
         return jsonResponse({
           ...me,
-          user: { ...me.user, practiceConsentAt: consented ? "2026-10-20T16:00:00.000Z" : null },
+          user: {
+            ...me.user,
+            practiceConsentAt: consented ? "2026-10-20T16:00:00.000Z" : null,
+            practiceConsentPartner: consented ? "live" : null,
+          },
         });
       },
       "GET /api/practice/quota": () => jsonResponse(QUOTA),
@@ -150,5 +189,69 @@ describe("ConsentDialog", () => {
     const start = fetchMock.mock.calls.find(([url]) => url === "/api/practice/sessions");
     expect(bodyOf(start?.[1])).toEqual({ skill: "pitching" });
     expect(window.location.pathname).toBe("/app/practice/attempt/65f1c0ffee00000000000b01");
+  });
+
+  /** The lobby for a student who accepted the notice for `accepted`, while `partner` answers. */
+  function lobbyAfter(accepted: string | null, partner: string) {
+    let consented = accepted;
+    const fetchMock = serveApi({
+      "GET /api/auth/csrf": csrf,
+      "GET /api/auth/me": () => {
+        const me = studentMe();
+        return jsonResponse({
+          ...me,
+          user: {
+            ...me.user,
+            practiceConsentAt: "2026-10-01T00:00:00.000Z",
+            practiceConsentPartner: consented,
+          },
+        });
+      },
+      "GET /api/practice/quota": () => jsonResponse({ ...QUOTA, practicePartner: partner }),
+      "GET /api/practice/attempts?pageSize=1": () =>
+        jsonResponse({ items: [], page: 1, pageSize: 1, total: 0 }),
+      "POST /api/me/practice-consent": () => {
+        consented = partner;
+        return jsonResponse({ practiceConsentAt: "2026-10-20T16:00:00.000Z" });
+      },
+      "POST /api/practice/sessions": () => jsonResponse(STARTED, 201),
+    });
+    renderSignedIn(<PracticeRoom skill="pitching" />);
+    return fetchMock;
+  }
+
+  it("asks again, worded for a live model, once the scripted partner is replaced", async () => {
+    const user = userEvent.setup();
+    const fetchMock = lobbyAfter("scripted", "live");
+
+    const dialog = await screen.findByRole("dialog", { name: "Before your next practice call" });
+    expect(dialog).toHaveTextContent(/Your practice partner is an AI/);
+    expect(dialog).toHaveTextContent(/goes to an AI provider/);
+    await user.click(within(dialog).getByRole("button", { name: "Not now" }));
+    await user.click(await screen.findByRole("button", { name: "Start the call" }));
+    expect(screen.getByRole("dialog", { name: "Before your next practice call" })).toBeVisible();
+    expect(callsTo(fetchMock, "POST /api/practice/sessions")).toBe(0);
+
+    await user.click(screen.getByRole("button", { name: "I understand" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    const post = fetchMock.mock.calls.find(([url]) => url === "/api/me/practice-consent");
+    expect(bodyOf(post?.[1])).toEqual({ accepted: true, partner: "live" });
+  });
+
+  it("asks again for a notice accepted before the kind was kept", async () => {
+    lobbyAfter(null, "scripted");
+    const dialog = await screen.findByRole("dialog", { name: "Before your next practice call" });
+    await waitFor(() => {
+      expect(dialog).toHaveTextContent(/scripted partner runs on our own server/);
+    });
+  });
+
+  it("doesn't ask again while the same kind of partner answers", async () => {
+    lobbyAfter("scripted", "scripted");
+    expect(await screen.findByRole("button", { name: "Start the call" })).toBeEnabled();
+    await screen.findByText(/This demo’s practice partner is scripted/);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

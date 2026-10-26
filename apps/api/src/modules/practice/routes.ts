@@ -3,6 +3,7 @@ import { AttemptListQuerySchema, StartPracticeSchema, TurnSchema } from "@pitchp
 import { requireConsent, requireRole, requireVerified } from "../../middleware/auth.js";
 import { byUser, rateLimit } from "../../middleware/rate-limit.js";
 import { IdParamSchema, validate } from "../../middleware/validate.js";
+import { practicePartnerOf } from "../../services/coach-probe.js";
 import { practiceHandlers } from "./handlers.js";
 import type { PracticeDeps } from "./service.js";
 
@@ -24,6 +25,7 @@ export function practiceRoutes(deps: PracticeDeps): Router {
   });
   const endLimit = rateLimit("practice-end", { windowMs: 10 * MINUTE_MS, limit: 20, key: byUser });
   const withId = validate({ params: IdParamSchema });
+  const consented = requireConsent(async () => practicePartnerOf(await deps.coachProbe()));
 
   const router = Router();
   router.get("/quota", student, handle.quota);
@@ -31,7 +33,7 @@ export function practiceRoutes(deps: PracticeDeps): Router {
     "/sessions",
     student,
     requireVerified,
-    requireConsent,
+    consented,
     startLimit,
     validate({ body: StartPracticeSchema }),
     handle.start,

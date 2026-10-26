@@ -41,6 +41,8 @@ function DemoSession({ children }: { children: ReactNode }) {
         lastName: "Visitor",
         emailVerifiedAt: VISITOR_SINCE,
         practiceConsentAt,
+        // The demo's notice is always the one for the partner in this tab.
+        practiceConsentPartner: practiceConsentAt ? "browser" : null,
       },
       refresh: () => Promise.resolve("signed_in"),
       signOut: () => Promise.resolve(),
