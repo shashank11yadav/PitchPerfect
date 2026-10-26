@@ -25,6 +25,11 @@ export interface RateLimitOptions {
    * taken back off the counter. For limits on what a request does, such as emails sent.
    */
   successfulOnly?: boolean;
+  /**
+   * Count only requests that fail (any 4xx or 5xx, the 429 itself included): a successful one is
+   * taken back off the counter. For limits on failed attempts, such as wrong passwords.
+   */
+  failedOnly?: boolean;
 }
 
 const hashed = (key: string) => createHash("sha256").update(key).digest("hex");
@@ -51,6 +56,7 @@ export function rateLimit(name: string, options: RateLimitOptions): RequestHandl
       ? { keyGenerator: (req: Request) => hashed(options.key(req)) }
       : { keyGenerator: options.key, store: createRateLimitStore(name) }),
     skipFailedRequests: options.successfulOnly ?? false,
+    skipSuccessfulRequests: options.failedOnly ?? false,
     standardHeaders: "draft-8",
     legacyHeaders: false,
     handler: (req, _res, next) => {

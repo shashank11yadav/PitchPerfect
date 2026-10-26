@@ -15,6 +15,8 @@ import type { AuthDeps } from "./service.js";
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
+/** Failed sign-ins are counted over 15 minutes; a blocked client waits out the window. */
+const SIGNIN_FAILURE_WINDOW_MS = 15 * MINUTE_MS;
 
 /**
  * The email in the (not yet validated) body, normalized like the schemas do. Limiters run before
@@ -37,6 +39,24 @@ export function authRoutes({ csrf, ...deps }: AuthRouteDeps): Router {
   const handle = authHandlers(deps, csrf);
   // The 5-per-minute window is also the backoff: a blocked client waits out the window.
   const signinLimit = rateLimit("signin", { windowMs: MINUTE_MS, limit: 5, key: byIpAndEmail });
+  // Credential stuffing tries many emails from one address: cap its failures across all emails.
+  // Successful sign-ins don't count, so a campus or office behind one address isn't blocked.
+  const signinIpFailures = rateLimit("signin-ip-failures", {
+    windowMs: SIGNIN_FAILURE_WINDOW_MS,
+    limit: 30,
+    key: byIp,
+    failedOnly: true,
+  });
+  // Guessing one account's password from many addresses: cap that email's failures across all
+  // addresses. It slows the email down for at most the window and never locks the account, so
+  // someone hammering an address can delay its owner by minutes, not shut them out (docs/limits.md).
+  // Unknown emails are counted the same way, so the answer says nothing about which exist.
+  const signinEmailFailures = rateLimit("signin-email-failures", {
+    windowMs: SIGNIN_FAILURE_WINDOW_MS,
+    limit: 10,
+    key: emailKey,
+    failedOnly: true,
+  });
   const signupLimit = rateLimit("signup", { windowMs: HOUR_MS, limit: 3, key: byIp });
   const resendLimit = rateLimit("resend-verification", {
     windowMs: HOUR_MS,
@@ -64,7 +84,14 @@ export function authRoutes({ csrf, ...deps }: AuthRouteDeps): Router {
     handle.verify,
   );
   router.post("/auth/resend-verification", requireAuth, resendLimit, handle.resend);
-  router.post("/auth/signin", signinLimit, validate({ body: SigninSchema }), handle.signin);
+  router.post(
+    "/auth/signin",
+    signinLimit,
+    signinIpFailures,
+    signinEmailFailures,
+    validate({ body: SigninSchema }),
+    handle.signin,
+  );
   router.post("/auth/signout", handle.signout);
   router.get("/auth/me", requireAuth, handle.me);
   router.post(
