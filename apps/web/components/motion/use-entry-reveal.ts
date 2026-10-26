@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
  */
 export type EntryPhase = "static" | "waiting" | "play";
 
-export const prefersReducedMotion = () =>
+const prefersReducedMotion = () =>
   typeof window.matchMedia !== "function" ||
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
