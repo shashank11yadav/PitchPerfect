@@ -63,9 +63,38 @@ describe("PATCH /api/employer/company", () => {
       pitch: "We sell demo widgets.",
       logoUrl: "https://cdn.acme-demo.example/logo.png",
       slug: company.slug,
-      verification: "verified",
+      // A new name needs a new approval.
+      verification: "unverified",
     });
     expect((await Company.findById(company._id))?.name).toBe("Acme Renamed");
+  });
+
+  it("drops the badge when the company is renamed", async () => {
+    const { session, company } = await employerSession(app, { email: MATCHING_EMAIL });
+
+    const res = await session
+      .patch("/api/employer/company")
+      .send({ name: "Northwind Hiring Group" });
+
+    expect(companyOf(res)).toMatchObject({
+      name: "Northwind Hiring Group",
+      verification: "unverified",
+    });
+    expect((await Company.findById(company._id))?.verification).toBe("unverified");
+  });
+
+  it("does not give the badge back when a renamed company's website moves away and back", async () => {
+    const { session } = await employerSession(app, { email: MATCHING_EMAIL });
+    await session.patch("/api/employer/company").send({ name: "Northwind Hiring Group" });
+
+    await session
+      .patch("/api/employer/company")
+      .send({ website: "https://elsewhere-demo.example" });
+    const res = await session
+      .patch("/api/employer/company")
+      .send({ website: "https://www.acme-demo.example" });
+
+    expect(companyOf(res).verification).toBe("unverified");
   });
 
   it("clears optional urls with null", async () => {
@@ -101,7 +130,7 @@ describe("PATCH /api/employer/company", () => {
     expect(companyOf(res).name).toBe("Acme Demo Co");
   });
 
-  it("demotes a verified company when the website no longer matches the owner's email domain", async () => {
+  it("drops the badge when the website moves to another domain", async () => {
     const { session, company } = await employerSession(app, { email: MATCHING_EMAIL });
 
     const res = await session
@@ -115,7 +144,17 @@ describe("PATCH /api/employer/company", () => {
     expect((await Company.findById(company._id))?.verification).toBe("unverified");
   });
 
-  it("promotes an unverified company when the website now matches the owner's email domain", async () => {
+  it("keeps the badge when the website stays on the same domain", async () => {
+    const { session } = await employerSession(app, { email: MATCHING_EMAIL });
+
+    const res = await session
+      .patch("/api/employer/company")
+      .send({ name: "Acme Demo Co", website: "https://careers.acme-demo.example/jobs" });
+
+    expect(companyOf(res).verification).toBe("verified");
+  });
+
+  it("never verifies a company from an edit, even when the website now matches the owner's email", async () => {
     const { session } = await employerSession(app, {
       email: MATCHING_EMAIL,
       companyVerified: false,
@@ -126,7 +165,7 @@ describe("PATCH /api/employer/company", () => {
       .patch("/api/employer/company")
       .send({ website: "https://www.acme-demo.example" });
 
-    expect(companyOf(res).verification).toBe("verified");
+    expect(companyOf(res).verification).toBe("unverified");
   });
 
   it("never touches a suspended company", async () => {

@@ -30,6 +30,21 @@ const toCompanyInput = (input: Record<string, unknown>) => ({
   logoUrl: input.logoUrl ?? null,
 });
 
+/** The badge vouches for a name on a domain, so the api drops it when either changes. */
+const BADGE_LOSS = "removes the Verified badge until an admin approves the company again.";
+
+/** What a save says, naming the change when it cost a verified company its badge. */
+function savedNews(before: PublicCompany, saved: PublicCompany): string {
+  if (before.verification !== "verified" || saved.verification !== "unverified") {
+    return "Company saved.";
+  }
+  const change =
+    saved.name === before.name
+      ? "Moving the website to another domain"
+      : "Changing the company name";
+  return `Company saved. ${change} removed the Verified badge until an admin approves the company again.`;
+}
+
 /** "PD" for "Pitchwell Demo Hiring Co": the mark shown where a logo would go. */
 function companyInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -73,7 +88,7 @@ function CompanyFields({
       });
       onSaved(saved);
       await refresh();
-      setNews("Company saved.");
+      setNews(savedNews(company, saved));
     },
     {
       initial: {
@@ -89,6 +104,7 @@ function CompanyFields({
     },
   );
   const pitchLength = typeof values.pitch === "string" ? values.pitch.length : 0;
+  const verified = company.verification === "verified";
 
   return (
     <form
@@ -99,7 +115,12 @@ function CompanyFields({
       }}
       className="flex flex-col gap-5"
     >
-      <Field label="Company name" required error={errors.name}>
+      <Field
+        label="Company name"
+        hint={verified ? `Changing it ${BADGE_LOSS}` : undefined}
+        required
+        error={errors.name}
+      >
         <Input
           {...register("name")}
           autoComplete="organization"
@@ -108,7 +129,7 @@ function CompanyFields({
       </Field>
       <Field
         label="Website"
-        hint="Changing it checks your verification again against your email’s domain."
+        hint={verified ? `Moving it to another domain ${BADGE_LOSS}` : undefined}
         required
         error={errors.website}
       >

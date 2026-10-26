@@ -88,6 +88,40 @@ describe("CompanyForm", () => {
     });
   });
 
+  it("says so when a rename removes the badge", async () => {
+    setup((init) =>
+      jsonResponse({
+        company: { ...company(), ...(bodyOf(init) as object), verification: "unverified" },
+      }),
+    );
+    const name = await screen.findByLabelText(/Company name/);
+    expect(name).toHaveAccessibleDescription(/removes the Verified badge/);
+    await userEvent.clear(name);
+    await userEvent.type(name, "Northwind Demo Hiring");
+    await userEvent.click(screen.getByRole("button", { name: "Save company" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Company saved. Changing the company name removed the Verified badge until an admin approves the company again.",
+    );
+    expect(screen.getByRole("heading", { name: "Not verified yet" })).toBeVisible();
+    // Nothing left to lose, so the warning goes.
+    expect(screen.getByLabelText(/Company name/)).not.toHaveAccessibleDescription(/badge/);
+  });
+
+  it("names the domain move when that removes the badge", async () => {
+    setup((init) =>
+      jsonResponse({
+        company: { ...company(), ...(bodyOf(init) as object), verification: "unverified" },
+      }),
+    );
+    const site = await screen.findByLabelText(/Website/);
+    await userEvent.clear(site);
+    await userEvent.type(site, "https://other-name.example");
+    await userEvent.click(screen.getByRole("button", { name: "Save company" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /Moving the website to another domain removed the Verified badge/,
+    );
+  });
+
   it("explains a write blocked by an unconfirmed email", async () => {
     setup(() => errorResponse(403, "email_not_verified", "Verify your email to continue"));
     await userEvent.click(await screen.findByRole("button", { name: "Save company" }));

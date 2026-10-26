@@ -52,6 +52,28 @@ SOFTWARE.
 
 The adapted components depend on `motion` 14.4.0 (MIT, https://github.com/motiondivision/motion), installed from npm.
 
+## email-providers
+
+- Package: `email-providers`, version 2.27.0
+- Source: https://github.com/derhuerst/email-providers (its list is built from https://github.com/goware/emailproviders)
+- License: ISC
+- Used for: the free mail domains that never verify a company (`apps/api/src/services/company-verification.ts`). The package is installed from npm and not modified.
+
+```
+Copyright (c) 2025, Jannis R
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+```
+
+## disposable-email-domains-js
+
+- Package: `disposable-email-domains-js`, version 1.26.0
+- Source: https://github.com/mziyut/disposable-email-domains-js (its list comes from https://github.com/disposable-email-domains/disposable-email-domains)
+- License: CC0 1.0 Universal (public domain dedication, https://creativecommons.org/publicdomain/zero/1.0/legalcode); no notice is required, it is listed here for completeness
+- Used for: the throwaway mail domains that never verify a company (`apps/api/src/services/company-verification.ts`). The package is installed from npm and not modified.
+
 ## Apache License, Version 2.0
 
 The full text of the license that covers Paper Shaders:

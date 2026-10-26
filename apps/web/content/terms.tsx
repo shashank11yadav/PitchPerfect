@@ -81,8 +81,10 @@ export const termsSections = (partner: PracticePartnerKind): readonly LegalSecti
           to consider them for your role.
         </li>
         <li>
-          A verified badge means your work email matches your company&apos;s website. It is not an
-          endorsement. We may suspend a company, which hides its jobs everywhere.
+          A verified badge means your work email matches your company&apos;s website. Changing the
+          company&apos;s name or moving its website to another domain removes the badge until we
+          approve the company again. It is not an endorsement. We may suspend a company, which hides
+          its jobs everywhere.
         </li>
       </ul>
     ),

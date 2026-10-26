@@ -121,7 +121,7 @@ All collections have `createdAt`/`updatedAt` timestamps. IDs are ObjectIds. Neve
 ### Sign up → verify → sign in
 
 1. `POST /api/auth/signup` validates with `SignupSchema` (shared), checks password policy, creates `users` + role profile (+ `companies` for employers, always created `unverified`), sends a verification email with a single-use token (stored hashed, 24 h expiry).
-2. `POST /api/auth/verify-email {token}` marks `emailVerifiedAt`. For employers, the company is then promoted to `verified` if the now-confirmed email's registrable domain matches the company website's (free-mail domains never match; a `suspended` company is never changed).
+2. `POST /api/auth/verify-email {token}` marks `emailVerifiedAt`. For employers, the company is then promoted to `verified` if the now-confirmed email's registrable domain matches the company website's (free and disposable mail domains never match, matched case-insensitively and including their subdomains against the `email-providers` and `disposable-email-domains-js` lists; a `suspended` company is never changed). Renaming the company, or moving its website to another registrable domain, later turns a `verified` company back to `unverified` until an admin approves it again.
 3. `POST /api/auth/signin` verifies argon2id hash, regenerates the session ID, stores `{userId, role}` in the session. The cookie is `pp.sid`, `httpOnly`, `Secure` (prod), `SameSite=Lax`, rolling 7 days, absolute 30 days.
 
 ### Practice session

@@ -38,10 +38,11 @@ export function VerificationBanner({ verification, website, className }: Verific
       title: "Not verified yet",
       body: (
         <>
-          Your jobs show an “Unverified employer” badge and stay out of search engines for now. This
-          clears on its own once your email is confirmed and it’s on your website’s domain, like{" "}
-          <span className="font-semibold [overflow-wrap:anywhere]">you@{domain}</span>. If your
-          email is on a different domain, an admin checks the company and approves it by hand.
+          Your jobs show an “Unverified employer” badge and stay out of search engines for now.
+          Confirming an email on your website’s domain, like{" "}
+          <span className="font-semibold [overflow-wrap:anywhere]">you@{domain}</span>, verifies the
+          company on its own. Otherwise, or after you change the company’s name or website domain,
+          an admin checks the company and approves it by hand.
         </>
       ),
     },

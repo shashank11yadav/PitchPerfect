@@ -9,6 +9,8 @@ describe("verificationForCompany", () => {
     ["mail.acme-demo.com", "https://www.acme-demo.com"],
     ["ACME-demo.com", "https://www.Acme-Demo.com"],
     ["acme-demo.co.uk", "https://acme-demo.co.uk"],
+    // A company on the same country domain as a blocked provider still verifies.
+    ["careers.acme-demo.de", "https://www.acme-demo.de"],
   ])("verifies %s against %s", (emailDomain, website) => {
     expect(verificationForCompany(emailDomain, website)).toBe("verified");
   });
@@ -26,6 +28,21 @@ describe("verificationForCompany", () => {
     ["acme-demo.com", "not a url"],
     ["acme-demo.com", "https://192.0.2.10"],
   ])("does not verify %s against %s", (emailDomain, website) => {
+    expect(verificationForCompany(emailDomain, website)).toBe("unverified");
+  });
+
+  it.each([
+    ["yahoo.co.uk", "https://www.yahoo.co.uk"],
+    ["gmx.de", "https://www.gmx.de"],
+    ["web.de", "https://web.de"],
+    ["mail.ru", "https://mail.ru"],
+    ["hotmail.co.uk", "https://hotmail.co.uk"],
+    ["libero.it", "https://libero.it"],
+    ["mailinator.com", "https://www.mailinator.com"],
+    // Case and subdomains don't get around the list.
+    ["GMX.DE", "https://www.gmx.de"],
+    ["mail.yahoo.co.uk", "https://yahoo.co.uk"],
+  ])("never verifies the free or disposable mail domain %s", (emailDomain, website) => {
     expect(verificationForCompany(emailDomain, website)).toBe("unverified");
   });
 
