@@ -1,4 +1,5 @@
 import type { ScenarioPrivate } from "@pitchperfect/shared";
+import { containsCanary } from "./canary.js";
 import { canonical, padded, plainWords, readingsOf, wordsOf, type Readings } from "./canonical.js";
 
 const SHINGLE_WORDS = 6;
@@ -171,10 +172,22 @@ function saidOutright(phrases: readonly KeyPhrase[], { plain }: Readings): boole
  *   in some reading of the reply but not in what it plainly says;
  * - two or more objections are said outright in one reply: that is the list.
  */
-export function createScenarioLeakScanner({
+export function createScenarioLeakScanner(scenario: ScenarioPrivate): (reply: string) => boolean {
+  const fragments = fragmentCheck(scenario);
+  const objections = scenario.hiddenObjections.map(keyPhrases);
+  return (reply) => {
+    const readings = readingsOf(reply);
+    return (
+      fragments(readings) || objections.filter((entry) => saidOutright(entry, readings)).length >= 2
+    );
+  };
+}
+
+/** A recited win condition, or a key phrase, name or figure that only a trick shows. */
+function fragmentCheck({
   hiddenObjections,
   winConditions,
-}: ScenarioPrivate): (reply: string) => boolean {
+}: ScenarioPrivate): (readings: Readings) => boolean {
   const recitesWin = phraseCheck(
     winConditions.flatMap((entry) => {
       const words = wordsOf(canonical(entry));
@@ -182,16 +195,29 @@ export function createScenarioLeakScanner({
     }),
   );
   const entries = [...hiddenObjections, ...winConditions];
-  const phrases = entries.flatMap(keyPhrases);
-  const tokens = entries.flatMap(distinctiveTokens);
-  const objections = hiddenObjections.map(keyPhrases);
-  return (reply) => {
-    const readings = readingsOf(reply);
+  const phrases = [...entries.flatMap(keyPhrases), ...entries.flatMap(distinctiveTokens)];
+  return (readings) => {
     const words = readings.worded.map((reading) => padded(wordsOf(reading)));
-    return (
-      recitesWin(readings) ||
-      [...phrases, ...tokens].some((phrase) => hidden(phrase, readings, words)) ||
-      objections.filter((entry) => saidOutright(entry, readings)).length >= 2
-    );
+    return recitesWin(readings) || phrases.some((phrase) => hidden(phrase, readings, words));
+  };
+}
+
+/**
+ * Builds a check for a secret spread over the partner's replies in a session: `earlier` holds its
+ * replies so far, read together with the new one, one line each. It finds half the canary in
+ * pieces across replies, and a win condition or a key phrase, name or figure of the hidden
+ * scenario completed by the new reply through a trick, as in {@link createScenarioLeakScanner}.
+ * Objections said outright are left out: the persona raises them one reply at a time.
+ */
+export function createSessionLeakScanner(
+  scenario: ScenarioPrivate,
+  earlier: readonly string[],
+): (reply: string) => boolean {
+  if (earlier.length === 0) return () => false;
+  const before = `${earlier.join("\n")}\n`;
+  const fragments = fragmentCheck(scenario);
+  return (reply) => {
+    const session = before + reply;
+    return containsCanary(session) || fragments(readingsOf(session));
   };
 }

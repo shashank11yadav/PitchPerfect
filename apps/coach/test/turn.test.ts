@@ -232,7 +232,7 @@ describe("POST /v1/turn", () => {
     const moderator = stubModerator((text) => text.includes("idiot"));
     const { events } = await turn(provider, request(), moderator);
     expect(events.map((e) => e.event)).toEqual(["delta", "retract", "done"]);
-    expect(streamed(events)).toBe("That sounds expensive. ");
+    expect(streamed(events)).toBe("That sounds expensive.");
     const done = doneOf(events);
     expect(named(events, "retract")[0]?.data).toEqual({ type: "retract", text: done?.finalText });
     expect(JSON.stringify(events)).not.toMatch(/idiot|go on/);
@@ -256,9 +256,9 @@ describe("POST /v1/turn", () => {
     const { events } = await turn(provider, request(), moderator);
     expect(started.slice(0, 2)).toEqual(["First point here.", "Second point here."]);
     expect(named(events, "delta").map((e) => (e.data as { text: string }).text)).toEqual([
-      "First point here. ",
-      "Second point here. ",
-      "Third point here. ",
+      "First point here.",
+      " Second point here.",
+      " Third point here.",
     ]);
     // Three sentence checks; the whole reply is checked once more at the end.
     expect(moderator.seen).toHaveLength(4);
@@ -318,7 +318,7 @@ describe("POST /v1/turn", () => {
       chunks: [["That is a fair question. [", "[stage:obj", "ection]", "]"]],
     });
     const { events } = await turn(provider);
-    expect(streamed(events)).toBe("That is a fair question. ");
+    expect(streamed(events)).toBe("That is a fair question.");
     expect(doneOf(events)).toMatchObject({
       stage: "objection",
       finalText: "That is a fair question.",

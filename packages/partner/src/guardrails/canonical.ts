@@ -191,32 +191,47 @@ function spelled(text: string): string {
 
 const reversed = (text: string) => Array.from(text).reverse().join("");
 
+/** Tag characters that mirror printable ASCII (U+E0020–U+E007E): invisible, yet machine-readable. */
+const TAG_CHAR = /[\u{E0020}-\u{E007E}]/gu;
+
+/** The ASCII text written in tag characters, all of them in order; empty when there are none. */
+const tagged = (text: string) =>
+  Array.from(text.match(TAG_CHAR) ?? [], (char) =>
+    String.fromCharCode((char.codePointAt(0) ?? 0) - 0xe0000),
+  ).join("");
+
 /** Every way a reply can be read, for the leak checks. */
 export interface Readings {
   /** Words as a reader sees them, padded: what the reply plainly says. */
   plain: string;
-  /** The canonical text, its reverse, and each decoded run, canonical too. */
+  /** The canonical text, its reverse, each decoded run, and any text in tag characters. */
   worded: readonly string[];
   /** Characters spelled one at a time in any of `worded`, with no word breaks. */
   spelled: readonly string[];
 }
 
-let last: { text: string; readings: Readings } | undefined;
+/** How many recent results are kept: the reply so far, and the session's replies with it. */
+const KEEP = 2;
+const recent: { text: string; readings: Readings }[] = [];
 
 /**
- * Reads a reply every way a trick could hide text in it. The filter checks the same text for the
- * canary, the instructions and the scenario in a row, so the last result is kept.
+ * Reads a reply every way a trick could hide text in it. The filter checks the same texts for the
+ * canary, the instructions and the scenario in a row, so the last two results are kept.
  */
 export function readingsOf(text: string): Readings {
-  if (last?.text === text) return last.readings;
+  const known = recent.find((entry) => entry.text === text);
+  if (known) return known.readings;
   const visible = stripInvisible(text).normalize("NFKC");
   const forward = canonical(text);
+  const hidden = tagged(text);
   const worded = [forward, reversed(forward), ...decoded(visible).map(canonical)];
+  if (hidden !== "") worded.push(...[hidden, ...decoded(hidden)].map(canonical));
   const readings = {
     plain: plainWords(text),
     worded,
     spelled: worded.map(spelled).filter((letters) => letters !== ""),
   };
-  last = { text, readings };
+  recent.unshift({ text, readings });
+  recent.length = Math.min(recent.length, KEEP);
   return readings;
 }

@@ -1,4 +1,10 @@
-import { SKILLS, type SkillSlug, type Stage, type TranscriptEntry } from "@pitchperfect/shared";
+import {
+  LIMITS,
+  SKILLS,
+  type SkillSlug,
+  type Stage,
+  type TranscriptEntry,
+} from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
 import { createPracticeDeps } from "../deps.js";
 import { FakeProvider, VOICES } from "@pitchperfect/scripted-partner";
@@ -15,7 +21,11 @@ import {
   SCENARIO_VARIANTS,
   type LeakVariant,
 } from "./leak-corpus.js";
-import { createLeakScanner, createScenarioLeakScanner } from "./leak-scan.js";
+import {
+  createLeakScanner,
+  createScenarioLeakScanner,
+  createSessionLeakScanner,
+} from "./leak-scan.js";
 
 const leaksRules = createLeakScanner(TURN_LEAK_SOURCE);
 const leaksScenario = createScenarioLeakScanner(LEAK_SCENARIO);
@@ -94,12 +104,40 @@ describe("the hidden scenario fixture", () => {
   it("lets the persona raise its objections out loud, one at a time", () => {
     expect(SCENARIO_BENIGN.filter(leaks)).toEqual([]);
   });
+
+  it("lets the persona raise them in a row of replies in one session", () => {
+    expect(sessionLeaks(SCENARIO_BENIGN)).toEqual([]);
+  });
 });
+
+/** The partner's replies a turn's transcript can hold, every other entry. */
+const SESSION_REPLIES = LIMITS.transcriptMaxEntries / 2;
+
+/** Each line the session check flags, read after the lines before it in the same transcript. */
+const sessionLeaks = (lines: readonly string[]) =>
+  lines.filter((line, i) =>
+    createSessionLeakScanner(LEAK_SCENARIO, lines.slice(Math.max(0, i - SESSION_REPLIES), i))(line),
+  );
 
 describe("the benign corpus", () => {
   it("has no leak in any line", () => {
     expect(BENIGN.length).toBeGreaterThan(500);
     expect(BENIGN.filter(leaks)).toEqual([]);
+  });
+
+  it("has no leak across a session's worth of lines in a row", () => {
+    expect(sessionLeaks(BENIGN)).toEqual([]);
+  });
+
+  it("holds no canary in pieces across a session's worth of lines, for any canary", () => {
+    const checks = Array.from({ length: 50 }, () => canaryCheck(randomCanary()));
+    for (let start = 0; start < BENIGN.length; start += SESSION_REPLIES) {
+      const session = BENIGN.slice(start, start + SESSION_REPLIES + 1).join("\n");
+      expect(
+        checks.filter((check) => check(session)),
+        session,
+      ).toHaveLength(0);
+    }
   });
 });
 
@@ -144,7 +182,7 @@ async function scriptedCall(skill: SkillSlug, seed: number, lines: readonly stri
     transcript.push({ role: "student", text: studentText }, { role: "partner", text });
     currentStage = stage ?? currentStage;
   }
-  return { scenarioPrivate, replies };
+  return { scenarioPrivate, opening: scenarioPublic.openingLine, replies };
 }
 
 describe("whole calls with the scripted partner", () => {
@@ -157,10 +195,21 @@ describe("whole calls with the scripted partner", () => {
         const start = (call * CALL_LINES) % BENIGN_LINES.length;
         call += 1;
         const lines = [...PITCH, ...BENIGN_LINES.slice(start, start + CALL_LINES)];
-        const { scenarioPrivate, replies } = await scriptedCall(slug, seed, lines);
+        const { scenarioPrivate, opening, replies } = await scriptedCall(slug, seed, lines);
         const leaksHere = createScenarioLeakScanner(scenarioPrivate);
-        for (const reply of replies) {
-          if (containsCanary(reply) || leaksRules(reply) || leaksHere(reply)) flagged.push(reply);
+        for (const [i, reply] of replies.entries()) {
+          const leaksSession = createSessionLeakScanner(scenarioPrivate, [
+            opening,
+            ...replies.slice(0, i),
+          ]);
+          if (
+            containsCanary(reply) ||
+            leaksRules(reply) ||
+            leaksHere(reply) ||
+            leaksSession(reply)
+          ) {
+            flagged.push(reply);
+          }
           const raised = scenarioPrivate.hiddenObjections.some((objection) =>
             reply.toLowerCase().includes(objection.slice(-14).toLowerCase()),
           );

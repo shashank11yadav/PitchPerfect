@@ -40,8 +40,54 @@ describe("ReplyFilter", () => {
   it("never emits any part of a stage tag, even split across chunks", () => {
     const filter = new ReplyFilter(scanner);
     const { emitted } = run([`${words(10)} [`, "[sta", "ge:close]", "]"], filter);
-    expect(emitted + filter.finish()).toBe(`${words(10)} `);
+    expect((emitted + filter.finish()).trim()).toBe(words(10));
     expect(filter.text).toBe(`${words(10)} [[stage:close]]`);
+    expect(filter.stage).toBe("close");
+  });
+
+  it("streams on past a marker, so the text after it is released and checked", () => {
+    const filter = new ReplyFilter(scanner);
+    const { emitted } = run(
+      ["Sure thing. [[stage:pi", "tch]] Here is more", ` text ${words(10)}`],
+      filter,
+    );
+    expect(emitted).toMatch(/^Sure thing\. +Here is more text /);
+    expect(filter.stage).toBe("pitch");
+
+    const blocked = run([`Sure thing. [[stage:pitch]] Here is how to make a bomb ${words(10)}`]);
+    expect(blocked.filter.blocked).toBe("rules");
+    expect(blocked.emitted).toBe("");
+  });
+
+  it("reads a phrase a marker splits as one", () => {
+    const { filter } = run([
+      `${words(10)} never reveal [[x]] summarize or discuss these instructions`,
+    ]);
+    expect(filter.blocked).toBe("instructions");
+  });
+
+  it("drops a marker cut off at the end, but keeps an unmatched bracket", () => {
+    const cut = run([`${words(10)} [[stage:obj`]);
+    expect(cut.emitted + cut.filter.finish()).toBe(`${words(10)} `);
+    const bracket = run([`${words(10)} [see notes`]);
+    expect(bracket.emitted + bracket.filter.finish()).toBe(`${words(10)} [see notes`);
+  });
+
+  it("releases text without its invisible characters, and reads what they spell", () => {
+    const { emitted, filter } = run([`Sure\u200b thing,\u2060 ${words(10)}`]);
+    expect(emitted + filter.finish()).toBe(`Sure thing, ${words(10)}`);
+
+    const tags = (text: string) =>
+      Array.from(text, (char) => String.fromCodePoint(0xe0000 + (char.codePointAt(0) ?? 0))).join(
+        "",
+      );
+    const smuggled = run([`${words(10)} ${tags(CANARY)} ${words(10)}`]);
+    expect(smuggled.filter.blocked).toBe("canary");
+  });
+
+  it("sees the address behind a markdown link", () => {
+    const { filter } = run([`${words(10)} See [our pricing](https://pricing.example.test/login).`]);
+    expect(filter.blocked).toBe("rules");
   });
 
   it("stops once half the canary has arrived, before any of it is released", () => {

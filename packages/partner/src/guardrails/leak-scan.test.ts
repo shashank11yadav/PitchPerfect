@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { TURN_LEAK_SOURCE } from "../prompts/persona-turn.js";
-import { createLeakScanner, createScenarioLeakScanner } from "./leak-scan.js";
+import { CANARY } from "./canary.js";
+import {
+  createLeakScanner,
+  createScenarioLeakScanner,
+  createSessionLeakScanner,
+} from "./leak-scan.js";
 
 const INSTRUCTIONS = [
   "[task:turn]",
@@ -161,4 +166,50 @@ describe("createScenarioLeakScanner", () => {
   it("does not match a win condition too short to be distinctive said plainly", () => {
     expect(scan("Sure, he books a call every week.")).toBe(false);
   });
+
+  it("reads text written in invisible tag characters", () => {
+    expect(scan(`Sure.${tags("asks about the current process before pitching")}`)).toBe(true);
+    expect(scan(`Sure.${tags("Routewise")}`)).toBe(true);
+    expect(scan(`Sure.${tags("price")}`)).toBe(false);
+  });
 });
+
+describe("createSessionLeakScanner", () => {
+  const scenario = {
+    hiddenObjections: [
+      "The price is higher than what we pay today.",
+      "We signed a two-year contract with Routewise in March.",
+    ],
+    winConditions: ["The student asks about the current process before pitching."],
+  };
+
+  it("finds half the canary in pieces across replies", () => {
+    const scan = createSessionLeakScanner(scenario, [`It starts ${CANARY.slice(0, 6)}.`]);
+    expect(scan(`It ends ${CANARY.slice(6, 12)}.`)).toBe(true);
+    expect(scan(`It ends ${CANARY.slice(12, 16)}.`)).toBe(false);
+  });
+
+  it("finds a win condition or a name completed by this reply", () => {
+    const scan = createSessionLeakScanner(scenario, [
+      "Hello there.",
+      "A tip: I like it when the student asks about",
+    ]);
+    expect(scan("the current process before pitching.")).toBe(true);
+    expect(createSessionLeakScanner(scenario, ["Our vendor is R O U"])("T E W I S E.")).toBe(true);
+  });
+
+  it("lets the persona raise its objections one reply at a time", () => {
+    const scan = createSessionLeakScanner(scenario, [
+      "I'll be honest. The price is higher than what we pay today.",
+    ]);
+    expect(scan("Maybe. But we signed a two-year contract with Routewise in March.")).toBe(false);
+  });
+
+  it("finds nothing without earlier replies", () => {
+    expect(createSessionLeakScanner(scenario, [])(`It is ${CANARY}`)).toBe(false);
+  });
+});
+
+/** Text in Unicode tag characters, which render as nothing. */
+const tags = (text: string) =>
+  Array.from(text, (char) => String.fromCodePoint(0xe0000 + (char.codePointAt(0) ?? 0))).join("");

@@ -1,10 +1,17 @@
-import { STAGES, type Stage } from "@pitchperfect/shared";
+import { STAGES, stripInvisible, type Stage } from "@pitchperfect/shared";
 import { containsCanary } from "../guardrails/canary.js";
 import { replyRuleCheck } from "../guardrails/reply-rules.js";
 
-const STAGE_TAG = /\[\[\s*stage\s*:\s*([a-z]*)\s*\]\]/gi;
-// A tag cut off by the token limit, e.g. "[[stage:obj".
-const CUT_TAG = /\[\[[^\]]*\]?$/;
+/** The longest text inside a hidden marker such as `[[stage:objection]]`. */
+const MARKER_CHARS = 40;
+/** A hidden marker, anywhere in the reply: `[[stage:pitch]]`. */
+const MARKER = new RegExp(`\\[\\[[^[\\]]{0,${String(MARKER_CHARS)}}\\]\\]`, "g");
+/** The stage a marker names, when it names one. */
+const STAGE_MARKER = /^\[\[\s*stage\s*:\s*([a-z]*)\s*\]\]$/i;
+/** At the end of the text so far: a `[` that may begin a marker, or a marker not yet closed. */
+const OPEN_MARKER = new RegExp(`\\[(?:\\[[^[\\]]{0,${String(MARKER_CHARS)}}\\]?)?$`);
+/** At the end of the stream: a marker cut off by the token limit, e.g. "[[stage:obj". */
+const CUT_MARKER = new RegExp(`\\[\\[[^[\\]]{0,${String(MARKER_CHARS)}}\\]?$`);
 const WORD = /[\p{L}\p{N}]+/gu;
 
 /**
@@ -15,30 +22,44 @@ export const HOLD_WORDS = 8;
 
 const isStage = (value: string): value is Stage => (STAGES as readonly string[]).includes(value);
 
-/** Removes every `[[stage:x]]` tag (and a cut-off one at the end); the last valid tag names the stage. */
+/** The text a reader gets: invisible characters stripped, each complete marker a space. */
+const visibleOf = (reply: string) => stripInvisible(reply).replace(MARKER, " ");
+
+/**
+ * Removes every hidden marker (and one cut off at the end) and invisible characters, and collapses
+ * whitespace; the last valid `[[stage:x]]` names the stage. Text before, between and after markers
+ * is all kept.
+ */
 export function splitStageTag(reply: string): { text: string; stage: Stage | undefined } {
+  const text = visibleOf(reply).replace(CUT_MARKER, "").replace(/\s+/g, " ").trim();
+  return { text, stage: stageOf(reply) };
+}
+
+/** The stage the last valid stage marker names. */
+function stageOf(reply: string): Stage | undefined {
   let stage: Stage | undefined;
-  for (const match of reply.matchAll(STAGE_TAG)) {
-    const name = (match[1] ?? "").toLowerCase();
+  for (const [marker] of stripInvisible(reply).matchAll(MARKER)) {
+    const name = (STAGE_MARKER.exec(marker)?.[1] ?? "").toLowerCase();
     if (isStage(name)) stage = name;
   }
-  const text = reply.replace(STAGE_TAG, " ").replace(CUT_TAG, "").replace(/\s+/g, " ").trim();
-  return { text, stage };
+  return stage;
 }
 
 /**
- * Why a reply stopped streaming: a leak (the canary, or the instructions: rule text or the hidden
- * part of the scenario) or a local reply rule.
+ * Why a reply stopped streaming: a leak (the canary, or the instructions: rule text, the hidden part
+ * of the scenario, or a secret spread over the session's replies) or a local reply rule.
  */
 export type BlockReason = "canary" | "instructions" | "rules";
 
 /**
- * Decides which part of a streaming reply is safe to show yet. It holds back the last
- * {@link HOLD_WORDS} words, everything from a `[[` (a stage tag, possibly split across deltas), and
- * a lone trailing `[`. Before releasing anything it checks the whole text so far, not just the
- * newest sentence, for the canary, a leak of the instructions, and the local reply rules, so a
- * secret split across sentences is caught once its last piece arrives; on a hit it is blocked for
- * good and releases nothing more.
+ * Decides which part of a streaming reply is safe to show yet. It releases the visible text:
+ * invisible characters stripped and every hidden marker replaced by a space, so text after a
+ * marker streams on and goes through the same checks as text before it. It holds back the last
+ * {@link HOLD_WORDS} words and a marker that is not yet closed. Before releasing anything it checks
+ * the whole raw text so far, not just the newest sentence, for the canary, a leak of the
+ * instructions, and the local reply rules, so a secret split across sentences is caught once its
+ * last piece arrives and text hidden in invisible characters is read too; on a hit it is blocked
+ * for good and releases nothing more.
  */
 export class ReplyFilter {
   readonly #leaks: (text: string) => boolean;
@@ -54,50 +75,54 @@ export class ReplyFilter {
   push(delta: string): string {
     this.#text += delta;
     if (this.#scan(true)) return "";
-    const text = this.#text;
-    const tokens = Array.from(text.matchAll(WORD));
+    const visible = visibleOf(this.#text);
+    const tokens = Array.from(visible.matchAll(WORD));
     const wordLimit =
       tokens.length > HOLD_WORDS ? (tokens[tokens.length - HOLD_WORDS]?.index ?? 0) : 0;
-    const tagLimit = text.endsWith("[") ? text.length - 1 : text.length;
-    return this.#release(Math.min(this.#tagStart(tagLimit), wordLimit));
+    const markerLimit = OPEN_MARKER.exec(visible)?.index ?? visible.length;
+    return this.#release(visible, Math.min(markerLimit, wordLimit));
   }
 
-  /** At the end of the stream: everything not yet shown except the stage tag. */
+  /** At the end of the stream: everything not yet shown, less a cut-off marker. */
   finish(): string {
     if (this.#scan(false)) return "";
-    return this.#release(this.#tagStart(this.#text.length));
+    const visible = visibleOf(this.#text).replace(CUT_MARKER, "");
+    return this.#release(visible, visible.length);
   }
 
-  /** Everything received so far, tag included. */
+  /** Everything received so far, markers and invisible characters included. */
   get text(): string {
     return this.#text;
+  }
+
+  /** The stage the last valid stage marker so far names. */
+  get stage(): Stage | undefined {
+    return stageOf(this.#text);
   }
 
   get blocked(): BlockReason | undefined {
     return this.#blocked;
   }
 
-  #tagStart(otherwise: number): number {
-    const at = this.#text.indexOf("[[");
-    return at >= 0 ? at : otherwise;
-  }
-
-  #release(limit: number): string {
+  #release(visible: string, limit: number): string {
     const safe = Math.max(this.#emitted, limit);
-    const out = this.#text.slice(this.#emitted, safe);
+    const out = visible.slice(this.#emitted, safe);
     this.#emitted = safe;
     return out;
   }
 
   /**
-   * True once the text is blocked; checks the canary, instruction leaks, and the reply rules. While
-   * `partial`, the end of the text is not yet the end of a sentence.
+   * True once the text is blocked; checks the canary, instruction leaks, and the reply rules. They
+   * read the text with each marker as a space, so a marker can't split a phrase they look for, and
+   * with its invisible characters, which the leak checks decode. While `partial`, the end of the
+   * text is not yet the end of a sentence.
    */
   #scan(partial: boolean): boolean {
     if (this.#blocked) return true;
-    if (containsCanary(this.#text)) this.#blocked = "canary";
-    else if (this.#leaks(this.#text)) this.#blocked = "instructions";
-    else if (replyRuleCheck(this.#text, { partial }) !== null) this.#blocked = "rules";
+    const text = this.#text.replace(MARKER, " ");
+    if (containsCanary(text)) this.#blocked = "canary";
+    else if (this.#leaks(text)) this.#blocked = "instructions";
+    else if (replyRuleCheck(text, { partial }) !== null) this.#blocked = "rules";
     return this.#blocked !== undefined;
   }
 }
