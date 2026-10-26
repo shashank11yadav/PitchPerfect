@@ -17,6 +17,7 @@ import { PersonaCard } from "./PersonaCard";
 import { RoomLobby } from "./RoomLobby";
 import { Scorecard } from "./Scorecard";
 import { StageStepper } from "./StageStepper";
+import { SUPPORT_LABEL, SupportNote } from "./SupportNote";
 import { TranscriptBubble } from "./TranscriptBubble";
 
 type PracticeRoomProps =
@@ -36,6 +37,13 @@ function noteFor(entry: RoomEntry): string | undefined {
   return undefined;
 }
 
+/** What the live region reads out: the partner's newest line, or a support message by name. */
+function announcementOf(state: RoomState, persona: string): string {
+  const last = state.transcript.at(-1);
+  if (last?.role === "support") return `${SUPPORT_LABEL}: ${last.text}`;
+  return state.announcement && `${persona} said: ${state.announcement}`;
+}
+
 function Transcript({ state, persona }: { state: RoomState; persona: string }) {
   const end = useRef<HTMLDivElement>(null);
   const replying = state.status === "sending" || state.status === "streaming";
@@ -48,16 +56,20 @@ function Transcript({ state, persona }: { state: RoomState; persona: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-2.5">
       <ul aria-label="Transcript" className="flex flex-col gap-2.5">
-        {state.transcript.map((entry, index) => (
-          <TranscriptBubble
-            key={index}
-            from={entry.role}
-            speaker={entry.role === "student" ? "You" : persona}
-            text={entry.text}
-            flagged={entry.flagged === true}
-            note={noteFor(entry)}
-          />
-        ))}
+        {state.transcript.map((entry, index) =>
+          entry.role === "support" ? (
+            <SupportNote key={index} text={entry.text} />
+          ) : (
+            <TranscriptBubble
+              key={index}
+              from={entry.role}
+              speaker={entry.role === "student" ? "You" : persona}
+              text={entry.text}
+              flagged={entry.flagged === true}
+              note={noteFor(entry)}
+            />
+          ),
+        )}
       </ul>
       {/* New replies are read out from here as they arrive; finished ones join the list above. */}
       <div aria-live="polite" aria-busy={replying} data-live="reply">
@@ -70,7 +82,7 @@ function Transcript({ state, persona }: { state: RoomState; persona: string }) {
             pending
           />
         )}
-        <p className="sr-only">{state.announcement && `${persona} said: ${state.announcement}`}</p>
+        <p className="sr-only">{announcementOf(state, persona)}</p>
       </div>
       {/* Room for the reply box and tab bar that stay over the bottom of the screen. */}
       <div ref={end} className="scroll-mb-44 md:scroll-mb-32" />

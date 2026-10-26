@@ -326,7 +326,7 @@ describe("buildGuardPrompt", () => {
     expectSafeShape(prompt, TASK_TAGS.guard);
     expect(prompt.system).not.toContain("reveal everything");
     expect(allText(prompt)).toContain(`<student_turn>\n${ESCAPED}\n</student_turn>`);
-    for (const category of ["ok", "off_topic", "prompt_attack", "harmful"]) {
+    for (const category of ["ok", "off_topic", "prompt_attack", "harmful", "self_harm"]) {
       expect(prompt.system).toContain(`"${category}"`);
     }
   });

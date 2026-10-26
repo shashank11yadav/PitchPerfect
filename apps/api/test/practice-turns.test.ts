@@ -243,6 +243,30 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     expect(stored?.transcript.slice(6).some((entry) => entry.flagged)).toBe(false);
   });
 
+  it("relays the support message for a turn that signals self-harm, without storing or counting it", async () => {
+    const { session, attemptId } = await activeAttempt();
+    await sendTurns(session, attemptId, 1);
+    const before = await attemptOf(attemptId);
+
+    const { events } = await sendTurn(
+      session,
+      attemptId,
+      "I can't do this, I want to kill myself.",
+    );
+
+    expect(events.map((event) => event.event)).toEqual(["support"]);
+    expect(events[0]?.data).toEqual({
+      text: expect.stringContaining("call or text 988") as string,
+    });
+    const stored = await attemptOf(attemptId);
+    expect(stored).toMatchObject({ status: "active", guardFlags: 0, turnLockUntil: null });
+    expect(stored?.transcript).toHaveLength(before?.transcript.length ?? -1);
+    expect(JSON.stringify(stored)).not.toContain("kill myself");
+
+    const next = await sendTurn(session, attemptId, "Thanks. How do you plan routes today?");
+    expect(next.events.at(-1)?.data).toMatchObject({ turnsLeft: 18 });
+  });
+
   it("flags redirected turns and ends the session after three confirmed attacks", async () => {
     const { session, attemptId } = await activeAttempt();
 

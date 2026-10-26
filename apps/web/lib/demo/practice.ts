@@ -358,6 +358,12 @@ export async function runDemoTurn(
           else if (turnsLeft === 0) onEvent({ type: "ended", reason: "turn_limit" });
           break;
         }
+        case "support":
+          // As on the api: the turn signalled self-harm, so its words are not kept and it uses
+          // no turn. The scripted partner makes no model calls, so there is no usage to keep.
+          progress.saved = true;
+          onEvent({ type: "support", text: event.text });
+          break;
         case "error":
           // The engine reports failures by throwing; this event never reaches the sink.
           break;

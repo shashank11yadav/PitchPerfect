@@ -147,6 +147,26 @@ test("a practice call by text runs in the browser through to a scorecard", async
   await expect(page.getByRole("heading", { name: /^Pitching with /, level: 2 })).toBeVisible();
 });
 
+test("a turn that signals self-harm gets the support message, apart from the partner", async ({
+  page,
+}) => {
+  await page.goto(at("practice/pitching/"));
+  const notice = page.getByRole("dialog", { name: "Before your first practice call" });
+  await notice.getByRole("button", { name: "I understand" }).click();
+  await page.getByRole("button", { name: "Start the call" }).click();
+  const typeInstead = page.getByRole("button", { name: "Type instead" });
+  if (await typeInstead.isVisible()) await typeInstead.click();
+
+  await page.getByLabel("Your turn").fill("Sorry, it's been a hard week. I want to end my life.");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  const note = page.getByRole("note", { name: "A message from PitchPerfect" });
+  await expect(note).toContainText("call or text 988");
+  await expect(note).toContainText("findahelpline.com");
+  await expect(page.getByText("20 turns left")).toBeVisible();
+  await expect(page.getByText(/keep this to business/)).toHaveCount(0);
+});
+
 test("the sign-in route says there are no accounts in the demo", async ({ page }) => {
   await page.goto(at("signin/"));
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(

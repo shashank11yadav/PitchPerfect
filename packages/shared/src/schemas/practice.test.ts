@@ -91,6 +91,7 @@ describe("PracticeEvent", () => {
       { type: "retract", text: "Sorry, could you say that again?" },
       { type: "done", stage: "pitch", turnsLeft: 0, finalText: "Go on." },
       { type: "redirect", text: "Let's get back to it." },
+      { type: "support", text: "In the US, call or text 988." },
       { type: "ended", reason: "guard_limit" },
       { type: "ended", reason: "turn_limit" },
       { type: "ended", reason: "expired" },
@@ -112,5 +113,6 @@ describe("PracticeEvent", () => {
     const usage = { provider: "fake", model: "fake", inputTokens: 1, outputTokens: 1 };
     expect(PracticeEvent.safeParse({ ...done, turnsLeft: 3, usage }).success).toBe(false);
     expect(PracticeEvent.safeParse({ type: "delta", text: "x", extra: 1 }).success).toBe(false);
+    expect(PracticeEvent.safeParse({ type: "support", text: "x", usage }).success).toBe(false);
   });
 });

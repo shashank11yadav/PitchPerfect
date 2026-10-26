@@ -151,6 +151,18 @@ async function relayTurn(
         if (turnsLeft === 0) stream.send({ type: "ended", reason: "turn_limit" });
         return { outcome: "done", stage, usage: event.usage };
       }
+      case "support": {
+        // The turn signalled self-harm: the student's words are not kept and the turn is not
+        // counted. Only the usage, if the model guard was asked, is charged.
+        await PracticeAttempt.updateOne(
+          { _id: attempt._id, status: "active" },
+          { $inc: tokensOf(event.usage) },
+        );
+        progress.stored = true;
+        await recordUsage(event.usage, new Date());
+        stream.send({ type: "support", text: event.text });
+        return { outcome: "support", stage: attempt.stage, usage: event.usage };
+      }
       case "redirect": {
         // Every redirected turn is flagged; only a confirmed attack counts toward the limit.
         const text = redactPii(event.text);

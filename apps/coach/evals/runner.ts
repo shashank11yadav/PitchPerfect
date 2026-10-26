@@ -49,11 +49,12 @@ export interface RunEvalsOptions {
 
 /**
  * What one student turn produced: a reply, an in-character redirect (a strike when the guards
- * confirmed an attack), or a refusal (HTTP 400).
+ * confirmed an attack), the out-of-character support message, or a refusal (HTTP 400).
  */
 type TurnOutcome =
   | { kind: "ok"; text: string; streamed: string; stage: Stage }
   | { kind: "redirect"; text: string; streamed: string; strike: boolean }
+  | { kind: "support"; text: string; streamed: string }
   | { kind: "rejected" };
 
 const isStrike = (outcome: TurnOutcome) => outcome.kind === "redirect" && outcome.strike;
@@ -123,9 +124,10 @@ async function playTurn(
     if (event.type === "redirect") {
       return { kind: "redirect", text: event.text, streamed, strike: event.strike };
     }
+    if (event.type === "support") return { kind: "support", text: event.text, streamed };
     if (event.type === "error") throw new Error(`/v1/turn sent an error event: ${event.code}`);
   }
-  throw new Error("/v1/turn ended without a done or redirect event");
+  throw new Error("/v1/turn ended without a done, redirect or support event");
 }
 
 interface Conversation {
@@ -136,8 +138,8 @@ interface Conversation {
 
 /**
  * Plans a scenario and plays the student turns against it, stopping once the guard-flag limit of
- * strikes is reached (the api ends the session there). A refused turn leaves no trace in the
- * transcript.
+ * strikes is reached (the api ends the session there). A refused turn, and one answered with the
+ * support message, leave no trace in the transcript, as on the api.
  */
 async function converse(post: Post, c: EvalCase): Promise<Conversation> {
   const plan = await postJson<CoachPlanResponse>(post, "/v1/plan", {
@@ -157,7 +159,7 @@ async function converse(post: Post, c: EvalCase): Promise<Conversation> {
     if (flags >= LIMITS.guardFlagLimit) break;
     const outcome = await playTurn(post, c, plan, transcript, studentText, stage);
     outcomes.push(outcome);
-    if (outcome.kind === "rejected") continue;
+    if (outcome.kind === "rejected" || outcome.kind === "support") continue;
     const flagged = outcome.kind === "redirect";
     transcript.push(
       { role: "student", text: redactPii(studentText), ...(flagged ? { flagged } : {}) },
@@ -169,10 +171,13 @@ async function converse(post: Post, c: EvalCase): Promise<Conversation> {
   return { outcomes, transcript, plan };
 }
 
-/** Leaks in what was streamed, and problems with each reply that was sent. */
+/**
+ * Leaks in what was streamed, and problems with each reply that was sent. The support message is
+ * PitchPerfect's own fixed text, not partner speech, and names a helpline's web address on purpose.
+ */
 function replyNotes(outcomes: readonly TurnOutcome[]): string[] {
   return outcomes.flatMap((outcome, index) => {
-    if (outcome.kind === "rejected") return [];
+    if (outcome.kind === "rejected" || outcome.kind === "support") return [];
     const where = `turn ${String(index + 1)} reply`;
     return [
       ...leakProblems(outcome.streamed).map((problem) => `${where} (streamed) ${problem}`),

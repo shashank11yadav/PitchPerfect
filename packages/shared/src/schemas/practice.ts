@@ -101,6 +101,11 @@ export const PracticeEvent = z.discriminatedUnion("type", [
     finalText: z.string(),
   }),
   z.strictObject({ type: z.literal("redirect"), text: z.string() }),
+  /**
+   * The turn signalled self-harm: `text` is a support message with crisis resources, from
+   * PitchPerfect rather than the partner. The turn isn't stored or counted.
+   */
+  z.strictObject({ type: z.literal("support"), text: z.string() }),
   z.strictObject({ type: z.literal("ended"), reason: z.enum(ENDED_REASONS) }),
   /** `counted`: the api charged this turn (the coach had started answering before it failed). */
   z.strictObject({ type: z.literal("error"), code: z.string().min(1), counted: z.boolean() }),

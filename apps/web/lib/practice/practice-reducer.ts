@@ -38,8 +38,12 @@ export type SpeechErrorCode =
  */
 export type RoomEndReason = EndedReason | "abandoned" | "replaced";
 
-/** A transcript line as the room shows it. */
-export interface RoomEntry extends Pick<TranscriptEntry, "role" | "text"> {
+/**
+ * A transcript line as the room shows it. `support` is PitchPerfect stepping out of the call
+ * with crisis resources, after a turn that signalled self-harm; it is never the partner speaking.
+ */
+export interface RoomEntry extends Pick<TranscriptEntry, "text"> {
+  role: TranscriptEntry["role"] | "support";
   /** A guardrail redirect and the student line that caused it; neither is scored. */
   flagged?: boolean;
   /** A student line whose reply never arrived; the next send replaces it. */
@@ -94,6 +98,8 @@ export type RoomAction =
   | { type: "retract"; text: string }
   | { type: "done"; stage: Stage; turnsLeft: number; finalText: string }
   | { type: "redirect"; text: string }
+  /** The turn signalled self-harm: a support message instead of a reply, and no turn used. */
+  | { type: "support"; text: string }
   | { type: "ended"; reason: EndedReason }
   | { type: "replaced" }
   /** `counted`: the partner had started answering, so the api counts the turn as used. */
@@ -356,6 +362,16 @@ export function practiceReducer(state: RoomState, action: RoomAction): RoomState
           ),
           { role: "partner", text: action.text, flagged: true },
         ],
+      };
+    case "support":
+      if (!inTurn(state)) return state;
+      return {
+        ...state,
+        status: "ready",
+        streamingText: "",
+        // The room reads it out under its own name, never as the partner.
+        announcement: "",
+        transcript: [...state.transcript, { role: "support", text: action.text }],
       };
     case "ended":
       return ended(state, action.reason);

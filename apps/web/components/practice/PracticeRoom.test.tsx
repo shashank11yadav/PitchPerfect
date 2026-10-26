@@ -192,6 +192,37 @@ describe("PracticeRoom", () => {
     expect(screen.getByText("20 turns left")).toBeInTheDocument();
   });
 
+  it("shows a support message as its own note, not as the partner speaking", async () => {
+    const user = userEvent.setup();
+    const turn = controlStream();
+    render(<PracticeRoom attempt={activeAttempt()} />);
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Your turn" }),
+      "I want to end my life{Enter}",
+    );
+    turn.emit({
+      type: "support",
+      text: "This is PitchPerfect, stepping out of the practice call. In the US, call or text 988.",
+    });
+    await act(async () => {
+      turn.finish();
+      await Promise.resolve();
+    });
+
+    const note = screen.getByRole("note", { name: "A message from PitchPerfect" });
+    expect(note).toHaveTextContent("call or text 988");
+    expect(note).not.toHaveTextContent("Dana Ruiz said");
+    const transcript = screen.getByRole("list", { name: "Transcript" });
+    expect(within(transcript).queryByText(/Dana Ruiz said: This is PitchPerfect/)).toBeNull();
+    const live = document.querySelector('[aria-live="polite"][data-live="reply"]');
+    expect(live?.textContent).toBe(
+      "A message from PitchPerfect: This is PitchPerfect, stepping out of the practice call. In the US, call or text 988.",
+    );
+    expect(screen.getByText("20 turns left")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Your turn" })).toBeEnabled();
+  });
+
   it("adds a line on Shift+Enter instead of sending", async () => {
     const user = userEvent.setup();
     render(<PracticeRoom attempt={activeAttempt()} />);

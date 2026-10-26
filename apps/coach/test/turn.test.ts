@@ -133,6 +133,23 @@ describe("POST /v1/turn", () => {
     expect(provider.streamCalls).toBe(0);
   });
 
+  it("answers a turn that signals self-harm with the support event alone", async () => {
+    const provider = scripted({});
+    const { res, events } = await turn(
+      provider,
+      request({ studentText: "I can't keep going, I want to end my life." }),
+    );
+    expect(res.statusCode).toBe(200);
+    expect(events.map((e) => e.event)).toEqual(["support"]);
+    expect(events[0]?.data).toMatchObject({
+      type: "support",
+      text: expect.stringContaining("988") as string,
+      usage: { provider: "fake", inputTokens: 0, outputTokens: 0 },
+    });
+    expect(events[0]?.data).not.toHaveProperty("strike");
+    expect(provider.streamCalls).toBe(0);
+  });
+
   it("redirects when the model guard says the turn is off topic", async () => {
     const provider = new FakeProvider({ overrides: { guard: () => ({ category: "off_topic" }) } });
     const { events } = await turn(provider);

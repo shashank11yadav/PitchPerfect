@@ -168,7 +168,8 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
   /**
    * Applies a stream event. Errors never get here: `send` handles them, since it knows whether
    * the reply had started. Only the checked final text is spoken, never the deltas, so a
-   * retracted sentence is never read out.
+   * retracted sentence is never read out. A support message is not spoken at all: the voice is
+   * the partner's, and the message is PitchPerfect's, so it is shown and announced instead.
    */
   const onEvent = useCallback(
     (event: PracticeEvent) => {
@@ -187,6 +188,10 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
         case "redirect":
           dispatch(event);
           speakReply(event.text);
+          return;
+        case "support":
+          cancel();
+          dispatch(event);
           return;
         case "ended":
           dispatch(event);

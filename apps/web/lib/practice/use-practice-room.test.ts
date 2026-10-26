@@ -142,6 +142,57 @@ describe("usePracticeRoom", () => {
     expect(spoken).toEqual([fallback]);
   });
 
+  it("shows the support message without speaking it, and frees the room for the next turn", () => {
+    const spoken: string[] = [];
+    const cancel = vi.fn();
+    vi.stubGlobal("speechSynthesis", {
+      speak: (utterance: { text: string }) => spoken.push(utterance.text),
+      cancel,
+      getVoices: () => [],
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    });
+    vi.stubGlobal(
+      "SpeechSynthesisUtterance",
+      class {
+        lang = "";
+        voice: unknown = null;
+        constructor(readonly text: string) {}
+      },
+    );
+    const turn = pendingTurn();
+    const { result } = room();
+    act(() => {
+      result.current.setMode("voice");
+      result.current.editDraft("I want to end my life");
+    });
+    act(() => {
+      result.current.send();
+    });
+    cancel.mockClear();
+    act(() => {
+      turn.emit({
+        type: "support",
+        text: "This is PitchPerfect, stepping out of the practice call. In the US, call or text 988.",
+      });
+    });
+    expect(spoken).toEqual([]);
+    expect(cancel).toHaveBeenCalled();
+    expect(result.current.state.transcript.at(-1)).toEqual({
+      role: "support",
+      text: "This is PitchPerfect, stepping out of the practice call. In the US, call or text 988.",
+    });
+    expect(result.current.state.turnsLeft).toBe(20);
+
+    act(() => {
+      result.current.editDraft("Okay");
+    });
+    act(() => {
+      result.current.send();
+    });
+    expect(stream).toHaveBeenCalledTimes(2);
+  });
+
   it("counts the turn as used when the api answers with an error event", () => {
     const turn = pendingTurn();
     const { result } = room();

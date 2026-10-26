@@ -184,9 +184,10 @@ describe("plan and score contracts", () => {
 });
 
 describe("CoachTurnEvent", () => {
-  it("accepts the five event shapes", () => {
+  it("accepts the six event shapes", () => {
     const events = [
       { type: "delta", text: "Hel" },
+      { type: "support", text: "In the US, call or text 988.", usage: usage() },
       { type: "retract", text: "Sorry, could you say that again?" },
       { type: "done", stage: "pitch", finalText: "Hello.", usage: usage() },
       {

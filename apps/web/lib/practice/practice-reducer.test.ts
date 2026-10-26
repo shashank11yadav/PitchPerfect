@@ -318,6 +318,38 @@ describe("practiceReducer: guardrails and limits", () => {
     expect(state.announcement).toBe("Let’s get back to freight. What do you sell?");
   });
 
+  it("adds a support message apart from the partner's lines, without using up a turn", () => {
+    const state = run(
+      readyRoom({ draft: "I want to end my life", turnsLeft: 12 }),
+      { type: "send" },
+      {
+        type: "support",
+        text: "This is PitchPerfect, stepping out of the practice call. In the US, call or text 988.",
+      },
+    );
+    expect(state).toMatchObject({ status: "ready", turnsLeft: 12, streamingText: "" });
+    expect(state.transcript.slice(-2)).toEqual([
+      { role: "student", text: "I want to end my life" },
+      {
+        role: "support",
+        text: "This is PitchPerfect, stepping out of the practice call. In the US, call or text 988.",
+      },
+    ]);
+    // Not announced as the partner speaking; the room reads the support message out itself.
+    expect(state.announcement).toBe("");
+    expect(canSend({ ...state, draft: "Thanks" })).toBe(true);
+  });
+
+  it("ignores a support message outside a turn", () => {
+    const state = readyRoom();
+    expect(
+      run(state, {
+        type: "support",
+        text: "This is PitchPerfect, stepping out of the practice call. In the US, call or text 988.",
+      }),
+    ).toBe(state);
+  });
+
   it("ends on the turn limit with scoring still available", () => {
     const state = run(
       readyRoom({ draft: "Can we meet Thursday?", turnsLeft: 1 }),

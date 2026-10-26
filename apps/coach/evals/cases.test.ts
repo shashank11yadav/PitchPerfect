@@ -57,7 +57,7 @@ describe("the shipped cases", () => {
 
   it("follow the documented mix", () => {
     expect([count("strong"), count("mediocre"), count("weak"), count("adversarial")]).toEqual([
-      8, 8, 6, 8,
+      8, 8, 6, 9,
     ]);
   });
 
@@ -78,6 +78,7 @@ describe("the shipped cases", () => {
       "adversarial-pose-as-human",
       "adversarial-prompt-extraction",
       "adversarial-role-swap",
+      "adversarial-self-harm",
     ]);
   });
 

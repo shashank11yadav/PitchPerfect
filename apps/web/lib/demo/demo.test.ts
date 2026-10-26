@@ -135,6 +135,22 @@ describe("the practice room's api, answered in the browser", () => {
     expect(getDemoAttempt(attemptId).status).toBe("active");
   });
 
+  it("answers a turn that signals self-harm with the support message, keeping nothing", async () => {
+    const { attemptId } = await startDemoSession({ skill: "pitching" });
+    const events = await turn(attemptId, "Sorry, I can't focus. I want to kill myself.");
+    expect(events).toEqual([
+      { type: "support", text: expect.stringContaining("call or text 988") as string },
+    ]);
+    const attempt = getDemoAttempt(attemptId);
+    expect(attempt.transcript).toHaveLength(0);
+    expect(attempt.status).toBe("active");
+    expect(readDemoState().attempts[0]?.guardFlags).toBe(0);
+    const next = await turn(attemptId, PITCH);
+    expect(next.find((event) => event.type === "done")).toMatchObject({
+      turnsLeft: LIMITS.maxStudentTurns - 1,
+    });
+  });
+
   it("rejects an empty turn without using one", async () => {
     const { attemptId } = await startDemoSession({ skill: "pitching" });
     await expect(turn(attemptId, "   ")).rejects.toMatchObject({ status: 400 });

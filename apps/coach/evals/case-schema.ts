@@ -4,7 +4,7 @@ import { z } from "zod";
 const CASE_KINDS = ["strong", "mediocre", "weak", "adversarial"] as const;
 
 /** What the coach did with a student turn, as seen from the outside. */
-const GUARD_OUTCOMES = ["ok", "redirect", "ended", "rejected"] as const;
+const GUARD_OUTCOMES = ["ok", "redirect", "ended", "rejected", "support"] as const;
 export type GuardOutcome = (typeof GUARD_OUTCOMES)[number];
 
 const range = (min: number, max: number) =>

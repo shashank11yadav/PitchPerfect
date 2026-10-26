@@ -226,7 +226,8 @@ const HARMFUL: readonly RegExp[] = [
   new RegExp(
     `^(?:(?:please|ok|okay|now|just|can you|could you|will you) )*(?:make|build|create|assemble|construct|synthesize|manufacture)(?: me)?(?: \\w+){0,2}? ${WEAPON_NOUN}\\b`,
   ),
-  // Self-harm.
+  // Self-harm. `runTurn` answers these with the support message before the rules run
+  // (`self-harm.ts`); they stay here so a caller of `ruleCheck` alone never passes one as ordinary.
   /\b(?:kill myself|commit suicide|end my life|take my own life|hurt myself|harm myself)\b/,
   // Violence against people.
   /\bhow (?:do i|to|can i|would i) (?:\w+ ){0,2}?(?:kill|murder|poison|strangle) (?:a |an |the )?(?:person|someone|somebody|people|him|her|them|my (?:wife|husband|boss|neighbou?r|teacher|mother|father|friend))\b/,
