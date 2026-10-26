@@ -221,6 +221,11 @@ const appSections = (partner: "live" | "scripted"): readonly LegalSection[] => [
             browser with this cookie can still sign in with the right password.
           </li>
         </ul>
+        <p>
+          On the live site each name starts with <strong>__Host-</strong>, which tells your browser
+          to accept the cookie only over a secure connection and only from PitchPerfect’s own
+          address.
+        </p>
         <p>There are no advertising, analytics or tracking cookies, and no third-party scripts.</p>
       </>
     ),

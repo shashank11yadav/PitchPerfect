@@ -1,9 +1,15 @@
-import type { Router } from "express";
+import type { Request, Response, Router } from "express";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIMITS, MINUTE_MS } from "@pitchperfect/shared";
 import { byIp } from "../src/middleware/rate-limit.js";
-import { DEVICE_COOKIE, deviceToken, isKnownDevice } from "../src/modules/auth/known-device.js";
+import {
+  DEVICE_COOKIE,
+  deviceToken,
+  fromKnownDevice,
+  isKnownDevice,
+  rememberDevice,
+} from "../src/modules/auth/known-device.js";
 import { makeTestApp } from "./helpers/app.js";
 import { csrfAgent, withCsrf, type CsrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
@@ -229,18 +235,43 @@ describe("the owner of an email someone is guessing", () => {
     await signin(browser, "192.0.2.53", { email, password }).expect(429);
   });
 
-  it("sets the device cookie on sign-in, httpOnly and only for the auth routes", async () => {
+  it("sets the device cookie on sign-in, httpOnly, on Path=/ under its plain name in development", async () => {
     const { email, password } = await createStudent({ email: "owner@example.test" });
     const res = await signin(await csrfAgent(app), "192.0.2.54", { email, password }).expect(200);
 
     const cookie = ((res.headers["set-cookie"] ?? []) as string[]).find((value) =>
       value.startsWith(`${DEVICE_COOKIE}=`),
     );
-    expect(cookie).toMatch(/; Path=\/api\/auth/);
+    expect(cookie).toMatch(/; Path=\/;/);
     expect(cookie).toMatch(/; HttpOnly/);
     expect(cookie).toMatch(/; SameSite=Lax/);
     expect(cookie).toMatch(new RegExp(`; Max-Age=${String(LIMITS.signinDeviceDays * 86_400)}`));
     expect(cookie).not.toContain("owner");
+  });
+
+  it("names the device cookie __Host- in production, Secure on Path=/, and reads it by that name", () => {
+    const prod = { SESSION_SECRET: config.SESSION_SECRET, isProd: true };
+    const cookie = vi.fn();
+    rememberDevice(prod, { cookie } as unknown as Response, "owner@example.test");
+
+    expect(cookie).toHaveBeenCalledWith(
+      `__Host-${DEVICE_COOKIE}`,
+      expect.any(String),
+      expect.objectContaining({ secure: true, path: "/", httpOnly: true }),
+    );
+    expect(JSON.stringify(cookie.mock.calls[0]?.[2])).not.toMatch(/domain/i);
+    const token = cookie.mock.calls[0]?.[1] as string;
+    const asRequest = (cookies: Record<string, string>) => ({ cookies }) as unknown as Request;
+    expect(
+      fromKnownDevice(
+        prod,
+        asRequest({ [`__Host-${DEVICE_COOKIE}`]: token }),
+        "owner@example.test",
+      ),
+    ).toBe(true);
+    expect(fromKnownDevice(prod, asRequest({ [DEVICE_COOKIE]: token }), "owner@example.test")).toBe(
+      false,
+    );
   });
 
   it("trusts a device cookie only for its own email, unaltered and unexpired", () => {

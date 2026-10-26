@@ -6,8 +6,15 @@ export const REPO_URL = "https://github.com/shashank11yadav/PitchPerfect";
 /** Where bug reports and questions about the code go. */
 export const ISSUES_URL = `${REPO_URL}/issues`;
 
-/** The api's session cookie. The web app only checks that it exists; it can't read it. */
-export const SESSION_COOKIE = "pp.sid";
+/**
+ * The api's session cookie: `__Host-pp.sid` in production, `pp.sid` in development over http. The
+ * web app only checks that one exists; it can't read it.
+ */
+const SESSION_COOKIES = ["__Host-pp.sid", "pp.sid"] as const;
+
+/** True when the request carries the api's session cookie under either name. */
+export const hasSessionCookie = (cookies: { has: (name: string) => boolean }) =>
+  SESSION_COOKIES.some((name) => cookies.has(name));
 
 /** Canonical origin for metadata, sitemaps and JSON-LD. Read on the server only. */
 export const SITE_URL = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/+$/, "");

@@ -2,10 +2,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
 import { DAY_MS, LIMITS } from "@pitchperfect/shared";
 import type { Config } from "../../config.js";
+import { cookieName } from "../../middleware/cookie-name.js";
 
 /**
  * Marks a browser that has signed in to an account, or reset its password, before. Failed
- * sign-ins from other browsers can't slow that browser down (see `authRoutes`).
+ * sign-ins from other browsers can't slow that browser down (see `authRoutes`). Named
+ * `__Host-pp.device` in production (`cookieName`).
  */
 export const DEVICE_COOKIE = "pp.device";
 
@@ -43,21 +45,24 @@ export function isKnownDevice(secret: string, email: string, token: unknown, now
 }
 
 /**
- * Sets `pp.device` for `email`: httpOnly, `Secure` in production, `SameSite=Lax`, sent only to
- * `/api/auth`, for `LIMITS.signinDeviceDays`. A later sign-in with another email replaces it.
+ * Sets the device cookie for `email`: httpOnly, `SameSite=Lax`, `Path=/` (the `__Host-` prefix
+ * requires it), `Secure` and `__Host-` in production, for `LIMITS.signinDeviceDays`. A later
+ * sign-in with another email replaces it.
  */
 export function rememberDevice(config: DeviceConfig, res: Response, email: string): void {
-  res.cookie(DEVICE_COOKIE, deviceToken(config.SESSION_SECRET, email, new Date()), {
+  const token = deviceToken(config.SESSION_SECRET, email, new Date());
+  res.cookie(cookieName(DEVICE_COOKIE, config.isProd), token, {
     httpOnly: true,
     secure: config.isProd,
     sameSite: "lax",
-    path: "/api/auth",
+    path: "/",
     maxAge: MAX_AGE_MS,
   });
 }
 
-/** True when the request carries a valid `pp.device` cookie for `email`. */
+/** True when the request carries a valid device cookie for `email`. */
 export function fromKnownDevice(config: DeviceConfig, req: Request, email: string): boolean {
   const cookies = req.cookies as Record<string, unknown> | undefined;
-  return isKnownDevice(config.SESSION_SECRET, email, cookies?.[DEVICE_COOKIE], new Date());
+  const token = cookies?.[cookieName(DEVICE_COOKIE, config.isProd)];
+  return isKnownDevice(config.SESSION_SECRET, email, token, new Date());
 }

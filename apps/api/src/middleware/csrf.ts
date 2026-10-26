@@ -4,6 +4,7 @@ import { doubleCsrf } from "csrf-csrf";
 import { DAY_MS, LIMITS } from "@pitchperfect/shared";
 import type { Config } from "../config.js";
 import { ForbiddenError } from "../errors.js";
+import { cookieName } from "./cookie-name.js";
 import { sessionUserId } from "./session.js";
 
 const CSRF_COOKIE = "pp.csrf";
@@ -12,10 +13,8 @@ const ANONYMOUS_ID_COOKIE = "pp.aid";
 
 const ANONYMOUS_ID_PATTERN = /^[0-9a-f]{64}$/;
 
-function anonymousIdOf(req: Request): string | undefined {
-  const value: unknown = (req.cookies as Record<string, unknown> | undefined)?.[
-    ANONYMOUS_ID_COOKIE
-  ];
+function anonymousIdOf(req: Request, name: string): string | undefined {
+  const value: unknown = (req.cookies as Record<string, unknown> | undefined)?.[name];
   return typeof value === "string" && ANONYMOUS_ID_PATTERN.test(value) ? value : undefined;
 }
 
@@ -29,7 +28,8 @@ export interface Csrf {
 /**
  * Double-submit CSRF protection (header `x-csrf-token`, cookie `pp.csrf`). The token is bound to the
  * session id once signed in. Before that it is bound to the `pp.aid` cookie, because with
- * `saveUninitialized: false` an anonymous visitor has no stable session id.
+ * `saveUninitialized: false` an anonymous visitor has no stable session id. In production both
+ * cookies carry the `__Host-` prefix (`cookieName`).
  */
 export function createCsrf(config: Config): Csrf {
   const cookieOptions: CookieOptions = {
@@ -38,6 +38,9 @@ export function createCsrf(config: Config): Csrf {
     secure: config.isProd,
     path: "/",
   };
+  const csrfCookie = cookieName(CSRF_COOKIE, config.isProd);
+  const anonymousIdCookie = cookieName(ANONYMOUS_ID_COOKIE, config.isProd);
+  const anonymousIdOfRequest = (req: Request) => anonymousIdOf(req, anonymousIdCookie);
 
   const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
     getSecret: () => config.CSRF_SECRET,
@@ -45,9 +48,9 @@ export function createCsrf(config: Config): Csrf {
       if (sessionUserId(req) !== undefined) return `session:${req.sessionID}`;
       // Without a browser id there is nothing to bind to: a one-off random id makes every token
       // fail, instead of all such browsers sharing one identifier.
-      return `anonymous:${anonymousIdOf(req) ?? randomBytes(32).toString("hex")}`;
+      return `anonymous:${anonymousIdOfRequest(req) ?? randomBytes(32).toString("hex")}`;
     },
-    cookieName: CSRF_COOKIE,
+    cookieName: csrfCookie,
     cookieOptions,
   });
 
@@ -60,14 +63,14 @@ export function createCsrf(config: Config): Csrf {
   };
 
   const issueCsrfToken = (req: Request, res: Response): string => {
-    if (sessionUserId(req) === undefined && anonymousIdOf(req) === undefined) {
+    if (sessionUserId(req) === undefined && anonymousIdOfRequest(req) === undefined) {
       const id = randomBytes(32).toString("hex");
-      res.cookie(ANONYMOUS_ID_COOKIE, id, {
+      res.cookie(anonymousIdCookie, id, {
         ...cookieOptions,
         maxAge: LIMITS.sessionAbsoluteDays * DAY_MS,
       });
       // So this request's own token is bound to the id it just set.
-      (req.cookies as Record<string, unknown>)[ANONYMOUS_ID_COOKIE] = id;
+      (req.cookies as Record<string, unknown>)[anonymousIdCookie] = id;
     }
     return generateCsrfToken(req, res);
   };

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { proxySecret } from "@/lib/proxy-secret";
-import { SESSION_COOKIE } from "@/lib/site";
+import { hasSessionCookie } from "@/lib/site";
 
 const PROTECTED_PREFIXES = ["/app", "/employer"];
 
@@ -36,14 +36,17 @@ function newNonce(): string {
 
 /**
  * Requests that Next rewrites to the api (next.config.ts). Rewrites can't set headers, so they
- * are set here: the shared proxy secret, and the public protocol and host, which the api trusts
- * (`TRUST_PROXY`) to mark its cookies `Secure`.
+ * are set here: the shared proxy secret, a fresh request id (the api keeps an id only from a
+ * request with the secret, so a client never chooses its own), and the public protocol and host,
+ * which the api trusts (`TRUST_PROXY`) to mark its cookies `Secure`. Cookies, the `__Host-`
+ * prefixed ones included, go through as they came.
  */
 function forwardToApi(request: NextRequest): NextResponse {
   const headers = new Headers(request.headers);
   headers.delete("x-pp-proxy");
   const secret = proxySecret();
   if (secret) headers.set("x-pp-proxy", secret);
+  headers.set("x-request-id", crypto.randomUUID());
   headers.set("x-forwarded-proto", request.nextUrl.protocol.replace(/:$/, ""));
   headers.set("x-forwarded-host", request.nextUrl.host);
   return NextResponse.next({ request: { headers } });
@@ -55,7 +58,7 @@ export function proxy(request: NextRequest): NextResponse {
 
   // Only UX: pages still ask the api who is signed in, and the api is the real gate.
   const isProtected = PROTECTED_PREFIXES.some((prefix) => startsWithSegment(pathname, prefix));
-  if (isProtected && !request.cookies.has(SESSION_COOKIE)) {
+  if (isProtected && !hasSessionCookie(request.cookies)) {
     const signin = new URL("/signin", request.nextUrl.origin);
     signin.searchParams.set("next", `${pathname}${search}`);
     return NextResponse.redirect(signin);

@@ -4,6 +4,7 @@ import session from "express-session";
 import type { Connection } from "mongoose";
 import { DAY_MS, LIMITS, type Role } from "@pitchperfect/shared";
 import type { Config } from "../config.js";
+import { cookieName } from "./cookie-name.js";
 
 declare module "express-session" {
   interface SessionData {
@@ -23,6 +24,7 @@ export interface SessionIdentity {
   sessionVersion?: number;
 }
 
+/** `__Host-pp.sid` in production, `pp.sid` in development (`cookieName`). */
 const SESSION_COOKIE = "pp.sid";
 const SESSIONS_COLLECTION = "sessions";
 
@@ -105,8 +107,9 @@ function enforceAbsoluteLimit(): RequestHandler {
 }
 
 /**
- * Server-side sessions in MongoDB. The cookie is `pp.sid`: httpOnly, `Secure` in production,
- * `SameSite=Lax`, rolling 7 days, with a 30-day absolute limit. Sessions are only stored (and the
+ * Server-side sessions in MongoDB. The cookie is `__Host-pp.sid` in production (`Secure`, no
+ * `Domain`) and `pp.sid` in development: httpOnly, `SameSite=Lax`, `Path=/`, rolling 7 days, with
+ * a 30-day absolute limit. Sessions are only stored (and the
  * cookie only issued) once something is written to them, i.e. at sign-in.
  */
 export function sessionMiddleware(
@@ -116,7 +119,7 @@ export function sessionMiddleware(
   const router = express.Router();
   router.use(
     session({
-      name: SESSION_COOKIE,
+      name: cookieName(SESSION_COOKIE, config.isProd),
       secret: config.SESSION_SECRET,
       store: new LazyMongoStore(getClient),
       resave: false,
@@ -177,7 +180,8 @@ export function regenerateSession(
 }
 
 /**
- * Deletes the stored session and clears `pp.sid` using the attributes the cookie was set with.
+ * Deletes the stored session and clears the session cookie using the name and attributes it was
+ * set with.
  * Like `req.session.destroy()`, it leaves no session on the request until one is regenerated.
  */
 export function destroySession(req: express.Request, res: Response): Promise<void> {
@@ -196,7 +200,7 @@ export function destroySession(req: express.Request, res: Response): Promise<voi
         reject(asError(error));
         return;
       }
-      res.clearCookie(SESSION_COOKIE, attributes);
+      res.clearCookie(cookieName(SESSION_COOKIE, attributes.secure === true), attributes);
       resolve();
     });
   });

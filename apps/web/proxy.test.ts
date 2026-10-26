@@ -69,8 +69,8 @@ describe("proxy: route protection", () => {
     },
   );
 
-  it("lets requests with a session cookie through", () => {
-    const res = proxy(request("/app/history", { cookie: "pp.sid=s%3Aabc" }));
+  it.each(["__Host-pp.sid", "pp.sid"])("lets requests with a %s cookie through", (name) => {
+    const res = proxy(request("/app/history", { cookie: `${name}=s%3Aabc` }));
     expect(res.headers.get("location")).toBeNull();
     expect(res.headers.get("content-security-policy")).toContain("'nonce-");
   });
@@ -98,6 +98,21 @@ describe("proxy: /api requests", () => {
       "x-pp-proxy",
     );
     expect(forwarded(res, "x-pp-proxy")).toBeNull();
+  });
+
+  it("replaces a client-supplied request id with a fresh one", () => {
+    const res = proxy(request("/api/auth/me", { headers: { "x-request-id": "client-req-12345" } }));
+    const id = forwarded(res, "x-request-id");
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(
+      proxy(request("/api/auth/me")).headers.get("x-middleware-request-x-request-id"),
+    ).not.toBe(id);
+  });
+
+  it("forwards the session, CSRF and device cookies untouched", () => {
+    const cookie = "__Host-pp.sid=s%3Aabc; __Host-pp.csrf=t; __Host-pp.aid=a; __Host-pp.device=d";
+    const res = proxy(request("/api/auth/me", { cookie }));
+    expect(forwarded(res, "cookie")).toBe(cookie);
   });
 
   it("tells the api the public protocol and host so Secure cookies work", () => {

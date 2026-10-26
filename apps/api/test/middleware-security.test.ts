@@ -360,30 +360,55 @@ describe("sessions", () => {
   it.each([
     ["in production", "production"],
     ["when NODE_ENV is unset", undefined],
-  ])("marks cookies Secure %s", async (_label, nodeEnv) => {
-    const prod = makeTestApp({
-      env: prodEnv({ TRUST_PROXY: "1", NODE_ENV: nodeEnv }),
-      extraRoutes,
-    });
+  ])(
+    "names cookies __Host- and marks them Secure, Path=/ and host-only %s",
+    async (_label, nodeEnv) => {
+      const prod = makeTestApp({
+        env: prodEnv({ TRUST_PROXY: "1", NODE_ENV: nodeEnv }),
+        extraRoutes,
+      });
+      const user = await makeUser();
+      const agent = request.agent(prod.app);
+      // As web proxies it: over https, with the shared proxy secret.
+      const get = (path: string) =>
+        agent.get(path).set("x-forwarded-proto", "https").set("x-pp-proxy", PROD_PROXY_SECRET);
+      const csrf = await get("/api/auth/csrf");
+      expect(cookieHeader(csrf, "pp.csrf")).toBeUndefined();
+      for (const name of ["__Host-pp.csrf", "__Host-pp.aid"]) {
+        const cookie = cookieHeader(csrf, name) ?? "";
+        expect(cookie).toContain("Secure");
+        expect(cookie).toContain("Path=/;");
+        expect(cookie).not.toMatch(/Domain=/i);
+      }
+
+      const login = await get(`/api/__test/login/${user.id}/student`);
+      expect(cookieHeader(login, "pp.sid")).toBeUndefined();
+      const session = cookieHeader(login, "__Host-pp.sid") ?? "";
+      for (const attribute of ["Secure", "HttpOnly", "SameSite=Lax", "Path=/;"]) {
+        expect(session).toContain(attribute);
+      }
+      expect(session).not.toMatch(/Domain=/i);
+
+      const logout = await get("/api/__test/logout");
+      const cleared = cookieHeader(logout, "__Host-pp.sid") ?? "";
+      expect(cleared).toContain("Secure");
+      expect(cleared).toContain("HttpOnly");
+      expect(cleared).toContain("SameSite=Lax");
+      expect(cleared).toContain("Path=/");
+    },
+  );
+
+  it("keeps the plain cookie names in development over http", async () => {
     const user = await makeUser();
-    const agent = request.agent(prod.app);
-    // As web proxies it: over https, with the shared proxy secret.
-    const get = (path: string) =>
-      agent.get(path).set("x-forwarded-proto", "https").set("x-pp-proxy", PROD_PROXY_SECRET);
-    const login = await get(`/api/__test/login/${user.id}/student`);
-    expect(cookieHeader(login, "pp.sid")).toContain("Secure");
-    expect(cookieHeader(login, "pp.sid")).toContain("HttpOnly");
-    expect(cookieHeader(login, "pp.sid")).toContain("SameSite=Lax");
+    const agent = request.agent(app);
+    const csrf = await agent.get("/api/auth/csrf");
+    const login = await agent.get(`/api/__test/login/${user.id}/student`);
 
-    const csrf = await get("/api/auth/csrf");
-    expect(cookieHeader(csrf, "pp.csrf")).toContain("Secure");
-
-    const logout = await get("/api/__test/logout");
-    const cleared = cookieHeader(logout, "pp.sid") ?? "";
-    expect(cleared).toContain("Secure");
-    expect(cleared).toContain("HttpOnly");
-    expect(cleared).toContain("SameSite=Lax");
-    expect(cleared).toContain("Path=/");
+    expect(cookieHeader(login, "pp.sid")).not.toContain("Secure");
+    expect(cookieHeader(csrf, "pp.csrf")).toBeDefined();
+    expect(cookieHeader(csrf, "pp.aid")).toBeDefined();
+    const names = [login, csrf].flatMap((res) => (res.headers["set-cookie"] ?? []) as string[]);
+    expect(names.join("\n")).not.toContain("__Host-");
   });
 
   it("rolls: each response renews the cookie", async () => {
