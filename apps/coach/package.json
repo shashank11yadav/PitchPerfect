@@ -19,12 +19,12 @@
     "eval": "tsx --env-file-if-exists=.env evals/run.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.135.0",
+    "@anthropic-ai/sdk": "1.2.0",
     "@pitchperfect/partner": "0.0.0",
     "@pitchperfect/scripted-partner": "0.0.0",
     "@pitchperfect/shared": "0.0.0",
     "fastify": "5.12.7",
-    "openai": "7.39.0",
+    "openai": "7.43.0",
     "pino": "10.4.0",
     "zod": "4.6.7"
   },
