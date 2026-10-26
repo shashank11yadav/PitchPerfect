@@ -162,7 +162,7 @@ PitchPerfect/
 
 - **Look:** clean, airy, confident. A white/`#f8f9fa` base, brand blue `#3f56d2` for primary actions and highlights, navy `#2d3c90` for headers, footers and hero gradients, Poppins headings and Manrope body. Rounded 12–16 px cards, soft shadows and generous spacing. The PitchPerfect wordmark and icon in the same palette (SVG, plus generated favicon/PWA sizes).
 - **Legal pages:** `/privacy` and `/terms` are complete, readable templates covering the real data flows (accounts, résumés, transcripts, LLM provider, browser speech, retention, deletion, 18+). Each carries a visible banner marking it as a template, not legal advice.
-- **Components** (one shared set): Button, Input/Field with label + error, Select, Card, Badge, Tabs, Modal, Toast, EmptyState, Skeleton, DataTable, Navbar (public) and AppShell (role-aware: one component with links passed in), Footer, SkillGrid, ScoreRing, RubricBar.
+- **Components** (one shared set): Button, Input/Field with label + error, Select, Card, Badge, Tabs, Modal, EmptyState, Skeleton, DataTable, Navbar (public) and AppShell (role-aware: one component with links passed in), Footer, SkillGrid, ScoreRing, RubricBar.
 - **Accessibility:** WCAG 2.2 AA. Every input has a visible label, focus rings are visible, contrast is checked, and everything works by keyboard. `prefers-reduced-motion` is respected.
 - **Responsive:** mobile-first. Dashboards collapse to a bottom tab bar on phones.
 - **Motion:** subtle only (hover, page fade, score count-up). Nothing that hurts Core Web Vitals.
