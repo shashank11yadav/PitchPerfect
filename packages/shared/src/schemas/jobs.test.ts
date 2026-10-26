@@ -220,6 +220,7 @@ describe("PublicJobSummaryPageSchema", () => {
       logoUrl: null,
       verification: "verified",
       verifiedDomain: "quarrow-logistics.example",
+      sample: true,
     },
   });
 
@@ -261,6 +262,7 @@ describe("PublicJobDetailResponseSchema", () => {
         logoUrl: null,
         verification: "verified",
         verifiedDomain: "quarrow-logistics.example",
+        sample: true,
       },
     },
     company: {
@@ -273,6 +275,7 @@ describe("PublicJobDetailResponseSchema", () => {
       logoUrl: null,
       verification: "verified",
       verifiedDomain: "quarrow-logistics.example",
+      sample: true,
     },
   });
 

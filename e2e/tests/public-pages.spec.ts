@@ -78,14 +78,20 @@ test("the home page describes the site and its questions in JSON-LD", async ({ p
   );
 });
 
-test("a verified company's job is indexable and has a JobPosting", async ({ page }) => {
+// Every seeded company lives on a reserved `.example` domain, so even a verified one is a sample:
+// its job stays out of search and links nowhere. Unit tests cover a real verified company's.
+test("a seeded verified company's job is a sample: noindex, no JobPosting, no links", async ({
+  page,
+}) => {
   const job = await publicJob("verified");
   await page.goto(`/jobs/${job.slug}`);
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator("h1")).toContainText(job.title);
   await expectCanonical(page, `/jobs/${job.slug}`);
-  expect(await robots(page)).toBeNull();
-  expect(await jsonLdTypes(page)).toContain("JobPosting");
+  expect(await robots(page)).toContain("noindex");
+  expect(await jsonLdTypes(page)).not.toContain("JobPosting");
+  await expect(page.getByText("Sample company").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /^(website|linkedin)/i })).toHaveCount(0);
 });
 
 test("an unverified company's job is noindex and has no JobPosting", async ({ page }) => {

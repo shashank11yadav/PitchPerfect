@@ -105,7 +105,11 @@ export function DashboardStats() {
   return (
     <div className="flex flex-col gap-6">
       {company && company.verification !== "verified" && (
-        <VerificationBanner verification={company.verification} website={company.website} />
+        <VerificationBanner
+          verification={company.verification}
+          website={company.website}
+          sample={company.sample}
+        />
       )}
       {noJobs ? (
         <EmptyState

@@ -32,8 +32,9 @@ async function activeJobs(): Promise<PublicJobSummary[]> {
 export const generateStaticParams = staticMetadataRoute;
 
 /**
- * Static public pages, plus active jobs of verified companies (docs/design-system.md, SEO). The
- * static demo lists no jobs: its board is samples, and its job pages are `noindex`.
+ * Static public pages, plus active jobs of verified companies that aren't samples
+ * (docs/design-system.md, SEO). The static demo lists no jobs: its board is samples, and its job
+ * pages are `noindex`.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Built per request, so new jobs appear without a rebuild. The static demo bakes its board.
@@ -52,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // If the api can't be reached, the static pages are still worth serving.
   const jobs = PAGES_EXPORT ? [] : await activeJobs().catch(() => []);
   const jobEntries = jobs
-    .filter((job) => job.company.verification === "verified")
+    .filter((job) => !job.company.sample && job.company.verification === "verified")
     // No lastModified: publishedAt says when a job went live, not when its page last changed.
     .map((job) => ({ url: absoluteUrl(`/jobs/${job.slug}`) }));
 

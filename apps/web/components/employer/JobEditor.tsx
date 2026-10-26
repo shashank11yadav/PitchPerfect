@@ -50,6 +50,7 @@ function asListing(job: EmployerJob, company: PublicCompany): PublicJob {
       logoUrl: company.logoUrl,
       verification: company.verification,
       verifiedDomain: company.verifiedDomain,
+      sample: company.sample,
     },
   };
 }

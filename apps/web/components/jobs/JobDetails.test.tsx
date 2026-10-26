@@ -75,6 +75,17 @@ describe("JobDetails", () => {
     expect(screen.getByText("orvexa-payments.example")).toBeInTheDocument();
   });
 
+  it("shows a sample company as a sample: no verified badge, no links, no website", () => {
+    const company = publicCompany({ sample: true });
+    const job = publicJob({ company: { ...publicJob().company, sample: true } });
+    render(<JobDetails job={job} company={company} />);
+    expect(screen.getAllByText("Sample company")).toHaveLength(2);
+    expect(screen.queryByText(/^Verified/)).not.toBeInTheDocument();
+    expect(screen.getByText(/is a sample company/)).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.queryByText("quarrow-logistics.example")).not.toBeInTheDocument();
+  });
+
   it("never links a company URL that isn't https", () => {
     const company = publicCompany({
       website: "javascript:alert(1)",

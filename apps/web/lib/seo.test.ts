@@ -103,6 +103,7 @@ describe("jobPostingJsonLd", () => {
     logoUrl: "https://quarrow.example/logo.png",
     verification: "verified",
     verifiedDomain: "quarrow.example",
+    sample: false,
   };
   const job = (overrides: Partial<PublicJob> = {}): PublicJob => ({
     id: "65f1c0ffee0000000000abcd",
@@ -128,6 +129,7 @@ describe("jobPostingJsonLd", () => {
       logoUrl: company.logoUrl,
       verification: company.verification,
       verifiedDomain: company.verifiedDomain,
+      sample: company.sample,
     },
     ...overrides,
   });

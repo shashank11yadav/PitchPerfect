@@ -72,12 +72,19 @@ export function PracticeFragment() {
   );
 }
 
-/** A job's company with its badge, as a listing shows it. */
+/**
+ * A job's company with its badge, as a listing shows it. These pictures show what the verified and
+ * unverified badges look like, so the company is drawn as a real one would be, not as a sample.
+ */
 function CompanyLine({ job }: { job: SampleJob }) {
   return (
     <p className="mt-1 flex flex-wrap items-center gap-2 text-small text-ink">
       {job.company.name}
-      <CompanyBadge verification={job.company.verification} domain={job.company.host} />
+      <CompanyBadge
+        verification={job.company.verification}
+        domain={job.company.host}
+        sample={false}
+      />
     </p>
   );
 }

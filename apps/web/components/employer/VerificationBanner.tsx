@@ -20,25 +20,41 @@ interface VerificationBannerProps {
   verification: CompanyVerification;
   /** The company's website, to show which email domain verifies it. */
   website: string;
+  /** `sample` from the api: the website is on a reserved domain, so students see a sample. */
+  sample?: boolean;
   className?: string;
 }
 
+/** What students see of a sample company, said in place of what its badge would show. */
+const SAMPLE_VIEW =
+  "Your website is on a domain reserved for examples, so students see your company labeled “Sample company”, with no links, and your jobs stay out of search engines.";
+
 /**
- * Where the company stands and why, in plain words: what students see on its jobs, and for an
- * unverified company, how it gets verified (matching email domain, or an admin's approval).
+ * Where the company stands and why, in plain words: what students see on its jobs (a sample
+ * company's as a sample), and for an unverified company, how it gets verified (matching email
+ * domain, or an admin's approval).
  */
-export function VerificationBanner({ verification, website, className }: VerificationBannerProps) {
+export function VerificationBanner({
+  verification,
+  website,
+  sample = false,
+  className,
+}: VerificationBannerProps) {
   const domain = domainOf(website);
   const copy: Record<CompanyVerification, { title: string; body: ReactNode }> = {
     verified: {
       title: "Verified",
-      body: "Students see a “Verified” badge with your domain on your jobs, so they know the posting comes from someone with an email there.",
+      body: sample
+        ? `${SAMPLE_VIEW} Being verified still lets you send interview invites.`
+        : "Students see a “Verified” badge with your domain on your jobs, so they know the posting comes from someone with an email there.",
     },
     unverified: {
       title: "Not verified yet",
       body: (
         <>
-          Your jobs show an “Unverified employer” badge and stay out of search engines for now.
+          {sample
+            ? SAMPLE_VIEW
+            : "Your jobs show an “Unverified employer” badge and stay out of search engines until the company is verified."}{" "}
           Confirming an email on your website’s domain, like{" "}
           <span className="font-semibold [overflow-wrap:anywhere]">you@{domain}</span>, verifies the
           company on its own. Otherwise, or after you change the company’s name or website domain,

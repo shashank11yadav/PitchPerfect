@@ -5,7 +5,11 @@ vi.mock("next/server", () => ({ connection: () => Promise.resolve() }));
 
 const fetchMock = vi.fn<typeof fetch>();
 
-const summary = (slug: string, verification: PublicJobSummary["company"]["verification"]) => ({
+const summary = (
+  slug: string,
+  verification: PublicJobSummary["company"]["verification"],
+  sample = false,
+) => ({
   id: `65f1c0ffee00000000000${slug.length.toString().padStart(3, "0")}`,
   slug,
   title: "Sales development representative",
@@ -21,6 +25,7 @@ const summary = (slug: string, verification: PublicJobSummary["company"]["verifi
     logoUrl: null,
     verification,
     verifiedDomain: verification === "verified" ? "quarrow.example" : null,
+    sample,
   },
 });
 
@@ -65,7 +70,15 @@ describe("sitemap", () => {
   it("lists the static pages and the active jobs of verified companies, paging until done", async () => {
     fetchMock
       .mockResolvedValueOnce(
-        page([summary("verified-one", "verified"), summary("unverified-two", "unverified")], 1, 51),
+        page(
+          [
+            summary("verified-one", "verified"),
+            summary("unverified-two", "unverified"),
+            summary("sample-four", "verified", true),
+          ],
+          1,
+          51,
+        ),
       )
       .mockResolvedValueOnce(page([summary("verified-three", "verified")], 2, 51));
     const { sitemap } = await load();

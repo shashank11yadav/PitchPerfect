@@ -45,6 +45,7 @@ export function JobCard({
           <CompanyBadge
             verification={job.company.verification}
             domain={job.company.verifiedDomain}
+            sample={job.company.sample}
           />
         </p>
         {job.skills.length > 0 && (

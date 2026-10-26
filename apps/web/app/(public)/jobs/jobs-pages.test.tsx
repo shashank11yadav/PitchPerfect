@@ -184,6 +184,20 @@ describe("/jobs/[slug]", () => {
     expect(screen.getAllByText("Unverified employer").length).toBeGreaterThan(0);
   });
 
+  it("keeps a sample company's job out of search, verified or not, and shows it as a sample", async () => {
+    const sample = {
+      job: publicJob({ company: { ...publicJob().company, sample: true } }),
+      company: publicCompany({ sample: true }),
+    };
+    serve({ [`/api/jobs/${SLUG}`]: () => json(sample) });
+    const metadata = await generateMetadata(params(SLUG));
+    expect(metadata.robots).toEqual({ index: false, follow: false });
+    const { container } = render(await JobPage(params(SLUG)));
+    expect(container.querySelector('script[type="application/ld+json"]')).toBeNull();
+    expect(screen.getAllByText("Sample company").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^Verified/)).not.toBeInTheDocument();
+  });
+
   it("is a 404 when the api says the job isn't listed", async () => {
     serve({ "/api/jobs/gone-123": () => apiError(404) });
     await expect(JobPage(params("gone-123"))).rejects.toBe(NOT_FOUND);

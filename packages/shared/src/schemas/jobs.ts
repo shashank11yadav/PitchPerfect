@@ -83,6 +83,8 @@ export const PublicJobSummarySchema = z.object({
     verification: z.enum(COMPANY_VERIFICATION),
     /** The registrable domain the badge vouches for, e.g. "acme-demo.example"; null unless verified. */
     verifiedDomain: z.string().nullable(),
+    /** The website is on a reserved domain (`isSampleWebsite`): shown as a sample. */
+    sample: z.boolean(),
   }),
 });
 export type PublicJobSummary = z.infer<typeof PublicJobSummarySchema>;

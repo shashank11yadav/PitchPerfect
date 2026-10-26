@@ -63,6 +63,14 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
 }
 
 function CompanyNote({ company }: { company: PublicCompany }) {
+  if (company.sample) {
+    return (
+      <p>
+        {company.name} is a sample company, made up to show how PitchPerfect works. Its website is
+        on a domain reserved for examples, so there is nothing to visit.
+      </p>
+    );
+  }
   if (company.verification === "verified") {
     return (
       <p>
@@ -101,7 +109,11 @@ interface JobDetailsProps {
   titleAs?: "h1" | "h2" | "h3";
 }
 
-/** One job, as students, employers and visitors all see it. The description goes through SafeHtml. */
+/**
+ * One job, as students, employers and visitors all see it. The description goes through SafeHtml.
+ * Only a verified company's own links are linked; an unverified one's website is shown as text,
+ * and a sample company's not at all.
+ */
 export function JobDetails({
   job,
   company,
@@ -143,6 +155,7 @@ export function JobDetails({
                 <CompanyBadge
                   verification={company.verification}
                   domain={company.verifiedDomain}
+                  sample={company.sample}
                   onDark={variant === "page"}
                 />
               </p>
@@ -217,18 +230,21 @@ export function JobDetails({
           <div className="flex flex-col gap-6 text-ink lg:col-span-6 lg:col-start-7">
             {company.pitch && <p className="text-statement">{company.pitch}</p>}
             <div className="flex flex-col items-start gap-3">
-              <CompanyBadge verification={company.verification} domain={company.verifiedDomain} />
+              <CompanyBadge
+                verification={company.verification}
+                domain={company.verifiedDomain}
+                sample={company.sample}
+              />
               <div className="max-w-[56ch]">
                 <CompanyNote company={company} />
               </div>
             </div>
-            {company.verification !== "verified" && website && (
+            {!company.sample && company.verification !== "verified" && website && (
               <p className="text-small">
-                Website (not checked):{" "}
-                <span className="font-semibold">{new URL(website).host}</span>
+                Website they list: <span className="font-semibold">{new URL(website).host}</span>
               </p>
             )}
-            {company.verification === "verified" && (website ?? linkedin) && (
+            {!company.sample && company.verification === "verified" && (website ?? linkedin) && (
               <ul className="flex flex-wrap gap-x-8 gap-y-3">
                 {website && (
                   <li>

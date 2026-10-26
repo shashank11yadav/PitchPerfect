@@ -134,7 +134,7 @@ Each component is implemented once:
 - JSON-LD via a `JsonLd` component:
   - `Organization` and `WebSite` on `/`.
   - `FAQPage` on `/` and `/how-it-works`.
-  - `JobPosting` on `/jobs/[slug]` (verified companies only), with `title`, `description`, `datePosted`, `validThrough`, `employmentType`, `hiringOrganization`, `jobLocation` or `jobLocationType: TELECOMMUTE`, and `baseSalary` when present.
+  - `JobPosting` on `/jobs/[slug]` (verified companies that aren't samples only), with `title`, `description`, `datePosted`, `validThrough`, `employmentType`, `hiringOrganization`, `jobLocation` or `jobLocationType: TELECOMMUTE`, and `baseSalary` when present.
 - Semantic structure: one `h1` per page, ordered headings, `<main>`, `<nav>`, `<footer>`, descriptive link text, and `alt` on every meaningful image.
 - Performance:
   - Public pages are server-rendered per request with minimal client JS, and use `next/image` for images.

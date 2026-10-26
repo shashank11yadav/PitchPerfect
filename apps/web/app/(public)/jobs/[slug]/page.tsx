@@ -61,11 +61,13 @@ interface JobPageProps {
 const HIDDEN = { index: false, follow: false };
 
 /**
- * Whether search engines may see this listing as a real job: only a verified employer's, and never
- * the static demo's, whose listings are all samples. Anything else is `noindex` with no
- * `JobPosting`, so a crawler never takes a sample or an unproven employer for an opening.
+ * Whether search engines may see this listing as a real job: only a verified employer's, never a
+ * sample company's, and never the static demo's, whose listings are all samples. Anything else is
+ * `noindex` with no `JobPosting`, so a crawler never takes a sample or an unproven employer for an
+ * opening.
  */
-const indexable = (company: PublicCompany) => !PAGES_EXPORT && company.verification === "verified";
+const indexable = (company: PublicCompany) =>
+  !PAGES_EXPORT && !company.sample && company.verification === "verified";
 
 export async function generateMetadata({ params }: JobPageProps): Promise<Metadata> {
   const loaded = await loadJob((await params).slug);

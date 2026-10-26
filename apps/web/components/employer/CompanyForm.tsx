@@ -172,11 +172,19 @@ export function CompanyForm() {
         <div className="min-w-0">
           <h2 className="text-h3 [overflow-wrap:anywhere]">{current.name}</h2>
           <div className="mt-1">
-            <CompanyBadge verification={current.verification} domain={current.verifiedDomain} />
+            <CompanyBadge
+              verification={current.verification}
+              domain={current.verifiedDomain}
+              sample={current.sample}
+            />
           </div>
         </div>
       </div>
-      <VerificationBanner verification={current.verification} website={current.website} />
+      <VerificationBanner
+        verification={current.verification}
+        website={current.website}
+        sample={current.sample}
+      />
       {/* A suspended company can't edit its profile, so there is no form to fill in. */}
       {current.verification !== "suspended" && (
         <Card className="md:p-8">

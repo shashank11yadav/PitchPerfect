@@ -353,6 +353,7 @@ describe("view mappers", () => {
       logoUrl: null,
       verification: "verified",
       verifiedDomain: "example.test",
+      sample: true,
     });
     const view = toPublicJob(job, company);
     expect(view).toEqual({
@@ -379,6 +380,7 @@ describe("view mappers", () => {
         logoUrl: null,
         verification: "verified",
         verifiedDomain: "example.test",
+        sample: true,
       },
     });
   });

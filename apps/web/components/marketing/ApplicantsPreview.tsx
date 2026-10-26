@@ -69,7 +69,11 @@ export function ApplicantsPreview({
           <span className="block font-display font-semibold text-navy">{job.title}</span>
           <span className="block text-small text-muted">{job.company.name}</span>
         </span>
-        <CompanyBadge verification={job.company.verification} domain={job.company.host} />
+        <CompanyBadge
+          verification={job.company.verification}
+          domain={job.company.host}
+          sample={false}
+        />
       </figcaption>
       <ul className="divide-y divide-border">
         {pipeline.applicants.map(({ name, detail, score, status }) => (

@@ -159,5 +159,21 @@ describe("VerificationBanner", () => {
   it("says what the verified badge means", () => {
     render(<VerificationBanner verification="verified" website="https://pitchwell-demo.example" />);
     expect(screen.getByRole("heading", { name: "Verified" })).toBeVisible();
+    expect(screen.getByText(/“Verified” badge with your domain/)).toBeVisible();
+  });
+
+  it("says students see a sample company as a sample, verified or not", () => {
+    for (const verification of ["verified", "unverified"] as const) {
+      const { unmount } = render(
+        <VerificationBanner
+          verification={verification}
+          website="https://pitchwell-demo.example"
+          sample
+        />,
+      );
+      expect(screen.getByText(/labeled “Sample company”, with no links/)).toBeVisible();
+      expect(screen.queryByText(/“Verified” badge|“Unverified employer” badge/)).toBeNull();
+      unmount();
+    }
   });
 });

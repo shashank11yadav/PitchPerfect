@@ -1,18 +1,19 @@
 import type { Types } from "mongoose";
-import type {
-  AttemptSummary,
-  AttemptView,
-  EmployerApplicationView,
-  EmployerJob,
-  EmployerJobSummary,
-  EmployerProfileView,
-  JobPay,
-  PublicCompany,
-  PublicJob,
-  PublicJobSummary,
-  PublicUser,
-  StudentApplicationView,
-  StudentProfileView,
+import {
+  isSampleWebsite,
+  type AttemptSummary,
+  type AttemptView,
+  type EmployerApplicationView,
+  type EmployerJob,
+  type EmployerJobSummary,
+  type EmployerProfileView,
+  type JobPay,
+  type PublicCompany,
+  type PublicJob,
+  type PublicJobSummary,
+  type PublicUser,
+  type StudentApplicationView,
+  type StudentProfileView,
 } from "@pitchperfect/shared";
 import { badgeDomain } from "../services/company-verification.js";
 import type { ApplicationAttrs } from "./models/application.js";
@@ -77,6 +78,7 @@ export function toPublicCompany(company: Persisted<CompanyAttrs>): PublicCompany
     logoUrl: company.logoUrl ?? null,
     verification: company.verification,
     verifiedDomain: badgeDomain(company),
+    sample: isSampleWebsite(company.website),
   };
 }
 
@@ -97,7 +99,7 @@ export function toPublicJobSummary(
   job: Persisted<JobAttrs>,
   company: Persisted<CompanyAttrs>,
 ): PublicJobSummary {
-  const { name, slug, logoUrl, verification, verifiedDomain } = toPublicCompany(company);
+  const { name, slug, logoUrl, verification, verifiedDomain, sample } = toPublicCompany(company);
   return {
     id: job._id.toString(),
     slug: job.slug,
@@ -108,7 +110,7 @@ export function toPublicJobSummary(
     pay: toJobPay(job.pay),
     skills: [...job.skills],
     publishedAt: iso(job.publishedAt),
-    company: { name, slug, logoUrl, verification, verifiedDomain },
+    company: { name, slug, logoUrl, verification, verifiedDomain, sample },
   };
 }
 

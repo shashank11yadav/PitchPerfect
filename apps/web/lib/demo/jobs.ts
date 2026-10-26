@@ -1,5 +1,6 @@
 import {
   DAY_MS,
+  isSampleWebsite,
   type Page,
   type PublicCompany,
   type PublicJob,
@@ -42,6 +43,7 @@ const COMPANIES: readonly PublicCompany[] = SEED_COMPANIES.map((company, index) 
   logoUrl: null,
   verification: company.verification,
   verifiedDomain: company.verification === "verified" ? company.host : null,
+  sample: isSampleWebsite(company.host),
 }));
 
 export const DEMO_JOBS: readonly DemoJob[] = SEED_JOBS.flatMap((seed, index) => {
@@ -65,6 +67,7 @@ export const DEMO_JOBS: readonly DemoJob[] = SEED_JOBS.flatMap((seed, index) => 
       logoUrl: company.logoUrl,
       verification: company.verification,
       verifiedDomain: company.verifiedDomain,
+      sample: company.sample,
     },
   };
   return [{ job, company }];
