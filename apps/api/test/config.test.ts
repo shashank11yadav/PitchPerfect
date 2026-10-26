@@ -15,7 +15,6 @@ describe("loadConfig", () => {
   it("treats empty optional variables as unset", () => {
     const config = loadConfig(devEnv());
     expect(config.PROXY_SHARED_SECRET).toBeUndefined();
-    expect(config.REDIS_URL).toBeUndefined();
     expect(config.SEED_DEMO_PASSWORD).toBeUndefined();
     expect(config.SMTP_USER).toBeUndefined();
     expect(config.SMTP_PASS).toBeUndefined();

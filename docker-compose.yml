@@ -67,10 +67,9 @@ services:
       COACH_SHARED_SECRET: *dev-coach-secret
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
-      # Blank means unset: a developer's apps/api/.env may hold these for another setup, and here
-      # web sends no proxy secret and there is no Redis.
+      # Blank means unset: a developer's apps/api/.env may hold it for another setup, and here web
+      # sends no proxy secret.
       PROXY_SHARED_SECRET: ""
-      REDIS_URL: ""
     depends_on:
       mongo:
         condition: service_healthy

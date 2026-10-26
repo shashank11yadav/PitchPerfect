@@ -50,7 +50,6 @@ const envSchema = z
     PRACTICE_STUDENT_DAILY_TOKEN_LIMIT: integer(LIMITS.studentDailyTokenLimit),
     PRACTICE_RETENTION_DAYS: integer(LIMITS.attemptRetentionDays),
     HIBP_ENABLED: flag.default(true),
-    REDIS_URL: optional(z.string()),
     SEED_DEMO_PASSWORD: optional(z.string().min(LIMITS.passwordMinLength)),
   })
   .superRefine((env, ctx) => {
