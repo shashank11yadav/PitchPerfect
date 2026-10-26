@@ -72,6 +72,21 @@ describe("Modal", () => {
     }
   });
 
+  it("stops the page scrolling while open, and gives it back on close", async () => {
+    document.body.style.overflow = "auto";
+    const { user } = await openModal();
+    expect(document.body.style.overflow).toBe("hidden");
+    await user.keyboard("{Escape}");
+    expect(document.body.style.overflow).toBe("auto");
+    document.body.style.overflow = "";
+  });
+
+  it("fits the screen and scrolls inside itself when its content is taller", async () => {
+    await openModal();
+    // The overlay pads 1rem on each side; the dialog stays within what is left of the screen.
+    expect(screen.getByRole("dialog")).toHaveClass("max-h-[calc(100dvh-2rem)]", "overflow-y-auto");
+  });
+
   it("closes on Escape and returns focus to the trigger", async () => {
     const { user, trigger } = await openModal();
     await user.keyboard("{Escape}");

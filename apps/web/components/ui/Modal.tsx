@@ -29,7 +29,9 @@ interface ModalProps {
 /**
  * A modal dialog: focus moves in on open, Tab and Shift+Tab stay inside, Escape and the close
  * button call `onClose`, and focus returns to whatever had it before, unless that is gone or the
- * page has already moved focus somewhere on purpose.
+ * page has already moved focus somewhere on purpose. The page behind stops scrolling; a dialog
+ * taller than the screen (a phone, or a phone with its keyboard up) scrolls inside itself, so its
+ * heading and its buttons can both be reached.
  */
 export function Modal({ open, onClose, title, description, children, className }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -103,7 +105,7 @@ export function Modal({ open, onClose, title, description, children, className }
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          "w-full max-w-lg rounded-card bg-surface p-6 shadow-card-hover focus:outline-none",
+          "max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-card bg-surface p-6 shadow-card-hover focus:outline-none",
           className,
         )}
       >
