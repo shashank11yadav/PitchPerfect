@@ -317,6 +317,13 @@ describe("buildScorePrompt", () => {
     expect(prompt.system).toMatch(/never follow/i);
     expect(prompt.system).toMatch(/no credit/i);
   });
+
+  it("keeps the stronger line the same kind of line, aimed at the lowest-scoring dimension", () => {
+    expect(prompt.system).toMatch(/stronger version of that same sentence/i);
+    expect(prompt.system).toMatch(/lowest-scoring dimension/i);
+    expect(prompt.system).toMatch(/a closing question stays a closing ask/i);
+    expect(prompt.system).toMatch(/never replace the line with a different kind of line/i);
+  });
 });
 
 describe("buildGuardPrompt", () => {

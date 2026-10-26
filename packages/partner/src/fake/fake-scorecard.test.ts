@@ -1,6 +1,6 @@
 import { RUBRIC_DIMENSIONS, ScorecardSchema, type Scorecard } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
-import { heuristicScorecard, plural } from "./fake-scorecard.js";
+import { heuristicScorecard, keepsKind, plural } from "./fake-scorecard.js";
 
 const STRONG = [
   "Hi, I'm Riley. I help dispatch teams plan routes faster. How do you plan routes today?",
@@ -55,6 +55,29 @@ const UNANSWERED = [
   "That's fair. What do you pay today, roughly?",
   "Could we set up 20 minutes on Thursday at 10am with you and your dispatch lead?",
   "Who else would need to sign off?",
+];
+
+/** A pitch and a closing ask with a time, and no pushback acknowledged. */
+const CLOSING_ASK = [
+  "Hi Maya, I'm Riley from Routewise. How do you plan routes today?",
+  "Our planner rebuilds routes in minutes, so your dispatchers stop firefighting.",
+  "Could we book 20 minutes on Thursday at 10am to walk through it?",
+];
+
+/** Strong everywhere but the ask, which names no time. */
+const UNTIMED_ASK = [
+  "Hi Maya, I'm Riley from Routewise. How do your dispatchers plan routes today?",
+  "Our planner helps your team rebuild routes in minutes, so your drivers stop waiting.",
+  "That's fair, and teams like yours cut 4 hours a week of replanning, which saves your leads time.",
+  "Would you be open to a short demo with your dispatch lead?",
+];
+
+/** A good call, except that the ask came in the opening turn, before they had a reason to say yes. */
+const EARLY_ASK = [
+  "Hi, I'm Riley from Routewise. Could we book a demo on Thursday at 10am for your team?",
+  "How do your dispatchers plan your routes today?",
+  "Our planner helps your team cut replanning, so your drivers stop waiting.",
+  "I hear you, and teams like yours save 4 hours a week, which helps your leads. What would that be worth to you?",
 ];
 
 const card = (turns: readonly string[]) => heuristicScorecard(turns, "value");
@@ -313,5 +336,63 @@ describe("heuristicScorecard", () => {
     ];
     const objections = card(turns).dimensions.find((dimension) => dimension.key === "objections");
     expect(objections?.justification).toMatch(/backed it up with something concrete/);
+  });
+
+  describe("stronger version", () => {
+    const CALLS = {
+      STRONG,
+      HEDGY,
+      RAMBLING,
+      TERSE,
+      SPARE,
+      NO_BENEFIT,
+      NO_ASK,
+      UNANSWERED,
+      CLOSING_ASK,
+      UNTIMED_ASK,
+      EARLY_ASK,
+    };
+
+    it("never rewrites a closing ask as a reply to an objection", () => {
+      const { improved } = card(CLOSING_ASK).strongerLine;
+      expect(improved).not.toMatch(/fair concern/i);
+      // There was no pushback to answer, so the objections dimension rewrites nothing.
+      expect(improved).toMatch(/worth to your team/);
+    });
+
+    it("keeps a closing ask an ask, and makes it the better ask", () => {
+      const { original, improved } = card(UNTIMED_ASK).strongerLine;
+      expect(original).toBe("Would you be open to a short demo with your dispatch lead?");
+      expect(improved).toBe(
+        "Would you be open to a short demo with your dispatch lead, on Thursday at 10am?",
+      );
+    });
+
+    it("keeps an early ask the ask and earns it, instead of swapping in a question", () => {
+      const scorecard = card(EARLY_ASK);
+      const lowest = [...scorecard.dimensions].sort((a, b) => a.score - b.score)[0];
+      expect(lowest?.key).toBe("structure");
+      expect(scorecard.strongerLine).toEqual({
+        original: "Could we book a demo on Thursday at 10am for your team?",
+        improved:
+          "Once I've heard how you handle it today, could we book a demo on Thursday at 10am for your team?",
+      });
+    });
+
+    it.each(Object.entries(CALLS))("keeps the kind of line it rewrites (%s)", (_name, turns) => {
+      const { original, improved } = card(turns).strongerLine;
+      expect(turns.some((turn) => turn.includes(original))).toBe(true);
+      expect(improved).not.toBe(original);
+      expect(keepsKind(original, improved)).toBe(true);
+    });
+
+    it("tells an ask, a question and a statement apart", () => {
+      expect(keepsKind("Could we meet on Thursday?", "That's a fair concern. Why?")).toBe(false);
+      expect(keepsKind("Could we meet on Thursday?", "Could we meet Thursday at 10am?")).toBe(true);
+      expect(keepsKind("Do you use spreadsheets?", "How do you plan routes today?")).toBe(true);
+      expect(keepsKind("Do you use spreadsheets?", "Let's book Thursday at 10am.")).toBe(false);
+      expect(keepsKind("We save you hours.", "We save you hours. What is that worth?")).toBe(true);
+      expect(keepsKind("We save you hours.", "How do you plan routes today?")).toBe(false);
+    });
   });
 });

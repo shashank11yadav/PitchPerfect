@@ -21,11 +21,23 @@ interface Judgement {
   /** Said when this is one of the call's best dimensions; null when it isn't true enough. */
   strength: string | null;
   improvement: string;
-  /** The line to rewrite when this is the weakest dimension and has no quote of its own. */
-  fallback: string;
-  /** A stronger version of `line`, aimed at what this dimension scored low on. */
-  rewrite: (line: string) => string;
+  /**
+   * The line to rewrite when this is the weakest dimension and has no quote of its own; null when
+   * no other line is one this dimension can make stronger.
+   */
+  fallback: string | null;
+  /**
+   * A stronger version of `line`, aimed at what this dimension scored low on, or null when this
+   * dimension has no stronger version of that kind of line.
+   */
+  rewrite: (line: string) => string | null;
 }
+
+/**
+ * What a line does in the call: asks for the next step (the scorecard's own test for an ask), asks
+ * a question, or says something.
+ */
+type LineKind = "ask" | "question" | "statement";
 
 /** "1 question", "3 questions". */
 export const plural = (count: number, word: string) =>
@@ -53,6 +65,34 @@ const wordCount = (text: string) => text.split(/\s+/).filter(Boolean).length;
 
 /** A sentence without its closing punctuation, for building on. */
 const bare = (sentence: string) => sentence.replace(/[.!?]+$/, "");
+
+function kindOf(sentence: string): LineKind {
+  if (ASK.test(sentence) || TIME_PHRASE.test(sentence)) return "ask";
+  return sentence.includes("?") ? "question" : "statement";
+}
+
+/**
+ * True when `improved` still does what `original` did: an ask still ends on an ask, a question
+ * still ends on a question, and a statement still opens with a statement. A closing question
+ * never comes back as an answer to pushback, and an answer never comes back as a question.
+ */
+export function keepsKind(original: string, improved: string): boolean {
+  const kind = kindOf(original);
+  const sentences = sentencesOf(improved);
+  const end = kind === "statement" ? sentences[0] : sentences.at(-1);
+  return end !== undefined && kindOf(end) === kind;
+}
+
+/** `line` lower-cased at the start, to follow on from a clause; "I" stays a capital. */
+const followOn = (line: string) =>
+  /^I\b/.test(line) ? line : line.charAt(0).toLowerCase() + line.slice(1);
+
+/**
+ * `extra` added to `line` without changing what the line does: after a statement, and before a
+ * question or an ask, so the line still ends on it.
+ */
+const withLine = (line: string, extra: string) =>
+  kindOf(line) === "statement" ? `${bare(line)}. ${extra}` : `${extra} ${line}`;
 
 const OPEN_QUESTION = /^(what|how|why|which|where|who|tell me|walk me)\b/i;
 const PROOF = /\b(\d+|for example|customers|teams like|case study|results)\b/i;
@@ -117,7 +157,7 @@ function withoutHedges(line: string): string {
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
-/** The first clause of a long line, as its own sentence. */
+/** The first clause of a long line, as its own sentence, ending the way the line did. */
 function shortened(line: string): string {
   const words = bare(line).split(/\s+/);
   const clause =
@@ -125,7 +165,7 @@ function shortened(line: string): string {
       .split(/,|\band\b|\bwhich\b/)[0]
       ?.trim() ?? "";
   const short = wordCount(clause) >= 4 ? clause : words.slice(0, 12).join(" ");
-  return `${short}.`;
+  return `${short}${line.includes("?") ? "?" : "."}`;
 }
 
 function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
@@ -143,12 +183,17 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
   const turnsWith = (test: (sentence: string) => boolean) =>
     new Set(said.filter(({ sentence }) => test(sentence)).map(({ turn }) => turn)).size;
   const last = sentences.at(-1) ?? "";
+  /** The last thing the student said rather than asked, for a rewrite that adds to it. */
+  const lastStatement = sentences.findLast((sentence) => kindOf(sentence) === "statement");
 
   const questions = sentences.filter((sentence) => sentence.includes("?"));
   const open = questions.filter((sentence) => OPEN_QUESTION.test(sentence));
   const questionTurns = turnsWith((sentence) => sentence.includes("?"));
   const openTurns = turnsWith((sentence) => sentence.includes("?") && OPEN_QUESTION.test(sentence));
-  const closed = questions.find((sentence) => !OPEN_QUESTION.test(sentence));
+  // An ask phrased as a question is the call to action, not a closed discovery question.
+  const closed = questions.find(
+    (sentence) => !OPEN_QUESTION.test(sentence) && kindOf(sentence) === "question",
+  );
   const averageWords = turns.length ? Math.round(wordCount(all) / turns.length) : 0;
   const longest = [...sentences].sort((a, b) => wordCount(b) - wordCount(a))[0] ?? "";
   const tidiest = sentences.find((sentence) => {
@@ -188,20 +233,22 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
       reason:
         "You pitched without asking anything first, so the pitch had nothing of theirs to hang on.",
       fix: "Ask one question about how they work today before you describe anything.",
-      rewrite: (line: string) => `${bare(line)}. ${DISCOVERY_LINE}`,
+      rewrite: (line: string) => withLine(line, DISCOVERY_LINE),
     },
     turns.length < 3 && {
       reason: `The call ended after ${plural(turns.length, "turn")}, before it could get anywhere.`,
       quote: last,
       fix: "Stay in the call longer: answer what they say and move it toward a decision.",
-      rewrite: (line: string) => `${bare(line)}. ${DISCOVERY_LINE}`,
+      rewrite: (line: string) => withLine(line, DISCOVERY_LINE),
     },
     !ask && {
       reason: "It ended without an ask, so there was nothing for them to agree to.",
       // Where the ask should have been.
       quote: last,
       fix: "Finish with a clear ask for the next meeting.",
-      rewrite: (line: string) => `${bare(line)}. ${ASK_LINE}`,
+      // A closing question stays a question, so only a closing statement gets the ask added.
+      rewrite: (line: string) =>
+        kindOf(line) === "statement" ? `${bare(line)}. ${ASK_LINE}` : null,
     },
     ask !== undefined &&
       askedLater === undefined && {
@@ -209,7 +256,11 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
           "You asked for the meeting in your first turn, before they had a reason to say yes.",
         quote: ask,
         fix: "Make the ask at the end, once they've told you what matters to them.",
-        rewrite: () => DISCOVERY_LINE,
+        // Still the ask, now earned by what they've said.
+        rewrite: (line: string) =>
+          kindOf(line) === "ask"
+            ? `Once I've heard how you handle it today, ${followOn(line)}`
+            : null,
       },
   ].filter((part) => part !== false);
   const structureScore = clamp(5 - missing.length);
@@ -292,11 +343,13 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
     // The line where they said what they do, which is where the benefit belongs.
     fallback:
       sentences.find(
-        (sentence) => !sentence.includes("?") && sentence !== opener && wordCount(sentence) >= 6,
+        (sentence) =>
+          kindOf(sentence) === "statement" && sentence !== opener && wordCount(sentence) >= 6,
       ) ??
       sentences[0] ??
       last,
-    rewrite: (line) => `${bare(line)}. What would that be worth to your team?`,
+    rewrite: (line) =>
+      kindOf(line) === "statement" ? `${bare(line)}. What would that be worth to your team?` : null,
   };
 
   const structure: Judgement = {
@@ -308,8 +361,18 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
     strength:
       missing.length === 0 ? "The call had a beginning, a middle and an ask, in that order." : null,
     improvement: missing[0]?.fix ?? "Sum up what you heard before you make the ask.",
-    fallback: sentences[0] ?? last,
-    rewrite: missing[0]?.rewrite ?? ((line) => `${bare(line)}. ${ASK_LINE}`),
+    // The line the reason is about, even when another dimension quotes it.
+    fallback: missing[0]?.quote ?? sentences[0] ?? last,
+    // Nothing missing: sum up before the ask, or end a statement on one.
+    rewrite:
+      missing[0]?.rewrite ??
+      ((line) => {
+        const kind = kindOf(line);
+        if (kind === "question") return null;
+        return kind === "ask"
+          ? `From what you've told me, it's worth a closer look. ${line}`
+          : `${bare(line)}. ${ASK_LINE}`;
+      }),
   };
 
   const discoveryScore = clamp(1 + questionTurns + Math.min(1, openTurns) - (openTurns ? 0 : 1));
@@ -332,8 +395,13 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
       open.length === 0
         ? "Ask how they handle it today before you pitch anything."
         : "After a good answer, ask what the problem costs them.",
-    fallback: closed ?? last,
-    rewrite: () => DISCOVERY_LINE,
+    fallback: closed ?? lastStatement ?? last,
+    // A question becomes an open one; a statement gets one after it; an ask stays the ask.
+    rewrite: (line) => {
+      const kind = kindOf(line);
+      if (kind === "question") return DISCOVERY_LINE;
+      return kind === "statement" ? `${bare(line)}. ${DISCOVERY_LINE}` : null;
+    },
   };
 
   const objectionsScore = clamp(
@@ -352,8 +420,13 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
       : null,
     improvement:
       "When they push back, say it's fair, ask what's behind it, then answer with one fact.",
-    fallback: benefits[0] ?? last,
-    rewrite: () => "That's a fair concern. Can I ask what's behind it before I answer?",
+    // Only the line that answered pushback can become a better answer to it. Without one, a
+    // pitch or a closing ask rewritten as an objection reply would make no sense.
+    fallback: null,
+    rewrite: (line) =>
+      kindOf(line) === "statement"
+        ? "That's a fair concern. Can I ask what's behind it before I answer?"
+        : null,
   };
 
   const confidenceScore = clamp(5 - hedges.count);
@@ -392,13 +465,15 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
       : ask
         ? "Put a day and a time on your ask."
         : "End with a clear ask for a meeting.",
-    fallback: last,
-    rewrite: (line) =>
-      timed
+    fallback: lastStatement ?? last,
+    rewrite: (line) => {
+      const kind = kindOf(line);
+      if (kind === "question") return null;
+      if (kind === "statement") return `${bare(line)}. ${ASK_LINE}`;
+      return TIME_PHRASE.test(line)
         ? `${bare(line)}, and could you bring whoever else would need to sign off?`
-        : ask
-          ? `${bare(line)}, on Thursday at 10am?`
-          : `${bare(line)}. ${ASK_LINE}`,
+        : `${bare(line)}, on Thursday at 10am?`;
+    },
   };
 
   return capped(
@@ -448,6 +523,13 @@ function distinctTurns(turns: readonly string[]): string[] {
   });
 }
 
+/** A stronger version of `line` of the same kind, when no dimension has one of its own. */
+function lastResort(line: string): string {
+  const kind = kindOf(line);
+  if (kind === "statement") return `${bare(line)}. ${ASK_LINE}`;
+  return kind === "ask" ? ASK_LINE : DISCOVERY_LINE;
+}
+
 /** True things to say about any call the student kept going. */
 const FALLBACK_STRENGTHS = [
   "You got the conversation started and kept it going.",
@@ -494,13 +576,26 @@ export function heuristicScorecard(said: readonly string[], weighted: RubricKey)
     .filter((line, index, lines) => lines.indexOf(line) === index)
     .slice(0, LIMITS.scorecardListSize);
 
-  // The weakest dimension, so the rewrite answers the lowest score: its quote when it has one
-  // (equal scores put a quoted one first), otherwise its fallback line from the student's turns.
-  const target = judged[worst[0] ?? "clarity"];
-  const original = target.evidence ?? quote(target.fallback || (turns[0] ?? ""));
-  const rewritten = original ? target.rewrite(original) : "";
-  const improved =
-    rewritten && rewritten !== original ? rewritten : `${bare(original)}. ${ASK_LINE}`;
+  // The weakest dimension that has a stronger version of its line, so the rewrite answers the
+  // lowest score it can: its quote when it has one (equal scores put a quoted one first),
+  // otherwise its fallback line from the student's turns. The stronger version does what the
+  // line did, so a closing ask stays an ask and only becomes a better one.
+  const lineOf = (judgement: Judgement) =>
+    judgement.evidence ??
+    (judgement.fallback === null ? null : quote(judgement.fallback || (turns[0] ?? "")));
+  const rewrites = worst.flatMap((key) => {
+    const line = lineOf(judged[key]);
+    if (!line) return [];
+    const rewritten = judged[key].rewrite(line);
+    return rewritten && rewritten !== line && keepsKind(line, rewritten)
+      ? [{ original: line, improved: rewritten }]
+      : [];
+  });
+  const original =
+    rewrites[0]?.original ??
+    worst.map((key) => lineOf(judged[key])).find((line) => line !== null) ??
+    "";
+  const improved = rewrites[0]?.improved ?? lastResort(original);
 
   return {
     overall: computeOverall(dimensions, weighted),

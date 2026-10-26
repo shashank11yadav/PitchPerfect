@@ -18,6 +18,34 @@ export function studentSentences(turns: readonly string[]): string[] {
 
 const isWordChar = (char: string | undefined) => char !== undefined && WORD_CHAR.test(char);
 
+/** A sentence that shares fewer words than this with a misquote is not the line it meant. */
+const MIN_SHARED_WORDS = 2;
+
+/** The distinct words of three or more letters, lower-cased. */
+const wordsOf = (text: string) => new Set(text.toLowerCase().match(/[\p{L}\p{N}']{3,}/gu) ?? []);
+
+/**
+ * The student sentence a misquoted line was taken from: the one sharing the most words with it
+ * (the longer on a tie), or null when none shares enough. The rewrite was written for that line,
+ * so it keeps its pair.
+ */
+function closestSentence(misquote: string, sentences: readonly string[]): string | null {
+  const words = wordsOf(normalize(unescapeData(misquote)));
+  let best: string | null = null;
+  let bestShared = MIN_SHARED_WORDS - 1;
+  for (const sentence of sentences) {
+    const shared = [...wordsOf(sentence)].filter((word) => words.has(word)).length;
+    if (
+      shared > bestShared ||
+      (shared === bestShared && best !== null && sentence.length > best.length)
+    ) {
+      best = sentence;
+      bestShared = shared;
+    }
+  }
+  return best;
+}
+
 /** True when `quote` occurs in `turn` without starting or ending inside a word. */
 function occursOnWordBoundaries(turn: string, quote: string): boolean {
   for (let at = turn.indexOf(quote); at >= 0; at = turn.indexOf(quote, at + 1)) {
@@ -31,7 +59,9 @@ function occursOnWordBoundaries(turn: string, quote: string): boolean {
 /**
  * Keeps only quotes the student actually said: `evidence` must be at least three words and a
  * whole-word, verbatim substring of a student turn after normalization, else it becomes null; a
- * `strongerLine.original` that fails the same test is replaced by the longest student sentence.
+ * `strongerLine.original` that fails the same test is replaced by the student sentence it was
+ * most likely taken from (most words in common), so `improved` still rewrites the line shown
+ * above it, or by the longest student sentence when none is close.
  * The model saw escaped text, so a quote is tried unescaped first, then as written.
  */
 export function verifyQuotes(scorecard: Scorecard, studentTurns: readonly string[]): Scorecard {
@@ -54,9 +84,11 @@ export function verifyQuotes(scorecard: Scorecard, studentTurns: readonly string
     dimensions: scorecard.dimensions.map((d) => ({ ...d, evidence: verbatim(d.evidence) })),
     strongerLine: {
       ...scorecard.strongerLine,
-      original:
+      original: (
         verbatim(scorecard.strongerLine.original) ??
-        longest.slice(0, LIMITS.transcriptEntryMaxLength),
+        closestSentence(scorecard.strongerLine.original, sentences) ??
+        longest
+      ).slice(0, LIMITS.transcriptEntryMaxLength),
     },
   };
 }

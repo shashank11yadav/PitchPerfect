@@ -70,7 +70,8 @@ describe("verifyQuotes", () => {
       TURNS,
     );
     expect(card.dimensions.slice(0, 3).map((d) => d.evidence)).toEqual([null, null, null]);
-    expect(card.strongerLine.original).toBe("What happens today when a patient cancels late?");
+    // Too short to keep as a quote, so the whole sentence it came from is shown instead.
+    expect(card.strongerLine.original).toBe("I help clinics fill empty appointment slots.");
   });
 
   it("matches the same words at a later whole-word position", () => {
@@ -83,6 +84,13 @@ describe("verifyQuotes", () => {
   it("replaces a fabricated strongerLine original with the longest student sentence", () => {
     const card = verifyQuotes(scorecard([], "Something the student never said."), TURNS);
     expect(card.strongerLine.original).toBe("What happens today when a patient cancels late?");
+    expect(card.strongerLine.improved).toBe("A better line.");
+  });
+
+  it("replaces a misquoted strongerLine original with the sentence it was taken from", () => {
+    // Paraphrased, so not verbatim; the rewrite was written for the line about the cost.
+    const card = verifyQuotes(scorecard([], "How much does it cost you each month?"), TURNS);
+    expect(card.strongerLine.original).toBe("How much does that cost you per month?");
     expect(card.strongerLine.improved).toBe("A better line.");
   });
 
