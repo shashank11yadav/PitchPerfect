@@ -132,7 +132,7 @@ All collections have `createdAt`/`updatedAt` timestamps. IDs are ObjectIds. Neve
 
 1. `POST /api/auth/signup` validates with `SignupSchema` (shared), checks password policy, creates `users` + role profile (+ `companies` for employers, always created `unverified`), sends a verification email with a single-use token (stored hashed, 24 h expiry).
 2. `POST /api/auth/verify-email {token}` marks `emailVerifiedAt`. For employers, the company is then promoted to `verified` if the now-confirmed email's registrable domain matches the company website's and records that domain as `verifiedDomain`, which the badge shows (free, disposable and alias mail domains never match, matched case-insensitively and including their subdomains against the `email-providers` and `disposable-email-domains-js` lists and `apps/api/src/services/alias-mail-domains.ts`; a `suspended` company is never changed). Renaming the company, or moving its website to another registrable domain, later turns a `verified` company back to `unverified` and stores `verificationLockedReason`; this step then skips it, and only an admin's `approve-company` verifies it again.
-3. `POST /api/auth/signin` verifies argon2id hash, regenerates the session ID, stores `{userId, role}` in the session. The cookie is `pp.sid`, `httpOnly`, `Secure` (prod), `SameSite=Lax`, rolling 7 days, absolute 30 days.
+3. `POST /api/auth/signin` verifies argon2id hash, regenerates the session ID, stores `{userId, role}` in the session. The cookie is `__Host-pp.sid` in production (`Secure`, `Path=/`, no `Domain`) and `pp.sid` in development, `httpOnly`, `SameSite=Lax`, rolling 7 days, absolute 30 days.
 
 ### Practice session
 
