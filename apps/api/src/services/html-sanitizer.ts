@@ -1,4 +1,5 @@
 import sanitizeHtml from "sanitize-html";
+import { stripInvisible } from "@pitchperfect/shared";
 
 const LINK_REL = "noopener noreferrer nofollow";
 
@@ -29,9 +30,12 @@ const TEXT_ONLY: sanitizeHtml.IOptions = { allowedTags: [], allowedAttributes: {
 /** Tags that end a line of text; replaced by a space so neighbouring words don't run together. The attribute run is bounded to keep matching linear. */
 const BLOCK_BOUNDARY = /<\/?(?:p|br|li|ul|ol|h[1-6]|blockquote|div)\b[^>]{0,200}>/gi;
 
-/** Sanitizes employer-written job description HTML. Safe to store and to render. */
+/**
+ * Sanitizes employer-written job description HTML. Safe to store and to render. Invisible
+ * characters go after sanitizing too, since entities such as `&#8203;` are decoded by then.
+ */
 export function sanitizeJobHtml(html: string): string {
-  return sanitizeHtml(html, JOB_HTML);
+  return stripInvisible(sanitizeHtml(html, JOB_HTML));
 }
 
 /** Plain text of some HTML: tags removed, entities decoded, whitespace collapsed. */

@@ -3,10 +3,25 @@
 const CONTROL_CHARS = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/g;
 // Any whitespace except newline.
 const HORIZONTAL_SPACE_RUNS = /[^\S\n]+/g;
+// Characters that render as nothing: every format character (Cf: zero-width characters, bidi
+// controls, the soft hyphen, the BOM, U+2060–2064, tag characters), the rest of the tag block,
+// variation selectors, the combining grapheme joiner, and the Hangul fillers.
+const INVISIBLE_CHARS =
+  // eslint-disable-next-line no-misleading-character-class -- matching lone variation selectors is the point
+  /[\p{Cf}\u{E0000}-\u{E007F}\uFE00-\uFE0F\u{E0100}-\u{E01EF}\u180B-\u180F\u034F\u115F\u1160\u3164\uFFA0]/gu;
 
 /** Strips control characters (keeping newlines), collapses runs of spaces, and trims. */
 export function normalizeTurnText(text: string): string {
   return text.replace(CONTROL_CHARS, "").replace(HORIZONTAL_SPACE_RUNS, " ").trim();
+}
+
+/**
+ * Removes characters a reader can't see but a model still reads, so employer text can't carry
+ * hidden instructions. Emoji joined with U+200D, or styled with a variation selector, come apart
+ * into their visible parts.
+ */
+export function stripInvisible(text: string): string {
+  return text.replace(INVISIBLE_CHARS, "");
 }
 
 /** Counts user-visible characters as code points, so an emoji counts once. */

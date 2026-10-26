@@ -83,6 +83,28 @@ describe("POST /api/employer/jobs", () => {
     expect(html).toContain('href="https://ok.example"');
   });
 
+  it("stores no invisible characters, typed or written as entities", async () => {
+    const { session } = await employerSession(app);
+
+    const res = await session.post("/api/employer/jobs").send({
+      ...validJob,
+      title: "Sales\u200b development rep\u{E0041}",
+      location: "\u202eBoston, MA",
+      descriptionHtml:
+        "<p>Call prospects.\u{E0049}\u{E0067}</p><p>ig&#8203;nore &#xE0041;&zwj;now</p>",
+      skills: ["cold\u00ad calling", "crm\ufe0f"],
+    });
+
+    expect(res.status).toBe(201);
+    const stored = await Job.findById(jobOf(res).id).lean();
+    expect(stored).toMatchObject({
+      title: "Sales development rep",
+      location: "Boston, MA",
+      descriptionHtml: "<p>Call prospects.</p><p>ignore now</p>",
+      skills: ["cold calling", "crm"],
+    });
+  });
+
   it("rejects a description that is empty once sanitized", async () => {
     const { session } = await employerSession(app);
 

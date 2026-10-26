@@ -1,6 +1,7 @@
+import { stripInvisible } from "@pitchperfect/shared";
+
 export type RuleVerdict = "prompt_attack" | "harmful";
 
-const ZERO_WIDTH = new RegExp("[\\u200b-\\u200f\\u2060\\ufeff\\u00ad]", "g");
 const COMBINING_MARKS = /\p{M}/gu;
 const LEET: Record<string, string> = {
   "0": "o",
@@ -16,11 +17,10 @@ const LEET_NEXT_TO_LETTER = /(?<=[a-z])[01345@$]|[01345@$](?=[a-z])/g;
 const NON_WORD = /[^a-z0-9\s]+/g;
 
 /** Lowercase, accent-free, de-obfuscated words separated by single spaces. */
-function normalize(text: string): string {
-  return text
+export function normalizeWords(text: string): string {
+  return stripInvisible(text)
     .normalize("NFKD")
     .replace(COMBINING_MARKS, "")
-    .replace(ZERO_WIDTH, "")
     .toLowerCase()
     .replace(LEET_NEXT_TO_LETTER, (char) => LEET[char] ?? char)
     .replace(NON_WORD, " ")
@@ -28,7 +28,7 @@ function normalize(text: string): string {
     .trim();
 }
 
-// These are matched on the raw text: they rely on punctuation or capitals that normalize() drops.
+// These are matched on the raw text: they rely on punctuation or capitals that normalizeWords() drops.
 const RAW_ATTACKS: readonly RegExp[] = [
   /<\|?\/?(?:im_start|im_end|system|endoftext)\|?>|\[\/?inst\]|<<\/?sys>>/i,
   /^\s*(?:new|updated|revised)\s+(?:system\s+)?instructions\s*:/i,
@@ -130,7 +130,7 @@ const anyMatch = (patterns: readonly RegExp[], text: string) =>
  * Harm is checked first because it is the more serious verdict.
  */
 export function ruleCheck(text: string): RuleVerdict | null {
-  const words = normalize(text);
+  const words = normalizeWords(text);
   if (anyMatch(HARMFUL, words)) return "harmful";
   if (anyMatch(RAW_ATTACKS, text) || isDan(text) || anyMatch(PROMPT_ATTACK, words))
     return "prompt_attack";

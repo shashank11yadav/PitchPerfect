@@ -104,6 +104,28 @@ describe("JobInputSchema", () => {
     expect(partial.parse({ title: "New title" })).toEqual({ title: "New title" });
     expect(partial.safeParse({ companyId: "x" }).success).toBe(false);
   });
+
+  it("removes invisible characters from every text field", () => {
+    const parsed = JobInputSchema.parse({
+      ...job(),
+      title: "\ufeffSales\u00ad development intern",
+      location: "Boston,\u200b MA",
+      descriptionHtml: "<p>Learn to sell.\u{E0041}\u{E0053}\u{E004B}</p>\u202e",
+      skills: ["Commu\u200dnication", "CRM\ufe0f"],
+    });
+    expect(parsed).toMatchObject({
+      title: "Sales development intern",
+      location: "Boston, MA",
+      descriptionHtml: "<p>Learn to sell.</p>",
+      skills: ["Communication", "CRM"],
+    });
+  });
+
+  it("rejects a title that is only invisible characters", () => {
+    expect(JobInputSchema.safeParse({ ...job(), title: "\u200b\u200b\u200b\u200b" }).success).toBe(
+      false,
+    );
+  });
 });
 
 describe("JobListQuerySchema", () => {

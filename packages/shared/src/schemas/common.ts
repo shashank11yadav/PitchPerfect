@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { LIMITS } from "../limits.js";
-import { countChars, normalizeTurnText } from "../text.js";
+import { countChars, normalizeTurnText, stripInvisible } from "../text.js";
 
 const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 const NAME = /^(?=.*\p{L})[\p{L}\p{M}' ’.-]+$/u;
@@ -40,8 +40,11 @@ export const tokenField = () => z.string().min(1).max(LIMITS.tokenMaxLength);
 /** Person name: 1–60 characters of letters (any language), spaces, apostrophes, hyphens, periods. */
 export const nameField = () => z.string().trim().min(1).max(LIMITS.nameMaxLength).regex(NAME);
 
+/** A string without invisible characters (`stripInvisible`), trimmed. For text people write. */
+export const visibleText = () => z.string().overwrite(stripInvisible).trim();
+
 /** Trimmed free text of 1–120 characters. */
-export const shortText = () => z.string().trim().min(1).max(LIMITS.profileTextMaxLength);
+export const shortText = () => visibleText().min(1).max(LIMITS.profileTextMaxLength);
 
 /** A student's message: normalized, then 1–1000 characters (counted as code points). */
 export const turnText = () =>

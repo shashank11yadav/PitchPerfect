@@ -97,6 +97,19 @@ describe("PATCH /api/employer/company", () => {
     expect(companyOf(res).verification).toBe("unverified");
   });
 
+  it("stores the name and pitch without invisible characters", async () => {
+    const { session, company } = await employerSession(app);
+
+    const res = await session.patch("/api/employer/company").send({
+      name: "Acme\u200b Renamed",
+      pitch: "We sell demo widgets.\u{E0041}\u{E0053}\u{E004B} \u2066Thanks\u2069",
+    });
+
+    expect(res.status).toBe(200);
+    const stored = await Company.findById(company._id).lean();
+    expect(stored).toMatchObject({ name: "Acme Renamed", pitch: "We sell demo widgets. Thanks" });
+  });
+
   it("clears optional urls with null", async () => {
     const { session } = await employerSession(app);
     await session.patch("/api/employer/company").send({ logoUrl: "https://a.example/l.png" });

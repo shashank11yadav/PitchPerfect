@@ -28,4 +28,13 @@ describe("CompanyUpdateSchema", () => {
     expect(CompanyUpdateSchema.safeParse({ pitch: "p".repeat(1001) }).success).toBe(false);
     expect(CompanyUpdateSchema.safeParse({ verification: "verified" }).success).toBe(false);
   });
+
+  it("removes invisible characters from the name and pitch", () => {
+    expect(
+      CompanyUpdateSchema.parse({
+        name: "\ufeffAc\u200bme",
+        pitch: "We make widgets.\u{E0049}\u{E0067}\u{E006E} \u202eSee you\u202c",
+      }),
+    ).toEqual({ name: "Acme", pitch: "We make widgets. See you" });
+  });
 });

@@ -8,7 +8,7 @@ import {
   WORKPLACES,
 } from "../enums.js";
 import { LIMITS } from "../limits.js";
-import { pageQuery, pageSchema } from "./common.js";
+import { pageQuery, pageSchema, visibleText } from "./common.js";
 import { PublicCompanySchema } from "./employer.js";
 
 const money = () => z.number().positive().max(LIMITS.payMax);
@@ -32,13 +32,13 @@ export const PaySchema = z.discriminatedUnion("type", [
 export type JobPay = z.infer<typeof PaySchema>;
 
 export const JobInputSchema = z.strictObject({
-  title: z.string().trim().min(LIMITS.jobTitleMinLength).max(LIMITS.jobTitleMaxLength),
-  location: z.string().trim().min(LIMITS.jobLocationMinLength).max(LIMITS.jobLocationMaxLength),
+  title: visibleText().min(LIMITS.jobTitleMinLength).max(LIMITS.jobTitleMaxLength),
+  location: visibleText().min(LIMITS.jobLocationMinLength).max(LIMITS.jobLocationMaxLength),
   workplace: z.enum(WORKPLACES),
   employmentType: z.enum(EMPLOYMENT_TYPES),
   /** Untrusted; the api sanitizes it before storing. */
-  descriptionHtml: z.string().trim().min(1).max(LIMITS.jobDescriptionMaxChars),
-  skills: z.array(z.string().trim().min(1).max(LIMITS.jobSkillMaxLength)).max(LIMITS.jobSkillsMax),
+  descriptionHtml: visibleText().min(1).max(LIMITS.jobDescriptionMaxChars),
+  skills: z.array(visibleText().min(1).max(LIMITS.jobSkillMaxLength)).max(LIMITS.jobSkillsMax),
   pay: PaySchema,
   /** Omitted means "draft" on create. Archiving goes through the status endpoint. */
   status: z.enum(["draft", "active"]).optional(),

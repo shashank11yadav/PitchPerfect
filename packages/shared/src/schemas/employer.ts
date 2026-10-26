@@ -7,7 +7,7 @@ import {
 } from "../enums.js";
 import { LIMITS } from "../limits.js";
 import type { EmployerRecentApplication } from "./applications.js";
-import { httpsUrl, shortText } from "./common.js";
+import { httpsUrl, shortText, visibleText } from "./common.js";
 import type { JobPay } from "./jobs.js";
 
 /** Company fields collected at employer signup; also editable later. */
@@ -21,7 +21,7 @@ export const CompanyUpdateSchema = z.strictObject({
   name: companyFields.name.optional(),
   website: companyFields.website.optional(),
   linkedinUrl: companyFields.linkedinUrl.nullable().optional(),
-  pitch: z.string().trim().max(LIMITS.companyPitchMaxLength).optional(),
+  pitch: visibleText().max(LIMITS.companyPitchMaxLength).optional(),
   logoUrl: httpsUrl().nullable().optional(),
 });
 export type CompanyUpdate = z.infer<typeof CompanyUpdateSchema>;
