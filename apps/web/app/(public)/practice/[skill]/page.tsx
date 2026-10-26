@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: DemoSkillPageProps): Promise<
   return pageMetadata({
     title: `Practice ${title.toLowerCase()}`,
     path: `/practice/${skill}`,
-    description: `${summary} Run the call with a scripted buyer in your browser, by voice or text, and read a scorecard that quotes your own words at the end.`,
+    description: `${summary} Talk or type with the scripted practice partner in your browser, then read a scorecard that quotes your own words.`,
   });
 }
 

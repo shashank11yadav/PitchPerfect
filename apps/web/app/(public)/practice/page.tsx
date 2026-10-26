@@ -11,7 +11,7 @@ export const metadata: Metadata = pageMetadata({
   title: "Practice",
   path: "/practice",
   description:
-    "Run a practice sales call in your browser: pick a skill, talk or type with a scripted buyer, end the call and read a scorecard that quotes what you said.",
+    "Run a practice sales call in your browser: pick a skill, talk or type with the scripted practice partner, then read a scorecard that quotes what you said.",
 });
 
 /** The static demo's practice room; the full app's lives under /app/practice. */

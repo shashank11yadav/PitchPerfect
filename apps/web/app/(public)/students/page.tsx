@@ -52,7 +52,7 @@ export default function StudentsPage() {
         lead={
           <p>
             Sales interviews ask you to introduce yourself, find the problem, pitch and handle
-            pushback. Rehearse each one with a practice buyer, then read exactly what to change.
+            pushback. Rehearse each one with the practice partner, then read exactly what to change.
           </p>
         }
         actions={<CtaLinks secondary={{ href: "/how-it-works", label: "See how it works" }} />}

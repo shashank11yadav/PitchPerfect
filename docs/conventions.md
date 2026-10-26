@@ -64,5 +64,5 @@ These rules apply to every workspace. If a rule here conflicts with a habit, the
 ## Copy and content
 
 - Plain, friendly, direct English. Sentence case for headings and buttons ("Start practice", not "Start Practice").
-- The practice feature is called the **practice partner**. Personas have human names but are always labelled for what is answering: "AI practice partner" only when a live model runs it (partner kind `live`), "Scripted demo partner" for `scripted` and `browser`. Copy that can't know the partner kind (marketing pages, metadata, JSON-LD) never calls it AI, and the sample calls on those pages are labelled "Sample buyer".
+- The practice feature is called the **practice partner**, or "the partner" for short. "Buyer" means only the role the partner plays ("a partner that plays the buyer"), never the partner itself, and `coach` is the service's name, never a word in user copy. Personas have human names but are always labelled for what is answering: "AI practice partner" only when a live model runs it (partner kind `live`), "Scripted demo partner" for `scripted` and `browser`. Copy that can't know the partner kind (marketing pages, metadata, JSON-LD) never calls it AI, and the sample calls on those pages are labelled "Sample buyer".
 - No real company names, logos, or people in seed data, lessons, or examples.

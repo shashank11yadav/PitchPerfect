@@ -46,7 +46,7 @@ export const PUBLIC_PAGES = {
     title: "For students",
     path: "/students",
     description:
-      "Practice introductions, pitches and objection handling against a practice buyer, see exactly what to improve, and share your best scorecard with employers.",
+      "Practice introductions, pitches and objection handling with the practice partner, see exactly what to improve, and share your best scorecard with employers.",
   },
   employers: {
     title: "For employers",
