@@ -16,8 +16,8 @@ import { FakeProvider } from "./provider.js";
 
 /**
  * A labelled corpus of student lines: what kind of turn each one is, and for many of them what
- * the demo persona must say back. Every line the reviewers flagged is here, next to the lines
- * from the probe scripts and the voice-style, terse and rambling turns a real demo gets.
+ * the demo persona must say back: tricky single lines, full calls, and the voice-style, terse
+ * and rambling turns a real demo gets.
  */
 
 type Scenario = Pick<CoachTurnRequest, "scenarioPublic" | "scenarioPrivate">;
@@ -125,7 +125,7 @@ const row = (line: string, intent: Intent, rest: Omit<Row, "line" | "intent"> = 
   ...rest,
 });
 
-/** The reviewer's probes open with a clinic buyer; everything else uses the voice's scenario. */
+/** Opening probes use a clinic buyer; everything else uses the voice's scenario. */
 const scenarioFor = (voice: Voice, stage: Stage, own?: Scenario): Scenario =>
   own ?? (voice === "buyer" && stage === "opening" ? CLINIC : SCENARIOS[voice]);
 
@@ -1117,7 +1117,7 @@ const CORPUS: Row[] = [
     not: ACCEPT_OR_COUNTER,
   }),
 
-  // Round 5: the reviewer's fresh calls and single-line probes, every line quoted.
+  // Fresh calls and single-line probes, every line quoted.
   // Call A, a dispatch buyer.
   row(
     "Hi Maya, this is Jordan with Laneshift. Have I caught you in the middle of something?",
@@ -1638,7 +1638,7 @@ const CORPUS: Row[] = [
     reply: /numbers|result|sold|run|short|clear/i,
     not: /think about that|why do you ask/i,
   }),
-  // Single lines, the reviewer's regression set.
+  // Single lines that once went wrong.
   row("Does Thursday work for your front desk to make the calls?", "yes_no_question", {
     not: ACCEPT_OR_COUNTER,
   }),
@@ -1699,7 +1699,7 @@ const CORPUS: Row[] = [
   row("Can we pencil in Friday at 11?", "proposal", { reply: /Friday at 11/, after: "close" }),
   row("do you have time tomorrow", "proposal", { reply: /Tomorrow/, after: "close" }),
 
-  // Round 5, lines from the author's own fresh calls that the reviewer's set didn't cover.
+  // Lines from further calls the set above doesn't cover.
   row("Morning Ruth, Dev calling from Shelfwise. Is this a terrible moment?", "small_talk", {
     stage: "opening",
     reply: /few minutes, Dev|go ahead/i,
@@ -1847,7 +1847,7 @@ const CORPUS: Row[] = [
     after: "close",
   }),
 
-  // Round 5, paraphrases of the patterns the author's measurement calls missed.
+  // Paraphrases of the patterns above.
   row("What percentage of orders show up late?", "quantity_question", {
     reply: /\b(two|three|four|forty|dozen|hundred|\d+|one in)\b/i,
   }),

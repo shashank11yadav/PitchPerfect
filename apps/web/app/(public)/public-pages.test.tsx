@@ -138,7 +138,7 @@ describe("privacy page", () => {
     expect(main).toHaveTextContent(/no (advertising|analytics|tracking)/i);
   });
 
-  it("links every contact line to the owner’s GitHub profile", async () => {
+  it("links every contact line to the maintainer’s GitHub profile", async () => {
     const { container } = render(await PrivacyPage());
     const contacts = within(container).getAllByRole("link", { name: "Shashank Yadav on GitHub" });
     expect(contacts).toHaveLength(4);
@@ -154,7 +154,7 @@ describe("privacy page", () => {
 });
 
 describe("terms page", () => {
-  it("sends questions to the owner’s GitHub profile", async () => {
+  it("sends questions to the maintainer’s GitHub profile", async () => {
     const { container } = render(await TermsPage());
     const changes = container.querySelector("#changes + div");
     expect(changes).toHaveTextContent("Questions go to Shashank Yadav on GitHub.");
@@ -192,7 +192,7 @@ describe("about page", () => {
   });
 });
 
-describe("privacy page, carried review fixes", () => {
+describe("privacy page, details", () => {
   it("says how long the rate-limit store keeps IP addresses and email-derived keys", async () => {
     const { container } = render(await PrivacyPage());
     const retention = container.querySelector("#retention + div");
@@ -238,7 +238,7 @@ describe("numbers in the copy come from the shared limits", () => {
   });
 });
 
-describe("fix round 1", () => {
+describe("public pages, details", () => {
   it("shows Maya’s persona card once on the home page", () => {
     render(<HomePage />);
     expect(screen.getAllByRole("region", { name: "Maya Chen" })).toHaveLength(1);
@@ -277,7 +277,7 @@ describe("fix round 1", () => {
   });
 });
 
-describe("final review: the legal pages describe the partner that is really running", () => {
+describe("the legal pages describe the partner that is really running", () => {
   const SCRIPTED =
     "This demo’s practice partner is scripted and runs on our server; what you say isn’t sent to an AI provider.";
 
