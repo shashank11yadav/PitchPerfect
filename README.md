@@ -17,6 +17,14 @@ PitchPerfect is a practice and hiring site for entry-level sales jobs. A student
 | **Jobs**      | Public job board. Students save, apply, optionally share a scorecard, and track status.                                                                                                                  |
 | **Employers** | Company profile, job posting with a safe rich-text editor, applicant pipeline (shortlist, interview, hire, not a fit), interview scheduling, dashboard.                                                  |
 
+## Engineering highlights
+
+- **Tested at every layer.** 3,222 unit and integration tests (Vitest; the api tests run against a real in-memory MongoDB), plus 34 Playwright tests on the full stack and 13 on the static demo, including axe accessibility scans and security-header checks. CI also runs lint, typecheck, knip and jscpd for dead and duplicated code, `npm audit`, gitleaks and Lighthouse budgets.
+- **Guardrails around the practice partner.** Student turns are stripped of hidden characters, redacted for personal data, and checked by rules and a model guard; only confirmed attacks count as strikes. Every partner sentence is moderated before it reaches the screen, with a retract event if a later check fails. A canary token and a leak scanner that sees through look-alike letters, encodings and spelled-out text protect the hidden scenario. A message that signals self-harm gets crisis resources, never a strike.
+- **Evals.** 31 scripted conversations (strong, mediocre, weak and adversarial) run through the real practice service against a live model, with score bands per case and a 100% bar on the adversarial ones: `npm run eval -w apps/coach`.
+- **Secure defaults.** argon2id passwords, server-side sessions, CSRF tokens, a nonce-based strict CSP, HMAC-signed requests between the api and the practice service, rate limits on every public route, and an unset `NODE_ENV` treated as production. The threat model is in [docs/security.md](docs/security.md).
+- **Spend limits.** Per-student session and token caps and a global daily token budget, with metering that also charges failed, aborted and retried calls.
+
 ## Screenshots
 
 Taken with `npx tsx e2e/screenshots.ts` from the containers (`docker compose --profile full up --build -d`) with the demo data and the default practice limits. No key is set there, so the partner is the scripted one and the practice room labels it "Scripted demo partner"; with a live model the badge reads "AI practice partner". The call on the home page is a sample, labelled "Sample buyer".
