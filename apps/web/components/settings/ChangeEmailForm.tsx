@@ -45,9 +45,12 @@ function EmailForm({ onChanged }: { onChanged: (email: string) => Promise<void> 
   );
 }
 
+const ADDRESS = "font-semibold [overflow-wrap:anywhere]";
+
 /**
- * Move the account to a new address. The new one has to be confirmed again, so the unconfirmed
- * banner comes back until it is. Shared by student and employer settings.
+ * Move the account to a new address. Nothing changes until the link sent to the new address is
+ * followed; until then the pending address is shown under the current one. Shared by student and
+ * employer settings.
  */
 export function ChangeEmailForm() {
   const { user } = useSession();
@@ -56,15 +59,21 @@ export function ChangeEmailForm() {
     <div className="flex flex-col gap-4" onFocus={clearNews}>
       {user && (
         <p className="text-ink">
-          You sign in with{" "}
-          <span className="font-semibold [overflow-wrap:anywhere]">{user.email}</span>.
+          You sign in with <span className={ADDRESS}>{user.email}</span>.
+        </p>
+      )}
+      {user?.pendingEmail && (
+        <p className="text-ink">
+          Waiting to move to <span className={ADDRESS}>{user.pendingEmail}</span>. If that address
+          can be used, the link we sent there makes the change. Until it’s followed, your email
+          stays the same.
         </p>
       )}
       <EmailForm
         key={round}
         onChanged={(email) =>
           changed(
-            `If ${email} can be used, we sent it a link to confirm the change. Check that inbox.`,
+            `If ${email} can be used, we sent it a link. Your email changes once that link is followed, and stays the same until then.`,
           )
         }
       />

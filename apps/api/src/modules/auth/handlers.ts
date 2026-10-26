@@ -10,6 +10,7 @@ import { userOf } from "../../middleware/auth.js";
 import type { Csrf } from "../../middleware/csrf.js";
 import { destroySession, regenerateSession } from "../../middleware/session.js";
 import { getInput } from "../../middleware/validate.js";
+import { confirmEmailChange } from "../profile/email-change.js";
 import { rememberDevice } from "./known-device.js";
 import {
   getMe,
@@ -37,9 +38,10 @@ export function authHandlers(deps: AuthDeps, csrf: Pick<Csrf, "issueCsrfToken">)
     res.status(201).json(OK);
   };
 
-  const verify: RequestHandler = async (_req, res) => {
+  const verify: RequestHandler = async (req, res) => {
     const { body } = getInput<{ body: typeof VerifyEmailSchema }>(res);
-    await verifyEmail(body.token);
+    // The sign-up link and the email-change link both open the confirm-your-email page.
+    if (!(await confirmEmailChange(deps, req.log, body.token))) await verifyEmail(body.token);
     res.json(OK);
   };
 

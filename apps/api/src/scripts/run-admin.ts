@@ -3,6 +3,7 @@ import * as models from "../db/models/index.js";
 import {
   AuthToken,
   Company,
+  EmailChange,
   PracticeAttempt,
   PracticeHold,
   PracticeStart,
@@ -37,7 +38,7 @@ async function findCompany(reference: string) {
 }
 
 /** Collections with a TTL index the app relies on to clear expired documents. */
-const TTL_MODELS = [PracticeAttempt, PracticeStart, PracticeHold, AuthToken];
+const TTL_MODELS = [PracticeAttempt, PracticeStart, PracticeHold, AuthToken, EmailChange];
 
 async function migrate(_args: readonly string[], io: AdminIo): Promise<void> {
   for (const model of Object.values(models)) {

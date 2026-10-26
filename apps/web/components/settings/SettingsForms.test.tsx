@@ -146,6 +146,20 @@ describe("ChangeEmailForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Change email" }));
     expect(
       await screen.findByText(/If taken@example.test can be used, we sent it a link/),
-    ).toBeVisible();
+    ).toHaveTextContent("stays the same until then");
+  });
+
+  it("shows the address waiting for its link under the current one", async () => {
+    const me = studentMe();
+    setup({
+      "GET /api/auth/me": () =>
+        jsonResponse({ ...me, user: { ...me.user, pendingEmail: "next@example.test" } }),
+    });
+    renderSignedIn(<ChangeEmailForm />);
+    expect(await screen.findByText("next@example.test")).toBeVisible();
+    expect(screen.getByText(/Waiting to move to/)).toHaveTextContent(
+      "Until it’s followed, your email stays the same.",
+    );
+    expect(screen.getByText("student@example.test")).toBeVisible();
   });
 });

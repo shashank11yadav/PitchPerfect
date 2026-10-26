@@ -6,7 +6,14 @@ import { ValidationError } from "../errors.js";
 
 const TOKEN_BYTES = 32;
 
-const hashToken = (raw: string) => createHash("sha256").update(raw).digest("hex");
+/** The sha256 stored for an emailed token, so a database leak can't be replayed. */
+export const hashToken = (raw: string) => createHash("sha256").update(raw).digest("hex");
+
+/** A new 256-bit token for an emailed link, and the hash to store in its place. */
+export function newLinkToken(): { raw: string; tokenHash: string } {
+  const raw = randomBytes(TOKEN_BYTES).toString("base64url");
+  return { raw, tokenHash: hashToken(raw) };
+}
 
 /** 400 `invalid_token`: the same answer for missing, expired, used, and wrong-type tokens. */
 export const invalidTokenError = () =>
@@ -32,14 +39,9 @@ export async function createToken(
   type: AuthTokenType,
   ttlMs: number,
 ): Promise<string> {
-  const raw = randomBytes(TOKEN_BYTES).toString("base64url");
+  const { raw, tokenHash } = newLinkToken();
   await AuthToken.deleteMany({ userId, type, usedAt: null });
-  await AuthToken.create({
-    userId,
-    type,
-    tokenHash: hashToken(raw),
-    expiresAt: new Date(Date.now() + ttlMs),
-  });
+  await AuthToken.create({ userId, type, tokenHash, expiresAt: new Date(Date.now() + ttlMs) });
   return raw;
 }
 

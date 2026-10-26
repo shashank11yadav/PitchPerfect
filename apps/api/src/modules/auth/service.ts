@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import type { Types } from "mongoose";
+import mongoose, { type Types } from "mongoose";
 import {
   HOUR_MS,
   LIMITS,
@@ -21,6 +21,7 @@ import {
 import {
   AuthToken,
   Company,
+  EmailChange,
   EmployerProfile,
   StudentProfile,
   User,
@@ -194,7 +195,7 @@ export async function signUp(deps: AuthDeps, log: MailFailureLog, input: Signup)
  * company that lost the badge by a rename or domain move waits for an admin, a suspended company
  * stays suspended, and nothing is ever downgraded here.
  */
-async function verifyOwnedCompany(userId: string, email: string): Promise<void> {
+export async function verifyOwnedCompany(userId: string, email: string): Promise<void> {
   const company = await Company.findOne({ ownerId: userId })
     .select("website verification verificationLockedReason")
     .lean();
@@ -255,20 +256,36 @@ export async function signIn({
   };
 }
 
-/** The signed-in user with their role profile and, for employers, their company. */
+/** The address a user asked to move to and hasn't confirmed yet, if any. */
+async function pendingEmailOf(userId: string): Promise<string | undefined> {
+  const change = await EmailChange.findOne({
+    userId,
+    expiresAt: mongoose.trusted({ $gt: new Date() }),
+  })
+    .select("newEmail")
+    .lean();
+  return change?.newEmail;
+}
+
+/**
+ * The signed-in user with their role profile and, for employers, their company. `pendingEmail` is
+ * an email change waiting for its link (`requestEmailChange`); only the owner ever sees it.
+ */
 export async function getMe(userId: string): Promise<AuthMe> {
   const user = await User.findById(userId).lean();
   if (!user) throw new UnauthenticatedError();
+  const pendingEmail = await pendingEmailOf(userId);
+  const publicUser = { ...toPublicUser(user), ...(pendingEmail !== undefined && { pendingEmail }) };
   if (user.role === "student") {
     const profile = await StudentProfile.findOne({ userId }).lean();
     if (!profile) throw new Error("student profile missing");
-    return { user: toPublicUser(user), profile: toStudentProfileView(profile) };
+    return { user: publicUser, profile: toStudentProfileView(profile) };
   }
   const profile = await EmployerProfile.findOne({ userId }).lean();
   const company = profile && (await Company.findById(profile.companyId).lean());
   if (!profile || !company) throw new Error("employer profile or company missing");
   return {
-    user: toPublicUser(user),
+    user: publicUser,
     profile: toEmployerProfileView(profile),
     company: toPublicCompany(company),
   };

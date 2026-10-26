@@ -1,6 +1,7 @@
 export { Application } from "./application.js";
 export { AuthToken } from "./auth-token.js";
 export { Company } from "./company.js";
+export { EmailChange } from "./email-change.js";
 export { EmployerProfile } from "./employer-profile.js";
 export { Job } from "./job.js";
 export { PracticeAttempt } from "./practice-attempt.js";

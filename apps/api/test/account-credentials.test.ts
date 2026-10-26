@@ -189,6 +189,27 @@ describe("POST /api/me/change-email", () => {
     }
   });
 
+  it("leaves /me the same for a free and a taken address until the link is followed", async () => {
+    const { free, taken, owner, freeSession, takenSession } = await freeAndTakenChanges();
+
+    await change(freeSession, { currentPassword: free.password, newEmail }).expect(200);
+    await change(takenSession, { currentPassword: taken.password, newEmail: owner.email }).expect(
+      200,
+    );
+
+    const meOf = async (session: Awaited<ReturnType<typeof withCsrf>>) =>
+      (await session.agent.get("/api/auth/me").expect(200)).body as {
+        user: Record<string, unknown>;
+      };
+    const freeMe = (await meOf(freeSession)).user;
+    const takenMe = (await meOf(takenSession)).user;
+    expect(freeMe).toMatchObject({ email: free.email, pendingEmail: newEmail });
+    expect(takenMe).toMatchObject({ email: taken.email, pendingEmail: owner.email });
+    expect(Object.keys(freeMe).sort()).toEqual(Object.keys(takenMe).sort());
+    expect(freeMe.emailVerifiedAt).toEqual(expect.any(String));
+    expect(takenMe.emailVerifiedAt).toEqual(expect.any(String));
+  });
+
   it("changes nothing for an address in use, and sends its owner a notice instead of a link", async () => {
     const employer = await createEmployer();
     const owner = await createStudent({ email: "owner@example.test" });
@@ -265,7 +286,14 @@ describe("POST /api/me/change-email", () => {
     expect(res.status).toBe(400);
   });
 
-  it("switches the address, unverifies it, and sends a link to the new one", async () => {
+  /** The token in the last email sent to `to`. */
+  const linkSentTo = (to: string) =>
+    /token=([\w-]+)/.exec(mailer.sent.findLast((message) => message.to === to)?.text ?? "")?.[1];
+
+  const followLink = async (token: string | undefined) =>
+    (await csrfAgent(app)).post("/api/auth/verify-email").send({ token });
+
+  it("keeps the address until the link is followed, then switches it as confirmed", async () => {
     const { email, password, user } = await createStudent();
     const session = await signIn(request.agent(app), email, password);
     await AuthToken.create({
@@ -282,30 +310,66 @@ describe("POST /api/me/change-email", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ ok: true });
-    const stored = await User.findById(user._id);
-    expect(stored?.email).toBe(newEmail);
-    expect(stored?.emailVerifiedAt ?? null).toBeNull();
-    expect(await AuthToken.countDocuments({ userId: user._id, type: "reset_password" })).toBe(0);
-
+    expect((await User.findById(user._id))?.email).toBe(email);
     const toNew = mailer.sent.filter((message) => message.to === newEmail);
     expect(toNew).toHaveLength(1);
-    expect(toNew[0]?.subject).toMatch(/verify/i);
-    const link = /token=([\w-]+)/.exec(toNew[0]?.text ?? "")?.[1];
-    expect(link).toBeTruthy();
-    const verify = await (
-      await csrfAgent(app)
-    )
-      .post("/api/auth/verify-email")
-      .send({ token: link });
-    expect(verify.status).toBe(200);
-    expect((await User.findById(user._id))?.emailVerifiedAt).toBeInstanceOf(Date);
+    expect(toNew[0]?.subject).toMatch(/confirm your new/i);
+    expect(mailer.sent.filter((message) => message.to === email)).toHaveLength(0);
+
+    expect((await followLink(linkSentTo(newEmail))).status).toBe(200);
+
+    const stored = await User.findById(user._id);
+    expect(stored?.email).toBe(newEmail);
+    expect(stored?.emailVerifiedAt).toBeInstanceOf(Date);
+    expect(await AuthToken.countDocuments({ userId: user._id, type: "reset_password" })).toBe(0);
+    const me = await session.agent.get("/api/auth/me").expect(200);
+    expect((me.body as { user: Record<string, unknown> }).user).not.toHaveProperty("pendingEmail");
+    expect(errorOf(await followLink(linkSentTo(newEmail))).code).toBe("invalid_token");
   });
 
-  it("tells the old address about the change", async () => {
+  it("applies the link only if the address is still free when it is followed", async () => {
+    const { email, password, user } = await createStudent();
+    const session = await signIn(request.agent(app), email, password);
+    await change(session, { currentPassword: password, newEmail }).expect(200);
+    const token = linkSentTo(newEmail);
+    await createStudent({ email: newEmail });
+    mailer.sent.length = 0;
+
+    const res = await followLink(token);
+
+    expect(res.status).toBe(400);
+    expect(errorOf(res).code).toBe("invalid_token");
+    expect((await User.findById(user._id))?.email).toBe(email);
+    expect(mailer.sent.map((message) => message.to)).toEqual([newEmail]);
+    expect(mailer.sent[0]?.text).not.toContain("token=");
+    const me = await session.agent.get("/api/auth/me").expect(200);
+    expect((me.body as { user: Record<string, unknown> }).user).not.toHaveProperty("pendingEmail");
+  });
+
+  it("lets a newer request replace the pending one and its link", async () => {
+    const { email, password, user } = await createStudent();
+    const session = await signIn(request.agent(app), email, password);
+    await change(session, { currentPassword: password, newEmail }).expect(200);
+    const first = linkSentTo(newEmail);
+    const second = "second.address@example.test";
+    // The first request gave the session a new id, so it needs a new CSRF token.
+    await change(await withCsrf(session.agent), {
+      currentPassword: password,
+      newEmail: second,
+    }).expect(200);
+
+    expect(errorOf(await followLink(first)).code).toBe("invalid_token");
+    expect((await User.findById(user._id))?.email).toBe(email);
+    expect((await followLink(linkSentTo(second))).status).toBe(200);
+    expect((await User.findById(user._id))?.email).toBe(second);
+  });
+
+  it("tells the old address once the change is made", async () => {
     const { email, password } = await createStudent();
     const session = await signIn(request.agent(app), email, password);
 
     await change(session, { currentPassword: password, newEmail }).expect(200);
+    expect((await followLink(linkSentTo(newEmail))).status).toBe(200);
 
     const toOld = mailer.sent.filter((message) => message.to === email);
     expect(toOld).toHaveLength(1);
@@ -322,29 +386,31 @@ describe("POST /api/me/change-email", () => {
     vi.setSystemTime(Date.now() + 5 * HOUR_MS);
 
     await change(session, { currentPassword: password, newEmail }).expect(200);
+    expect((await followLink(linkSentTo(newEmail))).status).toBe(200);
 
     await session.agent.get("/api/auth/me").expect(200);
     await other.agent.get("/api/auth/me").expect(200);
     expect((await storedCreatedAts()).sort()).toEqual(before.sort());
   });
 
-  it("unverifies an employer's verified company, but leaves a suspended one alone", async () => {
+  it("unverifies an employer's verified company once the link is followed, but leaves a suspended one alone", async () => {
     const verified = await createEmployer();
     const session = await signIn(request.agent(app), verified.email, verified.password);
     await change(session, { currentPassword: verified.password, newEmail }).expect(200);
+    expect((await Company.findById(verified.company._id))?.verification).toBe("verified");
+    expect((await followLink(linkSentTo(newEmail))).status).toBe(200);
     expect((await Company.findById(verified.company._id))?.verification).toBe("unverified");
 
     const suspended = await createEmployer();
     await Company.updateOne({ _id: suspended.company._id }, { verification: "suspended" });
     const other = await signIn(request.agent(app), suspended.email, suspended.password);
-    await change(other, {
-      currentPassword: suspended.password,
-      newEmail: "second.address@example.test",
-    }).expect(200);
+    const second = "second.address@example.test";
+    await change(other, { currentPassword: suspended.password, newEmail: second }).expect(200);
+    expect((await followLink(linkSentTo(second))).status).toBe(200);
     expect((await Company.findById(suspended.company._id))?.verification).toBe("suspended");
   });
 
-  it("re-verifies the company once the new address on its domain is confirmed", async () => {
+  it("keeps the company verified when the new address is on its domain", async () => {
     const { email, password, company } = await createEmployer({
       website: "https://www.acme-demo.com",
     });
@@ -353,26 +419,28 @@ describe("POST /api/me/change-email", () => {
     await change(session, { currentPassword: password, newEmail: "jane@acme-demo.com" }).expect(
       200,
     );
-    expect((await Company.findById(company._id))?.verification).toBe("unverified");
-    const link = /token=([\w-]+)/.exec(
-      mailer.sent.find((message) => message.to === "jane@acme-demo.com")?.text ?? "",
-    )?.[1];
-    await (await csrfAgent(app)).post("/api/auth/verify-email").send({ token: link }).expect(200);
+    expect((await Company.findById(company._id))?.verification).toBe("verified");
+    expect((await followLink(linkSentTo("jane@acme-demo.com"))).status).toBe(200);
 
     expect((await Company.findById(company._id))?.verification).toBe("verified");
   });
 
-  it("changes nothing when the company can't be updated", async () => {
+  it("changes nothing, and keeps the link working, when the company can't be updated", async () => {
     const { email, password, user, company } = await createEmployer();
     const session = await signIn(request.agent(app), email, password);
+    await change(session, { currentPassword: password, newEmail }).expect(200);
+    const token = linkSentTo(newEmail);
+    mailer.sent.length = 0;
     vi.spyOn(Company, "updateOne").mockRejectedValueOnce(new Error("db down"));
 
-    const res = await change(session, { currentPassword: password, newEmail });
+    const res = await followLink(token);
 
     expect(res.status).toBe(500);
     expect((await User.findById(user._id))?.email).toBe(email);
     expect((await Company.findById(company._id))?.verification).toBe("verified");
     expect(mailer.sent).toHaveLength(0);
+    expect((await followLink(token)).status).toBe(200);
+    expect((await User.findById(user._id))?.email).toBe(newEmail);
   });
 
   it("requires a session and counts attempts per user", async () => {

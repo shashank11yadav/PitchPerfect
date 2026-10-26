@@ -17,5 +17,8 @@
       "entry": ["src/scripts/*.ts", "test/**/*.test.ts"]
     },
     "apps/coach": {}
+  },
+  "ignoreIssues": {
+    "apps/api/src/modules/profile/credentials.ts": ["exports"]
   }
 }

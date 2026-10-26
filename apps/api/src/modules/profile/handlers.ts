@@ -52,9 +52,10 @@ export function profileHandlers(deps: ProfileDeps) {
   const email: RequestHandler = async (req, res) => {
     const { body } = getInput<{ body: typeof ChangeEmailSchema }>(res);
     const { id, role } = userOf(res);
-    const current = { userId: id, role, sessionVersion: sessionVersionOf(req) };
-    const identity = await requestEmailChange(deps, req.log, current, body);
-    // A new session id whether or not the address was free, so the answers can't be told apart.
+    await requestEmailChange(deps, req.log, id, body);
+    // The password was just checked: a new session id, as after a password change, whether or
+    // not the address was free, so the answers can't be told apart.
+    const identity = { userId: id, role, sessionVersion: sessionVersionOf(req) };
     await regenerateSession(req, identity, { preserveCreatedAt: true });
     res.json(OK);
   };

@@ -164,6 +164,25 @@ export function emailChangeToExistingAccount(signinLink: string, resetLink: stri
 }
 
 /**
+ * Sent to the new address of an email change that has no account. Following the link makes the
+ * change; until then the account keeps its address.
+ */
+export function confirmEmailChange(link: string): EmailContent {
+  return render(`Confirm your new ${BRAND} email`, {
+    heading: "Confirm your new email",
+    paragraphs: [
+      `Someone signed in to a ${BRAND} account asked to change its email address to this one. Confirm it with the link below and the account moves to this address.`,
+      "Until then, the account keeps its current address.",
+    ],
+    action: { label: "Confirm new email", url: link },
+    footnotes: [
+      `This link works once and expires in ${String(LIMITS.verifyTokenHours)} hours.`,
+      "If you didn’t ask for this, you can ignore this email. Nothing changes unless the link is followed.",
+    ],
+  });
+}
+
+/**
  * Sent to the previous address after an email change, so a takeover can't go unnoticed. The link
  * reaches the person who runs PitchPerfect, the same contact the privacy policy names.
  */

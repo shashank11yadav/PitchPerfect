@@ -4,6 +4,7 @@ import {
   Application,
   AuthToken,
   Company,
+  EmailChange,
   EmployerProfile,
   Job,
   PracticeAttempt,
@@ -84,6 +85,9 @@ export async function deleteAccount(
 ): Promise<void> {
   if (user.role === "student") await deleteStudentData(config, user.id);
   else await deleteEmployerData({ mailer, config }, log, user.id);
-  await AuthToken.deleteMany({ userId: user.id });
+  await Promise.all([
+    AuthToken.deleteMany({ userId: user.id }),
+    EmailChange.deleteMany({ userId: user.id }),
+  ]);
   await User.deleteOne({ _id: user.id });
 }

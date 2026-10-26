@@ -100,6 +100,11 @@ export interface PublicUser {
    * static demo's visitor accepts the `browser` notice.
    */
   practiceConsentPartner: PracticePartnerKind | null;
+  /**
+   * `GET /api/auth/me` only: the address an email change is waiting to move the account to, until
+   * the link sent there is followed. The same whether or not that address has an account.
+   */
+  pendingEmail?: string;
 }
 
 /** `GET /api/auth/me`: the signed-in user, their role profile, and (employers) their company. */
