@@ -32,6 +32,7 @@ import {
   type Page,
   type PracticeEvent,
   type PracticeQuota,
+  type Scorecard,
   type SkillSlug,
   type Stage,
   type StartedSession,
@@ -85,10 +86,12 @@ function findStored(id: string): StoredAttempt {
   return stored;
 }
 
+/** Stores an attempt; its scorecard never is (see `scorecardOf`). */
 function saveAttempt(next: StoredAttempt): void {
+  const kept: StoredAttempt = { ...next, view: { ...next.view, scorecard: null } };
   updateDemoState((state) => ({
     ...state,
-    attempts: state.attempts.map((stored) => (stored.view.id === next.view.id ? next : stored)),
+    attempts: state.attempts.map((stored) => (stored.view.id === kept.view.id ? kept : stored)),
   }));
 }
 
@@ -182,32 +185,34 @@ export async function startDemoSession(
 }
 
 /** `GET /api/practice/sessions/:id`. */
-export const getDemoAttempt = (id: string): AttemptView => findStored(id).view;
+export const getDemoAttempt = (id: string): Promise<AttemptView> => viewOf(findStored(id));
 
 /** `GET /api/practice/attempts`: newest first, optionally one skill's. */
-export function listDemoAttempts({
+export async function listDemoAttempts({
   skill,
   page,
   pageSize,
-}: AttemptListQuery): Page<AttemptSummary> {
+}: AttemptListQuery): Promise<Page<AttemptSummary>> {
   const all = readDemoState()
-    .attempts.map(({ view }) => view)
-    .filter((view) => !skill || view.skill === skill)
-    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-  const items = all.slice((page - 1) * pageSize, page * pageSize).map((view) => ({
-    id: view.id,
-    skill: view.skill,
-    status: view.status,
-    overall: view.scorecard?.overall ?? null,
-    startedAt: view.startedAt,
-    endedAt: view.endedAt,
-  }));
+    .attempts.filter(({ view }) => !skill || view.skill === skill)
+    .sort((a, b) => b.view.startedAt.localeCompare(a.view.startedAt));
+  const items = await Promise.all(
+    all.slice((page - 1) * pageSize, page * pageSize).map(async (stored) => ({
+      id: stored.view.id,
+      skill: stored.view.skill,
+      status: stored.view.status,
+      overall: (await scorecardOf(stored))?.overall ?? null,
+      startedAt: stored.view.startedAt,
+      endedAt: stored.view.endedAt,
+    })),
+  );
   return { items, page, pageSize, total: all.length };
 }
 
 /** `DELETE /api/practice/attempts/:id`. */
 export function deleteDemoAttempt(id: string): void {
   findStored(id);
+  scorecards.delete(id);
   updateDemoState((state) => ({
     ...state,
     attempts: state.attempts.filter(({ view }) => view.id !== id),
@@ -225,22 +230,15 @@ const usable = (view: AttemptView): TranscriptEntry[] =>
     )
     .map(({ role, text }) => ({ role, text }));
 
-function finish(stored: StoredAttempt, status: "completed" | "abandoned", now: Date) {
-  const view: AttemptView = { ...stored.view, status, endedAt: now.toISOString() };
-  saveAttempt({ ...stored, view });
-  return view;
-}
-
 /**
- * `POST /api/practice/sessions/:id/end`: scored with two or more unflagged student turns, else
- * abandoned. A session that already ended is returned as it is.
+ * The scripted scorer's scorecard for the call's transcript: null with fewer than two unflagged
+ * student turns, or when the scorer finds nothing to score. The same transcript always gets the
+ * same scorecard.
  */
-export async function endDemoSession(id: string, now = new Date()): Promise<AttemptView> {
-  const stored = findStored(id);
-  if (stored.view.status !== "active") return stored.view;
+async function score(stored: StoredAttempt): Promise<Scorecard | null> {
   const transcript = usable(stored.view);
   if (transcript.filter((entry) => entry.role === "student").length < MIN_SCORED_TURNS) {
-    return finish(stored, "abandoned", now);
+    return null;
   }
   try {
     const { scorecard } = await scoreTranscript(
@@ -253,11 +251,59 @@ export async function endDemoSession(id: string, now = new Date()): Promise<Atte
       },
       new AbortController().signal,
     );
-    return finish({ ...stored, view: { ...stored.view, scorecard } }, "completed", now);
+    return scorecard;
   } catch (error) {
-    if (error instanceof NotEnoughTurnsError) return finish(stored, "abandoned", now);
+    if (error instanceof NotEnoughTurnsError) return null;
     throw error;
   }
+}
+
+/**
+ * Scorecards worked out on this page, by attempt id. A scorecard is never stored: a completed
+ * call is scored again from its stored transcript after a reload, so editing this tab's storage
+ * can't plant a score the transcript didn't earn.
+ */
+const scorecards = new Map<string, Promise<Scorecard | null>>();
+
+/** A completed call's scorecard, worked out once per page load; null for any other call. */
+function scorecardOf(stored: StoredAttempt): Promise<Scorecard | null> {
+  const { id, status } = stored.view;
+  if (status !== "completed") return Promise.resolve(null);
+  let scorecard = scorecards.get(id);
+  if (!scorecard) {
+    scorecard = score(stored);
+    scorecards.set(id, scorecard);
+    // A failed scoring is tried again on the next read.
+    scorecard.catch(() => scorecards.delete(id));
+  }
+  return scorecard;
+}
+
+/** The attempt as the api returns it, with the scorecard its transcript earns. */
+async function viewOf(stored: StoredAttempt): Promise<AttemptView> {
+  return { ...stored.view, scorecard: await scorecardOf(stored) };
+}
+
+function finish(stored: StoredAttempt, status: "completed" | "abandoned", now: Date) {
+  const next: StoredAttempt = {
+    ...stored,
+    view: { ...stored.view, status, endedAt: now.toISOString() },
+  };
+  saveAttempt(next);
+  return viewOf(next);
+}
+
+/**
+ * `POST /api/practice/sessions/:id/end`: scored with two or more unflagged student turns, else
+ * abandoned. A session that already ended is returned as it is.
+ */
+export async function endDemoSession(id: string, now = new Date()): Promise<AttemptView> {
+  const stored = findStored(id);
+  if (stored.view.status !== "active") return viewOf(stored);
+  const scorecard = await score(stored);
+  if (!scorecard) return finish(stored, "abandoned", now);
+  scorecards.set(id, Promise.resolve(scorecard));
+  return finish(stored, "completed", now);
 }
 
 /** Why a session can't take a turn, if it can't. */

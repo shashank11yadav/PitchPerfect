@@ -63,7 +63,7 @@ async function answer(path: string, { method = "GET", body }: Options<unknown>):
   if (session?.[1]) {
     const id = decodeURIComponent(session[1]);
     if (session[2] && method === "POST") return { attempt: await endDemoSession(id) };
-    if (!session[2] && method === "GET") return { attempt: getDemoAttempt(id) };
+    if (!session[2] && method === "GET") return { attempt: await getDemoAttempt(id) };
   }
   const attempt = ATTEMPT.exec(pathname);
   if (attempt?.[1] && method === "DELETE") {

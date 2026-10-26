@@ -6,6 +6,7 @@ import type { AttemptView, ScenarioPrivate, SkillSlug } from "@pitchperfect/shar
  */
 
 export interface StoredAttempt {
+  /** The attempt with `scorecard` always null: the scorecard is worked out from the transcript. */
   view: AttemptView;
   /** Never shown; the partner reads it. Kept here because the partner runs in this browser. */
   scenarioPrivate: ScenarioPrivate;
