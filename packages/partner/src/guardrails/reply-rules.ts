@@ -139,6 +139,13 @@ const anyMatch = (patterns: readonly RegExp[], text: string) =>
   patterns.some((pattern) => pattern.test(text));
 
 /**
+ * The reply rules' content patterns on their own: self-harm, threats, drug-making and slurs,
+ * matched on `normalizeWords` text. The scenario check uses them on planned personas.
+ */
+export const harmfulContent = (words: string): boolean =>
+  SELF_HARM.test(words) || anyMatch(THREATS, words) || anyMatch(DRUGS, words) || SLURS.test(words);
+
+/**
  * The local output rules for a partner reply: no links, no requests for the student's personal
  * data, no claim to be a real person, and best-effort self-harm, threat, drug and slur patterns,
  * plus the guard's harmful-request rules. `partial` is for text that is still streaming: its end
