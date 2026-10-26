@@ -4,9 +4,7 @@ Practice the sales call out loud before the real one, then apply with the scorec
 
 PitchPerfect is a practice and hiring site for entry-level sales jobs. A student reads a short lesson on one skill, then runs the call by voice or text with a practice partner that plays the buyer: a live model from OpenAI or Anthropic when a key is set, or a scripted partner when it isn't. When the call ends they get a scorecard that quotes what they actually said. Employers post roles and, if a candidate chooses to share one, read that scorecard next to the application.
 
-> Status: portfolio project. It runs end to end on your machine with seeded demo data; deployment steps are in [docs/deploy.md](docs/deploy.md).
->
-> **Live demo:** https://shashank11yadav.github.io/PitchPerfect/ is a static build on GitHub Pages. You can run a practice call with the scripted partner (it and the scorer run in your browser, since Pages can't run a live model), read the lessons and browse the job board; accounts, applying and the employer tools need the api and database, so they are only in the full app.
+> **Live demo:** https://shashank11yadav.github.io/PitchPerfect/ runs on GitHub Pages. Try a full practice call with the scripted partner (the partner and the scorer run in your browser), read the lessons and browse the job board. Accounts, applications and the employer tools run on the full stack, which you can start locally with the quick start below and deploy with the steps in [docs/deploy.md](docs/deploy.md).
 
 ## What's inside
 
@@ -21,7 +19,7 @@ PitchPerfect is a practice and hiring site for entry-level sales jobs. A student
 
 - **Tested at every layer.** 3,222 unit and integration tests (Vitest; the api tests run against a real in-memory MongoDB), plus 34 Playwright tests on the full stack and 13 on the static demo, including axe accessibility scans and security-header checks. CI also runs lint, typecheck, knip and jscpd for dead and duplicated code, `npm audit`, gitleaks and Lighthouse budgets.
 - **Guardrails around the practice partner.** Student turns are stripped of hidden characters, redacted for personal data, and checked by rules and a model guard; only confirmed attacks count as strikes. Every partner sentence is moderated before it reaches the screen, with a retract event if a later check fails. A canary token and a leak scanner that sees through look-alike letters, encodings and spelled-out text protect the hidden scenario. A message that signals self-harm gets crisis resources, never a strike.
-- **Evals.** 31 scripted conversations (strong, mediocre, weak and adversarial) run through the real practice service against a live model, with score bands per case and a 100% bar on the adversarial ones: `npm run eval -w apps/coach`.
+- **Evals.** 31 scripted conversations (strong, mediocre, weak and adversarial) that play through the real practice service against the configured model, each with its expected score band or guard outcome, and a 100% pass bar on the adversarial ones: `npm run eval -w apps/coach`.
 - **Secure defaults.** argon2id passwords, server-side sessions, CSRF tokens, a nonce-based strict CSP, HMAC-signed requests between the api and the practice service, rate limits on every public route, and an unset `NODE_ENV` treated as production. The threat model is in [docs/security.md](docs/security.md).
 - **Spend limits.** Per-student session and token caps and a global daily token budget, with metering that also charges failed, aborted and retried calls.
 
@@ -57,7 +55,7 @@ Browser ──► apps/web (Next.js, port 3000)
 - `apps/coach`: the independent practice partner service: HMAC-checked routes over `packages/partner`, its config, the OpenAI and Anthropic adapters, and the evals.
 - `packages/partner`: the practice partner engine (prompts, guardrails, the provider interface, and the plan, turn and score steps), used by coach and by the static demo in the browser.
 - `packages/scripted-partner`: the scripted provider, which runs the engine without a model or keys, for local dev, tests, e2e and the static demo.
-- `packages/shared`: zod schemas, types, constants, the fictional seed data, and small helpers (slugify, UTC calendar days, PII redaction) shared by all apps.
+- `packages/shared`: zod schemas, types, constants, the fictional seed data, and the helpers more than one app needs (slugify, UTC calendar days, PII redaction, the self-harm check, the job-description HTML allowlist and the server-sent events reader).
 
 Details: [docs/architecture.md](docs/architecture.md).
 
@@ -122,7 +120,7 @@ docker compose exec -e SEED_DEMO_PASSWORD='pick-a-12-plus-char-password' api nod
 | [docs/design-system.md](docs/design-system.md)                 | Building UI: brand tokens, components, accessibility, SEO      |
 | [docs/security.md](docs/security.md)                           | Touching auth, data, uploads, or anything user-facing          |
 | [docs/deploy.md](docs/deploy.md)                               | Deploying                                                      |
-| [docs/limits.md](docs/limits.md)                               | Wondering what's intentionally out of scope                    |
+| [docs/roadmap.md](docs/roadmap.md)                             | Looking for the design trade-offs and what comes next          |
 | [docs/design/product-design.md](docs/design/product-design.md) | Understanding why the product is shaped this way               |
 | [CONTRIBUTING.md](CONTRIBUTING.md)                             | Opening a pull request                                         |
 
