@@ -75,9 +75,12 @@ export function ApplicantsPreview({
         {pipeline.applicants.map(({ name, detail, score, status }) => (
           <li key={name} className="flex items-center gap-3 px-5 py-4">
             {score === null ? (
-              <span className="flex size-14 shrink-0 items-center justify-center rounded-pill bg-surface-2 text-caption font-semibold text-ink">
-                <span className="sr-only">No scorecard shared</span>
-                <span aria-hidden="true">None</span>
+              <span
+                role="img"
+                aria-label="No scorecard shared"
+                className="flex size-14 shrink-0 items-center justify-center rounded-pill bg-surface-2 font-display text-body font-bold text-muted"
+              >
+                —
               </span>
             ) : (
               <ScoreRing score={score} size="sm" className="shrink-0" />
