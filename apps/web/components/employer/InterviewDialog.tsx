@@ -2,6 +2,8 @@
 
 import {
   InterviewSchema,
+  LIMITS,
+  MEETING_SERVICE_NAMES,
   type EmployerApplicationView,
   type Interview,
 } from "@pitchperfect/shared";
@@ -19,6 +21,7 @@ import {
   viewerTimeZone,
 } from "@/lib/local-time";
 import { useZodForm, type FormSchema } from "@/lib/use-form";
+import { domainOf } from "./VerificationBanner";
 
 const PAST = "Pick a time that hasn’t passed yet";
 const SKIPPED = "That time doesn’t exist on this day";
@@ -58,12 +61,18 @@ interface InterviewDialogProps {
   open: boolean;
   onClose: () => void;
   application: EmployerApplicationView;
+  /** The company's website: links on its domain are accepted besides the meeting services. */
+  companyWebsite: string;
   /** The application after the api booked the slot. */
   onScheduled: (application: EmployerApplicationView) => void;
 }
 
+/** The invite limits the api enforces, said before anyone runs into them. */
+const LIMITS_NOTE = `You can send up to ${String(LIMITS.interviewInvitesPerHour)} invites an hour, and up to ${String(LIMITS.interviewInvitesPerApplicationPerDay)} a day to the same applicant, new times included.`;
+
 function InterviewFields({
   application,
+  companyWebsite,
   onClose,
   onScheduled,
 }: Omit<InterviewDialogProps, "open">) {
@@ -111,12 +120,13 @@ function InterviewFields({
       </Field>
       <Field
         label="Meeting link"
-        hint="The video call link, starting with https://."
+        hint={`A ${MEETING_SERVICE_NAMES} link, or one on ${domainOf(companyWebsite)}, starting with https://. The email tells ${student.firstName} which site it opens.`}
         required
         error={errors.meetingUrl}
       >
         <Input {...register("meetingUrl")} type="url" inputMode="url" spellCheck={false} />
       </Field>
+      <p className="text-small text-muted">{LIMITS_NOTE}</p>
       <FormAlert message={formError} />
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button variant="secondary" onClick={onClose} disabled={submitting}>
@@ -134,7 +144,13 @@ function InterviewFields({
  * Books an interview with a shortlisted applicant, or moves one already booked. The student gets
  * an email either way. Times are picked in the viewer's own zone and sent as UTC.
  */
-export function InterviewDialog({ open, onClose, application, onScheduled }: InterviewDialogProps) {
+export function InterviewDialog({
+  open,
+  onClose,
+  application,
+  companyWebsite,
+  onScheduled,
+}: InterviewDialogProps) {
   const { firstName } = application.student;
   const rescheduling = application.status === "interview";
   return (
@@ -147,7 +163,12 @@ export function InterviewDialog({ open, onClose, application, onScheduled }: Int
       description={`${firstName} gets an email with the time and the link${rescheduling ? ", and the old time is dropped" : ""}.`}
     >
       {open && (
-        <InterviewFields application={application} onClose={onClose} onScheduled={onScheduled} />
+        <InterviewFields
+          application={application}
+          companyWebsite={companyWebsite}
+          onClose={onClose}
+          onScheduled={onScheduled}
+        />
       )}
     </Modal>
   );

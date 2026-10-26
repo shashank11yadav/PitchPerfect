@@ -134,7 +134,7 @@ export function ResumeUpload() {
 
       <Field
         label="Upload a PDF"
-        hint={`PDF only, up to ${String(LIMIT_MB)} MB.${hasResume ? " A new upload replaces the one on file." : ""}`}
+        hint={`PDF only, up to ${String(LIMIT_MB)} MB.${hasResume ? " A new upload replaces the one on file. Applications you’ve already sent keep the résumé you applied with." : ""}`}
         error={error}
       >
         <Input

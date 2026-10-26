@@ -5,6 +5,7 @@ import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetCsrf } from "@/lib/api";
+import { ProvideSession } from "@/lib/session";
 import {
   bodyOf,
   callsTo,
@@ -16,7 +17,13 @@ import {
   type Route,
 } from "@/lib/test-api";
 import { ApplicantDrawer, employerActions } from "./ApplicantDrawer";
-import { APPLICATION_ID, applicant, sharedScorecard } from "./test-fixtures";
+import {
+  APPLICATION_ID,
+  applicant,
+  company,
+  employerSession,
+  sharedScorecard,
+} from "./test-fixtures";
 
 const BASE = `/api/employer/applications/${APPLICATION_ID}`;
 const SCORECARD = `GET ${BASE}/scorecard`;
@@ -29,7 +36,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function setup(view = applicant(), routes: Record<string, Route> = {}) {
+function setup(view = applicant(), routes: Record<string, Route> = {}, owner = company()) {
   const fetchMock = serveApi({
     "GET /api/auth/csrf": csrf,
     [`PATCH ${BASE}`]: (init) =>
@@ -41,11 +48,13 @@ function setup(view = applicant(), routes: Record<string, Route> = {}) {
   });
   const onChange = vi.fn();
   render(
-    <ApplicantDrawer
-      application={view}
-      jobTitle="Sales development representative"
-      onChange={onChange}
-    />,
+    <ProvideSession session={employerSession(owner)}>
+      <ApplicantDrawer
+        application={view}
+        jobTitle="Sales development representative"
+        onChange={onChange}
+      />
+    </ProvideSession>,
   );
   return { fetchMock, onChange };
 }
@@ -147,7 +156,38 @@ describe("ApplicantDrawer", () => {
   it("says when there's no résumé", () => {
     setup();
     expect(screen.queryByRole("link", { name: /résumé/i })).not.toBeInTheDocument();
-    expect(screen.getByText(/hasn’t uploaded a résumé/)).toBeVisible();
+    expect(screen.getByText("Riley’s application has no résumé.")).toBeVisible();
+  });
+
+  it("says how long a decided application's résumé stays downloadable", () => {
+    setup(applicant({ status: "rejected", hasResume: true }));
+    expect(screen.getByRole("link", { name: /Download résumé/ })).toBeVisible();
+    expect(
+      screen.getByText(/until 7 days after the application was decided or closed/),
+    ).toBeVisible();
+  });
+
+  it.each(["hired", "rejected", "closed"] as const)(
+    "hides the download once the api stops serving the résumé of a %s application",
+    (status) => {
+      setup(applicant({ status, hasResume: false }));
+      expect(screen.queryByRole("link", { name: /résumé/i })).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "No résumé to download. Résumés stay available for 7 days after an application is decided or closed.",
+        ),
+      ).toBeVisible();
+    },
+  );
+
+  it("offers no invite to an unverified company and says why", () => {
+    setup(applicant({ status: "shortlisted" }), {}, company({ verification: "unverified" }));
+    expect(actionNames()).toEqual(["Not a fit"]);
+    expect(screen.getByText(/Only verified companies can send interview invites/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "See how to get verified" })).toHaveAttribute(
+      "href",
+      "/employer/company",
+    );
   });
 
   it("shows a shared scorecard read-only", async () => {
@@ -214,7 +254,11 @@ function setupLive(view = applicant()) {
     [`POST ${BASE}/interview`]: (init) =>
       jsonResponse({ application: { ...view, status: "interview", interview: bodyOf(init) } }),
   });
-  render(<Pipeline start={view} />);
+  render(
+    <ProvideSession session={employerSession()}>
+      <Pipeline start={view} />
+    </ProvideSession>,
+  );
 }
 
 const statusLine = () => screen.getByTestId("applicant-status");

@@ -177,15 +177,18 @@ export function CompanyForm() {
         </div>
       </div>
       <VerificationBanner verification={current.verification} website={current.website} />
-      <Card className="md:p-8">
-        <CompanyFields
-          key={current.id}
-          company={current}
-          onSaved={(saved) => {
-            company.update(() => saved);
-          }}
-        />
-      </Card>
+      {/* A suspended company can't edit its profile, so there is no form to fill in. */}
+      {current.verification !== "suspended" && (
+        <Card className="md:p-8">
+          <CompanyFields
+            key={current.id}
+            company={current}
+            onSaved={(saved) => {
+              company.update(() => saved);
+            }}
+          />
+        </Card>
+      )}
     </div>
   );
 }

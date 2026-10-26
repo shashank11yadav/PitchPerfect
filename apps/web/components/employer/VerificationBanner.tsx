@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /** "pitchwell-demo.example" from "https://www.pitchwell-demo.example/about". */
-function domainOf(website: string): string {
+export function domainOf(website: string): string {
   return URL.canParse(website)
     ? new URL(website).hostname.replace(/^www\./, "")
     : "your-company.example";
@@ -48,7 +48,7 @@ export function VerificationBanner({ verification, website, className }: Verific
     },
     suspended: {
       title: "Suspended",
-      body: "An admin suspended this company, so your jobs are hidden from students and the job board. Editing the company won’t lift it.",
+      body: "An admin suspended this company. Your jobs are hidden from students and the job board, and until the suspension is lifted you can’t see applicants or their résumés, send interview invites, post or edit jobs, or edit the company. Your account settings still work.",
     },
   };
   const { icon: Icon, frame, tint } = LOOK[verification];

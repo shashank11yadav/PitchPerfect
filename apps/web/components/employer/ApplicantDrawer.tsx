@@ -4,10 +4,12 @@ import {
   APPLICATION_TRANSITIONS,
   canTransition,
   getSkill,
+  LIMITS,
   type ApplicationStatus,
   type EmployerApplicationView,
 } from "@pitchperfect/shared";
 import { Bookmark, Download } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { InterviewSlot } from "@/components/jobs/InterviewSlot";
 import { ScorecardDetails } from "@/components/practice/ScorecardDetails";
@@ -20,6 +22,7 @@ import { ApiError, apiFetch } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { EMPLOYER_API_MESSAGES, OneApplicant, SharedScorecard } from "@/lib/employer-api";
 import { formatInterviewTime, formatLocalDate } from "@/lib/local-time";
+import { useSession } from "@/lib/session";
 import { useApi } from "@/lib/use-api";
 import { formMessage } from "@/lib/use-form";
 import { InterviewDialog } from "./InterviewDialog";
@@ -66,6 +69,43 @@ function confirmCopy(status: "hired" | "rejected", firstName: string) {
 
 const TEXT_LINK =
   "pp-link inline-flex items-center gap-1.5 rounded-control font-semibold text-primary";
+
+/** Decided or closed: the résumé stays downloadable for a few days, then the api stops serving it. */
+const ENDED: readonly ApplicationStatus[] = ["hired", "rejected", "closed"];
+const GRACE = `${String(LIMITS.resumeAccessGraceDays)} days`;
+
+/** The résumé download while the api still serves it, and why it's missing when it doesn't. */
+function ResumeAccess({
+  application,
+  path,
+}: {
+  application: EmployerApplicationView;
+  path: string;
+}) {
+  const ended = ENDED.includes(application.status);
+  if (!application.hasResume) {
+    return (
+      <p className="max-w-prose text-ink">
+        {ended
+          ? `No résumé to download. Résumés stay available for ${GRACE} after an application is decided or closed.`
+          : `${application.student.firstName}’s application has no résumé.`}
+      </p>
+    );
+  }
+  return (
+    <>
+      <a href={`/api${path}/resume`} download className={cn(TEXT_LINK, "self-start")}>
+        <Download aria-hidden="true" className="size-4" />
+        Download résumé (PDF)
+      </a>
+      {ended && (
+        <p className="max-w-prose text-small text-muted">
+          You can download it until {GRACE} after the application was decided or closed.
+        </p>
+      )}
+    </>
+  );
+}
 
 /** The scorecard the student attached, read-only. Asked for only when one was shared. */
 function SharedScorecardPanel({
@@ -142,8 +182,11 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
     setMoves((count) => count + 1);
   };
 
+  const { company } = useSession();
   const withdrawn = status === "withdrawn";
-  const canSchedule = canTransition(status, "interview", "employer");
+  // The api sends invites for verified companies only; the others are told why the button is missing.
+  const schedulable = canTransition(status, "interview", "employer");
+  const canSchedule = schedulable && company?.verification === "verified";
   const actions = employerActions(status);
 
   async function setStatus(next: SettableStatus) {
@@ -259,6 +302,15 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
             ))}
           </div>
         )}
+        {schedulable && !canSchedule && (
+          <p className="max-w-prose text-small text-ink">
+            Only verified companies can send interview invites.{" "}
+            <Link href="/employer/company" className="pp-link font-semibold text-primary">
+              See how to get verified
+            </Link>
+            .
+          </p>
+        )}
         <p role="status" className="font-semibold text-ink empty:sr-only">
           {news}
         </p>
@@ -276,14 +328,7 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
             <h3 id="applicant-resume" className="text-h4">
               Résumé
             </h3>
-            {application.hasResume ? (
-              <a href={`/api${path}/resume`} download className={cn(TEXT_LINK, "self-start")}>
-                <Download aria-hidden="true" className="size-4" />
-                Download résumé (PDF)
-              </a>
-            ) : (
-              <p className="text-ink">{student.firstName} hasn’t uploaded a résumé.</p>
-            )}
+            <ResumeAccess application={application} path={path} />
           </section>
           <section
             aria-labelledby="applicant-scorecard"
@@ -319,6 +364,7 @@ export function ApplicantDrawer({ application, jobTitle, onChange }: ApplicantDr
       <InterviewDialog
         open={scheduling}
         application={application}
+        companyWebsite={company?.website ?? ""}
         onClose={() => {
           setScheduling(false);
         }}

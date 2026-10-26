@@ -48,7 +48,15 @@ function setup(view = applicant({ status: "shortlisted" }), route?: Route) {
   });
   const onScheduled = vi.fn();
   const onClose = vi.fn();
-  render(<InterviewDialog open application={view} onClose={onClose} onScheduled={onScheduled} />);
+  render(
+    <InterviewDialog
+      open
+      application={view}
+      companyWebsite="https://www.pitchwell-demo.example"
+      onClose={onClose}
+      onScheduled={onScheduled}
+    />,
+  );
   return { fetchMock, onScheduled, onClose };
 }
 
@@ -123,6 +131,33 @@ describe("InterviewDialog", () => {
       expect(onScheduled).toHaveBeenCalled();
     });
     expect(lastBody(fetchMock, INTERVIEW)).toMatchObject({ startsAt: "2026-11-04T16:00:00.000Z" });
+  });
+
+  it("says which links are accepted and how many invites can be sent", () => {
+    setup();
+    const link = screen.getByLabelText(/Meeting link/);
+    expect(link).toHaveAccessibleDescription(/Zoom, Google Meet, Microsoft Teams, Webex, Whereby/);
+    expect(link).toHaveAccessibleDescription(/or one on pitchwell-demo\.example/);
+    expect(link).toHaveAccessibleDescription(/which site it opens/);
+    expect(
+      screen.getByText(
+        "You can send up to 20 invites an hour, and up to 3 a day to the same applicant, new times included.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("shows the api's field error for a link it doesn't accept", async () => {
+    setup(applicant({ status: "shortlisted" }), () =>
+      errorResponse(400, "validation_failed", "Some fields need attention", {
+        fields: { meetingUrl: "Use a Zoom link, or one on pitchwell-demo.example" },
+      }),
+    );
+    pickTime("2026-11-02T15:00");
+    await userEvent.type(screen.getByLabelText(/Meeting link/), "https://evil.example/login");
+    await userEvent.click(screen.getByRole("button", { name: "Send invite" }));
+    expect(
+      await screen.findByText("Use a Zoom link, or one on pitchwell-demo.example"),
+    ).toBeVisible();
   });
 
   it("shows the api's reason when it refuses", async () => {

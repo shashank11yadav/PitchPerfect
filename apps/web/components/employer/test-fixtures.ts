@@ -6,6 +6,8 @@ import type {
   SharedScorecardView,
 } from "@pitchperfect/shared";
 import { publicCompany } from "@/components/jobs/test-fixtures";
+import type { Session } from "@/lib/session";
+import { meBody } from "@/lib/test-api";
 
 /** Fictional employer-side data for tests; the company is the seed's coined demo name. */
 
@@ -21,6 +23,20 @@ export function company(overrides: Partial<PublicCompany> = {}): PublicCompany {
     pitch: "A made-up company for trying out PitchPerfect as an employer.",
     ...overrides,
   });
+}
+
+/** A signed-in employer of `owned`, for `ProvideSession` around components that read the session. */
+export function employerSession(owned = company()): Session {
+  const { user } = meBody("employer");
+  return {
+    status: "signed_in",
+    user,
+    profile: { jobTitle: "Head of talent", companyId: owned.id },
+    company: owned,
+    refresh: () => Promise.resolve("signed_in"),
+    signOut: () => Promise.resolve(),
+    leaving: false,
+  };
 }
 
 export function employerJob(overrides: Partial<EmployerJob> = {}): EmployerJob {

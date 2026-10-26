@@ -78,4 +78,8 @@ export const SharedScorecard: Parser<SharedScorecardView> = {
 export const EMPLOYER_API_MESSAGES: Record<string, string> = {
   email_not_verified:
     "Confirm your email first. Posting jobs and managing applicants wait until you click the link we sent you.",
+  company_suspended:
+    "An admin suspended this company, so jobs and applicants are closed until the suspension is lifted.",
+  company_unverified:
+    "Only verified companies can send interview invites. The Company page explains how to get verified.",
 };

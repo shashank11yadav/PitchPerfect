@@ -139,12 +139,21 @@ describe("VerificationBanner", () => {
     expect(screen.getByText(/an admin/)).toBeVisible();
   });
 
-  it("says suspended jobs are hidden", () => {
+  it("says suspended jobs are hidden and what else is closed", () => {
     render(
       <VerificationBanner verification="suspended" website="https://pitchwell-demo.example" />,
     );
     expect(screen.getByRole("heading", { name: "Suspended" })).toBeVisible();
-    expect(screen.getByText(/hidden/)).toBeVisible();
+    expect(screen.getByText(/hidden/)).toHaveTextContent(
+      /can’t see applicants or their résumés, send interview invites, post or edit jobs/,
+    );
+  });
+
+  it("shows a suspended company without the edit form", async () => {
+    setup(undefined, company({ verification: "suspended" }));
+    expect(await screen.findByRole("heading", { name: "Suspended" })).toBeVisible();
+    expect(screen.queryByLabelText(/Company name/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save company" })).not.toBeInTheDocument();
   });
 
   it("says what the verified badge means", () => {

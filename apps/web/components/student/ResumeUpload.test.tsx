@@ -123,6 +123,17 @@ describe("ResumeUpload", () => {
     expect(callsTo(fetchMock, "GET /api/auth/me")).toBeGreaterThan(1);
   });
 
+  it("says a new upload leaves applications already sent alone, and deleting doesn't", async () => {
+    setup({}, { hasResume: true });
+    expect(await screen.findByLabelText("Upload a PDF")).toHaveAccessibleDescription(
+      /Applications you’ve already sent keep the résumé you applied with/,
+    );
+    await user().click(screen.getByRole("button", { name: "Delete résumé" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      /including on applications you’ve already sent/,
+    );
+  });
+
   it("deletes the résumé after confirming", async () => {
     const fetchMock = setup(
       { "DELETE /api/me/resume": () => new Response(null, { status: 204 }) },
