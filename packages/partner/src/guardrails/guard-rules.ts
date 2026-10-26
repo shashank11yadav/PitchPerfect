@@ -1,38 +1,6 @@
-import { stripInvisible } from "@pitchperfect/shared";
+import { normalizeWords } from "@pitchperfect/shared";
 
 export type RuleVerdict = "prompt_attack" | "harmful";
-
-const COMBINING_MARKS = /\p{M}/gu;
-const LEET: Record<string, string> = {
-  "0": "o",
-  "1": "i",
-  "3": "e",
-  "4": "a",
-  "5": "s",
-  "@": "a",
-  $: "s",
-};
-// A leet symbol next to a letter stands in for that letter; plain numbers are left alone.
-const LEET_NEXT_TO_LETTER = /(?<=[a-z])[01345@$]|[01345@$](?=[a-z])/g;
-const NON_WORD = /[^a-z0-9\s]+/g;
-const NON_WORD_OR_STOP = /[^a-z0-9\s.]+/g;
-const CLAUSE_END = /[?!;:,]+|\.+/g;
-
-/**
- * Lowercase, accent-free, de-obfuscated words separated by single spaces. With `stops`, every run
- * of sentence punctuation is kept as a "." word, so a pattern can see where a clause ends.
- */
-export function normalizeWords(text: string, stops = false): string {
-  const plain = stripInvisible(text)
-    .normalize("NFKD")
-    .replace(COMBINING_MARKS, "")
-    .toLowerCase()
-    .replace(LEET_NEXT_TO_LETTER, (char) => LEET[char] ?? char);
-  const words = stops
-    ? plain.replace(CLAUSE_END, " . ").replace(NON_WORD_OR_STOP, " ")
-    : plain.replace(NON_WORD, " ");
-  return words.replace(/\s+/g, " ").trim();
-}
 
 // These are matched on the raw text: they rely on punctuation or capitals that normalizeWords() drops.
 const CHAT_TEMPLATE = /<\|?\/?(?:im_start|im_end|system|endoftext)\|?>|\[\/?inst\]|<<\/?sys>>/i;
@@ -227,7 +195,7 @@ const HARMFUL: readonly RegExp[] = [
     `^(?:(?:please|ok|okay|now|just|can you|could you|will you) )*(?:make|build|create|assemble|construct|synthesize|manufacture)(?: me)?(?: \\w+){0,2}? ${WEAPON_NOUN}\\b`,
   ),
   // Self-harm. `runTurn` answers these with the support message before the rules run
-  // (`self-harm.ts`); they stay here so a caller of `ruleCheck` alone never passes one as ordinary.
+  // (`signalsSelfHarm` in packages/shared); they stay here so a caller of `ruleCheck` alone never passes one as ordinary.
   /\b(?:kill myself|commit suicide|end my life|take my own life|hurt myself|harm myself)\b/,
   // Violence against people.
   /\bhow (?:do i|to|can i|would i) (?:\w+ ){0,2}?(?:kill|murder|poison|strangle) (?:a |an |the )?(?:person|someone|somebody|people|him|her|them|my (?:wife|husband|boss|neighbou?r|teacher|mother|father|friend))\b/,

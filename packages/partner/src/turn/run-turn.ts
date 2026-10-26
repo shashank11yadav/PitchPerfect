@@ -1,7 +1,6 @@
-import { LIMITS, type CoachTurnRequest, type Stage } from "@pitchperfect/shared";
+import { LIMITS, signalsSelfHarm, type CoachTurnRequest, type Stage } from "@pitchperfect/shared";
 import { reliably, usageOf } from "../deps.js";
 import { confirmsAttack, ruleCheck } from "../guardrails/guard-rules.js";
-import { signalsSelfHarm } from "../guardrails/self-harm.js";
 import { redirectLine, SUPPORT_LINE } from "../prompts/fixed-lines.js";
 import { buildGuardPrompt, GuardSchema, type GuardCategory } from "../prompts/guard.js";
 import { studentTurnNumber } from "../prompts/persona-turn.js";

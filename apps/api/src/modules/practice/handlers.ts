@@ -1,5 +1,11 @@
 import type { RequestHandler } from "express";
-import type { AttemptListQuerySchema, StartPracticeSchema, TurnSchema } from "@pitchperfect/shared";
+import {
+  signalsSelfHarm,
+  SUPPORT_LINE,
+  type AttemptListQuerySchema,
+  type StartPracticeSchema,
+  type TurnSchema,
+} from "@pitchperfect/shared";
 import { userOf } from "../../middleware/auth.js";
 import { getInput, type IdParamSchema } from "../../middleware/validate.js";
 import { practicePartnerOf } from "../../services/coach-probe.js";
@@ -10,6 +16,7 @@ import {
   endSession,
   getAttempt,
   listAttempts,
+  ownAttemptId,
   type PracticeDeps,
 } from "./service.js";
 import { openSse, watchDisconnect } from "./sse.js";
@@ -39,6 +46,26 @@ export function practiceHandlers(deps: PracticeDeps) {
     get: (async (_req, res) => {
       const { params } = getInput<WithId>(res);
       res.json({ attempt: await getAttempt(userOf(res).id, params.id) });
+    }) satisfies RequestHandler,
+
+    /**
+     * A turn that signals suicide or self-harm gets the support message here, before the turn
+     * rate limit and before anything that could refuse the turn: the token cap, the turn limit,
+     * an expired or ended session, a coach that is down. It is answered locally, so it calls no
+     * coach, costs no tokens and stores nothing. Only the body check and the attempt's owner come
+     * first. Any other turn goes on to `turn`.
+     */
+    support: (async (req, res, next) => {
+      const { params, body } = getInput<WithId & { body: typeof TurnSchema }>(res);
+      if (!signalsSelfHarm(body.text)) {
+        next();
+        return;
+      }
+      await ownAttemptId(userOf(res).id, params.id);
+      const stream = openSse(res, watchDisconnect(res));
+      stream.send({ type: "support", text: SUPPORT_LINE });
+      stream.close();
+      req.log.info({ attemptId: params.id, outcome: "support" }, "practice turn finished");
     }) satisfies RequestHandler,
 
     /** Errors before the stream opens are JSON; after that they are an `error` event. */

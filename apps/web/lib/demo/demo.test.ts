@@ -151,6 +151,32 @@ describe("the practice room's api, answered in the browser", () => {
     });
   });
 
+  it("answers self-harm with the support message even when the call can take no more turns", async () => {
+    const support = [
+      { type: "support", text: expect.stringContaining("call or text 988") as string },
+    ];
+    const CRISIS = "Honestly some days I just want to end my life.";
+
+    const full = await startDemoSession({ skill: "pitching" });
+    for (let index = 0; index < LIMITS.maxStudentTurns; index += 1)
+      await turn(full.attemptId, PITCH);
+    expect((await turn(full.attemptId, PITCH)).map((event) => event.type)).toEqual(["ended"]);
+    expect(await turn(full.attemptId, CRISIS)).toEqual(support);
+
+    const late = await startDemoSession({ skill: "pitching" });
+    const afterTime = new Date(
+      Date.parse(getDemoAttempt(late.attemptId).startedAt) + (LIMITS.sessionSeconds + 60) * 1000,
+    );
+    const events: PracticeEvent[] = [];
+    await runDemoTurn(late.attemptId, CRISIS, (event) => events.push(event), signal(), afterTime);
+    expect(events).toEqual(support);
+
+    const ended = await startDemoSession({ skill: "pitching" });
+    await endDemoSession(ended.attemptId);
+    expect(await turn(ended.attemptId, CRISIS)).toEqual(support);
+    expect(getDemoAttempt(ended.attemptId).transcript).toHaveLength(0);
+  });
+
   it("rejects an empty turn without using one", async () => {
     const { attemptId } = await startDemoSession({ skill: "pitching" });
     await expect(turn(attemptId, "   ")).rejects.toMatchObject({ status: 400 });

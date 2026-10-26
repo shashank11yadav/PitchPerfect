@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ATTACK_LINES, BENIGN_LINES } from "./guard-corpus.js";
-import { signalsSelfHarm } from "./self-harm.js";
+import { signalsSelfHarm } from "@pitchperfect/shared";
 
 /** A student saying they might hurt themselves: each one gets the support message. */
 const SIGNALS: readonly string[] = [

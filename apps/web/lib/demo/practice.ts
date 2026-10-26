@@ -17,7 +17,9 @@ import {
   redactPii,
   redactTurn,
   secondsUntil,
+  signalsSelfHarm,
   STAGES,
+  SUPPORT_LINE,
   type AttemptListQuery,
   type AttemptSummary,
   type AttemptView,
@@ -270,15 +272,6 @@ export async function runDemoTurn(
 ): Promise<void> {
   const stored = findStored(id);
   const { view } = stored;
-  if (view.status !== "active" && view.status !== "ended_by_guard") {
-    throw new ApiError(409, "conflict", "This practice session has ended");
-  }
-  const reason = endedReason(view, now);
-  if (reason) {
-    onEvent({ type: "ended", reason });
-    return;
-  }
-
   let studentText: string;
   try {
     sanitizeInput(text);
@@ -288,6 +281,20 @@ export async function runDemoTurn(
       throw new ApiError(400, "validation_failed", "Your message must be 1–1000 characters.");
     }
     throw error;
+  }
+  // As on the api: a student in crisis gets the support message before anything that could
+  // refuse the turn (an ended session, the turn limit, the time limit). Nothing is kept.
+  if (signalsSelfHarm(text)) {
+    onEvent({ type: "support", text: SUPPORT_LINE });
+    return;
+  }
+  if (view.status !== "active" && view.status !== "ended_by_guard") {
+    throw new ApiError(409, "conflict", "This practice session has ended");
+  }
+  const reason = endedReason(view, now);
+  if (reason) {
+    onEvent({ type: "ended", reason });
+    return;
   }
   const request: CoachTurnRequest = {
     skill: view.skill,

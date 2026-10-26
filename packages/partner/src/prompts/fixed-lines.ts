@@ -1,16 +1,10 @@
 import type { GuardCategory } from "./guard.js";
 
+export { SUPPORT_LINE } from "@pitchperfect/shared";
+
 /** Shown instead of a reply that failed the output check. In character, safe for any persona. */
 export const FALLBACK_LINE =
   "Sorry, I lost my train of thought for a second. Could you say that again?";
-
-/**
- * Sent instead of any reply when a student turn signals suicide or self-harm. It is PitchPerfect
- * speaking, not the persona, so it goes out as its own `support` event and never through the
- * partner's reply filter, which would block the helpline's web address.
- */
-export const SUPPORT_LINE =
-  "This is PitchPerfect, stepping out of the practice call. If you're thinking about suicide or hurting yourself, please talk to someone now. In the US, call or text 988 to reach the 988 Suicide & Crisis Lifeline, free and open 24 hours a day. Outside the US, findahelpline.com lists free helplines by country. If you're in danger right now, call your local emergency number. This didn't use one of your turns, and you can go back to the call whenever you're ready.";
 
 /** Guard verdicts answered with an in-character redirect. */
 type RedirectCategory = Exclude<GuardCategory, "ok" | "self_harm">;

@@ -6,6 +6,7 @@ export * from "./limits.js";
 export * from "./meeting-links.js";
 export * from "./pii.js";
 export * from "./rubric.js";
+export * from "./self-harm.js";
 export * from "./skills.js";
 export * from "./text.js";
 export * from "./time.js";

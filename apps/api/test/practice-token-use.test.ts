@@ -167,7 +167,7 @@ describe("support turns", () => {
     const { attemptId } = await startPractice(session);
     const before = await today();
     const ownBefore = await studentTokens(user._id);
-    // What a live model guard costs before it returns `self_harm`.
+    // What a live model guard costs before it returns `self_harm` for a line the rules miss.
     const usage = { provider: "openai" as const, model: "test-model", inputTokens: 600 };
     vi.spyOn(harness.coach, "turn").mockImplementationOnce(async function* () {
       await Promise.resolve();
@@ -178,7 +178,7 @@ describe("support turns", () => {
       } satisfies CoachTurnEvent;
     });
 
-    const { events } = await sendTurn(session, attemptId, "Some days I can't go on anymore.");
+    const { events } = await sendTurn(session, attemptId, "Lately none of this feels worth it.");
 
     expect(events.map((event) => event.event)).toEqual(["support"]);
     expect(await today()).toEqual({ input: before.input + 600, output: before.output + 20 });

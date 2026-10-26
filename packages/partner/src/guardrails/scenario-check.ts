@@ -1,5 +1,5 @@
-import { stripInvisible } from "@pitchperfect/shared";
-import { normalizeWords, ruleCheck } from "./guard-rules.js";
+import { normalizeWords, stripInvisible } from "@pitchperfect/shared";
+import { ruleCheck } from "./guard-rules.js";
 
 const PERSONAL_DATA =
   "(?:ssn|social security(?: number)?|passwords?|passcodes?|pin(?: code| number)?|log ?ins?|credentials|bank (?:account|details|login)|(?:credit |debit )?card (?:number|details)|cvv|routing number|date of birth|birth ?date|home address|phone number|email address|driver s licen[cs]e|passport(?: number)?|national id|tax id|(?:student |employee )?id number|maiden name|(?:verification|security|one time|2fa) code)";

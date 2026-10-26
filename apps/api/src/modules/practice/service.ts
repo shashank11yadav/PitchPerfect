@@ -103,18 +103,21 @@ export async function listAttempts(
   return { items: attempts.map(toAttemptSummary), page, pageSize, total };
 }
 
-/** Deletes the student's own attempt and stops sharing it with any application. */
-export async function deleteAttempt(studentId: string, attemptId: string): Promise<void> {
+/** The student's own attempt's id; `404` for anyone else's, a missing one, or a placeholder. */
+export async function ownAttemptId(studentId: string, attemptId: string) {
   const attempt = await PracticeAttempt.findOne({ _id: attemptId, studentId, ...visible() })
     .select("_id")
     .lean();
   if (!attempt) throw new NotFoundError();
+  return attempt._id;
+}
+
+/** Deletes the student's own attempt and stops sharing it with any application. */
+export async function deleteAttempt(studentId: string, attemptId: string): Promise<void> {
+  const id = await ownAttemptId(studentId, attemptId);
   // Detach first, so a failure in between never leaves a share pointing at nothing.
-  await Application.updateMany(
-    { sharedAttemptId: attempt._id },
-    { $unset: { sharedAttemptId: "" } },
-  );
-  await PracticeAttempt.deleteOne({ _id: attempt._id });
+  await Application.updateMany({ sharedAttemptId: id }, { $unset: { sharedAttemptId: "" } });
+  await PracticeAttempt.deleteOne({ _id: id });
 }
 
 /** Closes a locked attempt with `status`; saving runs the scorecard validator. */

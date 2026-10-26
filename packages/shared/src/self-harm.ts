@@ -1,4 +1,36 @@
-import { normalizeWords } from "./guard-rules.js";
+import { stripInvisible } from "./text.js";
+
+const COMBINING_MARKS = /\p{M}/gu;
+const LEET: Record<string, string> = {
+  "0": "o",
+  "1": "i",
+  "3": "e",
+  "4": "a",
+  "5": "s",
+  "@": "a",
+  $: "s",
+};
+// A leet symbol next to a letter stands in for that letter; plain numbers are left alone.
+const LEET_NEXT_TO_LETTER = /(?<=[a-z])[01345@$]|[01345@$](?=[a-z])/g;
+const NON_WORD = /[^a-z0-9\s]+/g;
+const NON_WORD_OR_STOP = /[^a-z0-9\s.]+/g;
+const CLAUSE_END = /[?!;:,]+|\.+/g;
+
+/**
+ * Lowercase, accent-free, de-obfuscated words separated by single spaces. With `stops`, every run
+ * of sentence punctuation is kept as a "." word, so a pattern can see where a clause ends.
+ */
+export function normalizeWords(text: string, stops = false): string {
+  const plain = stripInvisible(text)
+    .normalize("NFKD")
+    .replace(COMBINING_MARKS, "")
+    .toLowerCase()
+    .replace(LEET_NEXT_TO_LETTER, (char) => LEET[char] ?? char);
+  const words = stops
+    ? plain.replace(CLAUSE_END, " . ").replace(NON_WORD_OR_STOP, " ")
+    : plain.replace(NON_WORD, " ");
+  return words.replace(/\s+/g, " ").trim();
+}
 
 const MYSELF = "(?:myself|my self)";
 
@@ -37,3 +69,11 @@ export function signalsSelfHarm(text: string): boolean {
   const words = normalizeWords(text);
   return SELF_HARM.some((pattern) => pattern.test(words));
 }
+
+/**
+ * Sent instead of any reply when a student turn signals suicide or self-harm. It is PitchPerfect
+ * speaking, not the persona, so it goes out as its own `support` event and never through the
+ * partner's reply filter, which would block the helpline's web address.
+ */
+export const SUPPORT_LINE =
+  "This is PitchPerfect, stepping out of the practice call. If you're thinking about suicide or hurting yourself, please talk to someone now. In the US, call or text 988 to reach the 988 Suicide & Crisis Lifeline, free and open 24 hours a day. Outside the US, findahelpline.com lists free helplines by country. If you're in danger right now, call your local emergency number. This didn't use one of your turns, and you can go back to the call whenever you're ready.";

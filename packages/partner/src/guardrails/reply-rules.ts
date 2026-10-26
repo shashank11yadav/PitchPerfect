@@ -1,5 +1,5 @@
-import { stripInvisible } from "@pitchperfect/shared";
-import { normalizeWords, ruleCheck } from "./guard-rules.js";
+import { normalizeWords, stripInvisible } from "@pitchperfect/shared";
+import { ruleCheck } from "./guard-rules.js";
 
 /**
  * Why the local rules blocked a partner reply. These run on every reply, with every provider and

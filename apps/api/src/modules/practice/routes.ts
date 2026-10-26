@@ -42,8 +42,10 @@ export function practiceRoutes(deps: PracticeDeps): Router {
   router.post(
     "/sessions/:id/turns",
     student,
-    turnLimit,
     validate({ params: IdParamSchema, body: TurnSchema }),
+    // A student in crisis is answered before the rate limit or any other refusal.
+    handle.support,
+    turnLimit,
     handle.turn,
   );
   router.post("/sessions/:id/end", student, endLimit, withId, handle.end);
