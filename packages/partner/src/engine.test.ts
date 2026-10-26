@@ -2,6 +2,7 @@ import { RUBRIC_KEYS, type CoachTurnEvent, type CoachTurnRequest } from "@pitchp
 import { describe, expect, it } from "vitest";
 import { createPracticeDeps, type PracticeDeps } from "./deps.js";
 import { FakeProvider } from "./fake/fake.js";
+import { CANARY } from "./guardrails/canary.js";
 import { createModelModerator } from "./guardrails/moderator.js";
 import { planScenario } from "./plan.js";
 import { FALLBACK_LINE } from "./prompts/fixed-lines.js";
@@ -244,6 +245,73 @@ describe("the output check on a streamed reply", () => {
       expect(result.outcome, reply).toBe("fallback");
       expect(shown(events)).toBe(FALLBACK_LINE);
     }
+  });
+
+  /** The first line of a list in the `<scenario>` block the persona prompt carries. */
+  const scenarioLine = (messages: readonly { content: string }[], list: string) =>
+    new RegExp(`${list}:\\n- (.+)`).exec(messages[0]?.content ?? "")?.[1] ?? "";
+
+  it("blocks a reply that recites a win condition of this turn's scenario", async () => {
+    const d = createPracticeDeps(
+      { COACH_TIMEOUT_MS: 5_000 },
+      new FakeProvider({
+        overrides: {
+          turn: ({ messages }) =>
+            `Honestly? ${scenarioLine(messages, "Win conditions")} [[stage:pitch]]`,
+        },
+      }),
+    );
+    const { result, events } = await turn(PITCH, [], d);
+    expect(result.outcome).toBe("fallback");
+    expect(shown(events)).toBe(FALLBACK_LINE);
+  });
+
+  it("lets the persona raise a hidden objection out loud", async () => {
+    const d = createPracticeDeps(
+      { COACH_TIMEOUT_MS: 5_000 },
+      new FakeProvider({
+        overrides: {
+          turn: ({ messages }) =>
+            `I'll be honest. ${scenarioLine(messages, "Hidden objections")} [[stage:objection]]`,
+        },
+      }),
+    );
+    const { result, plan } = await turn(PITCH, [], d);
+    expect(result.outcome).toBe("done");
+    expect(plan.scenarioPrivate.hiddenObjections.length).toBeGreaterThan(0);
+  });
+
+  it("retracts the sentences it showed when a canary split across them is caught late", async () => {
+    const fake = new FakeProvider();
+    const replies = [
+      [
+        `Part one is ${CANARY.slice(0, 6)}. `,
+        "That is all I can share for now, so let us keep going. ",
+        `Part two is ${CANARY.slice(6, 12)}. `,
+        "[[stage:pitch]]",
+      ],
+      ["Fair enough. What does it cost? [[stage:pitch]]"],
+    ];
+    const provider: LlmProvider = {
+      name: "fake",
+      structured: fake.structured.bind(fake),
+      async *chatStream() {
+        for (const chunk of replies.shift() ?? []) {
+          // A macrotask between chunks, so each checked sentence is sent before the next arrives.
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          yield chunk;
+        }
+      },
+    };
+    const { result, events } = await turn(
+      PITCH,
+      [],
+      createPracticeDeps({ COACH_TIMEOUT_MS: 5_000 }, provider),
+    );
+    expect(result.outcome).toBe("done");
+    expect(events.map((event) => event.type)).toEqual(["delta", "retract", "done"]);
+    expect(events[1]).toEqual({ type: "retract", text: "Fair enough. What does it cost?" });
+    expect(JSON.stringify(events)).not.toContain(CANARY.slice(6, 12));
   });
 
   it("retracts the checked sentences it showed when the whole reply then fails", async () => {

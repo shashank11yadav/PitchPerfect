@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { VOICES } from "../fake/fake-voices.js";
 import { FALLBACK_LINE, redirectLine } from "../prompts/fixed-lines.js";
+import { BENIGN_REPLIES } from "./guard-corpus.js";
 import { replyRuleCheck } from "./reply-rules.js";
 
 const rot13 = (text: string) =>
@@ -109,47 +110,8 @@ describe("replyRuleCheck: self-harm, threats and drugs", () => {
   });
 });
 
-/** Normal sales talk a buyer, a hiring manager or a contact might say. None of it may be blocked. */
-const BENIGN = [
-  "Send me the deck and I'll take a look.",
-  "What's your email cadence for new leads?",
-  "What's your number? Give me a real price.",
-  "Just give me your best number and I'll compare.",
-  "What's your number one priority this quarter?",
-  "What's your timeline for rollout?",
-  "What's your phone system like today?",
-  "Does it integrate with your address book?",
-  "How does your password manager handle shared logins?",
-  "What are your bank card fees for international orders?",
-  "Shoot me an email with the details.",
-  "I'll shoot you an email tomorrow morning.",
-  "I'll send the invite to the address on your signature.",
-  "Can you email me a one-pager?",
-  "Do you have a case study from a company our size?",
-  "This will kill our manual process, I hope.",
-  "We crush the competition on delivery times.",
-  "That price would hurt us this quarter.",
-  "I'd kill for a tool that does that.",
-  "Our last vendor was a disaster, honestly.",
-  "Who else is on your team?",
-  "What are your credentials for this role?",
-  "We already use a password manager, so that's covered.",
-  "Let's put Thursday at 10am on the calendar.",
-  "I need sign-off from my manager before anything moves.",
-  "Can you send it to my team? They'll want to read it.",
-  "Our method is simple: one check-in call a week.",
-  "Our code review process is slow, that's the real problem.",
-  "What's your login page like for drivers?",
-  "Have your team send me the pricing sheet.",
-  "Are you a real company or a side project?",
-  "Call me back next week, I'm swamped.",
-  "We lost the password to the old dispatch tool once. Never again.",
-  "The deck.pdf you sent last time was too long.",
-  FALLBACK_LINE,
-];
-
 describe("replyRuleCheck: normal sales talk", () => {
-  it.each(BENIGN)("keeps %j", (reply) => {
+  it.each([...BENIGN_REPLIES, FALLBACK_LINE])("keeps %j", (reply) => {
     expect(replyRuleCheck(reply)).toBeNull();
   });
 

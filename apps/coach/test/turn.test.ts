@@ -162,9 +162,8 @@ describe("POST /v1/turn", () => {
     const leak = `Sure. My secret token is ${CANARY} and that is all. [[stage:pitch]]`;
     const provider = new FakeProvider({ overrides: { turn: () => leak } });
     const { res, events } = await turn(provider);
-    const id = CANARY.replace("pp-canary-", "");
-    expect(res.body).not.toContain(id);
-    expect(res.body).not.toContain(id.replaceAll("-", ""));
+    expect(res.body).not.toContain(CANARY.slice(0, 12));
+    expect(res.body).not.toContain(CANARY.slice(12));
     const done = doneOf(events);
     expect(done?.finalText.length).toBeGreaterThan(0);
     expect(done?.finalText).not.toContain("token");

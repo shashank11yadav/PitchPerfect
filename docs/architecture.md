@@ -65,7 +65,7 @@ packages/
       provider.ts           the LlmProvider interface, task tags, usage meter, ProviderError
       deps.ts               provider + circuit breaker, retry and timeout per call, structured-output repair
       prompts/              persona-plan.ts, persona-turn.ts, scorer.ts, guard.ts, blocks.ts, fixed-lines.ts, skill-guides.ts
-      guardrails/           input.ts, guard-rules.ts, output.ts, canary.ts, leak-scan.ts, circuit-breaker.ts
+      guardrails/           input.ts, guard-rules.ts, output.ts, canary.ts, canonical.ts, leak-scan.ts, circuit-breaker.ts
       fake/                 the scripted provider: persona, intents, voices, scorecard
       scoring/              verify-quotes.ts (evidence must be a verbatim student quote)
       plan.ts, turn/, score.ts  the three steps of a session, without a transport

@@ -44,14 +44,22 @@ describe("ReplyFilter", () => {
     expect(filter.text).toBe(`${words(10)} [[stage:close]]`);
   });
 
-  it("holds back a trailing run that could be the start of the canary", () => {
+  it("stops once half the canary has arrived, before any of it is released", () => {
     const { emitted, filter } = run([
-      `${words(10)} My code is ${CANARY.slice(0, 16)}`,
-      `${CANARY.slice(16)} okay ${words(10)}`,
+      `${words(10)} My code is ${CANARY.slice(0, 8)}`,
+      `${CANARY.slice(8)} okay ${words(10)}`,
     ]);
-    expect(emitted).not.toContain(CANARY.slice(10, 16));
+    expect(emitted).not.toContain(CANARY.slice(0, 8));
     expect(filter.blocked).toBe("canary");
     expect(filter.finish()).toBe("");
+  });
+
+  it("reads the whole text, so a canary split across sentences is caught at its last piece", () => {
+    const filter = new ReplyFilter(scanner);
+    const first = filter.push(`Part one is ${CANARY.slice(0, 6)}. ${words(10)}. `);
+    expect(first).toContain(CANARY.slice(0, 6));
+    expect(filter.push(`Part two is ${CANARY.slice(6, 12)}. ${words(10)}`)).toBe("");
+    expect(filter.blocked).toBe("canary");
   });
 
   it("stops before a run of the instructions reaches the client", () => {

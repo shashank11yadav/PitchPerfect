@@ -5,11 +5,12 @@ import { replyRuleCheck } from "../guardrails/reply-rules.js";
 const STAGE_TAG = /\[\[\s*stage\s*:\s*([a-z]*)\s*\]\]/gi;
 // A tag cut off by the token limit, e.g. "[[stage:obj".
 const CUT_TAG = /\[\[[^\]]*\]?$/;
-// Characters containsCanary() reads as part of the canary id: hex digits plus the separators it ignores.
-const CANARY_TAIL = new RegExp("[0-9a-f\\s\\-\\u200b-\\u200f\\u2060\\ufeff\\u00ad]*$", "i");
 const WORD = /[\p{L}\p{N}]+/gu;
 
-/** Words held back while streaming, so a 5-word run of the instructions is caught before it shows. */
+/**
+ * Words held back while streaming, so a 5-word run of the instructions is caught before it shows,
+ * and a canary spelled out one character at a time is caught before half of it does.
+ */
 export const HOLD_WORDS = 8;
 
 const isStage = (value: string): value is Stage => (STAGES as readonly string[]).includes(value);
@@ -25,15 +26,19 @@ export function splitStageTag(reply: string): { text: string; stage: Stage | und
   return { text, stage };
 }
 
-/** Why a reply stopped streaming: a leak (canary or instructions) or a local reply rule. */
+/**
+ * Why a reply stopped streaming: a leak (the canary, or the instructions: rule text or the hidden
+ * part of the scenario) or a local reply rule.
+ */
 export type BlockReason = "canary" | "instructions" | "rules";
 
 /**
  * Decides which part of a streaming reply is safe to show yet. It holds back the last
- * {@link HOLD_WORDS} words, everything from a `[[` (a stage tag, possibly split across deltas), a
- * lone trailing `[`, and a trailing run that could still grow into the canary. Before releasing
- * anything it checks the whole text for the canary, a run of the instructions, and the local
- * reply rules; on a hit it is blocked for good and releases nothing more.
+ * {@link HOLD_WORDS} words, everything from a `[[` (a stage tag, possibly split across deltas), and
+ * a lone trailing `[`. Before releasing anything it checks the whole text so far, not just the
+ * newest sentence, for the canary, a leak of the instructions, and the local reply rules, so a
+ * secret split across sentences is caught once its last piece arrives; on a hit it is blocked for
+ * good and releases nothing more.
  */
 export class ReplyFilter {
   readonly #leaks: (text: string) => boolean;
@@ -53,9 +58,8 @@ export class ReplyFilter {
     const tokens = Array.from(text.matchAll(WORD));
     const wordLimit =
       tokens.length > HOLD_WORDS ? (tokens[tokens.length - HOLD_WORDS]?.index ?? 0) : 0;
-    const canaryLimit = text.length - (CANARY_TAIL.exec(text)?.[0].length ?? 0);
     const tagLimit = text.endsWith("[") ? text.length - 1 : text.length;
-    return this.#release(Math.min(this.#tagStart(tagLimit), canaryLimit, wordLimit));
+    return this.#release(Math.min(this.#tagStart(tagLimit), wordLimit));
   }
 
   /** At the end of the stream: everything not yet shown except the stage tag. */
@@ -86,7 +90,7 @@ export class ReplyFilter {
   }
 
   /**
-   * True once the text is blocked; checks the canary, instruction runs, and the reply rules. While
+   * True once the text is blocked; checks the canary, instruction leaks, and the reply rules. While
    * `partial`, the end of the text is not yet the end of a sentence.
    */
   #scan(partial: boolean): boolean {

@@ -6,7 +6,7 @@ import {
   type Stage,
 } from "@pitchperfect/shared";
 import { withTimeout } from "../guardrails/circuit-breaker.js";
-import { createLeakScanner } from "../guardrails/leak-scan.js";
+import { createLeakScanner, createScenarioLeakScanner } from "../guardrails/leak-scan.js";
 import { checkOutput, type FlagCheck } from "../guardrails/output.js";
 import { FALLBACK_LINE } from "../prompts/fixed-lines.js";
 import { buildTurnPrompt, studentTurnNumber, TURN_LEAK_SOURCE } from "../prompts/persona-turn.js";
@@ -18,7 +18,7 @@ import { SentenceGate } from "./sentence-gate.js";
 const REPLY_TEMPERATURE = 0.8;
 
 /** Built once: the leak source holds only fixed rule text. */
-const leaks = createLeakScanner(TURN_LEAK_SOURCE);
+const leaksRules = createLeakScanner(TURN_LEAK_SOURCE);
 
 /** Where a turn's events go: the coach's SSE response, or the demo room in the browser. */
 export interface TurnSink {
@@ -91,10 +91,12 @@ function flagCheck(ctx: TurnContext): FlagCheck | undefined {
  * Streams one reply. Only reaching the first chunk is retried; a later provider failure counts
  * toward the circuit breaker and propagates. With `emit`, the text the reply filter releases goes
  * through the sentence gate, and `emit` receives only sentences that passed moderation. On a
- * leak, a reply rule or a flagged sentence the upstream stream is stopped at once.
+ * leak (`leaks` reads the whole text so far), a reply rule or a flagged sentence the upstream
+ * stream is stopped at once.
  */
 async function streamOnce(
   input: ChatStreamInput,
+  leaks: (text: string) => boolean,
   ctx: TurnContext,
   flagged: FlagCheck | undefined,
   emit?: (text: string) => Promise<void>,
@@ -153,10 +155,11 @@ const isLeak = (reason: Failure) => reason === "canary" || reason === "instructi
 
 /**
  * Streams the persona's reply one checked sentence at a time, then checks the whole text. A leak
- * (canary or instructions) is regenerated once without streaming; a rule hit, flagged text, an
- * empty reply, or a second leak becomes the fallback line. When the final text replaces anything
- * already shown, a `retract` carries it so the student never keeps withdrawn text. The stage
- * never moves backwards from `currentStage`.
+ * (the canary, the rule text, or the hidden part of this turn's scenario) is regenerated once
+ * without streaming; a rule hit, flagged text, an empty reply, or a second leak becomes the
+ * fallback line. When the final text replaces anything already shown, such as a leak caught only
+ * once a later sentence completed it, a `retract` carries it so the student never keeps withdrawn
+ * text. The stage never moves backwards from `currentStage`.
  */
 export async function personaReply(turn: CoachTurnRequest, ctx: TurnContext) {
   const input = {
@@ -164,6 +167,8 @@ export async function personaReply(turn: CoachTurnRequest, ctx: TurnContext) {
     maxTokens: LIMITS.maxTokensReply,
     temperature: REPLY_TEMPERATURE,
   };
+  const leaksScenario = createScenarioLeakScanner(turn.scenarioPrivate);
+  const leaks = (text: string) => leaksRules(text) || leaksScenario(text);
   const flagged = flagCheck(ctx);
   let shown = false;
   const sendDelta = async (text: string) => {
@@ -173,11 +178,11 @@ export async function personaReply(turn: CoachTurnRequest, ctx: TurnContext) {
   const replaceWith = (text: string) =>
     ctx.sink.send(shown ? { type: "retract", text } : { type: "delta", text });
 
-  const first = await streamOnce(input, ctx, flagged, sendDelta);
+  const first = await streamOnce(input, leaks, ctx, flagged, sendDelta);
   let modelStage = first.stage;
   let checked = await check(first, flagged);
   if (!checked.ok && isLeak(checked.reason)) {
-    const second = await streamOnce(input, ctx, flagged);
+    const second = await streamOnce(input, leaks, ctx, flagged);
     modelStage = second.stage ?? modelStage;
     checked = await check(second, flagged);
     if (checked.ok) await replaceWith(checked.text);
