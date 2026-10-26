@@ -314,17 +314,6 @@ export function warnSigninLimited(deps: AuthDeps, log: MailFailureLog, email: st
   });
 }
 
-/** Ends every session of the user (they check the version on each request); returns the new one. */
-export async function bumpSessionVersion(userId: string): Promise<number> {
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { $inc: { sessionVersion: 1 } },
-    { returnDocument: "after", projection: { sessionVersion: 1 } },
-  ).lean();
-  if (!user) throw new UnauthenticatedError();
-  return user.sessionVersion ?? 0;
-}
-
 /**
  * Sets a new password from a reset link and signs the user out everywhere. The token is only used
  * up once the new password passes the policy, so a rejected password doesn't burn the link.

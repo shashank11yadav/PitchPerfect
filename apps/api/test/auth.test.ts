@@ -12,7 +12,6 @@ import {
   User,
 } from "../src/db/models/index.js";
 import { requireVerified } from "../src/middleware/auth.js";
-import { bumpSessionVersion } from "../src/modules/auth/service.js";
 import { hashPassword } from "../src/services/passwords.js";
 import { makeTestApp } from "./helpers/app.js";
 import { csrfAgent, TEST_ORIGIN, withCsrf, type CsrfAgent } from "./helpers/csrf.js";
@@ -797,20 +796,5 @@ describe("token route limits", () => {
       .send({ token, password: NEW_PASSWORD });
     expect(reset.status).toBe(400);
     expect(errorOf(reset).code).toBe("invalid_token");
-  });
-});
-
-describe("bumpSessionVersion", () => {
-  it("returns the incremented version and ends every existing session", async () => {
-    const { user, email, password } = await createStudent();
-    const first = await signIn(request.agent(app), email, password);
-    const second = await signIn(request.agent(app), email, password);
-
-    expect(await bumpSessionVersion(user.id)).toBe(1);
-    expect(await bumpSessionVersion(user.id)).toBe(2);
-
-    await first.agent.get("/api/auth/me").expect(401);
-    await second.agent.get("/api/auth/me").expect(401);
-    await signIn(request.agent(app), email, password);
   });
 });
