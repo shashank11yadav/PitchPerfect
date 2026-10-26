@@ -1,8 +1,7 @@
 import type { PracticePartnerKind } from "@pitchperfect/shared";
 import type { LegalSection } from "@/components/marketing/LegalDocument";
+import { CONTACT } from "./legal";
 import { COPY_LIMITS as L } from "./limits";
-
-const CONTACT = "the maintainer listed on the project's GitHub page";
 
 /** The terms of use template; the partner section matches whichever partner is running. */
 export const termsSections = (partner: PracticePartnerKind): readonly LegalSection[] => [

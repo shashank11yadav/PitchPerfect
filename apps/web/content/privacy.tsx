@@ -1,10 +1,10 @@
 import type { PracticePartnerKind } from "@pitchperfect/shared";
 import type { LegalSection } from "@/components/marketing/LegalDocument";
+import { CONTACT } from "./legal";
 import { COPY_LIMITS as L } from "./limits";
 import { BROWSER_PARTNER_NOTICE, SCRIPTED_PARTNER_NOTICE } from "./partner-notice";
 
 const AI_PROVIDER = "our AI provider (OpenAI or Anthropic, depending on configuration)";
-const CONTACT = "the maintainer listed on the project's GitHub page";
 
 /**
  * The privacy policy template. It must match the data flows in docs/security.md, so the parts
@@ -267,7 +267,8 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         checked so people can only reach their own data, and employers can only reach applications
         to their own jobs. Résumés are only ever downloaded, never shown in the browser. The
         practice partner service cannot be reached from the internet. No system is perfectly secure;
-        if you find a problem, please report it to {CONTACT}.
+        if you find a security problem, please report it privately to {CONTACT}, not in a public
+        issue.
       </p>
     ),
   },

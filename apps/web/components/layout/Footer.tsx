@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { LEGAL_NAV, PUBLIC_NAV, SITE_NAME, TAGLINE, type NavLink } from "@/lib/site";
+import { AUTHOR, LEGAL_NAV, PUBLIC_NAV, SITE_NAME, TAGLINE, type NavLink } from "@/lib/site";
 import { Logo } from "./Logo";
+
+const EXTERNAL_LINK = "pp-link rounded-control font-semibold text-white";
 
 function LinkColumn({ title, links }: { title: string; links: readonly NavLink[] }) {
   return (
@@ -19,7 +21,7 @@ function LinkColumn({ title, links }: { title: string; links: readonly NavLink[]
   );
 }
 
-/** The footer: wordmark, tagline, site links and the legal line on navy. */
+/** The footer: wordmark, tagline, site links, the legal line and who built it, on navy. */
 export function Footer() {
   return (
     <footer className="pp-on-dark bg-navy text-white">
@@ -32,9 +34,21 @@ export function Footer() {
           <LinkColumn title="Product" links={PUBLIC_NAV} />
           <LinkColumn title="Company" links={LEGAL_NAV} />
         </div>
-        <p className="text-small text-white md:col-span-12">
-          © {new Date().getFullYear()} {SITE_NAME}
-        </p>
+        <div className="flex flex-col gap-2 text-small text-white sm:flex-row sm:justify-between md:col-span-12">
+          <p>
+            © {new Date().getFullYear()} {SITE_NAME}
+          </p>
+          <p>
+            Built by {AUTHOR.name} ·{" "}
+            <a href={AUTHOR.github} rel="noopener noreferrer" className={EXTERNAL_LINK}>
+              GitHub
+            </a>{" "}
+            ·{" "}
+            <a href={AUTHOR.website} rel="noopener noreferrer" className={EXTERNAL_LINK}>
+              shashankyadav.dev
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );

@@ -1,6 +1,18 @@
 export const SITE_NAME = "PitchPerfect";
 export const TAGLINE = "Practice your pitch. Get hired.";
 
+export const REPO_URL = "https://github.com/shashank11yadav/PitchPerfect";
+
+/** Where bug reports and questions about the code go. */
+export const ISSUES_URL = `${REPO_URL}/issues`;
+
+/** Who built PitchPerfect: named in the footer and on the about page, and the legal contact. */
+export const AUTHOR = {
+  name: "Shashank Yadav",
+  github: "https://github.com/shashank11yadav",
+  website: "https://www.shashankyadav.dev/",
+} as const;
+
 /** The api's session cookie. The web app only checks that it exists; it can't read it. */
 export const SESSION_COOKIE = "pp.sid";
 

@@ -10,8 +10,6 @@ export const PAGES_EXPORT = process.env.PAGES_EXPORT === "1";
 /** Where the export is served from, without a trailing slash; empty in a normal build. */
 export const BASE_PATH = PAGES_EXPORT ? (process.env.PAGES_BASE_PATH ?? "/PitchPerfect") : "";
 
-export const REPO_URL = "https://github.com/shashank11yadav/PitchPerfect";
-
 /**
  * A root-relative path as the browser must address it. `Link` and the router add the base path
  * themselves; raw URLs (`history.replaceState`, a form's `action`, manifest icons) go through here.

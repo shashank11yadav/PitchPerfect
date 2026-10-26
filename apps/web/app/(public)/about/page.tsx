@@ -3,8 +3,11 @@ import { PageHero } from "@/components/marketing/Hero";
 import { Section, SectionTitle } from "@/components/marketing/Section";
 import { COPY_LIMITS as L } from "@/content/limits";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
+import { AUTHOR, ISSUES_URL } from "@/lib/site";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.about);
+
+const LINK = "pp-link rounded-control font-semibold text-primary";
 
 export default function AboutPage() {
   return (
@@ -75,15 +78,36 @@ export default function AboutPage() {
             The project.
           </h2>{" "}
           <p className="inline">
-            PitchPerfect is open source. The practice partner runs as its own service, stores
-            nothing, and can&apos;t be reached from the internet. The main app holds your account
-            and decides who can see what.
+            PitchPerfect is open source under the MIT license. In the full app the practice partner
+            runs as its own service, stores nothing, and can&apos;t be reached from the internet. It
+            can use a live model from OpenAI or Anthropic, or a scripted partner when no key is set.
+            The public demo has no server, so its partner is the scripted one, running in your
+            browser.
           </p>
         </div>
-        <p className="max-w-[36ch] text-ink lg:col-span-4 lg:col-start-9">
-          Questions, bug reports and security reports go to the maintainer listed on the
-          project&apos;s GitHub page.
-        </p>
+        <div className="flex max-w-[36ch] flex-col gap-4 text-ink lg:col-span-4 lg:col-start-9">
+          <p>
+            Built by {AUTHOR.name}.{" "}
+            <a href={AUTHOR.github} rel="noopener noreferrer" className={LINK}>
+              GitHub
+            </a>{" "}
+            ·{" "}
+            <a href={AUTHOR.website} rel="noopener noreferrer" className={LINK}>
+              shashankyadav.dev
+            </a>
+          </p>
+          <p>
+            Questions and bug reports go to the{" "}
+            <a href={ISSUES_URL} rel="noopener noreferrer" className={LINK}>
+              project&apos;s issues on GitHub
+            </a>
+            . Please report a security problem to{" "}
+            <a href={AUTHOR.github} rel="noopener noreferrer" className={LINK}>
+              {AUTHOR.name} directly
+            </a>
+            , not in a public issue.
+          </p>
+        </div>
       </Section>
 
       <CtaBand />

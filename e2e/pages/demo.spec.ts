@@ -162,8 +162,38 @@ test("the sign-in route says there are no accounts in the demo", async ({ page }
   );
 });
 
+test("the footer and the about page name who built it and link out to him", async ({ page }) => {
+  await page.goto(at("about/"));
+  const footer = page.getByRole("contentinfo");
+  await expect(footer).toContainText("Built by Shashank Yadav");
+  await expect(footer.getByRole("link", { name: "GitHub" })).toHaveAttribute(
+    "href",
+    "https://github.com/shashank11yadav",
+  );
+  await expect(footer.getByRole("link", { name: "shashankyadav.dev" })).toHaveAttribute(
+    "href",
+    "https://www.shashankyadav.dev/",
+  );
+  const main = page.getByRole("main");
+  await expect(main).toContainText("Built by Shashank Yadav.");
+  await expect(main).toContainText("its partner is the scripted one, running in your browser");
+  await expect(main.getByRole("link", { name: "project's issues on GitHub" })).toHaveAttribute(
+    "href",
+    "https://github.com/shashank11yadav/PitchPerfect/issues",
+  );
+  // The internal links keep the base path.
+  await expect(footer.getByRole("link", { name: "Privacy" })).toHaveAttribute(
+    "href",
+    href("/privacy/"),
+  );
+  await page.goto(at("privacy/"));
+  await expect(
+    page.getByRole("main").getByRole("link", { name: "Shashank Yadav on GitHub" }).first(),
+  ).toHaveAttribute("href", "https://github.com/shashank11yadav");
+});
+
 test.describe("accessibility", () => {
-  for (const path of ["", "jobs/", "practice/"]) {
+  for (const path of ["", "jobs/", "practice/", "about/", "privacy/"]) {
     test(`/${path} has no serious or critical violations`, async ({ page }) => {
       await expectNoSeriousViolations(page, path);
     });

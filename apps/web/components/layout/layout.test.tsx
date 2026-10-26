@@ -190,6 +190,19 @@ describe("Footer", () => {
     );
     expect(within(footer).getByRole("link", { name: "How it works" })).toBeInTheDocument();
   });
+
+  it("names who built the site and links to his GitHub and website", () => {
+    render(<Footer />);
+    const footer = screen.getByRole("contentinfo");
+    expect(within(footer).getByText(/^Built by Shashank Yadav/)).toBeInTheDocument();
+    const github = within(footer).getByRole("link", { name: "GitHub" });
+    const website = within(footer).getByRole("link", { name: "shashankyadav.dev" });
+    expect(github).toHaveAttribute("href", "https://github.com/shashank11yadav");
+    expect(website).toHaveAttribute("href", "https://www.shashankyadav.dev/");
+    for (const link of [github, website]) {
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    }
+  });
 });
 
 describe("AppShell", () => {

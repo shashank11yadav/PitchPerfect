@@ -130,12 +130,64 @@ describe("privacy page", () => {
       "180 days",
       "Google, Apple or Microsoft",
       "18 or older",
-      "the maintainer listed on the project's GitHub page",
       "pp.sid",
     ]) {
       expect(main).toHaveTextContent(fact);
     }
     expect(main).toHaveTextContent(/no (advertising|analytics|tracking)/i);
+  });
+
+  it("links every contact line to the owner's GitHub profile", async () => {
+    const { container } = render(await PrivacyPage());
+    const contacts = within(container).getAllByRole("link", { name: "Shashank Yadav on GitHub" });
+    expect(contacts).toHaveLength(4);
+    for (const link of contacts) {
+      expect(link).toHaveAttribute("href", "https://github.com/shashank11yadav");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    }
+    expect(container).not.toHaveTextContent(/maintainer listed/);
+    expect(container.querySelector("#security + div")).toHaveTextContent(
+      "report it privately to Shashank Yadav on GitHub, not in a public issue",
+    );
+  });
+});
+
+describe("terms page", () => {
+  it("sends questions to the owner's GitHub profile", async () => {
+    const { container } = render(await TermsPage());
+    const changes = container.querySelector("#changes + div");
+    expect(changes).toHaveTextContent("Questions go to Shashank Yadav on GitHub.");
+    expect(
+      within(container).getByRole("link", { name: "Shashank Yadav on GitHub" }),
+    ).toHaveAttribute("href", "https://github.com/shashank11yadav");
+    expect(container).not.toHaveTextContent(/maintainer listed/);
+  });
+});
+
+describe("about page", () => {
+  it("names who built it, links to him, and sends bug reports to the issues", () => {
+    render(<AboutPage />);
+    expect(screen.getByText(/^Built by Shashank Yadav\./)).toBeInTheDocument();
+    const href = (name: string) => screen.getByRole("link", { name }).getAttribute("href");
+    expect(href("GitHub")).toBe("https://github.com/shashank11yadav");
+    expect(href("shashankyadav.dev")).toBe("https://www.shashankyadav.dev/");
+    expect(href("project's issues on GitHub")).toBe(
+      "https://github.com/shashank11yadav/PitchPerfect/issues",
+    );
+    expect(href("Shashank Yadav directly")).toBe("https://github.com/shashank11yadav");
+    for (const link of screen.getAllByRole("link", { name: /GitHub|shashankyadav|directly/ })) {
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    }
+    expect(screen.queryByText(/maintainer listed/)).toBeNull();
+  });
+
+  it("says the public demo is scripted and the full app can use a live model", () => {
+    const { container } = render(<AboutPage />);
+    expect(container).toHaveTextContent("open source under the MIT license");
+    expect(container).toHaveTextContent(
+      "It can use a live model from OpenAI or Anthropic, or a scripted partner when no key is set.",
+    );
+    expect(container).toHaveTextContent("its partner is the scripted one, running in your browser");
   });
 });
 
