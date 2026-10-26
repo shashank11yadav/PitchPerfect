@@ -64,35 +64,28 @@ export function SkillsList({ ground = "white", rubricHref }: SkillsListProps) {
   );
 }
 
-const skillNames = SKILLS.map((skill, index) => {
-  const name = index === 0 ? skill.title : skill.title.toLowerCase();
-  if (index === SKILLS.length - 1) return `and ${name}.`;
-  return `${name},`;
-});
-
 /**
- * Home: the skills as one sentence with a run-in heading, pointing to the full list on the
+ * Home: the skills as short cards, a name and a line each, pointing to the full list on the
  * students page.
  */
-export function SkillsLine() {
+export function SkillCards() {
   return (
-    <section aria-labelledby="skills-line-heading" className="bg-surface py-16 md:py-24">
+    <section aria-labelledby="skill-cards-heading" className="bg-surface py-16 md:py-24">
       <div className={WRAP}>
-        <div className="max-w-5xl text-[clamp(1.25rem,2.1vw,1.75rem)] leading-[1.45] text-ink">
-          <h2 id="skills-line-heading" className="inline font-display font-bold text-navy">
-            {skillCount} skills to practice:
-          </h2>{" "}
-          <ul className="inline">
-            {skillNames.map((name) => (
-              <li key={name} className="inline">
-                {name}{" "}
-              </li>
-            ))}
-          </ul>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
+          <SectionTitle id="skill-cards-heading">{skillCount} skills to practice</SectionTitle>
           <Link href="/students#skills-heading" className="pp-link font-semibold text-primary">
             What each one covers
           </Link>
         </div>
+        <ul className="mt-8 grid gap-3 sm:grid-cols-2 md:mt-12 lg:grid-cols-4 lg:gap-4">
+          {SKILLS.map((skill) => (
+            <li key={skill.slug} className="rounded-card bg-primary-soft p-4 md:p-5">
+              <h3 className="font-display text-lede font-semibold text-navy">{skill.title}</h3>
+              <p className="mt-1 text-small text-ink">{skill.summary}</p>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

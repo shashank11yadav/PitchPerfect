@@ -7,7 +7,7 @@ import { Faq } from "@/components/marketing/Faq";
 import { HomeHero } from "@/components/marketing/Hero";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
 import { Section, SectionTitle } from "@/components/marketing/Section";
-import { SkillsLine } from "@/components/marketing/SkillsList";
+import { SkillCards } from "@/components/marketing/SkillsList";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { HOME_FAQ } from "@/content/faq";
 import { organizationJsonLd, pageMetadata, PUBLIC_PAGES, websiteJsonLd } from "@/lib/seo";
@@ -51,7 +51,7 @@ export default function HomePage() {
       </Section>
 
       <HowItWorks />
-      <SkillsLine />
+      <SkillCards />
       <EmployerField />
       <Faq
         heading="Before you sign up"

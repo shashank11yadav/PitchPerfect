@@ -1,4 +1,4 @@
-import { computeOverall, RUBRIC_DIMENSIONS } from "@pitchperfect/shared";
+import { computeOverall, RUBRIC_DIMENSIONS, SKILLS } from "@pitchperfect/shared";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -8,6 +8,7 @@ import { PracticeRoomPreview } from "./PracticeRoomPreview";
 import { DISCOVERY_MOMENT, SAMPLE_SCORECARD, SAMPLE_WEIGHTED } from "./sample-session";
 import { StageShowcase } from "./SessionStages";
 import { ScorecardPreview } from "./ScorecardPreview";
+import { SkillCards } from "./SkillsList";
 
 const items = [
   { question: "Is the partner a real person?", answer: "No. It is an AI practice partner." },
@@ -110,5 +111,19 @@ describe("StageShowcase", () => {
     const stages = screen.getByRole("list", { name: "The five stages of a call" });
     expect(heading.compareDocumentPosition(stages) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(stages).getByText("Discovery")).toHaveAttribute("aria-current", "step");
+  });
+});
+
+describe("SkillCards", () => {
+  it("gives every shared skill its own card, with its name as a heading and its summary", () => {
+    render(<SkillCards />);
+    const section = screen.getByRole("region", { name: "Eight skills to practice" });
+    const cards = within(section).getAllByRole("listitem");
+    expect(
+      cards.map((card) => within(card).getByRole("heading", { level: 3 }).textContent),
+    ).toEqual(SKILLS.map((skill) => skill.title));
+    expect(cards.map((card) => card.textContent)).toEqual(
+      SKILLS.map((skill) => `${skill.title}${skill.summary}`),
+    );
   });
 });
