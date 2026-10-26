@@ -111,6 +111,14 @@ const envSchema = z
     if (!env.SMTP_HOST) {
       ctx.addIssue({ code: "custom", path: ["SMTP_HOST"], message: "is required in production" });
     }
+    if (!env.PROXY_SHARED_SECRET) {
+      // Without it anyone who finds the api's URL can call it directly, around web.
+      ctx.addIssue({
+        code: "custom",
+        path: ["PROXY_SHARED_SECRET"],
+        message: "is required in production",
+      });
+    }
   })
   .transform((env) => ({ ...env, isProd: env.NODE_ENV === "production" }));
 

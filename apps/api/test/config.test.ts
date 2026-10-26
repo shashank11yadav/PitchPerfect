@@ -20,6 +20,12 @@ describe("loadConfig", () => {
     expect(config.SMTP_PASS).toBeUndefined();
   });
 
+  it("trusts no proxy hops by default, so X-Forwarded-For is ignored", () => {
+    const env = devEnv();
+    delete env.TRUST_PROXY;
+    expect(loadConfig(env).TRUST_PROXY).toBe(0);
+  });
+
   it("coerces numbers and booleans and applies defaults", () => {
     const env = devEnv({ PORT: "5000", HIBP_ENABLED: "true", TRUST_PROXY: "2" });
     delete env.PRACTICE_RETENTION_DAYS;
@@ -161,6 +167,14 @@ describe("loadConfig", () => {
       expect(loadConfig(prodEnv({ TRUST_PROXY: "10.0.0.0/8" })).TRUST_PROXY).toEqual([
         "10.0.0.0/8",
       ]);
+    });
+
+    it("requires PROXY_SHARED_SECRET, so only web can reach the api", () => {
+      for (const value of ["", undefined]) {
+        const env = prodEnv({ PROXY_SHARED_SECRET: value });
+        expect(() => loadConfig(env)).toThrow(ConfigError);
+        expect(() => loadConfig(env)).toThrow(/PROXY_SHARED_SECRET: is required in production/);
+      }
     });
 
     it("requires a non-empty SMTP_HOST", () => {

@@ -1,5 +1,6 @@
 import "server-only";
 import { ApiError, toApiError, type Parser } from "./api";
+import { proxySecret } from "./proxy-secret";
 
 const TIMEOUT_MS = 5_000;
 
@@ -13,7 +14,7 @@ export async function serverApi<T>(path: string, schema: Parser<T>): Promise<T> 
   }
   const origin = new URL(process.env.API_ORIGIN ?? "http://localhost:4000").origin;
   const headers = new Headers({ accept: "application/json" });
-  const secret = process.env.PROXY_SHARED_SECRET;
+  const secret = proxySecret();
   if (secret) headers.set("x-pp-proxy", secret);
 
   let res: Response;

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { proxySecret } from "@/lib/proxy-secret";
 import { SESSION_COOKIE } from "@/lib/site";
 
 const PROTECTED_PREFIXES = ["/app", "/employer"];
@@ -41,7 +42,7 @@ function newNonce(): string {
 function forwardToApi(request: NextRequest): NextResponse {
   const headers = new Headers(request.headers);
   headers.delete("x-pp-proxy");
-  const secret = process.env.PROXY_SHARED_SECRET;
+  const secret = proxySecret();
   if (secret) headers.set("x-pp-proxy", secret);
   headers.set("x-forwarded-proto", request.nextUrl.protocol.replace(/:$/, ""));
   headers.set("x-forwarded-host", request.nextUrl.host);

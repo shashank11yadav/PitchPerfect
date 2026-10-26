@@ -116,6 +116,7 @@ jobs:
           CSRF_SECRET: dev-only-ci-csrf-secret-0000000000000000000
           COACH_URL: http://127.0.0.1:4100
           COACH_SHARED_SECRET: dev-only-ci-coach-shared-secret-00000000000
+          PROXY_SHARED_SECRET: dev-only-ci-proxy-shared-secret-00000000000
           COACH_PROVIDER: fake
           HIBP_ENABLED: "false"
           LOG_LEVEL: warn
@@ -130,8 +131,11 @@ jobs:
           done
           cat api.log coach.log
           exit 1
-      # Starts `next start` and checks /, /students and /jobs (lighthouserc.json).
+      # Starts `next start` and checks /, /students and /jobs (lighthouserc.json). `next start` runs
+      # as production, which requires the proxy secret the api above was given.
       - run: npm run lighthouse
+        env:
+          PROXY_SHARED_SECRET: dev-only-ci-proxy-shared-secret-00000000000
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

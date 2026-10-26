@@ -29,9 +29,12 @@ export function devEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   };
 }
 
+/** `PROXY_SHARED_SECRET` of `prodEnv`: production requests send it as `x-pp-proxy`. */
+export const PROD_PROXY_SECRET = "p".repeat(48);
+
 /**
- * Valid production environment: https APP_URL, SMTP host, one trusted proxy, and no development
- * placeholder secrets.
+ * Valid production environment: https APP_URL, SMTP host, one trusted proxy, a proxy secret, and
+ * no development placeholder secrets.
  */
 export function prodEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   return devEnv({
@@ -42,6 +45,7 @@ export function prodEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
     SESSION_SECRET: "s".repeat(48),
     CSRF_SECRET: "c".repeat(48),
     COACH_SHARED_SECRET: "k".repeat(48),
+    PROXY_SHARED_SECRET: PROD_PROXY_SECRET,
     ...overrides,
   });
 }

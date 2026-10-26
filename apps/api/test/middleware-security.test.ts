@@ -20,7 +20,7 @@ import { makeTestApp } from "./helpers/app.js";
 import { useTestDb } from "./helpers/db.js";
 import { fetchCsrfToken, TEST_ORIGIN } from "./helpers/csrf.js";
 import { errorOf } from "./helpers/error-body.js";
-import { prodEnv } from "./helpers/env.js";
+import { PROD_PROXY_SECRET, prodEnv } from "./helpers/env.js";
 
 useTestDb();
 
@@ -368,17 +368,18 @@ describe("sessions", () => {
     });
     const user = await makeUser();
     const agent = request.agent(prod.app);
-    const login = await agent
-      .get(`/api/__test/login/${user.id}/student`)
-      .set("x-forwarded-proto", "https");
+    // As web proxies it: over https, with the shared proxy secret.
+    const get = (path: string) =>
+      agent.get(path).set("x-forwarded-proto", "https").set("x-pp-proxy", PROD_PROXY_SECRET);
+    const login = await get(`/api/__test/login/${user.id}/student`);
     expect(cookieHeader(login, "pp.sid")).toContain("Secure");
     expect(cookieHeader(login, "pp.sid")).toContain("HttpOnly");
     expect(cookieHeader(login, "pp.sid")).toContain("SameSite=Lax");
 
-    const csrf = await agent.get("/api/auth/csrf").set("x-forwarded-proto", "https");
+    const csrf = await get("/api/auth/csrf");
     expect(cookieHeader(csrf, "pp.csrf")).toContain("Secure");
 
-    const logout = await agent.get("/api/__test/logout").set("x-forwarded-proto", "https");
+    const logout = await get("/api/__test/logout");
     const cleared = cookieHeader(logout, "pp.sid") ?? "";
     expect(cleared).toContain("Secure");
     expect(cleared).toContain("HttpOnly");
