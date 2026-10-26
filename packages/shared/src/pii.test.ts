@@ -63,6 +63,63 @@ describe("redactPii", () => {
     );
   });
 
+  // Personal data as people really type it: each one must come out redacted.
+  it.each([
+    ["SSN 123-45-6789", "SSN [ssn]"],
+    ["my social is 123 45 6789", "my social is [ssn]"],
+    ["ssn: 123456789", "ssn: [ssn]"],
+    [
+      "Social Security number 123456789, if you need it",
+      "Social Security number [ssn], if you need it",
+    ],
+    ["It's 123-45-6789.", "It's [ssn]."],
+    ["IBAN DE89 3704 0044 0532 0130 00", "IBAN [iban]"],
+    ["pay GB82WEST12345698765432 today", "pay [iban] today"],
+    ["iban: gb82 west 1234 5698 7654 32", "iban: [iban]"],
+    ["FR14 2004 1010 0505 0001 3M02 606 is ours", "[iban] is ours"],
+    ["NL91 ABNA 0417 1643 00 for the deposit", "[iban] for the deposit"],
+    ["call ６１７５５５０１００", "call [phone]"],
+    ["（６１７）５５５－０１００", "[phone]"],
+    ["text ٦١٧٥٥٥٠١٠٠", "text [phone]"],
+    ["mobile ６１７ ５５５ ０１００ after 5", "mobile [phone] after 5"],
+    ["ssn １２３－４５－６７８９", "ssn [ssn]"],
+    ["ｍｅ＠ｅｘａｍｐｌｅ．ｔｅｓｔ", "[email]"],
+    ["+44 7700 900123", "[phone]"],
+    ["+447700900123", "[phone]"],
+    ["617–555–0100", "[phone]"],
+    ["my cell is 6175550100", "my cell is [phone]"],
+    ["6175550100", "[phone]"],
+  ])("redacts %j", (text, expected) => {
+    expect(redactPii(text)).toBe(expected);
+  });
+
+  // Numbers a sales call is full of: none of them is personal data.
+  it.each([
+    "1234567890 events",
+    "We process 2500000000 events a month.",
+    "That's 1500000000 impressions in Q3.",
+    "1 234 567 890 users across Europe",
+    "1.234.567.890 rows",
+    "Revenue hit $1234567890 last year.",
+    "€ 2500000000 under management",
+    "order #1234567890",
+    "Invoice 4500012345 is overdue.",
+    "PO number 4500012345",
+    "tracking 1234567890123",
+    "ISBN 9780306406157",
+    "We have 123456789 rows in the warehouse.",
+    "000-12-3456",
+    "666-12-3456",
+    "900-12-3456",
+    "123-00-4567",
+    "DE89 3704 0044 0532 0130 01",
+    "FY 2024–2026 2027 2028",
+    "Ask about plan GB12 when you renew.",
+    "zip 02110, ext 1234, 3 users",
+  ])("leaves %j alone", (text) => {
+    expect(redactPii(text)).toBe(text);
+  });
+
   it("is idempotent", () => {
     const once = redactPii("me@x.io 617 555 0100");
     expect(redactPii(once)).toBe(once);
@@ -87,6 +144,13 @@ describe("redactTurn", () => {
   it("redacts what invisible characters were hiding", () => {
     expect(redactTurn("call 617\u200b555\u200b0100")).toBe("call [phone]");
     expect(redactTurn("a.b\u200b@example.test")).toBe("[email]");
+  });
+
+  it("redacts full-width and other scripts' digits after normalizing the turn", () => {
+    expect(redactTurn("  ＳＳＮ  １２３－４５－６７８９ ")).toBe("SSN [ssn]");
+    expect(redactTurn("We log 1234567890 events, call ６１７ ５５５ ０１００")).toBe(
+      "We log 1234567890 events, call [phone]",
+    );
   });
 
   it("keeps a placeholder that fits within the limit", () => {

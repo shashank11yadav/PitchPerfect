@@ -36,13 +36,13 @@ const safeguards = (partner: PracticePartnerKind): Statement[] => [
     body: "It keeps to the sales scenario and never asks for personal information.",
   },
   {
-    title: "Contact details removed",
+    title: "Personal details removed",
     body:
       partner === "live"
-        ? "Email addresses, phone numbers and card-like numbers are removed from your text before it's stored or sent to our AI provider."
+        ? "Email addresses, phone numbers, card and bank account numbers, and Social Security numbers are removed from your text before it's stored or sent to our AI provider."
         : partner === "scripted"
-          ? "Email addresses, phone numbers and card-like numbers are removed from your text before it's stored. In this demo your text isn't sent to an AI provider."
-          : "Email addresses, phone numbers and card-like numbers are removed from your text before it's kept in this tab. In this demo your text isn't sent anywhere.",
+          ? "Email addresses, phone numbers, card and bank account numbers, and Social Security numbers are removed from your text before it's stored. In this demo your text isn't sent to an AI provider."
+          : "Email addresses, phone numbers, card and bank account numbers, and Social Security numbers are removed from your text before it's kept in this tab. In this demo your text isn't sent anywhere.",
   },
   {
     title: "Session limits",

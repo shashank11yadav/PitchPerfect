@@ -137,24 +137,24 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         {partner === "browser" && (
           <li>
             <strong>No one.</strong> The scripted partner and the scorer run in this browser tab,
-            and your practice turns stay in the tab, with email addresses, phone numbers and
-            card-like numbers replaced by placeholders.
+            and your practice turns stay in the tab, with email addresses, phone numbers, card and
+            bank account numbers, and Social Security numbers replaced by placeholders.
           </li>
         )}
         {partner === "scripted" && (
           <li>
             <strong>No AI provider.</strong> The scripted partner runs on our server. Your practice
-            turns are stored with your session, with email addresses, phone numbers and card-like
-            numbers replaced by placeholders.
+            turns are stored with your session, with email addresses, phone numbers, card and bank
+            account numbers, and Social Security numbers replaced by placeholders.
           </li>
         )}
         {partner === "live" && (
           <li>
             <strong>{AI_PROVIDER}</strong> receives the text of your practice turns, the scenario
             and, if you practiced for a job, that job&apos;s title, description and skills. Before
-            anything is sent, email addresses, phone numbers and card-like numbers are replaced with
-            placeholders. We don&apos;t add your name or email address, but anything you say in a
-            session is sent as you said it.
+            anything is sent, email addresses, phone numbers, card and bank account numbers, and
+            Social Security numbers are replaced with placeholders. We don&apos;t add your name or
+            email address, but anything you say in a session is sent as you said it.
           </li>
         )}
         <li>

@@ -76,7 +76,7 @@ packages/
       schemas/              request/response zod schemas per api module + coach contract
       enums.ts              roles, job status, application status, etc.
       limits.ts             every numeric limit (turns, quotas, sizes, token caps)
-      pii.ts                redactPii and redactTurn (emails, phones, card-like numbers)
+      pii.ts                redactPii and redactTurn (emails, phones, cards, SSNs, IBANs)
       text.ts, time.ts      slugify and turn-text helpers; UTC day/month helpers for quotas
       env.ts, hmac.ts       server-only env parsing and request signing (the ./env and ./hmac subpaths)
       seed-data.ts          the fictional companies and jobs (api seed, static demo board; the ./seed-data subpath)
