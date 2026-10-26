@@ -48,7 +48,7 @@ describe("Scorecard", () => {
     expect(computeOverall(SCORECARD.dimensions, "value")).toBe(SCORECARD.overall);
   });
 
-  it("shows the overall ring and seven labelled bars, the weighted one marked", () => {
+  it("shows the overall ring and seven labeled bars, the weighted one marked", () => {
     show();
     expect(
       screen.getByRole("img", { name: "Overall score: 72 out of 100, developing" }),

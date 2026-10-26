@@ -60,7 +60,7 @@ afterEach(() => {
 });
 
 describe("SigninForm", () => {
-  it("shows labelled errors when submitted empty, without calling the api", async () => {
+  it("shows labeled errors when submitted empty, without calling the api", async () => {
     const fetchMock = serveApi({});
     renderForm();
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));

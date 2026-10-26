@@ -25,6 +25,6 @@ export function originCheck(config: Config): RequestHandler {
       next();
       return;
     }
-    next(new ForbiddenError("csrf_failed", "This request didn't come from PitchPerfect"));
+    next(new ForbiddenError("csrf_failed", "This request didn’t come from PitchPerfect"));
   };
 }

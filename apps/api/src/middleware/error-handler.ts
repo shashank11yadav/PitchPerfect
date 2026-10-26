@@ -34,13 +34,17 @@ function toAppError(error: unknown): AppError {
     return new ValidationError(fields);
   }
   if (error instanceof mongoose.Error.CastError) {
-    return new AppError("invalid_id", 400, "That identifier isn't valid");
+    return new AppError(
+      "invalid_id",
+      400,
+      "One of the IDs in that request isn’t in the right format",
+    );
   }
   if (hasProperty(error, "code") && error.code === DUPLICATE_KEY_CODE) return new ConflictError();
   if (isBodyParserError(error)) {
     return error.status === 413
       ? new PayloadTooLargeError("The request body is too large")
-      : new ValidationError(undefined, "The request body couldn't be read");
+      : new ValidationError(undefined, "The request body couldn’t be read");
   }
   return new AppError("internal_error", 500, "Something went wrong");
 }

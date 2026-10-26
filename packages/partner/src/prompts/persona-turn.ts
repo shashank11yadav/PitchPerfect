@@ -103,7 +103,7 @@ function systemFor(req: CoachTurnRequest): string {
   ]);
 }
 
-/** Merges neighbouring messages from the same role so roles strictly alternate. */
+/** Merges neighboring messages from the same role so roles strictly alternate. */
 function alternate(messages: readonly ChatMessage[]): ChatMessage[] {
   const merged: ChatMessage[] = [];
   for (const message of messages) {

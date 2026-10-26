@@ -254,7 +254,7 @@ describe("the student's daily token cap", () => {
     expect(res.status).toBe(429);
     expect(errorOf(res)).toMatchObject({
       code: "token_limit_reached",
-      message: "You've used today's practice allowance. It resets at midnight UTC",
+      message: "You’ve used today’s practice allowance. It resets at midnight UTC",
     });
     expect(res.headers["retry-after"]).toBe(String(9 * 60 * 60));
     expect(callCount(harness.stub, "/v1/plan")).toBe(0);

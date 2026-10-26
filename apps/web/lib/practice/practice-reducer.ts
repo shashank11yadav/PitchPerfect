@@ -40,7 +40,7 @@ export type RoomEndReason = EndedReason | "abandoned" | "replaced";
 
 /**
  * A transcript line as the room shows it. `support` is PitchPerfect stepping out of the call
- * with crisis resources, after a turn that signalled self-harm; it is never the partner speaking.
+ * with crisis resources, after a turn that signaled self-harm; it is never the partner speaking.
  */
 export interface RoomEntry extends Pick<TranscriptEntry, "text"> {
   role: TranscriptEntry["role"] | "support";
@@ -98,7 +98,7 @@ export type RoomAction =
   | { type: "retract"; text: string }
   | { type: "done"; stage: Stage; turnsLeft: number; finalText: string }
   | { type: "redirect"; text: string }
-  /** The turn signalled self-harm: a support message instead of a reply, and no turn used. */
+  /** The turn signaled self-harm: a support message instead of a reply, and no turn used. */
   | { type: "support"; text: string }
   | { type: "ended"; reason: EndedReason }
   | { type: "replaced" }

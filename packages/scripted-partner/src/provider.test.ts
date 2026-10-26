@@ -827,7 +827,7 @@ describe("FakeProvider", () => {
       expect(STUDENT_TURNS.some((text) => text.includes(result.strongerLine.original))).toBe(true);
     });
 
-    it("rewards questions, a dated ask, and penalises their absence", async () => {
+    it("rewards questions, a dated ask, and penalizes their absence", async () => {
       const strong = await score(new FakeProvider());
       const weak = await score(new FakeProvider(), ["Um, sorry, I just maybe sell software."]);
       const get = (card: typeof strong, key: string) =>

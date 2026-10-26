@@ -30,7 +30,7 @@ const TONES: Record<ApplicationStatus, Tone> = {
   closed: "neutral",
 };
 
-/** An application's status as a pill; the word carries the meaning, the colour only helps. */
+/** An application's status as a pill; the word carries the meaning, the color only helps. */
 export function StatusPill({
   status,
   viewer = "student",

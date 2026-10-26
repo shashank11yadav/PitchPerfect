@@ -46,7 +46,7 @@ describe("display primitives", () => {
     expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("Spinner is decorative unless labelled", () => {
+  it("Spinner is decorative unless labeled", () => {
     const { container } = render(<Spinner />);
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");

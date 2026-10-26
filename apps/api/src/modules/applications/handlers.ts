@@ -16,7 +16,7 @@ export const applicationHandlers = {
       res,
     );
     const result = await applyToJob(userOf(res).id, params.id, body.sharedAttemptId);
-    if (!result.created) throw new ConflictError("already_applied", "You've already applied");
+    if (!result.created) throw new ConflictError("already_applied", "You’ve already applied");
     res.status(201).json({ application: result.application });
   }) satisfies RequestHandler,
 

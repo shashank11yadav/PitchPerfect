@@ -184,7 +184,7 @@ export const SEED_JOBS: readonly SeedJob[] = [
     descriptionHtml: description(
       "Be the first friendly voice new clinics hear after they sign up.",
       [
-        "Run setup calls with each new clinic's front desk and office manager",
+        "Run setup calls with each new clinic’s front desk and office manager",
         "Check usage at 30 and 60 days and call the clinics that have stalled",
         "Write up the questions that keep coming up so the help center can answer them",
       ],

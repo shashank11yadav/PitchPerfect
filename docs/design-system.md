@@ -59,7 +59,7 @@ icon-card grids.
 - **Composition:** one 12-column grid, with the structure varied section by section: stacked
   heading and lead over a full-width piece, a two-column with the visual first, a pinned list, a
   compact two-column list, a full-width statement. Only the major beats of a page get a title-size
-  heading; the rest use the section step. Neighbouring sections never share a ground (white, soft
+  heading; the rest use the section step. Neighboring sections never share a ground (white, soft
   blue, navy, and brand blue only for the closing call to action), and sections are told apart by
   ground, never by rules or shadows.
 - **House rules:** no labels above headings, no index numbers (order is shown by position or a real
@@ -90,7 +90,7 @@ icon-card grids.
   - A bottom control dock: a large push-to-talk button with level meter, an editable interim transcript, a send button, a type toggle, a voice picker, mute, and End session.
   - Progress along the top: stage stepper, turns left, time left.
 - **Scorecard:**
-  - An overall score ring (animated count-up; colour by band).
+  - An overall score ring (animated count-up; color by band).
   - Seven rubric bars, each with its justification and quoted evidence.
   - Strengths and improvements in two columns.
   - A "Stronger version" before/after card.
@@ -106,7 +106,7 @@ Each component is implemented once:
 
 ## Motion
 
-- **Hero grain:** the voice control inline in the h1 sits on a grainy field of the brand blues (`.pp-grain` in `app/globals.css`), all CSS. A colour layer twice the strip's size drifts and turns over 9 s, alternating (a transform, so the compositor runs it with no script and no repaint per frame), under an SVG noise tile. Under reduced motion the field stands still.
+- **Hero grain:** the voice control inline in the h1 sits on a grainy field of the brand blues (`.pp-grain` in `app/globals.css`), all CSS. A color layer twice the strip's size drifts and turns over 9 s, alternating (a transform, so the compositor runs it with no script and no repaint per frame), under an SVG noise tile. Under reduced motion the field stands still.
 - **Entrances:** `components/motion/in-view.tsx` (adapted from Motion Primitives) staggers a section's parts in as it first scrolls into view: 24 px rise with opacity, 700 ms, ease-out `cubic-bezier(.22,1,.36,1)`. Server HTML and anything already on screen render finished, so nothing waits for scripts and nothing flickers; `useEntryReveal` decides.
 - **Streamed reply:** in the public previews, the last partner reply arrives letter by letter (`text-effect.tsx`), over a transparent copy that keeps its space and gives screen readers the sentence once. The live practice room shows the reply exactly as it streams (the api sends it in bursts while it checks the text) and then swaps in the checked final text; it adds no typing effect of its own.
 - **Feedback:** buttons scale to 0.97 on press (`.pp-press`); text links show their underline on hover (`.pp-link`); the voice meters breathe.
@@ -118,7 +118,7 @@ Each component is implemented once:
 - Focus is always visible (2 px `--pp-blue` ring with offset). Tab order is logical. A skip link goes to main content.
 - All interactions work with a keyboard. In the practice room, Space holds-to-talk when focus is on the mic button, and Enter sends.
 - New partner replies are announced via an `aria-live="polite"` region. Speaking can be muted, and captions are always shown.
-- Colour is never the only signal: score bands also have labels, and status pills have text.
+- Color is never the only signal: score bands also have labels, and status pills have text.
 - `prefers-reduced-motion` disables count-ups, entrances, the streamed reply, the hero grain and transitions.
 - The score ring shows its final value on the server and when it is already on screen; it only counts up from 0 if it was still off screen after hydration.
 - Contrast is checked with axe in Playwright (`@axe-core/playwright`) on every public page and the main app pages. There must be zero serious or critical violations.

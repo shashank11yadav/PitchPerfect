@@ -24,11 +24,11 @@ const OBJECTION_QUOTE =
 /** What keeps the partner honest, for the partner this deployment really runs. */
 const safeguards = (partner: PracticePartnerKind): Statement[] => [
   {
-    title: "Always labelled",
+    title: "Always labeled",
     body:
       partner === "live"
-        ? "The partner is labelled as AI wherever it appears, and says so if you sincerely ask."
-        : "The partner is labelled as a scripted demo wherever it appears, and says so if you sincerely ask.",
+        ? "The partner is labeled as AI wherever it appears, and says so if you sincerely ask."
+        : "The partner is labeled as a scripted demo wherever it appears, and says so if you sincerely ask.",
   },
   {
     title: "Stays on the call",

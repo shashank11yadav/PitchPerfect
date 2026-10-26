@@ -25,11 +25,11 @@ PitchPerfect is a practice and hiring site for entry-level sales jobs. A student
 
 ## Screenshots
 
-Taken with `npx tsx e2e/screenshots.ts` from the containers (`docker compose --profile full up --build -d`) with the demo data and the default practice limits. No key is set there, so the partner is the scripted one and the practice room labels it "Scripted demo partner"; with a live model the badge reads "AI practice partner". The call on the home page is a sample, labelled "Sample buyer".
+Taken with `npx tsx e2e/screenshots.ts` from the containers (`docker compose --profile full up --build -d`) with the demo data and the default practice limits. No key is set there, so the partner is the scripted one and the practice room labels it "Scripted demo partner"; with a live model the badge reads "AI practice partner". The call on the home page is a sample, labeled "Sample buyer".
 
 ![Home page: the headline "Practice your pitch. Get hired." beside a sample practice call](docs/images/home.png)
 
-![Practice room two turns into a pitching call, with the buyer's profile labelled "Scripted demo partner", the stage tracker, and the reply box](docs/images/practice-room.png)
+![Practice room two turns into a pitching call, with the buyer's profile labeled "Scripted demo partner", the stage tracker, and the reply box](docs/images/practice-room.png)
 
 ![Scorecard for a pitching call: 72 out of 100, with a 1 to 5 score, a reason and a quoted line for each of the seven rubric lines](docs/images/scorecard.png)
 

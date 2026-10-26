@@ -13,7 +13,7 @@ interface SkillSelectProps {
   className?: string;
 }
 
-/** A labelled dropdown of the eight skills. */
+/** A labeled dropdown of the eight skills. */
 export function SkillSelect({ label, value, onSelect, allLabel, className }: SkillSelectProps) {
   return (
     <Field label={label} className={className}>

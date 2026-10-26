@@ -67,7 +67,7 @@ interface ScoreRingProps {
 }
 
 /**
- * The overall score as a ring coloured by band, with the band named in text. The server renders
+ * The overall score as a ring colored by band, with the band named in text. The server renders
  * the final number; the count-up only runs in the browser and never changes the accessible name.
  */
 export function ScoreRing({ score, size = "lg", className }: ScoreRingProps) {

@@ -10,8 +10,8 @@ interface SkillGuide {
 }
 
 /**
- * Per-skill scenario setup and objection style (plan prompt) and persona behaviour (turn prompt).
- * Behaviour text avoids long quotable phrases: the turn route treats a 6-word run of the turn
+ * Per-skill scenario setup and objection style (plan prompt) and persona behavior (turn prompt).
+ * Behavior text avoids long quotable phrases: the turn route treats a 6-word run of the turn
  * instructions in a reply as a leak.
  */
 export const SKILL_GUIDES: Record<SkillSlug, SkillGuide> = {

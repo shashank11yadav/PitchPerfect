@@ -230,7 +230,7 @@ export async function shareScorecard(
   const notOpen = () =>
     new ValidationError(
       undefined,
-      `A ${application.status} application can't share a scorecard`,
+      `A ${application.status} application can’t share a scorecard`,
       "invalid_transition",
     );
   if (NO_SHARING.includes(application.status)) throw notOpen();

@@ -51,7 +51,7 @@ describe("Modal", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("is a labelled modal dialog that takes focus when opened", async () => {
+  it("is a labeled modal dialog that takes focus when opened", async () => {
     await openModal();
     const dialog = screen.getByRole("dialog", { name: "Delete this attempt?" });
     expect(dialog).toHaveAttribute("aria-modal", "true");

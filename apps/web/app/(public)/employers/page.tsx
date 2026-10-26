@@ -42,7 +42,7 @@ const FEATURES: Statement[] = [
 ];
 
 const VERIFY_STEPS = [
-  "Sign up with your work email, and add your company’s name and website.",
+  "Sign up with an email at your company, and add your company’s name and website.",
   "Confirm the email with the one-time link we send. Free, throwaway and alias email providers never count as a company domain.",
   "If the email’s domain matches the website’s, you’re verified, and your badge names that domain. Unverified listings still go live, with a badge.",
 ];

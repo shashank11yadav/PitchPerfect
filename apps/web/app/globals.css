@@ -32,7 +32,7 @@
 }
 
 @theme inline {
-  /* Only brand colours exist, so nothing off-palette can slip in. */
+  /* Only brand colors exist, so nothing off-palette can slip in. */
   --color-*: initial;
   --color-white: #ffffff;
   --color-transparent: transparent;
@@ -173,7 +173,7 @@
 @layer components {
   /*
    * The hero's voice strip: a grainy field of the brand blues that drifts slowly while motion is
-   * allowed. The colour layer is twice the strip's size and only moves (a compositor animation, so
+   * allowed. The color layer is twice the strip's size and only moves (a compositor animation, so
    * no script and no repaint per frame); the grain is an SVG noise tile laid over it. Under reduced
    * motion it is the same field, still.
    */

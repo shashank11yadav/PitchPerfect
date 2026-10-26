@@ -386,15 +386,15 @@ describe("the legal pages describe the partner that is really running", () => {
       "In this demo your text isn’t sent to an AI provider.",
     );
     expect(scripted.container).not.toHaveTextContent(/sent to our AI provider/);
-    expect(scripted.container).toHaveTextContent("labelled as a scripted demo wherever it appears");
-    expect(scripted.container).not.toHaveTextContent(/labelled as AI|an AI buyer/);
+    expect(scripted.container).toHaveTextContent("labeled as a scripted demo wherever it appears");
+    expect(scripted.container).not.toHaveTextContent(/labeled as AI|an AI buyer/);
     scripted.unmount();
 
     forgetPracticePartnerKind();
     fetchMock.mockResolvedValue(partnerBody("live"));
     const live = render(await HowItWorksPage());
     expect(live.container).toHaveTextContent("sent to our AI provider");
-    expect(live.container).toHaveTextContent("labelled as AI wherever it appears");
+    expect(live.container).toHaveTextContent("labeled as AI wherever it appears");
     expect(live.container).not.toHaveTextContent(/leaves PitchPerfect/);
   });
 
@@ -415,7 +415,7 @@ describe("the legal pages describe the partner that is really running", () => {
     expect(container).toHaveTextContent(
       "that’s a scripted partner or a live model from OpenAI or Anthropic; the public demo uses the scripted one",
     );
-    expect(container).not.toHaveTextContent(/labelled as AI everywhere/);
+    expect(container).not.toHaveTextContent(/labeled as AI everywhere/);
   });
 
   it("no page that can’t ask the api calls the partner an AI", () => {

@@ -427,7 +427,7 @@ export async function runDemoTurn(
           break;
         }
         case "support":
-          // As on the api: the turn signalled self-harm, so its words are not kept and it uses
+          // As on the api: the turn signaled self-harm, so its words are not kept and it uses
           // no turn. The scripted partner makes no model calls, so there is no usage to keep.
           progress.saved = true;
           onEvent({ type: "support", text: event.text });

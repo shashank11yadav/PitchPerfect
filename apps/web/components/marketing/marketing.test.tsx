@@ -31,7 +31,7 @@ describe("Faq", () => {
   });
 
   // Enter and Space toggle a focused <summary> natively; jsdom doesn't emulate that, so the
-  // behaviour is the browser's own. Here: each question is reachable by Tab.
+  // behavior is the browser's own. Here: each question is reachable by Tab.
   it("puts each question in the tab order", async () => {
     render(<Faq heading="Questions" items={items} />);
     await userEvent.tab();

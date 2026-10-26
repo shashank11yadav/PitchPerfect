@@ -5,7 +5,7 @@ import { useId } from "react";
 export const SUPPORT_LABEL = "A message from PitchPerfect";
 
 /**
- * The support message after a turn that signalled self-harm: PitchPerfect speaking, outside the
+ * The support message after a turn that signaled self-harm: PitchPerfect speaking, outside the
  * call, so it spans the transcript instead of sitting in the partner's bubble. The text is shown
  * as plain text, as it arrived.
  */

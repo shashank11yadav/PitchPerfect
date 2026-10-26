@@ -34,7 +34,7 @@ const traits = (personality: string) =>
     .map((trait) => trait.charAt(0).toUpperCase() + trait.slice(1));
 
 /**
- * Who the student is talking to. The persona has a human name but is always labelled for what it
+ * Who the student is talking to. The persona has a human name but is always labeled for what it
  * is: an AI model, the scripted demo partner (on our server, or in the visitor's browser), or a
  * sample buyer.
  */

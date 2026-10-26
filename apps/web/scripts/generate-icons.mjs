@@ -7,7 +7,7 @@ import sharp from "sharp";
 const path = (relative) => fileURLToPath(new URL(`../${relative}`, import.meta.url));
 const mark = path("public/brand/mark.svg");
 
-/** The mark centred on a white square, with a margin so it survives rounded-corner masks. */
+/** The mark centered on a white square, with a margin so it survives rounded-corner masks. */
 async function renderIcon(sizePx, out) {
   const inner = Math.round(sizePx * 0.75);
   const glyph = await sharp(mark, { density: 1200 }).resize(inner, inner).png().toBuffer();

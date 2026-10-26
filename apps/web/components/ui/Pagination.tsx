@@ -17,7 +17,7 @@ interface PaginationProps {
 const ITEM =
   "inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-control px-3 text-small font-semibold";
 
-/** Page numbers to show: the first, the last, and the current page with one neighbour each side. */
+/** Page numbers to show: the first, the last, and the current page with one neighbor each side. */
 export function pageItems(page: number, totalPages: number): (number | "gap")[] {
   const pages = new Set([1, totalPages, page - 1, page, page + 1]);
   const sorted = [...pages].filter((p) => p >= 1 && p <= totalPages).sort((a, b) => a - b);

@@ -119,7 +119,7 @@ export const CoachTurnEvent = z.discriminatedUnion("type", [
     usage: UsageSchema,
   }),
   /**
-   * The student's turn signalled self-harm. `text` is an out-of-character support message with
+   * The student's turn signaled self-harm. `text` is an out-of-character support message with
    * crisis resources, sent instead of a reply or a redirect; it is never a strike.
    */
   z.strictObject({ type: z.literal("support"), text: z.string(), usage: UsageSchema }),

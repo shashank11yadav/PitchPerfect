@@ -128,7 +128,7 @@ export const PracticeEvent = z.discriminatedUnion("type", [
   }),
   z.strictObject({ type: z.literal("redirect"), text: z.string() }),
   /**
-   * The turn signalled self-harm: `text` is a support message with crisis resources, from
+   * The turn signaled self-harm: `text` is a support message with crisis resources, from
    * PitchPerfect rather than the partner. The turn isn't stored or counted.
    */
   z.strictObject({ type: z.literal("support"), text: z.string() }),

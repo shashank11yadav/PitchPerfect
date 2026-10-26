@@ -6,7 +6,7 @@ PitchPerfect is a platform where students and early-career candidates (18+) trai
 
 It runs end to end, deploys with documented steps, and ships with fictional seed data for demos.
 
-In the product, the partner is labelled for what is really answering: an **"AI practice partner"** when a live model runs it, a **"Scripted demo partner"** when the scripted provider does (the public demo always uses that one). Users are told the buyer is automated either way, and with a live model the privacy page names the LLM provider that processes transcripts.
+In the product, the partner is labeled for what is really answering: an **"AI practice partner"** when a live model runs it, a **"Scripted demo partner"** when the scripted provider does (the public demo always uses that one). Users are told the buyer is automated either way, and with a live model the privacy page names the LLM provider that processes transcripts.
 
 ## 2. Goals
 

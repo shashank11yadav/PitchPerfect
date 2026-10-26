@@ -170,7 +170,7 @@ async function relayTurn(
         return { outcome: "done", stage, usage: event.usage };
       }
       case "support": {
-        // The turn signalled self-harm: the student's words are not kept and the turn is not
+        // The turn signaled self-harm: the student's words are not kept and the turn is not
         // counted. Only the usage, if the model guard was asked, is charged.
         await PracticeAttempt.updateOne(
           { _id: attempt._id, status: "active" },

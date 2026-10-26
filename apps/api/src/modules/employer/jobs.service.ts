@@ -108,7 +108,7 @@ export async function updateJob(job: JobDoc, patch: JobUpdate): Promise<Employer
 function invalidStatusChange(from: JobStatus, to: JobStatus): ValidationError {
   return new ValidationError(
     undefined,
-    `A job that is ${from} can't be changed to ${to}`,
+    `A job that is ${from} can’t be changed to ${to}`,
     "invalid_transition",
   );
 }

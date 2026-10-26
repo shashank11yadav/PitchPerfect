@@ -605,7 +605,7 @@ export const VOICES: Record<Trade, Lines> = {
         "Say a courier misses a pickup. We find out when the customer emails, and by then it’s a refund.",
       ],
       impact: [
-        "Fewer refunds and a support team that isn’t apologising all day. Real money, too.",
+        "Fewer refunds and a support team that isn’t apologizing all day. Real money, too.",
         "Better reviews, mostly. The refunds hurt, but the one-star reviews hurt more.",
       ],
       anythingElse: [

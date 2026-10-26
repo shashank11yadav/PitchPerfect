@@ -64,7 +64,7 @@ describe("the sample jobs on the public pages", () => {
 });
 
 describe("ApplicantsPreview", () => {
-  it("shows a dash, labelled for screen readers, for an applicant with no scorecard", () => {
+  it("shows a dash, labeled for screen readers, for an applicant with no scorecard", () => {
     render(<ApplicantsPreview />);
     const empty = screen.getByRole("img", { name: "No scorecard shared" });
     expect(empty).toHaveTextContent("—");

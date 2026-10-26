@@ -30,7 +30,7 @@ const JOB_HTML: sanitizeHtml.IOptions = {
 
 const TEXT_ONLY: sanitizeHtml.IOptions = { allowedTags: [], allowedAttributes: {} };
 
-/** Tags that end a line of text; replaced by a space so neighbouring words don't run together. The attribute run is bounded to keep matching linear. */
+/** Tags that end a line of text; replaced by a space so neighboring words don't run together. The attribute run is bounded to keep matching linear. */
 const BLOCK_BOUNDARY = /<\/?(?:p|br|li|ul|ol|h[1-6]|blockquote|div)\b[^>]{0,200}>/gi;
 
 /**

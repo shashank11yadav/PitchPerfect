@@ -30,7 +30,7 @@ export const RUBRIC_DIMENSIONS: readonly RubricDimension[] = [
     key: "value",
     name: "Value & relevance",
     low: "Features only, generic",
-    high: "Benefits tied to this buyer's stated needs",
+    high: "Benefits tied to this buyer’s stated needs",
   },
   {
     key: "structure",

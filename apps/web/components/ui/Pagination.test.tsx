@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Pagination, pageItems } from "./Pagination";
 
 describe("pageItems", () => {
-  it("keeps the ends and the neighbours of the current page", () => {
+  it("keeps the ends and the neighbors of the current page", () => {
     expect(pageItems(1, 3)).toEqual([1, 2, 3]);
     expect(pageItems(5, 10)).toEqual([1, "gap", 4, 5, 6, "gap", 10]);
     expect(pageItems(10, 10)).toEqual([1, "gap", 9, 10]);

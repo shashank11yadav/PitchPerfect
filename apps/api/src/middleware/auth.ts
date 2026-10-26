@@ -71,7 +71,7 @@ export const requireAuth: RequestHandler = guard(() => undefined);
 
 /** For signed-out-only routes such as signup: 403 when a (still valid) session exists. */
 export const requireSignedOut: RequestHandler = async (req, res, next) => {
-  if (await loadUser(req, res)) throw new ForbiddenError("forbidden", "You're already signed in");
+  if (await loadUser(req, res)) throw new ForbiddenError("forbidden", "You’re already signed in");
   next();
 };
 

@@ -190,7 +190,7 @@ export const DEMO_ATTEMPTS: readonly DemoAttempt[] = [
       [
         "cta",
         5,
-        "A specific, time-bound next step that fits the buyer's stated risk.",
+        "A specific, time-bound next step that fits the buyer’s stated risk.",
         "Could we run a pilot on one lane and meet Thursday at 10 to plan it?",
       ],
     ],
@@ -201,7 +201,7 @@ export const DEMO_ATTEMPTS: readonly DemoAttempt[] = [
     ],
     improvements: [
       "Ask one more question about what a late load costs before you describe the dashboard.",
-      "When the buyer raised budget, offer a proof point such as a similar customer's result.",
+      "When the buyer raised budget, offer a proof point such as a similar customer’s result.",
       "Summarize what you heard before pitching so the buyer feels understood.",
     ],
     strongerLine: {
@@ -226,7 +226,7 @@ export const DEMO_ATTEMPTS: readonly DemoAttempt[] = [
       hiddenObjections: [
         "A migration would take time I do not have",
         "I want proof from a company my size",
-        "The price is above this year's budget",
+        "The price is above this year’s budget",
       ],
       winConditions: [
         "Student acknowledges the objection before responding",
@@ -247,7 +247,7 @@ export const DEMO_ATTEMPTS: readonly DemoAttempt[] = [
       [
         "clarity",
         4,
-        "You restated the buyer's concern in one clear sentence.",
+        "You restated the buyer’s concern in one clear sentence.",
         "So the real concern is the time a migration would take, not only the cost.",
       ],
       [
@@ -289,7 +289,7 @@ export const DEMO_ATTEMPTS: readonly DemoAttempt[] = [
     ],
     strengths: [
       "You asked what the current vendor does well before defending your price.",
-      "You restated the buyer's real concern and checked it with a question.",
+      "You restated the buyer’s real concern and checked it with a question.",
       "You answered the switching worry with a concrete reference and an introduction.",
     ],
     improvements: [

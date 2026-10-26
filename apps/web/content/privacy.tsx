@@ -311,8 +311,8 @@ const appSections = (partner: "live" | "scripted"): readonly LegalSection[] => [
       <p>
         You can see and change your profile, email address and password in your settings, choose
         whether to share a scorecard each time you apply, practice in text mode instead of voice,
-        and delete sessions or your whole account. We don’t offer a download of your data yet; ask{" "}
-        {CONTACT} if you need a copy.
+        and delete sessions or your whole account. There is no download of your data; ask {CONTACT}{" "}
+        if you need a copy.
       </p>
     ),
   },

@@ -51,7 +51,7 @@ const PRODUCTION_SECRETS = [
 
 const envSchema = z
   .object({
-    // Unset means production: development and test behaviour must be asked for.
+    // Unset means production: development and test behavior must be asked for.
     NODE_ENV: unsetIfEmpty(z.enum(["development", "test", "production"]).default("production")),
     PORT: port(4000),
     LOG_LEVEL: z

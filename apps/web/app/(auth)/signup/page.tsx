@@ -75,7 +75,8 @@ export default function SignupPage() {
             <InViewItem>
               <p className="max-w-[44ch] text-lede text-ink">
                 Post entry-level roles and read the scorecards applicants choose to share before you
-                book an interview. Sign up with your work email so we can verify your company.
+                book an interview. Sign up with an email at your company and confirming it verifies
+                the company.
               </p>
             </InViewItem>
             <InViewItem>

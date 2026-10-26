@@ -14,7 +14,7 @@ export function transitionApplication(
   if (!canTransition(application.status, to, actor)) {
     throw new ValidationError(
       undefined,
-      `An application that is ${application.status} can't be changed to ${to}`,
+      `An application that is ${application.status} can’t be changed to ${to}`,
       "invalid_transition",
     );
   }

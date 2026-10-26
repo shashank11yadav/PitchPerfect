@@ -503,7 +503,7 @@ describe("PracticeRoom before the call", () => {
       });
       await user.click(await screen.findByRole("button", { name: "Start the call" }));
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "You’ve used your practice sessions for now. You can start another today at 8:00 PM EDT.",
+        "You’ve reached your practice session limit. You can start another today at 8:00 PM EDT.",
       );
     } finally {
       process.env.TZ = zone;

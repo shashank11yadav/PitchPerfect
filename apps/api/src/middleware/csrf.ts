@@ -54,7 +54,7 @@ export function createCsrf(config: Config): Csrf {
   const csrfProtection: RequestHandler = (req, res, next) => {
     doubleCsrfProtection(req, res, (error?: unknown) => {
       next(
-        error ? new ForbiddenError("csrf_failed", "Your request couldn't be verified") : undefined,
+        error ? new ForbiddenError("csrf_failed", "Your request couldn’t be verified") : undefined,
       );
     });
   };

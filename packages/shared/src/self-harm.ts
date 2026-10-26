@@ -211,7 +211,7 @@ export function maySignalSelfHarm(text: string): boolean {
  * partner's reply filter, which would block the helpline's web address.
  */
 export const SUPPORT_LINE =
-  "This is PitchPerfect, stepping out of the practice call. If you're thinking about suicide or hurting yourself, please talk to someone now. In the US, call or text 988 to reach the 988 Suicide & Crisis Lifeline, free and open 24 hours a day. Outside the US, findahelpline.com lists free helplines by country. If you're in danger right now, call your local emergency number. This didn't use one of your turns, and you can go back to the call whenever you're ready.";
+  "This is PitchPerfect, stepping out of the practice call. If you’re thinking about suicide or hurting yourself, please talk to someone now. In the US, call or text 988 to reach the 988 Suicide & Crisis Lifeline, free and open 24 hours a day. Outside the US, findahelpline.com lists free helplines by country. If you’re in danger right now, call your local emergency number. This didn’t use one of your turns, and you can go back to the call whenever you’re ready.";
 
 /**
  * Sent by the scripted partner instead of a reply when a turn may signal self-harm but is
@@ -219,4 +219,4 @@ export const SUPPORT_LINE =
  * and keeps nothing.
  */
 export const CHECK_IN_LINE =
-  "This is PitchPerfect, stepping out of the practice call for a moment. Some of what you wrote can mean you're thinking about hurting yourself, so we want to check in. If you are, please talk to someone now. In the US, call or text 988 to reach the 988 Suicide & Crisis Lifeline, free and open 24 hours a day. Outside the US, findahelpline.com lists free helplines by country. If you meant something else, that's fine: this didn't use one of your turns, so put it another way and the call goes on.";
+  "This is PitchPerfect, stepping out of the practice call for a moment. Some of what you wrote can mean you’re thinking about hurting yourself, so we want to check in. If you are, please talk to someone now. In the US, call or text 988 to reach the 988 Suicide & Crisis Lifeline, free and open 24 hours a day. Outside the US, findahelpline.com lists free helplines by country. If you meant something else, that’s fine: this didn’t use one of your turns, so put it another way and the call goes on.";

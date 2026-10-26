@@ -12,7 +12,7 @@ describe("StatusPill", () => {
     ["rejected", "Not selected"],
     ["withdrawn", "Withdrawn"],
     ["closed", "Closed"],
-  ] as const)("labels %s in words, not only colour", (status, label) => {
+  ] as const)("labels %s in words, not only color", (status, label) => {
     render(<StatusPill status={status} />);
     expect(screen.getByText(label)).toBeInTheDocument();
   });

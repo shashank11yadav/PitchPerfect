@@ -33,7 +33,7 @@ export const SKILLS: readonly Skill[] = [
     slug: "pitching",
     title: "Pitching",
     summary: "Tie what you offer to what the buyer actually needs.",
-    scenarioFocus: "Core value pitch of the student's product/role to a busy buyer",
+    scenarioFocus: "Core value pitch of the student’s product/role to a busy buyer",
     weighted: "value",
   },
   {

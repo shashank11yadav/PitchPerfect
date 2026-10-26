@@ -71,7 +71,7 @@ export async function changeEmail(
 ): Promise<SessionIdentity> {
   const user = await requireCurrentPassword(userId, currentPassword);
   if (newEmail === user.email) {
-    throw new ValidationError({ newEmail: "That's already your email address" });
+    throw new ValidationError({ newEmail: "That’s already your email address" });
   }
   const taken = () => new ConflictError("email_taken", "That email is already in use");
   if (await User.exists({ email: newEmail })) throw taken();

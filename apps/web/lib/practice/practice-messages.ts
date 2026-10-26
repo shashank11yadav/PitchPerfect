@@ -18,12 +18,12 @@ const inLocalTime = (seconds: number) =>
 
 function quotaMessage(error: ApiError): string {
   const seconds = error.retryAfterSec;
-  if (seconds === undefined) return "You’ve used your practice sessions for now.";
+  if (seconds === undefined) return "You’ve reached your practice session limit.";
   // Only the monthly limit lasts this long.
   if (seconds > TWO_DAYS_SEC) {
     return `You’ve used this month’s practice sessions. They start over ${formatMonthlyReset()}.`;
   }
-  return `You’ve used your practice sessions for now. You can start another ${inLocalTime(seconds)}.`;
+  return `You’ve reached your practice session limit. You can start another ${inLocalTime(seconds)}.`;
 }
 
 /** Why a session didn't start. */

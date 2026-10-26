@@ -54,7 +54,7 @@ export function createApp(
   const { config } = deps;
   const app = express();
 
-  // Express's own production behaviour follows the config, where an unset NODE_ENV is production.
+  // Express's own production behavior follows the config, where an unset NODE_ENV is production.
   app.set("env", config.NODE_ENV);
   // A hop count or a list of proxy subnets, never `true`: `req.ip`, which the limiters key on, is
   // then the address the last trusted proxy saw (docs/deploy.md).

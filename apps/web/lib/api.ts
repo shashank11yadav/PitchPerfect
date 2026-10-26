@@ -34,7 +34,7 @@ type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 interface ApiFetchOptions<T> {
   method?: Method;
-  /** JSON-serialised, except `FormData`, which is sent as multipart. */
+  /** JSON-serialized, except `FormData`, which is sent as multipart. */
   body?: unknown;
   schema?: Parser<T>;
   signal?: AbortSignal;

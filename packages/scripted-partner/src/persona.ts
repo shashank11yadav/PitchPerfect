@@ -15,7 +15,7 @@ import { type Lines, tradeOf, VOICES, voiceOf } from "./voices.js";
 
 interface Scenario {
   firstName: string;
-  /** Title and organisation, lower case, for telling a buyer from a hiring manager. */
+  /** Title and organization, lower case, for telling a buyer from a hiring manager. */
   who: string;
   objections: string[];
 }

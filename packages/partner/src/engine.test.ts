@@ -403,7 +403,7 @@ describe("the output check on a streamed reply", () => {
     }
   });
 
-  it("blocks what only a moderator recognises, through the model classifier", async () => {
+  it("blocks what only a moderator recognizes, through the model classifier", async () => {
     // Paraphrases the local rules don't know: a threat, drug instructions and a slur in code.
     const harmful = [
       "People who waste my time like this tend to have accidents on the way home.",

@@ -261,7 +261,7 @@ const SCORECARD_JSON =
 const WEAPON_TRADE =
   "(?:proof|squad|shelter|shell|storage|stores|compliance|compliant|safety|regulations?|regulatory|rules|handling|licen[cs]es?|permits?|inspections?|training|disposal|detection|detectors?|screening|sniffing|inventory|tracking|magazines?|records?|reporting|insurance|policy|policies|law|laws|standards?|certification|treaty|treaties|audits?|threats?|scare)";
 const WEAPON_NOUN = `(?:bombs?|explosives|explosive (?:devices?|materials?)|bioweapons?|chemical weapons?|nerve agents?|ghost guns?|untraceable guns?)\\b(?! ${WEAPON_TRADE}\\b)`;
-/** Verbs of looking after weapons someone already has: storing, shipping, labelling, licensing. */
+/** Verbs of looking after weapons someone already has: storing, shipping, labeling, licensing. */
 const WEAPON_UPKEEP =
   "(?:store|stores|storing|stored|transport\\w*|ship|shipping|label\\w*|handle|handling|detect\\w*|dispose|disposing|track|tracking|licen[cs]e|insure|inspect\\w*|audit\\w*|report\\w*|classify|comply|regulate|recogni[sz]e|spot|screen)";
 const HOW_TO =

@@ -48,7 +48,7 @@ export class InvalidCredentialsError extends AppError {
 }
 
 export class ForbiddenError extends AppError {
-  constructor(code: ForbiddenCode = "forbidden", message = "You can't do that") {
+  constructor(code: ForbiddenCode = "forbidden", message = "You can’t do that") {
     super(code, 403, message);
   }
 }
@@ -72,7 +72,7 @@ export class PayloadTooLargeError extends AppError {
 }
 
 export class UnsupportedFileError extends AppError {
-  constructor(message = "That file type isn't supported") {
+  constructor(message = "That file type isn’t supported") {
     super("unsupported_file", 415, message);
   }
 }
@@ -84,7 +84,7 @@ export class RateLimitedError extends AppError {
 }
 
 export class QuotaExceededError extends AppError {
-  constructor(retryAfterSec: number, message = "You've used your practice sessions for now") {
+  constructor(retryAfterSec: number, message = "You’ve reached your practice session limit") {
     super("quota_exceeded", 429, message, undefined, retryAfterSec);
   }
 }
@@ -98,20 +98,20 @@ export class BudgetExhaustedError extends AppError {
 export class TokenLimitError extends AppError {
   constructor(
     retryAfterSec: number,
-    message = "You've used today's practice allowance. It resets at midnight UTC",
+    message = "You’ve used today’s practice allowance. It resets at midnight UTC",
   ) {
     super("token_limit_reached", 429, message, undefined, retryAfterSec);
   }
 }
 
 export class UpstreamError extends AppError {
-  constructor(message = "A service we depend on isn't responding") {
+  constructor(message = "A service we depend on isn’t responding") {
     super("upstream_error", 502, message);
   }
 }
 
 export class PracticeUnavailableError extends AppError {
-  constructor(message = "Practice isn't available right now") {
+  constructor(message = "Practice isn’t available right now") {
     super("practice_unavailable", 503, message);
   }
 }

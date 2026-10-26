@@ -147,7 +147,7 @@ function CompanyFields({
       </Field>
       <Field
         label="Logo URL"
-        hint="Optional. We keep it with your profile, but job pages show your initials for now: PitchPerfect doesn’t load images from other sites."
+        hint="Optional. We keep it with your profile, and job pages show your initials in its place: PitchPerfect doesn’t load images from other sites."
         error={errors.logoUrl}
       >
         <Input {...register("logoUrl")} type="url" inputMode="url" spellCheck={false} />

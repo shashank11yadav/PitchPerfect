@@ -22,12 +22,12 @@ const hiringManager = (role: string | undefined): Scenario => ({
       ? `A mid-sized company hiring for the ${role} role`
       : "A mid-sized company growing its sales team",
     personality: "Friendly but probing",
-    openingLine: `Hi, I'm ${NAME}${role ? `, the hiring manager for the ${role} role` : ""}. Thanks for reaching out. What did you want to talk about?`,
+    openingLine: `Hi, I’m ${NAME}${role ? `, the hiring manager for the ${role} role` : ""}. Thanks for reaching out. What did you want to talk about?`,
   },
   scenarioPrivate: {
     hiddenObjections: [
-      "You don't have much direct experience for this role yet.",
-      "I'm not sure why you want this role rather than something else.",
+      "You don’t have much direct experience for this role yet.",
+      "I’m not sure why you want this role rather than something else.",
     ],
     winConditions: [
       "The student opens with one clear point about themself.",
@@ -45,12 +45,12 @@ const contact = (role: string | undefined): Scenario => ({
       ? `A regional firm with people in the ${role} role`
       : "A regional business services firm",
     personality: "Warm but busy",
-    openingLine: `Hey, good to hear from you. It's Jordan.${role ? ` I heard you're looking at the ${role} role.` : ""} What's up?`,
+    openingLine: `Hey, good to hear from you. It’s Jordan.${role ? ` I heard you’re looking at the ${role} role.` : ""} What’s up?`,
   },
   scenarioPrivate: {
     hiddenObjections: [
-      "I haven't talked to that person in a while.",
-      "I'm not sure I know your work well enough to vouch for you.",
+      "I haven’t talked to that person in a while.",
+      "I’m not sure I know your work well enough to vouch for you.",
     ],
     winConditions: [
       "The student names the exact person they want to meet.",
