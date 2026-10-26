@@ -1,7 +1,8 @@
-import { BadgeCheck } from "lucide-react";
+import { CompanyBadge } from "@/components/jobs/CompanyBadge";
 import { ScoreRing } from "@/components/practice/ScoreRing";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
+import { HIRING_JOB, HOME_APPLICANTS_JOB, type SampleJob } from "./sample-jobs";
 
 interface Applicant {
   name: string;
@@ -12,13 +13,13 @@ interface Applicant {
 }
 
 interface Pipeline {
-  job: string;
+  job: SampleJob;
   applicants: readonly Applicant[];
 }
 
-/** Fictional applicants for an account executive role, on the home page. */
+/** Fictional applicants for an account executive internship, on the home page. */
 const HOME_PIPELINE: Pipeline = {
-  job: "Account executive",
+  job: HOME_APPLICANTS_JOB,
   applicants: [
     {
       name: "Jordan Ellis",
@@ -36,7 +37,7 @@ const HOME_PIPELINE: Pipeline = {
  * interview invite on that page, so the page tells one hiring story.
  */
 export const EMPLOYER_PIPELINE: Pipeline = {
-  job: "Sales development representative",
+  job: HIRING_JOB,
   applicants: [
     { name: "Hannah Lee", detail: "Economics, class of 2025", score: 91, status: "Interview" },
     { name: "Marcus Webb", detail: "Psychology, class of 2026", score: 72, status: "Shortlisted" },
@@ -53,6 +54,7 @@ export function ApplicantsPreview({
   pipeline?: Pipeline;
   floating?: boolean;
 }) {
+  const { job } = pipeline;
   return (
     <figure
       data-ui
@@ -64,12 +66,10 @@ export function ApplicantsPreview({
       <figcaption className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-4">
         <span>
           <span className="block text-caption font-semibold text-muted">Sample applicants</span>
-          <span className="block font-display font-semibold text-navy">{pipeline.job}</span>
+          <span className="block font-display font-semibold text-navy">{job.title}</span>
+          <span className="block text-small text-muted">{job.company.name}</span>
         </span>
-        <Badge tone="success">
-          <BadgeCheck aria-hidden="true" className="size-3.5" />
-          Verified company
-        </Badge>
+        <CompanyBadge verification={job.company.verification} />
       </figcaption>
       <ul className="divide-y divide-border">
         {pipeline.applicants.map(({ name, detail, score, status }) => (

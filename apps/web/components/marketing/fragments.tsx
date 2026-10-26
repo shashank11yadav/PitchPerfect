@@ -1,15 +1,25 @@
 import { getSkill, redactPii, RUBRIC_DIMENSIONS, type SkillSlug } from "@pitchperfect/shared";
+import { seedCompanySlug } from "@pitchperfect/shared/seed-data";
 import { ArrowDown, CalendarClock, FileText, Link2, Mic } from "lucide-react";
 import { CompanyBadge } from "@/components/jobs/CompanyBadge";
+import { formatPay } from "@/components/jobs/PayText";
 import { PersonaCard } from "@/components/practice/PersonaCard";
 import { RubricBar } from "@/components/practice/RubricBar";
 import { Badge } from "@/components/ui/Badge";
 import { PointerText } from "@/components/ui/PointerText";
+import { placeLabel } from "@/lib/job-labels";
+import {
+  APPLIED_JOB,
+  HIRING_JOB,
+  PRACTICE_JOB,
+  SAMPLE_LISTINGS,
+  type SampleJob,
+} from "./sample-jobs";
 import { DISCOVERY_MOMENT, SAMPLE_SCORECARD, SAMPLE_SKILL_TITLE } from "./sample-session";
 
 /*
  * Small pieces of the real product's screens, filled with fictional sample data, used as the
- * pictures on the public pages. Companies come from the seed list; people are invented.
+ * pictures on the public pages. Jobs and companies come from the seed data; people are invented.
  */
 
 /** A lesson's opening card: the skill, its summary, and the two ends of its rubric line. */
@@ -62,18 +72,23 @@ export function PracticeFragment() {
   );
 }
 
+/** A job's company with its badge, as a listing shows it. */
+function CompanyLine({ job }: { job: SampleJob }) {
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-2 text-small text-ink">
+      {job.company.name}
+      <CompanyBadge verification={job.company.verification} />
+    </p>
+  );
+}
+
 /** An application with one scorecard attached. */
 export function ApplyFragment() {
   return (
     <div data-ui className="rounded-[20px] bg-surface p-5 ring-1 ring-border md:p-6">
       <p className="text-caption font-semibold text-muted">Apply</p>
-      <p className="font-display text-lede font-semibold text-navy">
-        Sales development representative
-      </p>
-      <p className="mt-1 flex flex-wrap items-center gap-2 text-small text-ink">
-        Quarrow Logistics Software
-        <CompanyBadge verification="verified" />
-      </p>
+      <p className="font-display text-lede font-semibold text-navy">{APPLIED_JOB.title}</p>
+      <CompanyLine job={APPLIED_JOB} />
       <ul className="mt-4 grid gap-2 text-small text-ink">
         <li className="flex items-center gap-2 rounded-control bg-surface-2 px-3 py-2">
           <FileText aria-hidden="true" className="size-4 text-primary" />
@@ -88,8 +103,6 @@ export function ApplyFragment() {
   );
 }
 
-const JOB_SKILLS = ["Prospecting", "Discovery calls", "Objection handling"];
-
 /** An employer's job post, as it looks once published. */
 export function JobPostFragment() {
   return (
@@ -97,24 +110,22 @@ export function JobPostFragment() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-caption font-semibold text-muted">Job post</p>
-          <p className="font-display text-lede font-semibold text-navy">
-            Sales development representative
-          </p>
+          <p className="font-display text-lede font-semibold text-navy">{HIRING_JOB.title}</p>
         </div>
         <Badge tone="success">Published</Badge>
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-2 text-small">
         <div className="rounded-control bg-surface-2 px-3 py-2">
           <dt className="text-ink">Pay</dt>
-          <dd className="font-semibold text-ink">$52,000 to $60,000 a year</dd>
+          <dd className="font-semibold text-ink">{formatPay(HIRING_JOB.pay)}</dd>
         </div>
         <div className="rounded-control bg-surface-2 px-3 py-2">
-          <dt className="text-ink">Workplace</dt>
-          <dd className="font-semibold text-ink">Hybrid, Denver</dd>
+          <dt className="text-ink">Location</dt>
+          <dd className="font-semibold text-ink">{placeLabel(HIRING_JOB)}</dd>
         </div>
       </dl>
       <ul aria-label="Skills" className="mt-3 flex flex-wrap gap-1.5">
-        {JOB_SKILLS.map((name) => (
+        {HIRING_JOB.skills.map((name) => (
           <li
             key={name}
             className="rounded-pill bg-primary-soft px-2.5 py-0.5 text-caption font-semibold text-ink"
@@ -133,7 +144,7 @@ export function InviteFragment() {
     <div data-ui className="rounded-[20px] bg-surface p-5 ring-1 ring-border md:p-6">
       <p className="text-caption font-semibold text-muted">Interview invite</p>
       <p className="font-display text-lede font-semibold text-navy">Hannah Lee</p>
-      <p className="text-small text-ink">Sales development representative</p>
+      <p className="text-small text-ink">{HIRING_JOB.title}</p>
       <ul className="mt-4 grid gap-2 text-small text-ink">
         <li className="flex items-center gap-2 rounded-control bg-surface-2 px-3 py-2">
           <CalendarClock aria-hidden="true" className="size-4 text-primary" />
@@ -141,7 +152,7 @@ export function InviteFragment() {
         </li>
         <li className="flex items-center gap-2 rounded-control bg-surface-2 px-3 py-2">
           <Link2 aria-hidden="true" className="size-4 text-primary" />
-          meet.example/quarrow-sdr
+          meet.example/{seedCompanySlug(HIRING_JOB.company)}-sdr
         </li>
       </ul>
       <p className="mt-3 text-small text-ink">Sent by email. It also shows in her applications.</p>
@@ -149,26 +160,14 @@ export function InviteFragment() {
   );
 }
 
-const LISTINGS = [
-  {
-    title: "Sales development representative",
-    company: "Quarrow Logistics Software",
-    verified: true,
-  },
-  { title: "Inside sales associate", company: "Orvexa Payments", verified: false },
-] as const;
-
 /** Two job listings as candidates see them: one verified company, one not yet. */
 export function ListingsFragment() {
   return (
     <ul data-ui className="grid gap-3">
-      {LISTINGS.map(({ title, company, verified }) => (
-        <li key={title} className="rounded-[20px] bg-surface p-5 ring-1 ring-border">
-          <p className="font-display text-lede font-semibold text-navy">{title}</p>
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-small text-ink">
-            {company}
-            <CompanyBadge verification={verified ? "verified" : "unverified"} />
-          </p>
+      {SAMPLE_LISTINGS.map((job) => (
+        <li key={job.title} className="rounded-[20px] bg-surface p-5 ring-1 ring-border">
+          <p className="font-display text-lede font-semibold text-navy">{job.title}</p>
+          <CompanyLine job={job} />
         </li>
       ))}
     </ul>
@@ -199,8 +198,10 @@ export function JobPracticeFragment() {
   return (
     <div data-ui className="rounded-[20px] bg-surface p-5 ring-1 ring-border md:p-6">
       <p className="text-caption font-semibold text-muted">Job</p>
-      <p className="font-display text-lede font-semibold text-navy">Inside sales associate</p>
-      <p className="mt-1 text-small text-ink">Lumivale Learning Systems, remote</p>
+      <p className="font-display text-lede font-semibold text-navy">{PRACTICE_JOB.title}</p>
+      <p className="mt-1 text-small text-ink">
+        {PRACTICE_JOB.company.name} · {placeLabel(PRACTICE_JOB)}
+      </p>
       <span className="mt-4 inline-flex h-10 items-center rounded-pill bg-primary px-4 text-small font-semibold text-white">
         Practice for this job
       </span>

@@ -1,8 +1,76 @@
 import { redactPii } from "@pitchperfect/shared";
-import { render, screen } from "@testing-library/react";
+import { SEED_COMPANIES, SEED_JOBS } from "@pitchperfect/shared/seed-data";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { RedactionFragment, ScoredLineFragment } from "./fragments";
+import { ApplicantsPreview, EMPLOYER_PIPELINE } from "./ApplicantsPreview";
+import {
+  ApplyFragment,
+  InviteFragment,
+  JobPostFragment,
+  JobPracticeFragment,
+  ListingsFragment,
+  RedactionFragment,
+  ScoredLineFragment,
+} from "./fragments";
 import { DISCOVERY_MOMENT } from "./sample-session";
+
+/** Title and company of every active job on the seeded board. */
+const BOARD = SEED_JOBS.filter((job) => job.status === "active").map((job) => ({
+  title: job.title,
+  company: SEED_COMPANIES[job.company]?.name ?? "",
+}));
+
+describe("the sample jobs on the public pages", () => {
+  it("are jobs on the seeded board, shown with their company", () => {
+    const { container } = render(
+      <>
+        <ApplyFragment />
+        <JobPracticeFragment />
+        <ApplicantsPreview />
+        <ApplicantsPreview pipeline={EMPLOYER_PIPELINE} />
+      </>,
+    );
+    render(<ListingsFragment />);
+    const pictures = [
+      ...container.querySelectorAll("[data-ui]"),
+      ...screen.getAllByRole("listitem").filter((item) => item.closest("ul[data-ui]")),
+    ];
+    expect(pictures).toHaveLength(6);
+    for (const picture of pictures) {
+      const text = picture.textContent;
+      const onBoard = BOARD.some((job) => text.includes(job.title) && text.includes(job.company));
+      expect(onBoard, text).toBe(true);
+    }
+  });
+
+  it("show the hiring job's real pay, place and skills in the job post", () => {
+    render(<JobPostFragment />);
+    const seeded = SEED_JOBS.find(
+      (job) =>
+        job.title === "Sales development representative" &&
+        SEED_COMPANIES[job.company]?.name === "Zentrova Analytics",
+    );
+    expect(screen.getByText("$52,000–$60,000 per year + commission")).toBeInTheDocument();
+    expect(screen.getByText("Boston, MA (hybrid)")).toBeInTheDocument();
+    const skills = within(screen.getByRole("list", { name: "Skills" })).getAllByRole("listitem");
+    expect(skills.map((skill) => skill.textContent)).toEqual(seeded?.skills);
+  });
+
+  it("name the same job in the invite as in the employers page applicants", () => {
+    render(<InviteFragment />);
+    expect(screen.getByText(EMPLOYER_PIPELINE.job.title)).toBeInTheDocument();
+    expect(screen.getByText("meet.example/zentrova-analytics-sdr")).toBeInTheDocument();
+  });
+});
+
+describe("ApplicantsPreview", () => {
+  it("shows a dash, labelled for screen readers, for an applicant with no scorecard", () => {
+    render(<ApplicantsPreview />);
+    const empty = screen.getByRole("img", { name: "No scorecard shared" });
+    expect(empty).toHaveTextContent("—");
+    expect(screen.queryByText("None")).not.toBeInTheDocument();
+  });
+});
 
 describe("RedactionFragment", () => {
   it("shows exactly what the real redaction makes of the typed turn", () => {
