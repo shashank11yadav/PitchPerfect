@@ -122,6 +122,23 @@ export function signupAttemptExistingAccount(signinLink: string, resetLink: stri
   });
 }
 
+/**
+ * Sent to an address that already has an account when another account asks to move to it. The
+ * person who asked sees the same answer as for a free address and gets nothing.
+ */
+export function emailChangeToExistingAccount(signinLink: string, resetLink: string): EmailContent {
+  return render(`Someone tried to move a ${BRAND} account to your email`, {
+    heading: "You already have an account",
+    paragraphs: [
+      `Someone signed in to another ${BRAND} account asked to change its email address to this one. You already have an account with this address, so nothing was changed.`,
+      "If that was you, sign in to this account instead. Forgot its password? You can reset it.",
+    ],
+    action: { label: "Sign in", url: signinLink },
+    secondary: { label: "Reset your password", url: resetLink },
+    footnotes: ["If it wasn't you, you can ignore this email. Your account stays as it is."],
+  });
+}
+
 /** Sent to the previous address after an email change, so a takeover can't go unnoticed. */
 export function emailChanged(): EmailContent {
   return render(`Your ${BRAND} email was changed`, {

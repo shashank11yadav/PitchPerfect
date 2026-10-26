@@ -9,13 +9,14 @@ import type {
 } from "@pitchperfect/shared";
 import { ValidationError } from "../../errors.js";
 import { userOf } from "../../middleware/auth.js";
-import { destroySession, regenerateSession } from "../../middleware/session.js";
+import { destroySession, regenerateSession, sessionVersionOf } from "../../middleware/session.js";
 import { getInput } from "../../middleware/validate.js";
 import { practicePartnerOf } from "../../services/coach-probe.js";
 import { streamResume } from "../../services/files.js";
 import type { ProfileDeps } from "./routes.js";
-import { changeEmail, changePassword, requireCurrentPassword } from "./credentials.js";
+import { changePassword, requireCurrentPassword } from "./credentials.js";
 import { deleteAccount } from "./deletion.js";
+import { requestEmailChange } from "./email-change.js";
 import {
   recordPracticeConsent,
   removeResume,
@@ -50,7 +51,10 @@ export function profileHandlers(deps: ProfileDeps) {
 
   const email: RequestHandler = async (req, res) => {
     const { body } = getInput<{ body: typeof ChangeEmailSchema }>(res);
-    const identity = await changeEmail(deps, req.log, userOf(res).id, body);
+    const { id, role } = userOf(res);
+    const current = { userId: id, role, sessionVersion: sessionVersionOf(req) };
+    const identity = await requestEmailChange(deps, req.log, current, body);
+    // A new session id whether or not the address was free, so the answers can't be told apart.
     await regenerateSession(req, identity, { preserveCreatedAt: true });
     res.json(OK);
   };

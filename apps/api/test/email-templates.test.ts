@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applicationsClosed,
+  emailChangeToExistingAccount,
   emailChanged,
   interviewScheduled,
   resetPassword,
@@ -39,6 +40,19 @@ describe("email templates", () => {
     expect(email.text).toContain("http://localhost:3000/forgot-password");
     expect(email.html).toContain('href="http://localhost:3000/signin"');
     expect(email.html).toContain('href="http://localhost:3000/forgot-password"');
+  });
+
+  it("emailChangeToExistingAccount offers sign-in and password reset, and no verification link", () => {
+    const email = emailChangeToExistingAccount(
+      "http://localhost:3000/signin",
+      "http://localhost:3000/forgot-password",
+    );
+
+    expect(email.text).toContain("http://localhost:3000/signin");
+    expect(email.text).toContain("http://localhost:3000/forgot-password");
+    expect(email.text).toMatch(/nothing was changed/);
+    expect(email.text).not.toContain("token=");
+    expect(email.subject).not.toMatch(/verify/i);
   });
 
   it("interviewScheduled shows the job, company, UTC time and meeting link, escaped", () => {

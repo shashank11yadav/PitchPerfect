@@ -1,13 +1,16 @@
+import argon2 from "argon2";
 import mongoose from "mongoose";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthToken, Company, User } from "../src/db/models/index.js";
 import { createToken } from "../src/services/tokens.js";
+import type { MailMessage } from "../src/services/mailer.js";
 import { verifyPassword } from "../src/services/passwords.js";
 import { makeTestApp } from "./helpers/app.js";
 import { csrfAgent, withCsrf } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
 import { errorOf } from "./helpers/error-body.js";
+import { FakeMailer } from "./helpers/fake-mailer.js";
 import { createEmployer, createStudent, signIn, TEST_PASSWORD } from "./helpers/factories.js";
 
 useTestDb();
@@ -151,15 +154,107 @@ describe("POST /api/me/change-email", () => {
     expect(mailer.sent).toHaveLength(0);
   });
 
-  it("refuses an address that is already in use", async () => {
-    const { email, password } = await createStudent();
-    const taken = await createStudent({ email: "taken@example.test" });
-    const session = await signIn(request.agent(app), email, password);
+  /** Two signed-in students: one asks for a free address, the other for one that has an account. */
+  async function freeAndTakenChanges(target = app) {
+    const owner = await createStudent({ email: "owner@example.test" });
+    const free = await createStudent();
+    const taken = await createStudent();
+    const freeSession = await signIn(request.agent(target), free.email, free.password);
+    const takenSession = await signIn(request.agent(target), taken.email, taken.password);
+    return { owner, free, taken, freeSession, takenSession };
+  }
 
-    const res = await change(session, { currentPassword: password, newEmail: taken.email });
+  const cookieNames = (res: { headers: Record<string, unknown> }) =>
+    ((res.headers["set-cookie"] ?? []) as string[]).map((cookie) => cookie.split("=")[0]).sort();
 
-    expect(res.status).toBe(409);
-    expect(errorOf(res).code).toBe("email_taken");
+  it("answers an address that is already in use exactly like a free one", async () => {
+    const { free, taken, owner, freeSession, takenSession } = await freeAndTakenChanges();
+
+    const toFree = await change(freeSession, { currentPassword: free.password, newEmail });
+    const toTaken = await change(takenSession, {
+      currentPassword: taken.password,
+      newEmail: owner.email,
+    });
+
+    expect(toTaken.status).toBe(toFree.status);
+    expect(toTaken.status).toBe(200);
+    expect(toTaken.body).toEqual(toFree.body);
+    expect(Object.keys(toTaken.headers).sort()).toEqual(Object.keys(toFree.headers).sort());
+    // Both get a new session id, so the CSRF token held before stops matching in both.
+    expect(cookieNames(toTaken)).toEqual(cookieNames(toFree));
+    expect(cookieNames(toTaken)).toContain("pp.sid");
+    for (const session of [freeSession, takenSession]) {
+      const stale = await change(session, { currentPassword: "not-my-password-1", newEmail });
+      expect(errorOf(stale).code).toBe("csrf_failed");
+    }
+  });
+
+  it("changes nothing for an address in use, and sends its owner a notice instead of a link", async () => {
+    const employer = await createEmployer();
+    const owner = await createStudent({ email: "owner@example.test" });
+    const session = await signIn(request.agent(app), employer.email, employer.password);
+    const before = await User.findById(employer.user._id).lean();
+
+    await change(session, {
+      currentPassword: employer.password,
+      newEmail: "Owner@Example.test",
+    }).expect(200);
+
+    const after = await User.findById(employer.user._id).lean();
+    expect(after?.email).toBe(employer.email);
+    expect(after?.emailVerifiedAt).toEqual(before?.emailVerifiedAt);
+    expect((await Company.findById(employer.company._id))?.verification).toBe("verified");
+    expect(await AuthToken.countDocuments()).toBe(0);
+    expect((await User.findById(owner.user._id).lean())?.email).toBe(owner.email);
+    await session.agent.get("/api/auth/me").expect(200);
+
+    expect(mailer.sent).toHaveLength(1);
+    const notice = mailer.sent[0];
+    expect(notice?.to).toBe(owner.email);
+    expect(notice?.subject).not.toMatch(/verify/i);
+    expect(notice?.text).not.toContain("token=");
+    expect(notice?.text).toContain("/forgot-password");
+  });
+
+  it("does the same work either way: one password check, and no wait for the mail server", async () => {
+    // A mail server that never answers: neither answer may wait for it.
+    class StalledMailer extends FakeMailer {
+      override send(message: MailMessage): Promise<void> {
+        this.sent.push(message);
+        return new Promise(() => undefined);
+      }
+    }
+    const stalled = makeTestApp({ mailer: new StalledMailer() });
+    const { free, taken, owner, freeSession, takenSession } = await freeAndTakenChanges(
+      stalled.app,
+    );
+    const verify = vi.spyOn(argon2, "verify");
+    const hash = vi.spyOn(argon2, "hash");
+
+    await change(freeSession, { currentPassword: free.password, newEmail }).expect(200);
+    const freeCalls = { verify: verify.mock.calls.length, hash: hash.mock.calls.length };
+    verify.mockClear();
+    hash.mockClear();
+    await change(takenSession, { currentPassword: taken.password, newEmail: owner.email }).expect(
+      200,
+    );
+
+    expect({ verify: verify.mock.calls.length, hash: hash.mock.calls.length }).toEqual(freeCalls);
+    expect(freeCalls).toEqual({ verify: 1, hash: 0 });
+    expect(stalled.mailer.sent.map((message) => message.to)).toContain(owner.email);
+  });
+
+  it("checks the password before anything else, taken address or not", async () => {
+    const { taken, owner, takenSession } = await freeAndTakenChanges();
+
+    const wrong = await change(takenSession, {
+      currentPassword: "not-my-password-1",
+      newEmail: owner.email,
+    });
+
+    expect(wrong.status).toBe(401);
+    expect(errorOf(wrong).code).toBe("invalid_credentials");
+    expect((await User.findById(taken.user._id))?.email).toBe(taken.email);
     expect(mailer.sent).toHaveLength(0);
   });
 
