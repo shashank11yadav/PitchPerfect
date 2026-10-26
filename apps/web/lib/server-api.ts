@@ -1,8 +1,7 @@
 import "server-only";
+import { TIMEOUTS } from "@pitchperfect/shared";
 import { ApiError, toApiError, type Parser } from "./api";
 import { proxySecret } from "./proxy-secret";
-
-const TIMEOUT_MS = 5_000;
 
 /**
  * Calls the api directly from the server (pages, sitemap), never cached, and parses the JSON body
@@ -22,7 +21,7 @@ export async function serverApi<T>(path: string, schema: Parser<T>): Promise<T> 
     res = await fetch(`${origin}${path}`, {
       headers,
       cache: "no-store",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(TIMEOUTS.serverApiMs),
     });
   } catch {
     throw new ApiError(0, "network_error", "The api could not be reached");

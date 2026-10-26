@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
+import { TIMEOUTS } from "@pitchperfect/shared/timeouts";
 
 /** Only an explicit development run (`next dev`, plain http) leaves HSTS out; unset is production. */
 const isDev = process.env.NODE_ENV === "development";
@@ -33,9 +34,9 @@ const serverConfig: NextConfig = {
   ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),
   images: { remotePatterns: [] },
   experimental: {
-    // Socket idle time allowed on proxied api calls. Above the api's 35 s practice partner
-    // timeout, so a slow scoring call isn't cut off by the proxy first.
-    proxyTimeout: 60_000,
+    // Socket idle time allowed on proxied api calls. Above the longest silent api request (ending
+    // a session behind a turn, then scoring it), so the proxy never cuts one off first.
+    proxyTimeout: TIMEOUTS.webProxyMs,
   },
   headers: () => Promise.resolve([{ source: "/:path*", headers: securityHeaders }]),
   rewrites: () =>

@@ -7,6 +7,7 @@ import {
   secret,
   unsetIfEmpty,
 } from "@pitchperfect/shared/env";
+import { TIMEOUTS } from "@pitchperfect/shared/timeouts";
 import { z } from "zod";
 
 const PROVIDER_KEYS = { openai: "OPENAI_API_KEY", anthropic: "ANTHROPIC_API_KEY" } as const;
@@ -44,10 +45,10 @@ const envSchema = z
     ANTHROPIC_API_KEY: optional(z.string()),
     COACH_MODEL: optional(z.string()),
     COACH_SCORING_MODEL: optional(z.string()),
-    COACH_TIMEOUT_MS: integer(30_000),
+    COACH_TIMEOUT_MS: integer(TIMEOUTS.providerCallMs),
     // Unset picks one; see moderatorFor().
     COACH_MODERATOR: optional(z.enum(["openai", "model", "none"])),
-    COACH_MODERATION_TIMEOUT_MS: integer(5_000),
+    COACH_MODERATION_TIMEOUT_MS: integer(TIMEOUTS.moderationMs),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production" && !env.COACH_PROVIDER) {

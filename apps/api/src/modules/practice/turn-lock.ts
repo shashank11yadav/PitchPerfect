@@ -1,8 +1,9 @@
 import mongoose from "mongoose";
+import { TIMEOUTS } from "@pitchperfect/shared";
 import { PracticeAttempt } from "../../db/models/index.js";
 
-/** Longer than the coach call timeout (35 s), so a live turn never loses its lock. */
-export const TURN_LOCK_MS = 45_000;
+/** Longer than the coach call timeout, so a live turn never loses its lock. */
+export const TURN_LOCK_MS = TIMEOUTS.turnLockMs;
 
 export type LockedAttempt = NonNullable<Awaited<ReturnType<typeof lockAttempt>>>;
 

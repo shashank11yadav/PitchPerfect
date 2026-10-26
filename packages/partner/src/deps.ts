@@ -1,4 +1,4 @@
-import type { Usage } from "@pitchperfect/shared";
+import { TIMEOUTS, type Usage } from "@pitchperfect/shared";
 import type { ZodType } from "zod";
 import { containsCanary } from "./guardrails/canary.js";
 import { CircuitBreaker, withRetry, withTimeout } from "./guardrails/circuit-breaker.js";
@@ -60,7 +60,7 @@ export function reliably<T>(
 ): Promise<T> {
   return deps.breaker.exec(() =>
     withRetry(() => call(withTimeout(deps.config.COACH_TIMEOUT_MS, signal)), {
-      retries: 1,
+      retries: TIMEOUTS.providerRetries,
       signal,
     }),
   );

@@ -23,6 +23,7 @@ import {
   signalsSelfHarm,
   STAGES,
   SUPPORT_LINE,
+  TIMEOUTS,
   type AttemptListQuery,
   type AttemptSummary,
   type AttemptView,
@@ -55,8 +56,6 @@ import { readDemoState, updateDemoState, type StoredAttempt } from "./store";
 
 const MIN_SCORED_TURNS = 2;
 const SESSION_MS = LIMITS.sessionSeconds * 1000;
-/** The coach's own per-call timeout; the scripted partner answers at once anyway. */
-const TIMEOUT_MS = 30_000;
 /** Job text handed to the planner is clipped as the api clips it. */
 const JOB_TEXT_MAX_CHARS = 4000;
 /** The coach's turn-request transcript cap. */
@@ -64,7 +63,11 @@ const TRANSCRIPT_MAX = 40;
 
 /** Each call gets its own seed, so a visitor who practices twice meets a different buyer. */
 const depsFor = (seed: number): PracticeDeps =>
-  createPracticeDeps({ COACH_TIMEOUT_MS: TIMEOUT_MS }, new FakeProvider({ seed }));
+  createPracticeDeps(
+    // The coach's own per-call timeout; the scripted partner answers at once anyway.
+    { COACH_TIMEOUT_MS: TIMEOUTS.providerCallMs },
+    new FakeProvider({ seed }),
+  );
 
 const notFound = () => new ApiError(404, "not_found", "We can’t find that session.");
 

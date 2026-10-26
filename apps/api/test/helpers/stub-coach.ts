@@ -1,4 +1,5 @@
 import type { AddressInfo } from "node:net";
+import { TIMEOUTS } from "@pitchperfect/shared";
 import { buildCoachApp, type CoachAppOptions } from "@pitchperfect/coach/app";
 
 interface InjectedFailure {
@@ -39,9 +40,9 @@ export async function startStubCoach(sharedSecret: string): Promise<StubCoach> {
     ANTHROPIC_API_KEY: undefined,
     COACH_MODEL: undefined,
     COACH_SCORING_MODEL: undefined,
-    COACH_TIMEOUT_MS: 30_000,
+    COACH_TIMEOUT_MS: TIMEOUTS.providerCallMs,
     COACH_MODERATOR: "none",
-    COACH_MODERATION_TIMEOUT_MS: 5_000,
+    COACH_MODERATION_TIMEOUT_MS: TIMEOUTS.moderationMs,
     isProd: false,
   };
   const app = buildCoachApp({ config });

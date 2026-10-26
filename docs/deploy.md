@@ -74,7 +74,7 @@ The browser only talks to web. Next.js rewrites `/api/*` to `${API_ORIGIN}/api/*
 Practice turns stream as server-sent events through the same rewrite:
 
 - The api sends `Cache-Control: no-store, no-transform`. Without `no-transform`, Next.js gzips the proxied response and holds the whole stream until it ends.
-- `experimental.proxyTimeout` is 60 s. That is the longest a proxied request may sit idle, and it is above the api's 35 s practice partner timeout.
+- `experimental.proxyTimeout` is 90 s (`TIMEOUTS.webProxyMs` in `packages/shared/src/timeouts.ts`). That is the longest a proxied request may sit idle. Ending a session is the longest silent api request: it can wait out a turn's 45 s lock and then spend the api's 35 s practice partner timeout on scoring.
 - A proxy in front of web must not buffer `text/event-stream` responses either. The api also sends `X-Accel-Buffering: no` for nginx.
 
 Every page is rendered per request, because the CSP nonce is new on each request. Static pages would carry no nonce, and the browser would block their scripts.

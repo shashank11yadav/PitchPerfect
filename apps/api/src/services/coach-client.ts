@@ -4,6 +4,7 @@ import {
   CoachScoreResponseSchema,
   CoachTurnEvent,
   readSseMessages,
+  TIMEOUTS,
   type CoachPlanRequest,
   type CoachPlanResponse,
   type CoachScoreRequest,
@@ -44,10 +45,6 @@ export interface CoachClient {
   turn(req: CoachTurnRequest, signal: AbortSignal): AsyncIterable<CoachTurnEvent>;
   score(req: CoachScoreRequest, signal?: AbortSignal): Promise<CoachScoreResponse>;
 }
-
-const HEALTH_TIMEOUT_MS = 2000;
-/** Above the coach's own 30 s provider timeout, so the coach reports its failures itself. */
-const CALL_TIMEOUT_MS = 35_000;
 
 const DOWN: CoachHealth = { status: "down", provider: undefined };
 
@@ -115,7 +112,7 @@ async function* readEvents(body: ReadableStream<Uint8Array>): AsyncGenerator<Coa
 
 /**
  * Talks to the coach over HTTP. Every practice call is HMAC-signed over the exact body sent and
- * gives up after 35 s.
+ * gives up after `TIMEOUTS.coachCallMs`.
  */
 export function createHttpCoachClient(
   config: Pick<Config, "COACH_URL" | "COACH_SHARED_SECRET">,
@@ -130,7 +127,7 @@ export function createHttpCoachClient(
         Date.now() / 1000,
       ),
     };
-    const timeout = AbortSignal.timeout(CALL_TIMEOUT_MS);
+    const timeout = AbortSignal.timeout(TIMEOUTS.coachCallMs);
     try {
       const res = await fetch(new URL(path, config.COACH_URL), {
         method: "POST",
@@ -168,7 +165,7 @@ export function createHttpCoachClient(
     async health() {
       try {
         const res = await fetch(new URL("/healthz", config.COACH_URL), {
-          signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS),
+          signal: AbortSignal.timeout(TIMEOUTS.coachHealthMs),
         });
         if (!res.ok) return DOWN;
         return { status: "ok", provider: providerOf(await res.json().catch(() => null)) };

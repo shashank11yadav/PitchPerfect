@@ -12,6 +12,9 @@ const alias = {
   "@pitchperfect/shared/hmac": fileURLToPath(
     new URL("./packages/shared/src/hmac.ts", import.meta.url),
   ),
+  "@pitchperfect/shared/timeouts": fileURLToPath(
+    new URL("./packages/shared/src/timeouts.ts", import.meta.url),
+  ),
   "@pitchperfect/shared/seed-data": fileURLToPath(
     new URL("./packages/shared/src/seed-data.ts", import.meta.url),
   ),

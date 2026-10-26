@@ -1,7 +1,7 @@
 import type { ServerResponse } from "node:http";
-import type { CoachTurnEvent } from "@pitchperfect/shared";
+import { TIMEOUTS, type CoachTurnEvent } from "@pitchperfect/shared";
 
-export const HEARTBEAT_MS = 15_000;
+export const HEARTBEAT_MS = TIMEOUTS.coachHeartbeatMs;
 
 const HEADERS = {
   "content-type": "text/event-stream; charset=utf-8",
