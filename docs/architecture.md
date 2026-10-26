@@ -45,8 +45,8 @@ apps/
         jobs/               public listing, job detail, save/unsave
         applications/       apply, withdraw, student list
         employer/           company, jobs CRUD, applicant pipeline, interviews, dashboard
-        practice/           sessions, turns (SSE proxy), end/score, attempts, quota
-        health/             GET /api/health: database, coach probe, partner kind
+        practice/           sessions, turns (SSE proxy), end/score, attempts, quota, partner kind
+        health/             GET /api/health: liveness (database, coach probe)
       services/             mailer, email-templates, passwords, password-policy, tokens, html-sanitizer, coach-client, coach-probe, company-verification, files (GridFS)
       scripts/              CLI entries (seed, admin, purge-expired), their run-*.ts logic, and the --demo accounts and company
     test/                   integration tests (supertest + mongodb-memory-server)
