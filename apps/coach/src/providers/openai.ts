@@ -19,7 +19,10 @@ const toUsage = (usage: CompletionUsage) => ({
   outputTokens: usage.completion_tokens,
 });
 
-/** Chat Completions with streaming, strict JSON-schema structured output, and moderation. */
+/**
+ * Chat Completions with streaming and strict JSON-schema structured output. Moderation is the
+ * separate `OpenAiModerator`, so it can also serve an Anthropic deployment.
+ */
 export class OpenAiProvider extends SdkProvider implements LlmProvider {
   readonly name = "openai";
   readonly #client: OpenAI;
@@ -95,19 +98,5 @@ export class OpenAiProvider extends SdkProvider implements LlmProvider {
       throw new ProviderError("invalid_structured_output", { detail: "No structured output" });
     }
     return parseStructured(content, input.schema);
-  }
-
-  /** The moderation endpoint reports no token usage, so nothing is metered. */
-  async moderate(text: string, signal: AbortSignal): Promise<{ flagged: boolean }> {
-    try {
-      // No model is named: the endpoint's default moderation model is used.
-      const response = await this.#client.moderations.create(
-        { input: text },
-        this.requestOptions(signal),
-      );
-      return { flagged: response.results.some((result) => result.flagged) };
-    } catch (error) {
-      throw this.toProviderError(error, signal);
-    }
   }
 }

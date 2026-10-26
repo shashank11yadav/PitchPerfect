@@ -1,7 +1,6 @@
 import { LIMITS } from "@pitchperfect/shared";
-import type { LlmProvider, UsageMeter } from "../provider.js";
 import { containsCanary } from "./canary.js";
-import { ruleCheck } from "./guard-rules.js";
+import { replyRuleCheck } from "./reply-rules.js";
 
 const LINK = /\[([^\]]*)\]\([^)]*\)/g;
 const HEADING = /^[ \t]{0,3}#{1,6}[ \t]+/gm;
@@ -39,26 +38,23 @@ export function capReply(text: string, maxWords: number = LIMITS.replyMaxWords):
 }
 
 export type OutputCheck =
-  { ok: true; text: string } | { ok: false; reason: "canary" | "moderation" | "empty" };
+  { ok: true; text: string } | { ok: false; reason: "canary" | "rules" | "moderation" | "empty" };
+
+/** Resolves true when moderation flags the text. It fails closed: an error counts as flagged. */
+export type FlagCheck = (text: string) => Promise<boolean>;
 
 /**
- * Checks a model reply before it reaches the student: canary leak, then markdown/length cleanup,
- * then moderation (the provider's where it has one, else the rule filter). A moderation call
- * that errors propagates, so callers fail closed.
+ * Checks a whole model reply before it is final: canary leak, the local reply rules (on the raw
+ * text, so a markdown link's address is seen), markdown/length cleanup, then moderation when the
+ * host has a moderator.
  */
-export async function checkOutput(
-  text: string,
-  provider: LlmProvider,
-  signal: AbortSignal,
-  meter?: UsageMeter,
-): Promise<OutputCheck> {
+export async function checkOutput(text: string, flagged?: FlagCheck): Promise<OutputCheck> {
   if (containsCanary(text)) return { ok: false, reason: "canary" };
+  if (replyRuleCheck(text) !== null) return { ok: false, reason: "rules" };
 
   const cleaned = capReply(text);
   if (cleaned === "") return { ok: false, reason: "empty" };
 
-  const flagged = provider.moderate
-    ? (await provider.moderate(cleaned, signal, meter)).flagged
-    : ruleCheck(cleaned) === "harmful";
-  return flagged ? { ok: false, reason: "moderation" } : { ok: true, text: cleaned };
+  if (flagged && (await flagged(cleaned))) return { ok: false, reason: "moderation" };
+  return { ok: true, text: cleaned };
 }

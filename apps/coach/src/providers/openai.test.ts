@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { devEnv } from "../../test/helpers/env.js";
 import { loadCoachConfig } from "../config.js";
+import { OpenAiModerator } from "./openai-moderator.js";
 import { OpenAiProvider } from "./openai.js";
 import { createUsageMeter, ProviderError, TASK_TAGS, type UsageMeter } from "./index.js";
 
@@ -62,10 +63,10 @@ const guard = (
 const turnInput = { system: TASK_TAGS.turn, messages, maxTokens: 200, temperature: 0.7 };
 
 describe("OpenAiProvider", () => {
-  it("is named openai and exposes moderation", () => {
+  it("is named openai and leaves moderation to the moderator", () => {
     const provider = new OpenAiProvider({ config, client: fakeClient(() => null).client });
     expect(provider.name).toBe("openai");
-    expect(typeof provider.moderate).toBe("function");
+    expect("moderate" in provider).toBe(false);
   });
 
   describe("chatStream", () => {
@@ -322,32 +323,37 @@ describe("OpenAiProvider", () => {
       expect((error as Error).message).not.toMatch(/secret upstream detail/);
     });
   });
+});
 
-  describe("moderate", () => {
-    it("calls the moderation endpoint and reports whether any result is flagged", async () => {
-      const { client, moderationsCreate } = fakeClient(
-        () => null,
-        () => ({ results: [{ flagged: false }, { flagged: true }] }),
-      );
-      const provider = new OpenAiProvider({ config, client });
-      const controller = new AbortController();
-      expect(await provider.moderate("some reply", controller.signal)).toEqual({ flagged: true });
-      expect(moderationsCreate).toHaveBeenCalledWith(
-        { input: "some reply" },
-        { signal: controller.signal, timeout: 12345 },
-      );
-    });
+describe("OpenAiModerator", () => {
+  const moderator = (client: OpenAI) =>
+    new OpenAiModerator({ apiKey: "test-key", timeoutMs: 4321, client });
 
-    it("maps moderation failures to a ProviderError", async () => {
-      const { client } = fakeClient(
-        () => null,
-        () => {
-          throw APIError.generate(429, undefined, "slow down", new Headers());
-        },
-      );
-      await expect(
-        new OpenAiProvider({ config, client }).moderate("x", new AbortController().signal),
-      ).rejects.toMatchObject({ code: "rate_limited" });
+  it("calls the moderation endpoint and reports whether any result is flagged", async () => {
+    const { client, moderationsCreate } = fakeClient(
+      () => null,
+      () => ({ results: [{ flagged: false }, { flagged: true }] }),
+    );
+    const controller = new AbortController();
+    expect(moderator(client).name).toBe("openai");
+    expect(await moderator(client).moderate("some reply", controller.signal)).toEqual({
+      flagged: true,
     });
+    expect(moderationsCreate).toHaveBeenCalledWith(
+      { input: "some reply" },
+      { signal: controller.signal, timeout: 4321 },
+    );
+  });
+
+  it("maps moderation failures to a ProviderError", async () => {
+    const { client } = fakeClient(
+      () => null,
+      () => {
+        throw APIError.generate(429, undefined, "slow down", new Headers());
+      },
+    );
+    await expect(
+      moderator(client).moderate("x", new AbortController().signal),
+    ).rejects.toMatchObject({ code: "rate_limited" });
   });
 });

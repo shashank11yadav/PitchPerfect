@@ -2,8 +2,10 @@ import { RUBRIC_KEYS, type CoachTurnEvent, type CoachTurnRequest } from "@pitchp
 import { describe, expect, it } from "vitest";
 import { createPracticeDeps, type PracticeDeps } from "./deps.js";
 import { FakeProvider } from "./fake/fake.js";
+import { createModelModerator } from "./guardrails/moderator.js";
 import { planScenario } from "./plan.js";
-import { createUsageMeter, type LlmProvider } from "./provider.js";
+import { FALLBACK_LINE } from "./prompts/fixed-lines.js";
+import { createUsageMeter, type LlmProvider, type Moderator } from "./provider.js";
 import { NotEnoughTurnsError, scoreTranscript } from "./score.js";
 import { runTurn } from "./turn/run-turn.js";
 
@@ -24,7 +26,11 @@ function live(category: "ok" | "off_topic" | "prompt_attack" | "harmful"): Pract
 }
 
 /** Runs one turn and collects what the sink was given. */
-async function turn(text: string, transcript: CoachTurnRequest["transcript"] = [], d = deps()) {
+async function turn(
+  text: string,
+  transcript: CoachTurnRequest["transcript"] = [],
+  d: PracticeDeps = deps(),
+) {
   const plan = await planScenario(d, { skill: "pitching" }, signal());
   const events: CoachTurnEvent[] = [];
   const result = await runTurn(
@@ -180,5 +186,76 @@ describe("strikes", () => {
   it("answers a normal line that mentions developer mode", async () => {
     const { result } = await turn("Can you enable developer mode in Salesforce?");
     expect(result.outcome).toBe("done");
+  });
+});
+
+describe("the output check on a streamed reply", () => {
+  const PITCH = "We help teams like yours plan routes in minutes instead of hours.";
+
+  /** A scripted reply (the provider streams it in four chunks) and an optional moderator. */
+  const withReply = (reply: string, moderator?: Moderator) =>
+    createPracticeDeps(
+      { COACH_TIMEOUT_MS: 5_000 },
+      new FakeProvider({ overrides: { turn: () => `${reply} [[stage:pitch]]` } }),
+      moderator,
+    );
+
+  const shown = (events: CoachTurnEvent[]) =>
+    events.flatMap((event) => (event.type === "delta" ? [event.text] : [])).join("");
+
+  it("blocks with the local rules alone, as the browser demo runs them", async () => {
+    for (const reply of [
+      "Sure. Log in at portal.example.test with your password and you'll see the quote.",
+      "Before we talk price, what's your home address?",
+      "Honestly, I'm a real person, not a bot, so you can trust me.",
+      "This quarter has been so bad I just want to end it all.",
+    ]) {
+      const { result, events } = await turn(PITCH, [], withReply(reply));
+      expect(result.outcome, reply).toBe("fallback");
+      expect(shown(events)).toBe(FALLBACK_LINE);
+    }
+  });
+
+  it("blocks what only a moderator recognises, through the model classifier", async () => {
+    // Paraphrases the local rules don't know: a threat, drug instructions and a slur in code.
+    const harmful = [
+      "People who waste my time like this tend to have accidents on the way home.",
+      "The trick is to buy cold medicine in bulk and cook it down in the garage.",
+      "You sound like one of those [slur] people, honestly.",
+    ];
+    for (const reply of harmful) {
+      const provider = new FakeProvider({
+        overrides: {
+          turn: () => `${reply} [[stage:pitch]]`,
+          moderate: ({ messages }) => ({
+            flagged: harmful.some((text) => messages[0]?.content.includes(text.slice(0, 25))),
+          }),
+        },
+      });
+      const unmoderated = await turn(PITCH, [], withReply(reply));
+      expect(unmoderated.result.outcome, reply).toBe("done");
+
+      const d = createPracticeDeps(
+        { COACH_TIMEOUT_MS: 5_000 },
+        provider,
+        createModelModerator(provider),
+      );
+      const { result, events } = await turn(PITCH, [], d);
+      expect(result.outcome, reply).toBe("fallback");
+      expect(shown(events)).toBe(FALLBACK_LINE);
+    }
+  });
+
+  it("retracts the checked sentences it showed when the whole reply then fails", async () => {
+    const reply = "Fair point on price. Our team looks at that every quarter.";
+    const moderator: Moderator = {
+      name: "model",
+      // Each sentence passes; only the two together are flagged.
+      moderate: (text) => Promise.resolve({ flagged: text === reply }),
+    };
+    const { result, events } = await turn(PITCH, [], withReply(reply, moderator));
+    expect(result.outcome).toBe("fallback");
+    expect(events.map((event) => event.type)).toEqual(["delta", "delta", "retract", "done"]);
+    expect(events[2]).toEqual({ type: "retract", text: FALLBACK_LINE });
   });
 });

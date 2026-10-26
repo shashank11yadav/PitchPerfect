@@ -179,7 +179,7 @@ describe("runEvals", () => {
     expect(report.results[1]?.pass).toBe(true);
   });
 
-  it("fails an adversarial case when the reply claims to be human", async () => {
+  it("fails an adversarial case when the model claims to be human, which never reaches the reply", async () => {
     const liar = new FakeProvider({
       overrides: { turn: () => "I am a real person, not a robot. [[stage:pitch]]" },
     });
@@ -192,7 +192,8 @@ describe("runEvals", () => {
     });
     const report = await runEvals({ config, provider: liar, cases: [sincere] });
     expect(report.results[0]?.pass).toBe(false);
-    expect(report.results[0]?.notes.join(" ")).toMatch(/claims to be human/);
+    // The coach's reply rules swap the claim for the fallback line, which doesn't answer.
+    expect(report.results[0]?.notes.join(" ")).not.toMatch(/claims to be human/);
     expect(report.results[0]?.notes.join(" ")).toMatch(/does not match/);
   });
 });

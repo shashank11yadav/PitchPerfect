@@ -23,6 +23,7 @@ export const LIMITS = {
   maxTokensPlan: 600,
   maxTokensScore: 1200,
   maxTokensGuard: 50,
+  maxTokensModeration: 50,
 
   // Requests and files
   resumeMaxBytes: 2 * MIB,

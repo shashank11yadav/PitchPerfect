@@ -18,7 +18,7 @@ Deploying the full stack is a manual, deliberate step; no workflow deploys it. T
 2. **Generate secrets:**
    - `SESSION_SECRET` and `CSRF_SECRET`: 64 random bytes each (`openssl rand -base64 64`).
    - `COACH_SHARED_SECRET`: 48 random bytes (`openssl rand -base64 48`).
-3. **Deploy coach:** from the `apps/coach/Dockerfile` image. Set every variable from `apps/coach/.env.example` (the image already sets `HOST=0.0.0.0` and `PORT=4100`), then check that `/healthz` returns `ok` from inside the private network.
+3. **Deploy coach:** from the `apps/coach/Dockerfile` image. Set every variable from `apps/coach/.env.example` (the image already sets `HOST=0.0.0.0` and `PORT=4100`), then check that `/healthz` returns `ok` from inside the private network. With a live provider, check that the startup log names a moderator (`openai` or `model`); see `COACH_MODERATOR` under [Environment variables](#environment-variables).
 4. **Deploy api:**
    - Deploy the `apps/api/Dockerfile` image. Set every variable from `apps/api/.env.example`, with `APP_URL=https://<web domain>` and `COACH_URL=<private coach URL>`. The image sets `NODE_ENV=production`.
    - Run `node dist/scripts/admin.js migrate` (builds indexes) once, in a one-off container from the api image (for example a Render shell or `fly ssh console`). The scripts are compiled into the image; `tsx` and the `npm run admin`/`seed`/`purge` scripts are for development only. Outside a container, `npm run admin:prod -w apps/api -- migrate` runs the same build after `npm run build`.
@@ -89,6 +89,8 @@ Notes that don't fit in an `.env.example` line:
 
 - `PRACTICE_RETENTION_DAYS` (api) is how long practice attempts are kept before the TTL index removes them. It stays configurable, but the web app's privacy policy, practice notice and other copy read the shared default (`LIMITS.attemptRetentionDays`, 180). If you change it, update that constant, or the copy will promise the wrong retention.
 - `COACH_PROVIDER` (coach) decides what the web app tells users about the partner, through `practicePartner` on `/api/health` and `/api/practice/quota`: `fake` is disclosed as a scripted demo that sends nothing to an AI provider; anything else, and a coach that can't be reached, as a live AI model.
+- `COACH_MODERATOR` (coach) picks what checks each sentence of a live partner's reply before it is shown ([practice-partner.md](practice-partner.md#output-moderation)): `openai` (the OpenAI moderation endpoint, needs `OPENAI_API_KEY`, and works with either provider), `model` (a short classifier call through `COACH_MODEL` on the configured provider), or `none`. Leave it unset for the safe default: `openai` when `OPENAI_API_KEY` is set, otherwise `model`, and `none` for `COACH_PROVIDER=fake`. In production the coach refuses to start with a live provider and `none`, and `openai` is refused with `fake` because the scripted partner is disclosed as sending nothing to an AI provider. The startup log line names the moderator in use.
+- `COACH_MODERATION_TIMEOUT_MS` (coach, default `5000`) is how long one moderation check may take. A check that times out or fails withholds the sentence and the student sees the fallback line, so keep it well under `COACH_TIMEOUT_MS`.
 - `GET /api/health` is limited to 120 requests a minute per address (counted in memory per instance, so it keeps answering when the database is down), with the coach probe cached for 30 s. Point platform health checks at it as often as every few seconds from a single prober; only a flood is refused.
 
 ## Rollback

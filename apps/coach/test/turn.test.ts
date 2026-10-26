@@ -5,7 +5,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildCoachApp } from "../src/app.js";
 import { loadCoachConfig } from "../src/config.js";
 import { CANARY } from "@pitchperfect/partner";
-import { FakeProvider, ProviderError, type LlmProvider } from "../src/providers/index.js";
+import {
+  FakeProvider,
+  ProviderError,
+  type LlmProvider,
+  type Moderator,
+} from "../src/providers/index.js";
 import {
   buildApp,
   parseSse,
@@ -14,6 +19,7 @@ import {
   scenarioPublic,
   signedHeaders,
   STUDENT_LINES,
+  stubModerator,
   transcriptOf,
   type SseEvent,
 } from "./helpers/coach.js";
@@ -21,8 +27,8 @@ import { devEnv } from "./helpers/env.js";
 
 let app: FastifyInstance | undefined;
 
-function start(provider?: LlmProvider): FastifyInstance {
-  app = buildApp(provider);
+function start(provider?: LlmProvider, moderator?: Moderator): FastifyInstance {
+  app = buildApp(provider, moderator);
   return app;
 }
 
@@ -40,8 +46,8 @@ const request = (overrides: Partial<CoachTurnRequest> = {}): CoachTurnRequest =>
   ...overrides,
 });
 
-async function turn(provider?: LlmProvider, body: unknown = request()) {
-  const res = await post(start(provider), "/v1/turn", body);
+async function turn(provider?: LlmProvider, body: unknown = request(), moderator?: Moderator) {
+  const res = await post(start(provider, moderator), "/v1/turn", body);
   const events = res.headers["content-type"]?.startsWith("text/event-stream")
     ? parseSse(res.body)
     : [];
@@ -178,12 +184,106 @@ describe("POST /v1/turn", () => {
     expect(doneOf(events)).toMatchObject({ finalText: "Clean reply.", stage: "objection" });
   });
 
-  it("falls back when moderation flags the reply", async () => {
-    const provider = new FakeProvider({ overrides: { moderate: () => ({ flagged: true }) } });
-    const { events } = await turn(provider);
+  it("falls back without streaming anything when moderation flags the first sentence", async () => {
+    const reply = "That sounds expensive. Tell me more about the setup. [[stage:pitch]]";
+    const provider = scripted({ chunks: [reply.split(/(?<= )/)] });
+    const { events } = await turn(
+      provider,
+      request(),
+      stubModerator(() => true),
+    );
     const done = doneOf(events);
-    expect(done?.finalText).toBe((named(events, "delta").at(-1)?.data as { text: string }).text);
-    expect(done?.finalText).not.toBe(streamed(events));
+    expect(events.map((e) => e.event)).toEqual(["delta", "done"]);
+    expect(done?.finalText).toBe(streamed(events));
+    expect(streamed(events)).not.toMatch(/expensive|setup/);
+  });
+
+  it("streams checked sentences, then retracts them when a later sentence is flagged", async () => {
+    const reply =
+      "That sounds expensive. Honestly you sound like an idiot. Anyway, go on. [[stage:pitch]]";
+    const provider = scripted({ chunks: [reply.split(/(?<= )/)] });
+    const moderator = stubModerator((text) => text.includes("idiot"));
+    const { events } = await turn(provider, request(), moderator);
+    expect(events.map((e) => e.event)).toEqual(["delta", "retract", "done"]);
+    expect(streamed(events)).toBe("That sounds expensive. ");
+    const done = doneOf(events);
+    expect(named(events, "retract")[0]?.data).toEqual({ type: "retract", text: done?.finalText });
+    expect(JSON.stringify(events)).not.toMatch(/idiot|go on/);
+  });
+
+  it("checks the next sentence while the current one is being sent", async () => {
+    const reply = "First point here. Second point here. Third point here. [[stage:pitch]]";
+    const provider = scripted({ chunks: [reply.split(/(?<= )/)] });
+    const started: string[] = [];
+    let release: () => void = () => undefined;
+    const firstHeld = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const moderator = stubModerator(async (text) => {
+      started.push(text);
+      // The first check waits until the second has started: the checks overlap.
+      if (text.startsWith("First")) await firstHeld;
+      if (text.startsWith("Second")) release();
+      return false;
+    });
+    const { events } = await turn(provider, request(), moderator);
+    expect(started.slice(0, 2)).toEqual(["First point here.", "Second point here."]);
+    expect(named(events, "delta").map((e) => (e.data as { text: string }).text)).toEqual([
+      "First point here. ",
+      "Second point here. ",
+      "Third point here. ",
+    ]);
+    // Three sentence checks; the whole reply is checked once more at the end.
+    expect(moderator.seen).toHaveLength(4);
+  });
+
+  it("retracts the shown sentences when the whole-reply check fails", async () => {
+    const reply = "Happy to look at it. Send it over now. [[stage:pitch]]";
+    const provider = scripted({ chunks: [reply.split(/(?<= )/)] });
+    const whole = "Happy to look at it. Send it over now.";
+    const { events } = await turn(
+      provider,
+      request(),
+      stubModerator((text) => text === whole),
+    );
+    expect(events.map((e) => e.event)).toEqual(["delta", "delta", "retract", "done"]);
+    expect(doneOf(events)?.finalText).toBe(
+      (named(events, "retract")[0]?.data as { text: string }).text,
+    );
+  });
+
+  it("withholds the reply when moderation fails or times out (fails closed)", async () => {
+    const reply = "That is a fair question. Let me think about it. [[stage:pitch]]";
+    for (const failure of [
+      () => Promise.reject(new ProviderError("upstream_unavailable")),
+      () => Promise.reject(new ProviderError("timeout")),
+    ]) {
+      const provider = scripted({ chunks: [reply.split(/(?<= )/)] });
+      const { events } = await turn(provider, request(), stubModerator(failure));
+      expect(events.map((e) => e.event)).toEqual(["delta", "done"]);
+      expect(streamed(events)).not.toMatch(/fair question/);
+      expect(doneOf(events)?.finalText).toBe(streamed(events));
+      await app?.close();
+    }
+  });
+
+  it("gives a moderation call its own timeout", async () => {
+    const config = loadCoachConfig(devEnv({ COACH_MODERATION_TIMEOUT_MS: "20" }));
+    const hanging: Moderator = {
+      name: "model",
+      moderate: (_text, signal) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () => {
+            reject(new ProviderError("timeout"));
+          });
+        }),
+    };
+    const provider = scripted({ chunks: [["A short reply. [[stage:pitch]]"]] });
+    app = buildCoachApp({ config, provider, moderator: hanging });
+    const res = await post(app, "/v1/turn", request());
+    const events = parseSse(res.body);
+    expect(streamed(events)).not.toContain("short reply");
+    expect(events.at(-1)?.event).toBe("done");
   });
 
   it("holds back a stage tag split across deltas and strips it", async () => {
@@ -228,15 +328,16 @@ describe("POST /v1/turn", () => {
     expect(provider.streamCalls).toBe(2);
   });
 
-  it("does not retry after the first delta; it reports an error and ends", async () => {
+  it("does not retry after the first chunk; it reports an error and ends", async () => {
     const provider = scripted({
       chunks: [
-        ["Well, honestly that depends on a lot of things we have going on right now, ", "so..."],
+        ["Well, honestly that depends. We have a lot of things going on right now, ", "so..."],
       ],
       failAfterFirst: true,
     });
     const { events } = await turn(provider);
-    expect(events.map((e) => e.event)).toEqual(["delta", "error"]);
+    expect(events.at(-1)?.data).toEqual({ type: "error", code: "upstream_error" });
+    expect(named(events, "done")).toHaveLength(0);
     expect(provider.streamCalls).toBe(1);
   });
 
@@ -373,30 +474,31 @@ describe("POST /v1/turn", () => {
     expect(done?.finalText).not.toContain("bomb");
   });
 
-  it("streams a normal reply word by word with a short hold-back", async () => {
-    const words = Array.from({ length: 30 }, (_, i) => `point${String(i)}`);
-    const provider = scripted({ chunks: [[...words.map((w) => `${w} `), "[[stage:pitch]]"]] });
-    const { events } = await turn(provider);
-    const deltas = named(events, "delta");
-    expect(deltas.length).toBeGreaterThanOrEqual(20);
-    expect(streamed(events).trim()).toBe(words.join(" "));
+  it("streams a normal reply one whole sentence at a time", async () => {
+    const sentences = Array.from({ length: 6 }, (_, i) => `This is point ${String(i)} of six.`);
+    const words = sentences.join(" ").split(/(?<= )/);
+    const provider = scripted({ chunks: [[...words, " [[stage:pitch]]"]] });
+    const { events } = await turn(provider, request(), stubModerator());
+    const deltas = named(events, "delta").map((e) => (e.data as { text: string }).text.trim());
+    expect(deltas).toEqual(sentences);
   });
 
-  it("streams, then reports an error when moderation fails after the deltas", async () => {
+  it("uses the model classifier as the moderator for a provider without an endpoint", async () => {
+    const asked: string[] = [];
     const provider = new FakeProvider({
       overrides: {
-        moderate: () => {
-          throw new ProviderError("upstream_unavailable");
+        moderate: ({ system, messages }) => {
+          asked.push(`${system} ${messages.map((m) => m.content).join(" ")}`);
+          return { flagged: false };
         },
       },
     });
-    const { events } = await turn(provider);
-    expect(events[0]?.event).toBe("delta");
-    expect(events.at(-1)).toEqual({
-      event: "error",
-      data: { type: "error", code: "upstream_error" },
-    });
-    expect(named(events, "done")).toHaveLength(0);
+    const config = loadCoachConfig(devEnv({ COACH_MODERATOR: "model" }));
+    app = buildCoachApp({ config, provider });
+    const res = await post(app, "/v1/turn", request());
+    expect(parseSse(res.body).at(-1)?.event).toBe("done");
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked.every((prompt) => prompt.includes("<partner_turn>"))).toBe(true);
   });
 
   it("counts mid-stream failures toward the breaker and then answers practice_unavailable", async () => {
@@ -502,7 +604,7 @@ describe("POST /v1/turn", () => {
       name: "fake",
       async *chatStream(_input, signal) {
         upstream = signal;
-        yield "Let me think about that for a second, because honestly I am not sure yet ";
+        yield "Let me think about that. Honestly I am not sure yet, because a lot is going on ";
         release();
         await new Promise<void>((resolve) => {
           signal.addEventListener("abort", () => {

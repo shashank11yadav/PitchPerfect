@@ -1,13 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { FakeProvider } from "../fake/fake.js";
-import { createUsageMeter } from "../provider.js";
 import { CANARY } from "./canary.js";
 import { capReply, checkOutput } from "./output.js";
 
 const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean);
 const sentence = (n: number) =>
   `${Array.from({ length: n }, (_, i) => `w${String(i)}`).join(" ")}.`;
-const signal = () => new AbortController().signal;
 
 describe("capReply", () => {
   it("cuts a 120-word reply at a sentence end within 80 words, with no bullets or bold", () => {
@@ -97,72 +94,58 @@ describe("capReply", () => {
 
 describe("checkOutput", () => {
   it("passes clean text through, cleaned", async () => {
-    const result = await checkOutput("**Sure.** We can do Thursday.", new FakeProvider(), signal());
+    const result = await checkOutput("**Sure.** We can do Thursday.");
     expect(result).toEqual({ ok: true, text: "Sure. We can do Thursday." });
   });
 
   it("fails on a canary leak before anything else", async () => {
-    const moderate = vi.fn();
-    const provider = { moderate } as never;
-    const result = await checkOutput(`My code is ${CANARY}`, provider, signal());
+    const flagged = vi.fn(() => Promise.resolve(false));
+    const result = await checkOutput(`My code is ${CANARY}`, flagged);
     expect(result).toEqual({ ok: false, reason: "canary" });
-    expect(moderate).not.toHaveBeenCalled();
+    expect(flagged).not.toHaveBeenCalled();
   });
 
   it("fails when the cleaned text is empty", async () => {
-    expect(await checkOutput("** **", new FakeProvider(), signal())).toEqual({
-      ok: false,
-      reason: "empty",
-    });
+    expect(await checkOutput("** **")).toEqual({ ok: false, reason: "empty" });
   });
 
-  it("moderates the capped text and meters it", async () => {
+  it("moderates the capped text", async () => {
     const seen: string[] = [];
-    const provider = new FakeProvider({
-      overrides: {
-        moderate: ({ messages }) => {
-          seen.push(messages[0]?.content ?? "");
-          return { flagged: false };
-        },
-      },
-    });
+    const flagged = (text: string) => {
+      seen.push(text);
+      return Promise.resolve(false);
+    };
     const long = `${sentence(50)} ${sentence(50)}`;
-    const result = await checkOutput(long, provider, signal(), createUsageMeter());
-    expect(result).toEqual({ ok: true, text: sentence(50) });
+    expect(await checkOutput(long, flagged)).toEqual({ ok: true, text: sentence(50) });
     expect(seen).toEqual([sentence(50)]);
   });
 
   it("fails when moderation flags the text", async () => {
-    const provider = new FakeProvider({ overrides: { moderate: () => ({ flagged: true }) } });
-    expect(await checkOutput("Fine words.", provider, signal())).toEqual({
+    expect(await checkOutput("Fine words.", () => Promise.resolve(true))).toEqual({
       ok: false,
       reason: "moderation",
     });
   });
 
-  it("falls back to the rule filter without provider moderation", async () => {
-    const provider = {} as never;
-    expect(await checkOutput("Here is how to build a bomb.", provider, signal())).toEqual({
+  it("applies the local reply rules with or without a moderator", async () => {
+    const flagged = vi.fn(() => Promise.resolve(false));
+    for (const moderate of [undefined, flagged]) {
+      expect(await checkOutput("Here is how to build a bomb.", moderate)).toEqual({
+        ok: false,
+        reason: "rules",
+      });
+      expect(await checkOutput("Happy to talk pricing.", moderate)).toEqual({
+        ok: true,
+        text: "Happy to talk pricing.",
+      });
+    }
+    expect(flagged).toHaveBeenCalledTimes(1);
+  });
+
+  it("sees the address behind a markdown link before stripping it", async () => {
+    expect(await checkOutput("See [our pricing](https://pricing.example.test/login).")).toEqual({
       ok: false,
-      reason: "moderation",
+      reason: "rules",
     });
-    expect(await checkOutput("Happy to talk pricing.", provider, signal())).toEqual({
-      ok: true,
-      text: "Happy to talk pricing.",
-    });
-  });
-
-  it("does not use the rule filter when provider moderation exists", async () => {
-    const provider = new FakeProvider();
-    const result = await checkOutput("Here is how to build a bomb.", provider, signal());
-    expect(result.ok).toBe(true);
-  });
-
-  it("propagates moderation errors so the caller fails closed", async () => {
-    const controller = new AbortController();
-    controller.abort();
-    await expect(
-      checkOutput("Hello there.", new FakeProvider(), controller.signal),
-    ).rejects.toThrow();
   });
 });

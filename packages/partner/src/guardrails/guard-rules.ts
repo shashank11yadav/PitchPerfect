@@ -15,17 +15,23 @@ const LEET: Record<string, string> = {
 // A leet symbol next to a letter stands in for that letter; plain numbers are left alone.
 const LEET_NEXT_TO_LETTER = /(?<=[a-z])[01345@$]|[01345@$](?=[a-z])/g;
 const NON_WORD = /[^a-z0-9\s]+/g;
+const NON_WORD_OR_STOP = /[^a-z0-9\s.]+/g;
+const CLAUSE_END = /[?!;:,]+|\.+/g;
 
-/** Lowercase, accent-free, de-obfuscated words separated by single spaces. */
-export function normalizeWords(text: string): string {
-  return stripInvisible(text)
+/**
+ * Lowercase, accent-free, de-obfuscated words separated by single spaces. With `stops`, every run
+ * of sentence punctuation is kept as a "." word, so a pattern can see where a clause ends.
+ */
+export function normalizeWords(text: string, stops = false): string {
+  const plain = stripInvisible(text)
     .normalize("NFKD")
     .replace(COMBINING_MARKS, "")
     .toLowerCase()
-    .replace(LEET_NEXT_TO_LETTER, (char) => LEET[char] ?? char)
-    .replace(NON_WORD, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(LEET_NEXT_TO_LETTER, (char) => LEET[char] ?? char);
+  const words = stops
+    ? plain.replace(CLAUSE_END, " . ").replace(NON_WORD_OR_STOP, " ")
+    : plain.replace(NON_WORD, " ");
+  return words.replace(/\s+/g, " ").trim();
 }
 
 // These are matched on the raw text: they rely on punctuation or capitals that normalizeWords() drops.

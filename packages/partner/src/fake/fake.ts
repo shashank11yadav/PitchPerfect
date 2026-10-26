@@ -20,13 +20,12 @@ import {
   taskOf,
 } from "../provider.js";
 
-type OverrideKey = ProviderTask | "moderate";
 type Override = (input: { system: string; messages: ChatMessage[] }) => string | object;
 
 export interface FakeProviderOptions {
   seed?: number;
   /** Replace the scripted output for a task. Structured results are still validated. */
-  overrides?: Partial<Record<OverrideKey, Override>>;
+  overrides?: Partial<Record<ProviderTask, Override>>;
 }
 
 const DEFAULT_SEED = 1;
@@ -216,22 +215,13 @@ export class FakeProvider implements LlmProvider {
   structured<T>(input: StructuredInput<T>, signal: AbortSignal, meter?: UsageMeter): Promise<T> {
     if (signal.aborted) return Promise.reject(abortedBy(signal));
     try {
-      const output = this.#output(this.#task(input.system, ["plan", "score", "guard"]), input);
+      const allowed = ["plan", "score", "guard", "moderate"] as const;
+      const output = this.#output(this.#task(input.system, allowed), input);
       meter?.add(usageOf(input, typeof output === "string" ? output : JSON.stringify(output)));
       return Promise.resolve(parseStructured(output, input.schema));
     } catch (error) {
       return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }
-  }
-
-  /** Like the OpenAI endpoint, moderation reports no token usage. */
-  moderate(text: string, signal: AbortSignal): Promise<{ flagged: boolean }> {
-    if (signal.aborted) return Promise.reject(abortedBy(signal));
-    const override = this.#overrides?.moderate;
-    const result = override?.({ system: "", messages: [{ role: "user", content: text }] });
-    return Promise.resolve({
-      flagged: typeof result === "object" && "flagged" in result && result.flagged === true,
-    });
   }
 
   #task(system: string, allowed: readonly ProviderTask[]): ProviderTask {
@@ -263,6 +253,8 @@ export class FakeProvider implements LlmProvider {
       }
       case "guard":
         return { category: "ok" };
+      case "moderate":
+        return { flagged: false };
     }
   }
 

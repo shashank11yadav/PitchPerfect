@@ -1,6 +1,6 @@
 import { STAGES, type Stage } from "@pitchperfect/shared";
 import { containsCanary } from "../guardrails/canary.js";
-import { ruleCheck } from "../guardrails/guard-rules.js";
+import { replyRuleCheck } from "../guardrails/reply-rules.js";
 
 const STAGE_TAG = /\[\[\s*stage\s*:\s*([a-z]*)\s*\]\]/gi;
 // A tag cut off by the token limit, e.g. "[[stage:obj".
@@ -25,15 +25,15 @@ export function splitStageTag(reply: string): { text: string; stage: Stage | und
   return { text, stage };
 }
 
-/** Why a reply stopped streaming: a leak (canary or instructions) or harmful text. */
-export type BlockReason = "canary" | "instructions" | "harmful";
+/** Why a reply stopped streaming: a leak (canary or instructions) or a local reply rule. */
+export type BlockReason = "canary" | "instructions" | "rules";
 
 /**
  * Decides which part of a streaming reply is safe to show yet. It holds back the last
  * {@link HOLD_WORDS} words, everything from a `[[` (a stage tag, possibly split across deltas), a
  * lone trailing `[`, and a trailing run that could still grow into the canary. Before releasing
- * anything it checks the whole text for the canary, a run of the instructions, and harmful
- * content; on a hit it is blocked for good and releases nothing more.
+ * anything it checks the whole text for the canary, a run of the instructions, and the local
+ * reply rules; on a hit it is blocked for good and releases nothing more.
  */
 export class ReplyFilter {
   readonly #leaks: (text: string) => boolean;
@@ -48,7 +48,7 @@ export class ReplyFilter {
   /** Adds a delta and returns the newly safe text (possibly empty). */
   push(delta: string): string {
     this.#text += delta;
-    if (this.#scan()) return "";
+    if (this.#scan(true)) return "";
     const text = this.#text;
     const tokens = Array.from(text.matchAll(WORD));
     const wordLimit =
@@ -60,7 +60,7 @@ export class ReplyFilter {
 
   /** At the end of the stream: everything not yet shown except the stage tag. */
   finish(): string {
-    if (this.#scan()) return "";
+    if (this.#scan(false)) return "";
     return this.#release(this.#tagStart(this.#text.length));
   }
 
@@ -85,12 +85,15 @@ export class ReplyFilter {
     return out;
   }
 
-  /** True once the text is blocked; checks the canary, instruction runs, and harmful content. */
-  #scan(): boolean {
+  /**
+   * True once the text is blocked; checks the canary, instruction runs, and the reply rules. While
+   * `partial`, the end of the text is not yet the end of a sentence.
+   */
+  #scan(partial: boolean): boolean {
     if (this.#blocked) return true;
     if (containsCanary(this.#text)) this.#blocked = "canary";
     else if (this.#leaks(this.#text)) this.#blocked = "instructions";
-    else if (ruleCheck(this.#text) === "harmful") this.#blocked = "harmful";
+    else if (replyRuleCheck(this.#text, { partial }) !== null) this.#blocked = "rules";
     return this.#blocked !== undefined;
   }
 }

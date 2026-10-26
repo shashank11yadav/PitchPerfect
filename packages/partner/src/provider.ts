@@ -40,7 +40,15 @@ export interface LlmProvider {
     meter?: UsageMeter,
   ): AsyncIterable<string>;
   structured<T>(input: StructuredInput<T>, signal: AbortSignal, meter?: UsageMeter): Promise<T>;
-  moderate?(text: string, signal: AbortSignal, meter?: UsageMeter): Promise<{ flagged: boolean }>;
+}
+
+/**
+ * Checks partner text before the student sees it: the OpenAI moderation endpoint, or a classifier
+ * call through the configured model. A failure rejects; the caller fails closed.
+ */
+export interface Moderator {
+  readonly name: "openai" | "model";
+  moderate(text: string, signal: AbortSignal, meter?: UsageMeter): Promise<{ flagged: boolean }>;
 }
 
 /** A meter that sums every call added to it. */
@@ -64,6 +72,7 @@ export const TASK_TAGS = {
   turn: "[task:turn]",
   score: "[task:score]",
   guard: "[task:guard]",
+  moderate: "[task:moderate]",
 } as const;
 export type ProviderTask = keyof typeof TASK_TAGS;
 

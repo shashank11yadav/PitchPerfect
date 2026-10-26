@@ -1,6 +1,7 @@
 import { ScenarioPrivateSchema, ScenarioPublicSchema, ScorecardSchema } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { createModelModerator } from "../guardrails/moderator.js";
 import { dataBlock, scenarioBlock } from "../prompts/blocks.js";
 import {
   type ChatMessage,
@@ -859,9 +860,9 @@ describe("FakeProvider", () => {
       expect(result).toEqual({ category: "ok" });
     });
 
-    it("does not flag text by default", async () => {
-      const provider = new FakeProvider();
-      expect(await provider.moderate("anything", signal())).toEqual({ flagged: false });
+    it("does not flag text by default when asked to moderate", async () => {
+      const moderator = createModelModerator(new FakeProvider());
+      expect(await moderator.moderate("anything", signal())).toEqual({ flagged: false });
     });
   });
 
@@ -906,7 +907,8 @@ describe("FakeProvider", () => {
 
     it("lets moderation be overridden", async () => {
       const provider = new FakeProvider({ overrides: { moderate: () => ({ flagged: true }) } });
-      expect(await provider.moderate("anything", signal())).toEqual({ flagged: true });
+      const moderator = createModelModerator(provider);
+      expect(await moderator.moderate("anything", signal())).toEqual({ flagged: true });
     });
   });
 

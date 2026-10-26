@@ -105,7 +105,8 @@ Password policy: 12–128 characters, not in the breached-password check, not eq
 
 SSE events from `/turns` (each `data:` line is JSON):
 
-- `event: delta` → `{ text }` (partial partner reply)
+- `event: delta` → `{ text }` (the next whole sentence of the partner's reply, already checked)
+- `event: retract` → `{ text }` (the reply streamed so far in this turn was withdrawn by a later check; the client removes it and shows `text`, the fallback line, instead. `done` follows with the same text)
 - `event: done` → `{ stage: "opening" | "discovery" | "pitch" | "objection" | "close", turnsLeft, finalText }`. `finalText` is the stored, checked reply, and the client replaces the streamed text with it.
 - `event: redirect` → `{ text }` (guardrail in-character redirect; turn counted as flagged, and as a strike only when the guards confirmed an attack)
 - `event: ended` → `{ reason: "guard_limit" | "turn_limit" | "expired" }`
@@ -159,12 +160,12 @@ Base: `COACH_URL` (e.g. `http://coach:4100`). Every request carries:
 - `x-pp-signature`: hex HMAC-SHA256 of `${timestamp}.${METHOD}.${path}.${rawBody}` with `COACH_SHARED_SECRET`, where `METHOD` is the uppercase HTTP method and `path` is the request path exactly as sent, without the query string (e.g. `/v1/plan`). An empty body signs as an empty string.
   Coach rejects if the signature is wrong or `|now − timestamp| > 60`.
 
-| Method | Path        | Body (shared schema)                                                                                      | Response                                                                                                |
-| ------ | ----------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| GET    | `/healthz`  | — (unsigned allowed)                                                                                      | `{ status: "ok", provider }`                                                                            |
-| POST   | `/v1/plan`  | `CoachPlanRequest` `{ skill, targetRole?, industry?, job?: { title, descriptionText, skills[] } }`        | `CoachPlanResponse` `{ scenarioPublic, scenarioPrivate, usage }`                                        |
-| POST   | `/v1/turn`  | `CoachTurnRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[], studentText, currentStage? }` | SSE: `delta {text}`, `done {stage, finalText, usage}`, `redirect {text, strike, usage}`, `error {code}` |
-| POST   | `/v1/score` | `CoachScoreRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[] }`                            | `CoachScoreResponse` `{ scorecard: Scorecard, usage }`                                                  |
+| Method | Path        | Body (shared schema)                                                                                      | Response                                                                                                                  |
+| ------ | ----------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/healthz`  | — (unsigned allowed)                                                                                      | `{ status: "ok", provider }`                                                                                              |
+| POST   | `/v1/plan`  | `CoachPlanRequest` `{ skill, targetRole?, industry?, job?: { title, descriptionText, skills[] } }`        | `CoachPlanResponse` `{ scenarioPublic, scenarioPrivate, usage }`                                                          |
+| POST   | `/v1/turn`  | `CoachTurnRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[], studentText, currentStage? }` | SSE: `delta {text}`, `retract {text}`, `done {stage, finalText, usage}`, `redirect {text, strike, usage}`, `error {code}` |
+| POST   | `/v1/score` | `CoachScoreRequest` `{ skill, scenarioPublic, scenarioPrivate, transcript[] }`                            | `CoachScoreResponse` `{ scorecard: Scorecard, usage }`                                                                    |
 
 `usage` = `{ provider, model, inputTokens, outputTokens }`; api adds it to the attempt and to `usagedays`.
 

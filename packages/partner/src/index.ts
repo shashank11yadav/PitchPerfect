@@ -17,6 +17,8 @@ export { CircuitBreaker, withRetry, withTimeout } from "./guardrails/circuit-bre
 export { ruleCheck } from "./guardrails/guard-rules.js";
 export { InputError, sanitizeInput } from "./guardrails/input.js";
 export { createLeakScanner } from "./guardrails/leak-scan.js";
+export { createModelModerator } from "./guardrails/moderator.js";
+export { replyRuleCheck, type ReplyRuleVerdict } from "./guardrails/reply-rules.js";
 export { planScenario } from "./plan.js";
 export { TURN_LEAK_SOURCE } from "./prompts/persona-turn.js";
 export {
@@ -30,6 +32,7 @@ export {
   type ChatMessage,
   type ChatStreamInput,
   type LlmProvider,
+  type Moderator,
   type ProviderTask,
   type StructuredInput,
   type Usage,

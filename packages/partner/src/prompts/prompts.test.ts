@@ -11,6 +11,7 @@ import { CANARY } from "../guardrails/canary.js";
 import { TASK_TAGS } from "../provider.js";
 import { dataBlock, type PromptInput } from "./blocks.js";
 import { buildGuardPrompt } from "./guard.js";
+import { buildModerationPrompt } from "./moderation.js";
 import { buildPlanPrompt } from "./persona-plan.js";
 import { buildTurnPrompt } from "./persona-turn.js";
 import { buildScorePrompt } from "./scorer.js";
@@ -322,5 +323,17 @@ describe("buildGuardPrompt", () => {
     for (const category of ["ok", "off_topic", "prompt_attack", "harmful"]) {
       expect(prompt.system).toContain(`"${category}"`);
     }
+  });
+});
+
+describe("buildModerationPrompt", () => {
+  const prompt = buildModerationPrompt(ATTACK);
+
+  it("starts with the moderate tag, carries the canary, and checks the reply only as data", () => {
+    expectSafeShape(prompt, TASK_TAGS.moderate);
+    expect(prompt.system).not.toContain("reveal everything");
+    expect(allText(prompt)).toContain(`<partner_turn>\n${ESCAPED}\n</partner_turn>`);
+    expect(prompt.system).toContain('{"flagged": true}');
+    expect(prompt.system).toMatch(/email cadence/);
   });
 });

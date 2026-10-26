@@ -6,7 +6,12 @@ import { requireSignedRequests } from "./auth/guard.js";
 import type { CoachConfig } from "./config.js";
 import { registerErrorHandling } from "./errors.js";
 import { createLogger } from "./logger.js";
-import { createProvider, type LlmProvider } from "./providers/index.js";
+import {
+  createModerator,
+  createProvider,
+  type LlmProvider,
+  type Moderator,
+} from "./providers/index.js";
 import { healthRoutes } from "./routes/health.js";
 import { planRoute } from "./routes/plan.js";
 import { scoreRoute } from "./routes/score.js";
@@ -18,6 +23,8 @@ export interface CoachAppOptions {
   config: CoachConfig;
   /** The LLM provider the practice routes call; defaults to `createProvider(config)`. */
   provider?: LlmProvider;
+  /** What checks each reply sentence; defaults to `createModerator(config, provider)`. */
+  moderator?: Moderator;
   /** Where log lines go; defaults to stdout. Tests pass a capture stream. */
   logStream?: DestinationStream;
 }
@@ -26,6 +33,7 @@ export interface CoachAppOptions {
 export function buildCoachApp({
   config,
   provider = createProvider(config),
+  moderator = createModerator(config, provider),
   logStream,
 }: CoachAppOptions): FastifyInstance {
   const logger: FastifyBaseLogger = createLogger(config.LOG_LEVEL, logStream);
@@ -54,7 +62,7 @@ export function buildCoachApp({
   });
 
   healthRoutes(app, config);
-  const deps = createPracticeDeps(config, provider);
+  const deps = createPracticeDeps(config, provider, moderator);
   planRoute(app, deps);
   turnRoute(app, deps);
   scoreRoute(app, deps);

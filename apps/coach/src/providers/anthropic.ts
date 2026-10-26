@@ -24,8 +24,8 @@ const toUsage = (usage: MessageUsage) => ({
 /**
  * Messages API with streaming; structured output through one forced tool whose input schema
  * is the JSON schema. Temperature is not sent: the SDK marks it deprecated and current models
- * reject non-default values. There is no moderation endpoint, so output checks use the rule
- * filter instead.
+ * reject non-default values. There is no moderation endpoint: without an OpenAI key, replies
+ * are moderated by a classifier call through this provider (see `createModerator`).
  */
 export class AnthropicProvider extends SdkProvider implements LlmProvider {
   readonly name = "anthropic";

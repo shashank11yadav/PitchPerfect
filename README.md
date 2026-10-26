@@ -71,7 +71,7 @@ The demo student (`student@pitchperfect.example`) and employer (`employer@pitchp
 
 Open http://localhost:3000. Verification and password-reset emails land in Mailpit at http://localhost:8025.
 
-The practice partner runs with `COACH_PROVIDER=fake` by default, a deterministic offline persona, so everything works without an API key. To use a real model, set `COACH_PROVIDER=openai` or `anthropic` plus the matching key and model IDs in `apps/coach/.env`.
+The practice partner runs with `COACH_PROVIDER=fake` by default, a deterministic offline persona, so everything works without an API key. To use a real model, set `COACH_PROVIDER=openai` or `anthropic` plus the matching key and model IDs in `apps/coach/.env`. Every sentence of a real model's reply is moderated before it is shown: by the OpenAI moderation endpoint when `OPENAI_API_KEY` is set, otherwise by a classifier call through `COACH_MODEL` (`COACH_MODERATOR`, see [docs/deploy.md](docs/deploy.md#environment-variables)).
 
 To run the whole stack in containers instead, use `docker compose --profile full up --build -d`. It needs no `.env` files: it runs on `dev-only-` placeholder secrets and the `fake` partner (unless `apps/coach/.env` picks a provider), and serves http://localhost:3000 (set `WEB_PORT` if 3000 is taken). Load the demo data into it with:
 

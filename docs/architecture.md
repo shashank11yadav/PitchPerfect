@@ -132,7 +132,8 @@ web practice room            api                                 coach          
   │ ◄── {attemptId, scenario, limits}  stores scenario (private part never leaves api)
   │ POST /practice/sessions/:id/turns {text}
   │                          ─► validate, redact PII, append ─► POST /v1/turn (HMAC, SSE) ─► chatStream()
-  │ ◄══ SSE: delta…delta, done{stage}  ◄═══════════ relays stream, appends partner reply
+  │                                                            checks each sentence ─► moderate
+  │ ◄══ SSE: delta…delta, [retract], done{stage} ◄═══ relays stream, appends partner reply
   │ POST /practice/sessions/:id/end ─► POST /v1/score (HMAC) ─► structured(Scorecard)
   │ ◄── {attempt} with scorecard  saves scorecard, tokens, usage day
 ```

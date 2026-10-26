@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { devEnv } from "../../test/helpers/env.js";
 import { loadCoachConfig } from "../config.js";
-import { FakeProvider, createProvider, taskOf, TASK_TAGS } from "./index.js";
+import { FakeProvider, createModerator, createProvider, taskOf, TASK_TAGS } from "./index.js";
+import { OpenAiModerator } from "./openai-moderator.js";
 import { toJsonSchema, toStrictJsonSchema } from "./json-schema.js";
 
 const realEnv = (provider: "openai" | "anthropic") =>
@@ -42,6 +43,28 @@ describe("createProvider", () => {
     expect(() => createProvider(config)).toThrow(
       "COACH_SCORING_MODEL is required when COACH_PROVIDER is anthropic",
     );
+  });
+});
+
+describe("createModerator", () => {
+  it("uses the OpenAI moderation endpoint for both live providers when there is an OpenAI key", () => {
+    for (const name of ["openai", "anthropic"] as const) {
+      const config = loadCoachConfig(realEnv(name));
+      const moderator = createModerator(config, createProvider(config));
+      expect(moderator).toBeInstanceOf(OpenAiModerator);
+    }
+  });
+
+  it("uses a classifier through the configured model for an Anthropic-only deployment", () => {
+    const config = loadCoachConfig({ ...realEnv("anthropic"), OPENAI_API_KEY: "" });
+    expect(createModerator(config, createProvider(config))?.name).toBe("model");
+  });
+
+  it("has none for the scripted partner unless asked", () => {
+    const config = loadCoachConfig(devEnv());
+    expect(createModerator(config, new FakeProvider())).toBeUndefined();
+    const asked = loadCoachConfig(devEnv({ COACH_MODERATOR: "model" }));
+    expect(createModerator(asked, new FakeProvider())?.name).toBe("model");
   });
 });
 

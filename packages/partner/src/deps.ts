@@ -3,7 +3,13 @@ import type { ZodType } from "zod";
 import { containsCanary } from "./guardrails/canary.js";
 import { CircuitBreaker, withRetry, withTimeout } from "./guardrails/circuit-breaker.js";
 import type { PromptInput } from "./prompts/blocks.js";
-import { createUsageMeter, ProviderError, type LlmProvider, type UsageMeter } from "./provider.js";
+import {
+  createUsageMeter,
+  ProviderError,
+  type LlmProvider,
+  type Moderator,
+  type UsageMeter,
+} from "./provider.js";
 
 type Meter = ReturnType<typeof createUsageMeter>;
 
@@ -11,21 +17,31 @@ type Meter = ReturnType<typeof createUsageMeter>;
 export interface PartnerConfig {
   /** Longest a single provider call may take. */
   COACH_TIMEOUT_MS: number;
+  /** Longest one moderation check may take before the text is withheld; defaults to the above. */
+  COACH_MODERATION_TIMEOUT_MS?: number | undefined;
   COACH_MODEL?: string | undefined;
   COACH_SCORING_MODEL?: string | undefined;
 }
 
-/** What the practice steps share: one provider and one circuit breaker per host. */
+/**
+ * What the practice steps share: one provider, one circuit breaker, and the moderator (if any)
+ * per host. Without a moderator, replies get the local output rules only.
+ */
 export interface PracticeDeps {
   provider: LlmProvider;
+  moderator: Moderator | undefined;
   config: PartnerConfig;
   breaker: CircuitBreaker;
 }
 
 /** 5 retryable failures within 60 s open the breaker for 30 s (docs/practice-partner.md). */
-export function createPracticeDeps(config: PartnerConfig, provider: LlmProvider): PracticeDeps {
+export function createPracticeDeps(
+  config: PartnerConfig,
+  provider: LlmProvider,
+  moderator?: Moderator,
+): PracticeDeps {
   const breaker = new CircuitBreaker({ failures: 5, windowMs: 60_000, openMs: 30_000 });
-  return { provider, config, breaker };
+  return { provider, moderator, config, breaker };
 }
 
 /**

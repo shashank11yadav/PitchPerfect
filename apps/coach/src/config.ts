@@ -11,6 +11,23 @@ import { z } from "zod";
 
 const PROVIDER_KEYS = { openai: "OPENAI_API_KEY", anthropic: "ANTHROPIC_API_KEY" } as const;
 
+type ModeratorChoice = "openai" | "model" | "none";
+
+/**
+ * `COACH_MODERATOR` as set, or the default: the OpenAI moderation endpoint when there is an OpenAI
+ * key, otherwise a classifier call through the configured model. The scripted (`fake`) partner
+ * gets none by default; its replies are fixed lines and the local rules still check them.
+ */
+function moderatorFor(env: {
+  COACH_MODERATOR?: ModeratorChoice | undefined;
+  COACH_PROVIDER?: "fake" | "openai" | "anthropic" | undefined;
+  OPENAI_API_KEY?: string | undefined;
+}): ModeratorChoice {
+  if (env.COACH_MODERATOR) return env.COACH_MODERATOR;
+  if (!env.COACH_PROVIDER || env.COACH_PROVIDER === "fake") return "none";
+  return env.OPENAI_API_KEY ? "openai" : "model";
+}
+
 const envSchema = z
   .object({
     NODE_ENV: unsetIfEmpty(z.enum(["development", "test", "production"]).default("development")),
@@ -27,6 +44,9 @@ const envSchema = z
     COACH_MODEL: optional(z.string()),
     COACH_SCORING_MODEL: optional(z.string()),
     COACH_TIMEOUT_MS: integer(30_000),
+    // Unset picks one; see moderatorFor().
+    COACH_MODERATOR: optional(z.enum(["openai", "model", "none"])),
+    COACH_MODERATION_TIMEOUT_MS: integer(5_000),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === "production" && !env.COACH_PROVIDER) {
@@ -37,6 +57,29 @@ const envSchema = z
       });
     }
     const provider = env.COACH_PROVIDER ?? "fake";
+    const moderator = moderatorFor(env);
+    if (moderator === "openai" && !env.OPENAI_API_KEY) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["OPENAI_API_KEY"],
+        message: "is required when COACH_MODERATOR is openai",
+      });
+    }
+    if (moderator === "openai" && provider === "fake") {
+      // The scripted partner is disclosed as sending nothing to an AI provider.
+      ctx.addIssue({
+        code: "custom",
+        path: ["COACH_MODERATOR"],
+        message: "cannot be openai when COACH_PROVIDER is fake",
+      });
+    }
+    if (env.NODE_ENV === "production" && provider !== "fake" && moderator === "none") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["COACH_MODERATOR"],
+        message: `must be openai or model in production when COACH_PROVIDER is ${provider}`,
+      });
+    }
     if (provider !== "fake") {
       const required = [PROVIDER_KEYS[provider], "COACH_MODEL", "COACH_SCORING_MODEL"] as const;
       for (const name of required) {
@@ -60,6 +103,7 @@ const envSchema = z
   .transform((env) => ({
     ...env,
     COACH_PROVIDER: env.COACH_PROVIDER ?? ("fake" as const),
+    COACH_MODERATOR: moderatorFor(env),
     isProd: env.NODE_ENV === "production",
   }));
 

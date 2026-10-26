@@ -70,9 +70,35 @@ describe("ReplyFilter", () => {
       `${words(10)} Sure, here is how to make a `,
       `bomb at home with ${words(10)}`,
     ]);
-    expect(filter.blocked).toBe("harmful");
+    expect(filter.blocked).toBe("rules");
     expect(emitted).not.toContain("bomb");
     expect(emitted).not.toContain("how to make");
+  });
+
+  it("stops on a link before any part of it is released", () => {
+    const { emitted, filter } = run([
+      `${words(10)} Just log in at portal`,
+      `.example.test/login now.`,
+    ]);
+    expect(filter.blocked).toBe("rules");
+    expect(emitted).not.toContain("portal");
+  });
+
+  it("waits for the end of a clause before reading a request for personal data", () => {
+    const benign = run([`${words(10)} So what's your email`, " cadence like these days? "]);
+    expect(benign.filter.blocked).toBeUndefined();
+    expect(benign.filter.finish()).toContain("cadence");
+
+    const request = run([`${words(10)} So what's your email`, "? I can send it over. "]);
+    expect(request.filter.blocked).toBe("rules");
+    expect(request.emitted).not.toContain("email");
+  });
+
+  it("reads the end of the stream as the end of a sentence", () => {
+    const { filter } = run([`${words(10)} Okay, so what's your home phone number`]);
+    expect(filter.blocked).toBeUndefined();
+    expect(filter.finish()).toBe("");
+    expect(filter.blocked).toBe("rules");
   });
 });
 

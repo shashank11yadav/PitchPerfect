@@ -3,13 +3,31 @@ import { signRequest } from "@pitchperfect/shared/hmac";
 import type { FastifyInstance } from "fastify";
 import { buildCoachApp } from "../../src/app.js";
 import { loadCoachConfig } from "../../src/config.js";
-import { FakeProvider, type LlmProvider } from "../../src/providers/index.js";
+import { FakeProvider, type LlmProvider, type Moderator } from "../../src/providers/index.js";
 import { devEnv } from "./env.js";
 
 const config = loadCoachConfig(devEnv());
 
-export function buildApp(provider: LlmProvider = new FakeProvider()): FastifyInstance {
-  return buildCoachApp({ config, provider });
+/** The coach with the scripted provider by default and no moderator unless one is given. */
+export function buildApp(
+  provider: LlmProvider = new FakeProvider(),
+  moderator?: Moderator,
+): FastifyInstance {
+  return buildCoachApp({ config, provider, ...(moderator && { moderator }) });
+}
+
+/** A moderator that flags whatever `flagged` says, and records what it was asked. */
+export function stubModerator(flagged: (text: string) => boolean | Promise<boolean> = () => false) {
+  const seen: string[] = [];
+  const moderator: Moderator & { seen: string[] } = {
+    name: "openai",
+    seen,
+    async moderate(text) {
+      seen.push(text);
+      return { flagged: await flagged(text) };
+    },
+  };
+  return moderator;
 }
 
 export function signedHeaders(path: string, payload: string): Record<string, string> {

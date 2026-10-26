@@ -7,12 +7,13 @@ import {
 } from "@pitchperfect/shared";
 import { withTimeout } from "../guardrails/circuit-breaker.js";
 import { createLeakScanner } from "../guardrails/leak-scan.js";
-import { checkOutput } from "../guardrails/output.js";
+import { checkOutput, type FlagCheck } from "../guardrails/output.js";
 import { FALLBACK_LINE } from "../prompts/fixed-lines.js";
 import { buildTurnPrompt, studentTurnNumber, TURN_LEAK_SOURCE } from "../prompts/persona-turn.js";
 import { reliably, type PracticeDeps } from "../deps.js";
-import type { ChatStreamInput, createUsageMeter } from "../provider.js";
+import { abortedBy, type ChatStreamInput, type createUsageMeter } from "../provider.js";
 import { ReplyFilter, splitStageTag, type BlockReason } from "./reply-filter.js";
+import { SentenceGate } from "./sentence-gate.js";
 
 const REPLY_TEMPERATURE = 0.8;
 
@@ -37,7 +38,9 @@ type Failure = BlockReason | "moderation" | "empty";
 interface Attempt {
   text: string;
   stage: Stage | undefined;
-  blocked: BlockReason | undefined;
+  blocked: BlockReason | "moderation" | undefined;
+  /** True when a single sentence check already moderated the whole reply. */
+  moderated: boolean;
 }
 
 const stageIndex = (stage: Stage) => STAGES.indexOf(stage);
@@ -62,14 +65,38 @@ async function stop(iterator: AsyncIterator<string>): Promise<void> {
   }
 }
 
+const notFlagged: FlagCheck = () => Promise.resolve(false);
+
+/**
+ * The host's moderator for this turn, or undefined without one. It fails closed: an error or a
+ * timeout counts as flagged (and toward the breaker); only the caller's own abort propagates.
+ */
+function flagCheck(ctx: TurnContext): FlagCheck | undefined {
+  const { moderator, config, breaker } = ctx.deps;
+  if (!moderator) return undefined;
+  const timeoutMs = config.COACH_MODERATION_TIMEOUT_MS ?? config.COACH_TIMEOUT_MS;
+  return async (text) => {
+    try {
+      const result = await moderator.moderate(text, withTimeout(timeoutMs, ctx.signal), ctx.meter);
+      return result.flagged;
+    } catch (error) {
+      if (ctx.signal.aborted) throw abortedBy(ctx.signal, error);
+      breaker.recordFailure(error);
+      return true;
+    }
+  };
+}
+
 /**
  * Streams one reply. Only reaching the first chunk is retried; a later provider failure counts
- * toward the circuit breaker and propagates. `emit` receives text that is safe to show. On a
- * leak or harmful text the upstream stream is stopped at once.
+ * toward the circuit breaker and propagates. With `emit`, the text the reply filter releases goes
+ * through the sentence gate, and `emit` receives only sentences that passed moderation. On a
+ * leak, a reply rule or a flagged sentence the upstream stream is stopped at once.
  */
 async function streamOnce(
   input: ChatStreamInput,
   ctx: TurnContext,
+  flagged: FlagCheck | undefined,
   emit?: (text: string) => Promise<void>,
 ): Promise<Attempt> {
   const { deps, signal, meter } = ctx;
@@ -78,47 +105,58 @@ async function streamOnce(
     return { iterator, first: await iterator.next() };
   });
   const filter = new ReplyFilter(leaks);
+  const gate = emit && new SentenceGate(flagged ?? notFlagged, emit);
+  const blocked = (reason: BlockReason | "moderation"): Attempt => ({
+    text: filter.text,
+    stage: undefined,
+    blocked: reason,
+    moderated: false,
+  });
   try {
     for (let step = first; step.done !== true; step = await iterator.next()) {
       const safe = filter.push(step.value);
-      if (filter.blocked) break;
-      if (emit && safe !== "") await emit(safe);
+      if (filter.blocked || gate?.blocked) break;
+      gate?.push(safe);
     }
   } catch (error) {
+    await gate?.stop();
     deps.breaker.recordFailure(error);
     throw error;
   }
-  if (filter.blocked) {
+  const early = filter.blocked ?? (gate?.blocked ? "moderation" : undefined);
+  if (early) {
+    await gate?.stop();
     await stop(iterator);
-    return { text: filter.text, stage: undefined, blocked: filter.blocked };
+    return blocked(early);
   }
   const rest = filter.finish();
-  if (emit && rest !== "") await emit(rest);
-  return { ...splitStageTag(filter.text), blocked: filter.blocked };
+  // The end of the stream can complete a rule match, such as a request with no closing "?".
+  const late = filter.blocked;
+  if (late) {
+    await gate?.stop();
+    return blocked(late);
+  }
+  if (gate) {
+    gate.push(rest);
+    if (!(await gate.finish())) return blocked("moderation");
+  }
+  return { ...splitStageTag(filter.text), blocked: undefined, moderated: gate?.sentences === 1 };
 }
 
-/** The output check; a moderation failure counts toward the breaker and fails closed. */
-async function check(attempt: Attempt, ctx: TurnContext) {
-  if (attempt.blocked) return { ok: false as const, reason: attempt.blocked };
-  try {
-    return await checkOutput(
-      attempt.text,
-      ctx.deps.provider,
-      withTimeout(ctx.deps.config.COACH_TIMEOUT_MS, ctx.signal),
-      ctx.meter,
-    );
-  } catch (error) {
-    ctx.deps.breaker.recordFailure(error);
-    throw error;
-  }
+/** The whole-reply check, moderated again unless one sentence check already covered it. */
+function check(attempt: Attempt, flagged: FlagCheck | undefined) {
+  if (attempt.blocked) return Promise.resolve({ ok: false as const, reason: attempt.blocked });
+  return checkOutput(attempt.text, attempt.moderated ? undefined : flagged);
 }
 
 const isLeak = (reason: Failure) => reason === "canary" || reason === "instructions";
 
 /**
- * Streams the persona's reply, then checks the whole text. A leak (canary or instructions) is
- * regenerated once without streaming; harmful or flagged text, an empty reply, or a second leak
- * becomes the fallback line. The stage never moves backwards from `currentStage`.
+ * Streams the persona's reply one checked sentence at a time, then checks the whole text. A leak
+ * (canary or instructions) is regenerated once without streaming; a rule hit, flagged text, an
+ * empty reply, or a second leak becomes the fallback line. When the final text replaces anything
+ * already shown, a `retract` carries it so the student never keeps withdrawn text. The stage
+ * never moves backwards from `currentStage`.
  */
 export async function personaReply(turn: CoachTurnRequest, ctx: TurnContext) {
   const input = {
@@ -126,19 +164,26 @@ export async function personaReply(turn: CoachTurnRequest, ctx: TurnContext) {
     maxTokens: LIMITS.maxTokensReply,
     temperature: REPLY_TEMPERATURE,
   };
-  const sendDelta = (text: string) => ctx.sink.send({ type: "delta", text });
+  const flagged = flagCheck(ctx);
+  let shown = false;
+  const sendDelta = async (text: string) => {
+    shown = true;
+    await ctx.sink.send({ type: "delta", text });
+  };
+  const replaceWith = (text: string) =>
+    ctx.sink.send(shown ? { type: "retract", text } : { type: "delta", text });
 
-  const first = await streamOnce(input, ctx, sendDelta);
+  const first = await streamOnce(input, ctx, flagged, sendDelta);
   let modelStage = first.stage;
-  let checked = await check(first, ctx);
+  let checked = await check(first, flagged);
   if (!checked.ok && isLeak(checked.reason)) {
-    const second = await streamOnce(input, ctx);
+    const second = await streamOnce(input, ctx, flagged);
     modelStage = second.stage ?? modelStage;
-    checked = await check(second, ctx);
-    if (checked.ok) await sendDelta(checked.text);
+    checked = await check(second, flagged);
+    if (checked.ok) await replaceWith(checked.text);
   }
   const stage = nextStage(turn, modelStage);
   if (checked.ok) return { outcome: "done" as const, stage, text: checked.text };
-  await sendDelta(FALLBACK_LINE);
+  await replaceWith(FALLBACK_LINE);
   return { outcome: "fallback" as const, stage, text: FALLBACK_LINE };
 }

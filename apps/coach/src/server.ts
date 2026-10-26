@@ -24,7 +24,12 @@ process.on("SIGINT", () => {
 try {
   await app.listen({ host: config.HOST, port: config.PORT });
   app.log.info(
-    { port: config.PORT, env: config.NODE_ENV, provider: config.COACH_PROVIDER },
+    {
+      port: config.PORT,
+      env: config.NODE_ENV,
+      provider: config.COACH_PROVIDER,
+      moderator: config.COACH_MODERATOR,
+    },
     "coach listening",
   );
 } catch (error) {

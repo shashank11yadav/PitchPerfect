@@ -38,6 +38,8 @@ export async function startStubCoach(sharedSecret: string): Promise<StubCoach> {
     COACH_MODEL: undefined,
     COACH_SCORING_MODEL: undefined,
     COACH_TIMEOUT_MS: 30_000,
+    COACH_MODERATOR: "none",
+    COACH_MODERATION_TIMEOUT_MS: 5_000,
     isProd: false,
   };
   const app = buildCoachApp({ config });

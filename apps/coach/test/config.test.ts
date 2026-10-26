@@ -119,12 +119,71 @@ describe("loadCoachConfig", () => {
     });
   });
 
-  describe("numeric variables", () => {
-    it.each(["PORT", "COACH_TIMEOUT_MS"])("rejects %s=0 and non-integers", (name) => {
-      for (const value of ["0", "-1", "1.5", "abc"]) {
-        expect(problemsFor(devEnv({ [name]: value }))).toContain(name);
+  describe("COACH_MODERATOR", () => {
+    const live = (provider: "openai" | "anthropic", extra: NodeJS.ProcessEnv = {}) => ({
+      COACH_PROVIDER: provider,
+      [provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"]: "placeholder-key",
+      COACH_MODEL: "model-a",
+      COACH_SCORING_MODEL: "model-b",
+      ...extra,
+    });
+
+    it("defaults to the OpenAI endpoint with an OpenAI key, else the model classifier", () => {
+      expect(loadCoachConfig(devEnv(live("openai"))).COACH_MODERATOR).toBe("openai");
+      expect(loadCoachConfig(devEnv(live("anthropic"))).COACH_MODERATOR).toBe("model");
+      const both = live("anthropic", { OPENAI_API_KEY: "placeholder-key" });
+      expect(loadCoachConfig(devEnv(both)).COACH_MODERATOR).toBe("openai");
+      expect(loadCoachConfig(prodEnv(live("anthropic"))).COACH_MODERATOR).toBe("model");
+    });
+
+    it("defaults to none for the scripted partner", () => {
+      expect(loadCoachConfig(devEnv()).COACH_MODERATOR).toBe("none");
+      expect(loadCoachConfig(prodEnv()).COACH_MODERATOR).toBe("none");
+      expect(loadCoachConfig(devEnv({ OPENAI_API_KEY: "placeholder-key" })).COACH_MODERATOR).toBe(
+        "none",
+      );
+    });
+
+    it("needs an OpenAI key for the OpenAI endpoint", () => {
+      const env = devEnv(live("anthropic", { COACH_MODERATOR: "openai" }));
+      expect(problemsFor(env)).toContain("OPENAI_API_KEY");
+    });
+
+    it("never sends the scripted partner's replies to OpenAI", () => {
+      const env = devEnv({ COACH_MODERATOR: "openai", OPENAI_API_KEY: "placeholder-key" });
+      expect(problemsFor(env)).toContain("COACH_MODERATOR");
+    });
+
+    it("refuses to start in production with a live provider and no moderator", () => {
+      for (const provider of ["openai", "anthropic"] as const) {
+        const message = problemsFor(prodEnv(live(provider, { COACH_MODERATOR: "none" })));
+        expect(message).toContain("COACH_MODERATOR");
       }
     });
+
+    it("allows no moderator outside production", () => {
+      const env = devEnv(live("anthropic", { COACH_MODERATOR: "none" }));
+      expect(loadCoachConfig(env).COACH_MODERATOR).toBe("none");
+    });
+
+    it("rejects an unknown moderator", () => {
+      expect(problemsFor(devEnv({ COACH_MODERATOR: "regex" }))).toContain("COACH_MODERATOR");
+    });
+  });
+
+  describe("numeric variables", () => {
+    it("defaults the moderation timeout to 5 seconds", () => {
+      expect(loadCoachConfig(devEnv()).COACH_MODERATION_TIMEOUT_MS).toBe(5_000);
+    });
+
+    it.each(["PORT", "COACH_TIMEOUT_MS", "COACH_MODERATION_TIMEOUT_MS"])(
+      "rejects %s=0 and non-integers",
+      (name) => {
+        for (const value of ["0", "-1", "1.5", "abc"]) {
+          expect(problemsFor(devEnv({ [name]: value }))).toContain(name);
+        }
+      },
+    );
 
     it("rejects a port above 65535", () => {
       expect(problemsFor(devEnv({ PORT: "70000" }))).toContain("PORT");

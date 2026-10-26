@@ -12,6 +12,8 @@ export function devEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
     COACH_MODEL: "",
     COACH_SCORING_MODEL: "",
     COACH_TIMEOUT_MS: "30000",
+    COACH_MODERATOR: "",
+    COACH_MODERATION_TIMEOUT_MS: "",
     ...overrides,
   };
 }

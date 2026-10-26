@@ -37,7 +37,7 @@ export abstract class SdkProvider {
     this.#errors = errors;
   }
 
-  /** Scoring uses `COACH_SCORING_MODEL`; plans, turns, and guard checks use `COACH_MODEL`. */
+  /** Scoring uses `COACH_SCORING_MODEL`; plans, turns, guard and moderation use `COACH_MODEL`. */
   protected modelFor(system: string): string {
     return taskOf(system) === "score" ? this.#scoringModel : this.#model;
   }
@@ -46,28 +46,34 @@ export abstract class SdkProvider {
     return { signal, timeout: this.#timeoutMs };
   }
 
-  /** 429, 5xx, connection errors, and timeouts become retryable; nothing upstream leaks into the message. */
   protected toProviderError(error: unknown, signal: AbortSignal): ProviderError {
-    const sdk = this.#errors;
-    if (error instanceof ProviderError) return error;
-    if (signal.aborted) return abortedBy(signal, error);
-    if (error instanceof sdk.APIUserAbortError)
-      return new ProviderError("aborted", { cause: error });
-    if (error instanceof sdk.APIConnectionTimeoutError) {
-      return new ProviderError("timeout", { cause: error });
-    }
-    if (error instanceof sdk.APIConnectionError) {
-      return new ProviderError("upstream_unavailable", { cause: error });
-    }
-    if (error instanceof sdk.APIError) {
-      const { status } = error;
-      // No status: an error event inside an open stream (e.g. overloaded), so worth a retry.
-      if (status === undefined || status >= 500) {
-        return new ProviderError("upstream_unavailable", { status, cause: error });
-      }
-      if (status === 429) return new ProviderError("rate_limited", { status, cause: error });
-      return new ProviderError("request_rejected", { status, cause: error });
-    }
-    return new ProviderError("upstream_error", { cause: error });
+    return sdkProviderError(this.#errors, error, signal);
   }
+}
+
+/** 429, 5xx, connection errors, and timeouts become retryable; nothing upstream leaks into the message. */
+export function sdkProviderError(
+  sdk: SdkErrorClasses,
+  error: unknown,
+  signal: AbortSignal,
+): ProviderError {
+  if (error instanceof ProviderError) return error;
+  if (signal.aborted) return abortedBy(signal, error);
+  if (error instanceof sdk.APIUserAbortError) return new ProviderError("aborted", { cause: error });
+  if (error instanceof sdk.APIConnectionTimeoutError) {
+    return new ProviderError("timeout", { cause: error });
+  }
+  if (error instanceof sdk.APIConnectionError) {
+    return new ProviderError("upstream_unavailable", { cause: error });
+  }
+  if (error instanceof sdk.APIError) {
+    const { status } = error;
+    // No status: an error event inside an open stream (e.g. overloaded), so worth a retry.
+    if (status === undefined || status >= 500) {
+      return new ProviderError("upstream_unavailable", { status, cause: error });
+    }
+    if (status === 429) return new ProviderError("rate_limited", { status, cause: error });
+    return new ProviderError("request_rejected", { status, cause: error });
+  }
+  return new ProviderError("upstream_error", { cause: error });
 }
