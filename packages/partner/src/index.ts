@@ -1,7 +1,8 @@
 /**
- * The practice partner engine: prompts, guardrails, the scripted (fake) provider, and the three
- * steps of a session (plan, turn, score) without any transport. The coach service wraps it in
- * Fastify routes behind an HMAC check; the static demo runs it in the browser.
+ * The practice partner engine: prompts, guardrails, the provider interface, and the three steps
+ * of a session (plan, turn, score) without any transport. The coach service wraps it in Fastify
+ * routes behind an HMAC check; the static demo runs it in the browser. The scripted provider is
+ * its own package, `@pitchperfect/scripted-partner`.
  */
 export {
   createPracticeDeps,
@@ -11,7 +12,6 @@ export {
   type PartnerConfig,
   type PracticeDeps,
 } from "./deps.js";
-export { FakeProvider, type FakeProviderOptions } from "./fake/fake.js";
 export { CANARY, containsCanary } from "./guardrails/canary.js";
 export { CircuitBreaker, withRetry, withTimeout } from "./guardrails/circuit-breaker.js";
 export { ruleCheck } from "./guardrails/guard-rules.js";
@@ -20,7 +20,10 @@ export { createLeakScanner } from "./guardrails/leak-scan.js";
 export { createModelModerator } from "./guardrails/moderator.js";
 export { replyRuleCheck, type ReplyRuleVerdict } from "./guardrails/reply-rules.js";
 export { planScenario } from "./plan.js";
-export { TURN_LEAK_SOURCE } from "./prompts/persona-turn.js";
+// The prompt formats a provider reads; the scripted provider parses them.
+export { dataBlock, scenarioBlock } from "./prompts/blocks.js";
+export { buildPlanPrompt } from "./prompts/persona-plan.js";
+export { buildTurnPrompt, TURN_LEAK_SOURCE } from "./prompts/persona-turn.js";
 export {
   abortedBy,
   createUsageMeter,

@@ -1,8 +1,7 @@
 import { SKILLS, type SkillSlug, type Stage, type TranscriptEntry } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
 import { createPracticeDeps } from "../deps.js";
-import { VOICES } from "../fake/fake-voices.js";
-import { FakeProvider } from "../fake/fake.js";
+import { FakeProvider, VOICES } from "@pitchperfect/scripted-partner";
 import { planScenario } from "../plan.js";
 import { FALLBACK_LINE, redirectLine } from "../prompts/fixed-lines.js";
 import { buildTurnPrompt, TURN_LEAK_SOURCE } from "../prompts/persona-turn.js";

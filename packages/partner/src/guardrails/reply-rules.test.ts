@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { VOICES } from "../fake/fake-voices.js";
+import { VOICES } from "@pitchperfect/scripted-partner";
 import { FALLBACK_LINE, redirectLine } from "../prompts/fixed-lines.js";
 import { BENIGN_REPLIES } from "./guard-corpus.js";
 import { replyRuleCheck } from "./reply-rules.js";

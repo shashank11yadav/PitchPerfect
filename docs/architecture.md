@@ -2,22 +2,23 @@
 
 ## Services
 
-| Service | Path                             | Runtime                                   | Port               | Exposed publicly                    | Owns                                                                                                       |
-| ------- | -------------------------------- | ----------------------------------------- | ------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| web     | `apps/web`                       | Next.js (App Router), React, Tailwind CSS | 3000               | Yes                                 | Pages, UI, SEO, proxying `/api/*`                                                                          |
-| api     | `apps/api`                       | Express 5, Mongoose, MongoDB              | 4000               | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas                                                 |
-| coach   | `apps/coach`                     | Fastify                                   | 4100               | **Never**                           | HMAC-checked routes that run `packages/partner`; the LLM keys and the OpenAI/Anthropic adapters            |
-| partner | `packages/partner`               | TypeScript library                        | n/a                | n/a                                 | The practice partner engine: prompts, guardrails, scripted provider, plan/turn/score                       |
-| shared  | `packages/shared`                | TypeScript library                        | n/a                | n/a                                 | zod schemas, types, constants, seed data, slugify, UTC calendar helpers, PII redaction                     |
-| demo    | GitHub Pages                     | Static export of `apps/web`               | n/a                | Yes                                 | The public demo: pages, lessons, job board, and the practice room with the scripted partner in the browser |
-| mongo   | Docker `mongo:8.2.6`             |                                           | 27017              | No                                  | Data                                                                                                       |
-| mailpit | Docker `axllent/mailpit:v1.31.6` |                                           | 1025 SMTP, 8025 UI | Dev only                            | Catches outgoing email locally                                                                             |
+| Service          | Path                             | Runtime                                   | Port               | Exposed publicly                    | Owns                                                                                                       |
+| ---------------- | -------------------------------- | ----------------------------------------- | ------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| web              | `apps/web`                       | Next.js (App Router), React, Tailwind CSS | 3000               | Yes                                 | Pages, UI, SEO, proxying `/api/*`                                                                          |
+| api              | `apps/api`                       | Express 5, Mongoose, MongoDB              | 4000               | Only through web's `/api/*` rewrite | Accounts, sessions, all persistence, authorization, quotas                                                 |
+| coach            | `apps/coach`                     | Fastify                                   | 4100               | **Never**                           | HMAC-checked routes that run `packages/partner`; the LLM keys and the OpenAI/Anthropic adapters            |
+| partner          | `packages/partner`               | TypeScript library                        | n/a                | n/a                                 | The practice partner engine: prompts, guardrails, provider interface, plan/turn/score                      |
+| scripted partner | `packages/scripted-partner`      | TypeScript library                        | n/a                | n/a                                 | The scripted provider (no model, no keys) the coach and the static demo can run the engine with            |
+| shared           | `packages/shared`                | TypeScript library                        | n/a                | n/a                                 | zod schemas, types, constants, seed data, slugify, UTC calendar helpers, PII redaction                     |
+| demo             | GitHub Pages                     | Static export of `apps/web`               | n/a                | Yes                                 | The public demo: pages, lessons, job board, and the practice room with the scripted partner in the browser |
+| mongo            | Docker `mongo:8.2.6`             |                                           | 27017              | No                                  | Data                                                                                                       |
+| mailpit          | Docker `axllent/mailpit:v1.31.6` |                                           | 1025 SMTP, 8025 UI | Dev only                            | Catches outgoing email locally                                                                             |
 
 ### Why three services
 
 - **web** renders public pages on the server for SEO and serves the app UI. The browser only ever talks to the web origin; Next.js rewrites `/api/:path*` to `${API_ORIGIN}/api/:path*`, so the session cookie is always first-party and production needs no cross-site CORS.
 - **api** is the only component with database access and the only component that decides _who may do what_. Every authorization check lives here.
-- **coach** is the independent practice partner. It holds the LLM keys and nothing else: no database, no user accounts, no cookies. It trusts only HMAC-signed requests from api, so it can be deployed, scaled, rate-limited, and swapped independently, and a compromise of web cannot reach the LLM keys. The partner's logic itself (prompts, guardrails, the scripted provider, and the plan, turn and score steps) is `packages/partner`, a plain TypeScript library with no transport; coach wraps it in Fastify routes, and the static GitHub Pages demo runs the same code in the browser with the scripted provider ([deploy.md](deploy.md#github-pages-demo)).
+- **coach** is the independent practice partner. It holds the LLM keys and nothing else: no database, no user accounts, no cookies. It trusts only HMAC-signed requests from api, so it can be deployed, scaled, rate-limited, and swapped independently, and a compromise of web cannot reach the LLM keys. The partner's logic itself (prompts, guardrails, the provider interface, and the plan, turn and score steps) is `packages/partner`, a plain TypeScript library with no transport; coach wraps it in Fastify routes, and the static GitHub Pages demo runs the same code in the browser ([deploy.md](deploy.md#github-pages-demo)) with the scripted provider from `packages/scripted-partner`, which the coach also runs with `COACH_PROVIDER=fake`.
 
 ## Monorepo layout
 
@@ -68,9 +69,10 @@ packages/
       metering.ts           token usage per call, charged in full when the provider never reports it
       prompts/              persona-plan.ts, persona-turn.ts, scorer.ts, guard.ts, moderation.ts, blocks.ts, fixed-lines.ts, skill-guides.ts
       guardrails/           input.ts, guard-rules.ts, output.ts, reply-rules.ts, moderator.ts, canary.ts, canonical.ts, leak-scan.ts, scenario-check.ts, circuit-breaker.ts; guard-corpus.ts, leak-corpus.ts and injected-jobs.ts are test corpora
-      fake/                 the scripted provider: persona, intents, voices, scorecard
       scoring/              verify-quotes.ts (evidence must be a verbatim student quote)
       plan.ts, turn/, score.ts  the three steps of a session, without a transport; safe-scenario.ts is the fallback persona
+  scripted-partner/
+    src/                    the scripted provider (FakeProvider): provider.ts, persona.ts, intents.ts, voices.ts, scorecard.ts, patterns.ts
   shared/
     src/
       skills.ts             the 8 skills (slug, title, summary, weighted rubric dimension)

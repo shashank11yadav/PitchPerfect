@@ -1,17 +1,18 @@
-import { ScenarioPrivateSchema, ScenarioPublicSchema, ScorecardSchema } from "@pitchperfect/shared";
-import { describe, expect, it } from "vitest";
-import { z } from "zod";
-import { createModelModerator } from "../guardrails/moderator.js";
-import { dataBlock, scenarioBlock } from "../prompts/blocks.js";
 import {
   type ChatMessage,
+  createModelModerator,
   createUsageMeter,
+  dataBlock,
   ProviderError,
+  scenarioBlock,
   stageTag,
   TASK_TAGS,
   type UsageMeter,
-} from "../provider.js";
-import { FakeProvider } from "./fake.js";
+} from "@pitchperfect/partner";
+import { ScenarioPrivateSchema, ScenarioPublicSchema, ScorecardSchema } from "@pitchperfect/shared";
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
+import { FakeProvider } from "./provider.js";
 
 const PlanSchema = z.strictObject({
   scenarioPublic: ScenarioPublicSchema,

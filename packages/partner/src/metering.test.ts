@@ -2,7 +2,7 @@ import { LIMITS, type CoachTurnRequest } from "@pitchperfect/shared";
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import { createPracticeDeps } from "./deps.js";
-import { FakeProvider } from "./fake/fake.js";
+import { FakeProvider } from "@pitchperfect/scripted-partner";
 import { createModelModerator } from "./guardrails/moderator.js";
 import { estimatedUsage, meteredProvider } from "./metering.js";
 import { planScenario } from "./plan.js";

@@ -5,7 +5,7 @@ import {
   type RubricKey,
   type Scorecard,
 } from "@pitchperfect/shared";
-import { ACKNOWLEDGE, ASK, BENEFIT, TIME_PHRASE } from "./fake-patterns.js";
+import { ACKNOWLEDGE, ASK, BENEFIT, TIME_PHRASE } from "./patterns.js";
 
 /**
  * The fake provider's scorer: simple text heuristics, written up the way a sales coach would say

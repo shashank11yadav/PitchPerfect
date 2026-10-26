@@ -12,6 +12,7 @@
     },
     "packages/shared": {},
     "packages/partner": {},
+    "packages/scripted-partner": {},
     "apps/api": {
       "entry": ["src/scripts/*.ts", "test/**/*.test.ts"]
     },

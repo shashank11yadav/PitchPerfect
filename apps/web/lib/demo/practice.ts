@@ -1,7 +1,6 @@
 import {
   createPracticeDeps,
   createUsageMeter,
-  FakeProvider,
   InputError,
   NotEnoughTurnsError,
   planScenario,
@@ -12,6 +11,7 @@ import {
   type PracticeDeps,
   type TurnSink,
 } from "@pitchperfect/partner";
+import { FakeProvider } from "@pitchperfect/scripted-partner";
 import {
   LIMITS,
   redactPii,

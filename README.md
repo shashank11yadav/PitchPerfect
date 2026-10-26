@@ -47,7 +47,8 @@ Browser ──► apps/web (Next.js, port 3000)
 - `apps/web`: Next.js App Router site: public pages (server-rendered per request for SEO), student app, employer app.
 - `apps/api`: REST API: accounts, sessions, companies, jobs, applications, lessons, and the practice proxy.
 - `apps/coach`: the independent practice partner service: HMAC-checked routes over `packages/partner`, its config, the OpenAI and Anthropic adapters, and the evals.
-- `packages/partner`: the practice partner engine (prompts, guardrails, the scripted provider, and the plan, turn and score steps), used by coach and by the static demo in the browser.
+- `packages/partner`: the practice partner engine (prompts, guardrails, the provider interface, and the plan, turn and score steps), used by coach and by the static demo in the browser.
+- `packages/scripted-partner`: the scripted provider, which runs the engine without a model or keys, for local dev, tests, e2e and the static demo.
 - `packages/shared`: zod schemas, types, constants, the fictional seed data, and small helpers (slugify, UTC calendar days, PII redaction) shared by all apps.
 
 Details: [docs/architecture.md](docs/architecture.md).

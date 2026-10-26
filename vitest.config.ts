@@ -19,6 +19,9 @@ const alias = {
   "@pitchperfect/partner": fileURLToPath(
     new URL("./packages/partner/src/index.ts", import.meta.url),
   ),
+  "@pitchperfect/scripted-partner": fileURLToPath(
+    new URL("./packages/scripted-partner/src/index.ts", import.meta.url),
+  ),
   "@pitchperfect/coach/app": fileURLToPath(new URL("./apps/coach/src/app.ts", import.meta.url)),
 };
 
@@ -47,6 +50,15 @@ export default defineConfig({
         test: {
           name: "partner",
           root: "packages/partner",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          name: "scripted-partner",
+          root: "packages/scripted-partner",
           environment: "node",
           include: ["src/**/*.test.ts"],
         },

@@ -7,7 +7,7 @@ import type {
   TargetTopic,
   Voice,
   QuantityKind,
-} from "./fake-intents.js";
+} from "./intents.js";
 
 /**
  * What each kind of person says, by kind of turn. A buyer's lines depend on their trade; a hiring

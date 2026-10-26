@@ -6,7 +6,7 @@ import {
 } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
 import { createPracticeDeps, type PracticeDeps } from "./deps.js";
-import { FakeProvider } from "./fake/fake.js";
+import { FakeProvider } from "@pitchperfect/scripted-partner";
 import { CANARY } from "./guardrails/canary.js";
 import { createModelModerator } from "./guardrails/moderator.js";
 import { planScenario } from "./plan.js";

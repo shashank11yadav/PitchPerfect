@@ -13,7 +13,7 @@
   },
   "scripts": {
     "postinstall": "simple-git-hooks",
-    "predev": "npm run build -w packages/partner",
+    "predev": "npm run build -w packages/partner -w packages/scripted-partner",
     "dev": "concurrently -n api,coach,web -c blue,magenta,green \"npm:dev -w apps/api\" \"npm:dev -w apps/coach\" \"npm:dev -w apps/web\"",
     "dev:infra": "docker compose up -d mongo mailpit",
     "seed": "npm run seed -w apps/api --",

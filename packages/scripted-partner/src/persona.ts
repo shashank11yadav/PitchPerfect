@@ -1,13 +1,13 @@
+import { stageTag, type ChatMessage } from "@pitchperfect/partner";
 import { STAGES, type Stage } from "@pitchperfect/shared";
-import { type Booking, type Reading, type Voice, readTurn, timeIn } from "./fake-intents.js";
-import { mulberry32 } from "./fake-patterns.js";
-import { type Lines, tradeOf, VOICES, voiceOf } from "./fake-voices.js";
-import { stageTag, type ChatMessage } from "../provider.js";
+import { type Booking, type Reading, type Voice, readTurn, timeIn } from "./intents.js";
+import { mulberry32 } from "./patterns.js";
+import { type Lines, tradeOf, VOICES, voiceOf } from "./voices.js";
 
 /**
  * The offline demo persona: a buyer, a hiring manager or a warm contact. It reads the scenario and
  * the student's last turn the way the turn prompt sends them, works out what kind of turn it was
- * (`fake-intents.ts`), and answers in that person's voice (`fake-voices.ts`): a question gets an
+ * (`intents.ts`), and answers in that person's voice (`voices.ts`): a question gets an
  * answer, a pitch gets the next hidden objection, a real meeting proposal gets a yes or a counter,
  * and once a meeting is booked a "thanks" gets a goodbye. Same input, same reply; the stage only
  * moves forward; no line is said twice in a call.

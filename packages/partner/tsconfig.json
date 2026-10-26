@@ -2,9 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist",
+    "outDir": "node_modules/.cache/tsc",
+    "emitDeclarationOnly": true,
     "types": ["node"]
   },
   "include": ["src"],
-  "references": [{ "path": "../shared" }]
+  // The tests run the engine with the scripted provider, which builds on tsconfig.build.json.
+  "references": [{ "path": "../shared" }, { "path": "../scripted-partner" }]
 }

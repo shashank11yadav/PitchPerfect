@@ -8,6 +8,9 @@
       "path": "packages/partner"
     },
     {
+      "path": "packages/scripted-partner"
+    },
+    {
       "path": "apps/api"
     },
     {

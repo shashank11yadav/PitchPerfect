@@ -1,5 +1,5 @@
 import type { Stage } from "@pitchperfect/shared";
-import { ACKNOWLEDGE } from "./fake-patterns.js";
+import { ACKNOWLEDGE } from "./patterns.js";
 
 /**
  * What kind of turn the student just took, read the way a person on the call would read it: the

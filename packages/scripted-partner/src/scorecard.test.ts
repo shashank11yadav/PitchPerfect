@@ -1,6 +1,6 @@
 import { RUBRIC_DIMENSIONS, ScorecardSchema, type Scorecard } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
-import { heuristicScorecard, keepsKind, plural } from "./fake-scorecard.js";
+import { heuristicScorecard, keepsKind, plural } from "./scorecard.js";
 
 const STRONG = [
   "Hi, I'm Riley. I help dispatch teams plan routes faster. How do you plan routes today?",

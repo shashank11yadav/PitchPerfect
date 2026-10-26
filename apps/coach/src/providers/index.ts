@@ -1,9 +1,5 @@
-import {
-  createModelModerator,
-  FakeProvider,
-  type LlmProvider,
-  type Moderator,
-} from "@pitchperfect/partner";
+import { createModelModerator, type LlmProvider, type Moderator } from "@pitchperfect/partner";
+import { FakeProvider } from "@pitchperfect/scripted-partner";
 import type { CoachConfig } from "../config.js";
 import { AnthropicProvider } from "./anthropic.js";
 import { OpenAiModerator } from "./openai-moderator.js";
@@ -11,7 +7,6 @@ import { OpenAiProvider } from "./openai.js";
 
 export {
   createUsageMeter,
-  FakeProvider,
   type LlmProvider,
   type Moderator,
   ProviderError,
@@ -19,6 +14,7 @@ export {
   taskOf,
   type UsageMeter,
 } from "@pitchperfect/partner";
+export { FakeProvider } from "@pitchperfect/scripted-partner";
 
 /** The provider named by `COACH_PROVIDER`; throws if its key or models are missing. */
 export function createProvider(config: CoachConfig): LlmProvider {

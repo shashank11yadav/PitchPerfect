@@ -24,7 +24,8 @@ const run = (command, args, cwd, env = {}) => {
   execFileSync(command, args, { cwd, stdio: "inherit", env: { ...process.env, ...env } });
 };
 
-run("npm", ["run", "build", "-w", "packages/shared", "-w", "packages/partner"], root);
+const packages = ["packages/shared", "packages/partner", "packages/scripted-partner"];
+run("npm", ["run", "build", ...packages.flatMap((path) => ["-w", path])], root);
 // A fresh directory: the export never removes files an earlier one left behind.
 rmSync(out, { recursive: true, force: true });
 run("npx", ["next", "build"], web, {

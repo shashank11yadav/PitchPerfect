@@ -1,13 +1,4 @@
 import {
-  SKILLS,
-  type ScenarioPrivate,
-  type ScenarioPublic,
-  type SkillSlug,
-} from "@pitchperfect/shared";
-import { mulberry32 } from "./fake-patterns.js";
-import { personaReply } from "./fake-persona.js";
-import { heuristicScorecard } from "./fake-scorecard.js";
-import {
   type ChatMessage,
   type ChatStreamInput,
   type LlmProvider,
@@ -18,7 +9,16 @@ import {
   abortedBy,
   parseStructured,
   taskOf,
-} from "../provider.js";
+} from "@pitchperfect/partner";
+import {
+  SKILLS,
+  type ScenarioPrivate,
+  type ScenarioPublic,
+  type SkillSlug,
+} from "@pitchperfect/shared";
+import { mulberry32 } from "./patterns.js";
+import { personaReply } from "./persona.js";
+import { heuristicScorecard } from "./scorecard.js";
 
 type Override = (input: { system: string; messages: ChatMessage[] }) => string | object;
 

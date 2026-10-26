@@ -1,3 +1,4 @@
+import { buildPlanPrompt, buildTurnPrompt } from "@pitchperfect/partner";
 import {
   type CoachTurnRequest,
   ScenarioPrivateSchema,
@@ -9,11 +10,9 @@ import {
 } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { buildPlanPrompt } from "../prompts/persona-plan.js";
-import { buildTurnPrompt } from "../prompts/persona-turn.js";
-import { type Intent, type Voice, readTurn } from "./fake-intents.js";
-import { personaReply, readBooking } from "./fake-persona.js";
-import { FakeProvider } from "./fake.js";
+import { type Intent, type Voice, readTurn } from "./intents.js";
+import { personaReply, readBooking } from "./persona.js";
+import { FakeProvider } from "./provider.js";
 
 /**
  * A labelled corpus of student lines: what kind of turn each one is, and for many of them what

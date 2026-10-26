@@ -43,7 +43,8 @@ In the product, the partner is labelled for what is really answering: an **"AI p
   - **`apps/api`:** Express + Mongoose + MongoDB.
   - **`apps/coach`:** a separate Node service (Fastify) for pitch practice. It is internal-only.
   - **`packages/shared`:** zod schemas, types, constants and small helpers used by all three apps, which removes client/server duplication.
-  - **`packages/partner`:** the practice partner engine (prompts, guardrails, the scripted provider, and the plan, turn and score steps), run by coach and by the static demo.
+  - **`packages/partner`:** the practice partner engine (prompts, guardrails, the provider interface, and the plan, turn and score steps), run by coach and by the static demo.
+  - **`packages/scripted-partner`:** the scripted provider the engine runs with when there is no model: local dev, tests, e2e and the static demo.
   - **Local:** `npm run dev:infra` starts MongoDB and a local mail catcher (Mailpit) for `npm run dev`; `docker compose --profile full up --build -d` runs those plus api, coach and web.
 - **Practice mode:** voice-first with typing always available. It uses the browser's Web Speech API for speech-to-text and `speechSynthesis` for the buyer's voice. Unsupported browsers (e.g. Firefox STT) fall back to text automatically.
 - **LLM provider:** swappable between OpenAI and Anthropic via `COACH_PROVIDER=openai|anthropic`. Model IDs come from env (`COACH_MODEL`, `COACH_SCORING_MODEL`). Keys exist only in the coach service's environment.
@@ -58,6 +59,7 @@ PitchPerfect/
   apps/api/         REST API: auth, users, companies, jobs, applications, practice proxy
   apps/coach/       Pitch-practice service: HMAC-checked routes, LLM provider adapters, evals
   packages/partner/ the practice partner engine: personas, conversation, scoring, guardrails
+  packages/scripted-partner/ the scripted provider for dev, tests and the demo
   packages/shared/  zod schemas, types, constants (skills, roles, enums), seed data
   e2e/              Playwright suites for the full stack, the static demo and a deployed site
   docs/             architecture.md, security.md, deploy.md, and the other guides; design/ (this doc)
@@ -123,7 +125,7 @@ PitchPerfect/
    - The skill-specific dimension is weighted higher (e.g. Objection handling for that skill).
 4. Results are saved as a `PracticeAttempt` (studentId, skill, jobId?, scenario public fields, transcript, scorecard, model/provider used, token counts, timestamps).
 
-**Provider adapter:** `LlmProvider` interface with `chatStream` (streaming), `structured` (zod-validated) and an optional `moderate`, implemented for OpenAI and Anthropic in the coach, plus the deterministic scripted provider in `packages/partner`. It is selected by env at startup and fails fast with a clear error if the selected provider's key or model IDs are missing. No provider names appear in prompts; the privacy page names the provider that processes transcripts.
+**Provider adapter:** `LlmProvider` interface with `chatStream` (streaming), `structured` (zod-validated) and an optional `moderate`, implemented for OpenAI and Anthropic in the coach, plus the deterministic scripted provider in `packages/scripted-partner`. It is selected by env at startup and fails fast with a clear error if the selected provider's key or model IDs are missing. No provider names appear in prompts; the privacy page names the provider that processes transcripts.
 
 **Guardrails (coach + api):**
 

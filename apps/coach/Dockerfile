@@ -11,21 +11,26 @@ WORKDIR /repo
 COPY package.json package-lock.json .npmrc ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/partner/package.json packages/partner/
+COPY packages/scripted-partner/package.json packages/scripted-partner/
 COPY apps/coach/package.json apps/coach/
 
 FROM manifests AS build
 RUN npm ci --ignore-scripts --no-audit --include-workspace-root \
-      --workspace packages/shared --workspace packages/partner --workspace apps/coach
+      --workspace packages/shared --workspace packages/partner \
+      --workspace packages/scripted-partner --workspace apps/coach
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY packages/partner packages/partner
+COPY packages/scripted-partner packages/scripted-partner
 COPY apps/coach apps/coach
-RUN npm run build -w packages/shared && npm run build -w packages/partner && npm run build -w apps/coach
+RUN npm run build -w packages/shared && npm run build -w packages/partner \
+  && npm run build -w packages/scripted-partner && npm run build -w apps/coach
 
 FROM manifests AS deps
 ENV NODE_ENV=production
 RUN npm ci --ignore-scripts --no-audit --omit=dev \
-      --workspace packages/shared --workspace packages/partner --workspace apps/coach \
+      --workspace packages/shared --workspace packages/partner \
+      --workspace packages/scripted-partner --workspace apps/coach \
   && npm cache clean --force
 
 FROM node:22.23.3-alpine3.23 AS runtime
@@ -35,6 +40,7 @@ WORKDIR /app
 COPY --from=deps /repo ./
 COPY --from=build /repo/packages/shared/dist packages/shared/dist
 COPY --from=build /repo/packages/partner/dist packages/partner/dist
+COPY --from=build /repo/packages/scripted-partner/dist packages/scripted-partner/dist
 COPY --from=build /repo/apps/coach/dist apps/coach/dist
 WORKDIR /app/apps/coach
 USER node
