@@ -23,17 +23,12 @@ export function expectPageSecurityHeaders(response: APIResponse): void {
 }
 
 /**
- * `GET /api/health` through the web origin: the proxy reaches the api, and the api its deps. The
- * partner kind depends on the deployment (`scripted` for the e2e stack's fake coach).
+ * `GET /api/health` through the web origin: the proxy reaches the api, and the api its deps.
+ * Liveness only, so nothing about how the deployment is configured (the partner kind has its own
+ * endpoint, `/api/practice/partner`).
  */
 export async function expectHealthy(response: APIResponse): Promise<void> {
   expect(response.status()).toBe(200);
   expect(response.headers()["x-powered-by"]).toBeUndefined();
-  const body = (await response.json()) as { practicePartner?: string };
-  expect(body).toEqual({
-    status: "ok",
-    db: "ok",
-    coach: "ok",
-    practicePartner: expect.stringMatching(/^(?:scripted|live)$/) as unknown,
-  });
+  expect(await response.json()).toEqual({ status: "ok", db: "ok", coach: "ok" });
 }

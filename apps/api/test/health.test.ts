@@ -15,27 +15,28 @@ afterEach(() => {
 });
 
 describe("GET /api/health", () => {
-  it("reports ok for the api, database, and coach, and the scripted demo partner", async () => {
+  it("reports liveness only: the api, the database and the coach, nothing about the setup", async () => {
     const { app } = makeTestApp();
     const res = await request(app).get("/api/health");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok", db: "ok", coach: "ok", practicePartner: "scripted" });
+    expect(res.body).toEqual({ status: "ok", db: "ok", coach: "ok" });
   });
 
-  it("reports a live partner when the coach runs a real provider", async () => {
-    const { app } = makeTestApp({ coach: new FakeCoachClient("ok", "openai") });
-    const res = await request(app).get("/api/health");
-
-    expect(res.body).toMatchObject({ coach: "ok", practicePartner: "live" });
+  it("doesn't name the partner, whichever provider the coach runs", async () => {
+    for (const provider of ["fake", "openai"]) {
+      const { app } = makeTestApp({ coach: new FakeCoachClient("ok", provider) });
+      const res = await request(app).get("/api/health");
+      expect(res.body).toEqual({ status: "ok", db: "ok", coach: "ok" });
+    }
   });
 
-  it("reports the coach as down without failing the request, and the partner as live", async () => {
+  it("reports the coach as down without failing the request", async () => {
     const { app } = makeTestApp({ coach: new FakeCoachClient("down") });
     const res = await request(app).get("/api/health");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok", db: "ok", coach: "down", practicePartner: "live" });
+    expect(res.body).toEqual({ status: "ok", db: "ok", coach: "down" });
   });
 
   it("asks the coach once per 30 s, however often health is checked", async () => {
@@ -45,14 +46,14 @@ describe("GET /api/health", () => {
     const { app } = makeTestApp({ coach });
 
     await request(app).get("/api/health");
-    await request(app).get("/api/health");
+    await request(app).get("/api/practice/partner");
     expect(health).toHaveBeenCalledTimes(1);
 
     vi.setSystemTime(Date.now() + COACH_PROBE_TTL_MS + 1);
     coach.healthStatus = "down";
     const res = await request(app).get("/api/health");
     expect(health).toHaveBeenCalledTimes(2);
-    expect(res.body).toMatchObject({ coach: "down", practicePartner: "live" });
+    expect(res.body).toMatchObject({ coach: "down" });
   });
 
   it("answers 429 after 120 checks a minute from one address", async () => {
@@ -72,12 +73,7 @@ describe("GET /api/health", () => {
     const res = await request(app).get("/api/health");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
-      status: "ok",
-      db: "down",
-      coach: "ok",
-      practicePartner: "scripted",
-    });
+    expect(res.body).toEqual({ status: "ok", db: "down", coach: "ok" });
   });
 
   it("sets a request id and security headers and hides the framework", async () => {
@@ -117,5 +113,39 @@ describe("GET /api/health", () => {
     const unset = makeTestApp({ env: prodEnv({ NODE_ENV: undefined }) });
     const res = await request(unset.app).get("/api/health");
     expect(res.headers["strict-transport-security"]).toContain("max-age=");
+  });
+});
+
+describe("GET /api/practice/partner", () => {
+  it("discloses the scripted partner to anyone, with caching headers", async () => {
+    const { app } = makeTestApp();
+    const res = await request(app).get("/api/practice/partner");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ practicePartner: "scripted" });
+    expect(res.get("cache-control")).toBe("public, max-age=30");
+  });
+
+  it("reports a live partner for a real provider, and for a coach that is down", async () => {
+    const live = makeTestApp({ coach: new FakeCoachClient("ok", "openai") });
+    expect((await request(live.app).get("/api/practice/partner")).body).toEqual({
+      practicePartner: "live",
+    });
+
+    const down = makeTestApp({ coach: new FakeCoachClient("down") });
+    expect((await request(down.app).get("/api/practice/partner")).body).toEqual({
+      practicePartner: "live",
+    });
+  });
+
+  it("answers 429 after 120 requests a minute from one address", async () => {
+    const { app } = makeTestApp();
+    const statuses: number[] = [];
+    for (let i = 0; i < 121; i += 1) {
+      statuses.push((await request(app).get("/api/practice/partner")).status);
+    }
+
+    expect(statuses.slice(0, 120).every((status) => status === 200)).toBe(true);
+    expect(statuses[120]).toBe(429);
   });
 });

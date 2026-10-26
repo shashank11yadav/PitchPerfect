@@ -38,11 +38,11 @@ afterEach(() => {
 
 describe("apiFetch", () => {
   it("GETs same-origin /api paths with credentials and no CSRF round trip", async () => {
-    fetchMock.mockResolvedValueOnce(json(200, { status: "ok" }));
-    await expect(apiFetch("/health")).resolves.toEqual({ status: "ok" });
+    fetchMock.mockResolvedValueOnce(json(200, { practicePartner: "live" }));
+    await expect(apiFetch("/practice/partner")).resolves.toEqual({ practicePartner: "live" });
     expect(fetchMock).toHaveBeenCalledOnce();
     const { url, method, init, headers } = call(0);
-    expect(url).toBe("/api/health");
+    expect(url).toBe("/api/practice/partner");
     expect(method).toBe("GET");
     expect(init?.credentials).toBe("same-origin");
     expect(headers.has("x-csrf-token")).toBe(false);

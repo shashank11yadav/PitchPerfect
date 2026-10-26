@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { AttemptListQuerySchema, StartPracticeSchema, TurnSchema } from "@pitchperfect/shared";
 import { requireConsent, requireRole, requireVerified } from "../../middleware/auth.js";
-import { byUser, rateLimit } from "../../middleware/rate-limit.js";
+import { byIp, byUser, rateLimit } from "../../middleware/rate-limit.js";
 import { IdParamSchema, validate } from "../../middleware/validate.js";
 import { practicePartnerOf } from "../../services/coach-probe.js";
 import { practiceHandlers } from "./handlers.js";
@@ -9,10 +9,19 @@ import type { PracticeDeps } from "./service.js";
 
 const MINUTE_MS = 60 * 1000;
 
-/** `/api/practice/*` per docs/api.md. Every route is for the signed-in student's own data. */
+/**
+ * `/api/practice/*` per docs/api.md. Every route but the public partner disclosure is for the
+ * signed-in student's own data.
+ */
 export function practiceRoutes(deps: PracticeDeps): Router {
   const handle = practiceHandlers(deps);
   const student = requireRole("student");
+  // Public and unauthenticated, like the job board: the legal pages ask for it as they render.
+  const partnerLimit = rateLimit("practice-partner", {
+    windowMs: MINUTE_MS,
+    limit: 120,
+    key: byIp,
+  });
   const startLimit = rateLimit("practice-start", {
     windowMs: 60 * MINUTE_MS,
     limit: 10,
@@ -28,6 +37,7 @@ export function practiceRoutes(deps: PracticeDeps): Router {
   const consented = requireConsent(async () => practicePartnerOf(await deps.coachProbe()));
 
   const router = Router();
+  router.get("/partner", partnerLimit, handle.partner);
   router.get("/quota", student, handle.quota);
   router.post(
     "/sessions",

@@ -27,3 +27,11 @@ test("the home page sends the security headers", async ({ request, baseURL }) =>
 test("the api is healthy through the web origin", async ({ request }) => {
   await expectHealthy(await request.get("/api/health"));
 });
+
+test("the api discloses which practice partner runs", async ({ request }) => {
+  const response = await request.get("/api/practice/partner");
+  expect(response.status()).toBe(200);
+  expect(await response.json()).toEqual({
+    practicePartner: expect.stringMatching(/^(?:scripted|live)$/) as unknown,
+  });
+});

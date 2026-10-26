@@ -103,7 +103,7 @@ export function createApp(
   app.use(originCheck(config));
   app.use(csrf.csrfProtection);
 
-  // One cached probe of the coach, shared by the health and quota routes.
+  // One cached probe of the coach, shared by the health, partner and quota routes.
   const coachProbe = createCoachProbe(deps.coach);
 
   const api = express.Router();

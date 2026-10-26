@@ -3,12 +3,13 @@ import {
   signalsSelfHarm,
   SUPPORT_LINE,
   type AttemptListQuerySchema,
+  type PracticePartnerResponse,
   type StartPracticeSchema,
   type TurnSchema,
 } from "@pitchperfect/shared";
 import { userOf } from "../../middleware/auth.js";
 import { getInput, type IdParamSchema } from "../../middleware/validate.js";
-import { practicePartnerOf } from "../../services/coach-probe.js";
+import { COACH_PROBE_TTL_MS, practicePartnerOf } from "../../services/coach-probe.js";
 import { getQuota } from "./quota.js";
 import {
   coachOf,
@@ -30,6 +31,15 @@ interface WithId {
 
 export function practiceHandlers(deps: PracticeDeps) {
   return {
+    partner: (async (_req, res) => {
+      const body: PracticePartnerResponse = {
+        practicePartner: practicePartnerOf(await deps.coachProbe()),
+      };
+      // Shared caches may keep it as long as the api keeps its own coach probe.
+      res.set("Cache-Control", `public, max-age=${String(COACH_PROBE_TTL_MS / 1000)}`);
+      res.json(body);
+    }) satisfies RequestHandler,
+
     quota: (async (_req, res) => {
       const [quota, coach] = await Promise.all([
         getQuota(deps.config, userOf(res).id, new Date()),

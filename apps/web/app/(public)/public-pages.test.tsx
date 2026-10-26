@@ -20,8 +20,8 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 type PageComponent = () => ReactNode | Promise<ReactNode>;
 
 const fetchMock = vi.fn<typeof fetch>();
-const healthBody = (practicePartner: "scripted" | "live") =>
-  new Response(JSON.stringify({ status: "ok", db: "ok", coach: "ok", practicePartner }), {
+const partnerBody = (practicePartner: "scripted" | "live") =>
+  new Response(JSON.stringify({ practicePartner }), {
     status: 200,
     headers: { "content-type": "application/json" },
   });
@@ -290,12 +290,12 @@ describe("final review: the legal pages describe the partner that is really runn
   });
 
   it("privacy says the scripted partner stays on our server when the coach runs the demo", async () => {
-    fetchMock.mockResolvedValue(healthBody("scripted"));
+    fetchMock.mockResolvedValue(partnerBody("scripted"));
     const { container } = render(await PrivacyPage());
     expect(container).toHaveTextContent(SCRIPTED);
     expect(container).not.toHaveTextContent(/our AI provider/);
     expect(container.querySelector("#processors + div")).toHaveTextContent(/scripted/);
-    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/api\/health$/);
+    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/api\/practice\/partner$/);
   });
 
   it("privacy says the in-browser partner keeps practice on the device", () => {
@@ -308,21 +308,21 @@ describe("final review: the legal pages describe the partner that is really runn
   });
 
   it("terms call the partner scripted when the coach runs the demo, and AI when it doesn’t", async () => {
-    fetchMock.mockResolvedValue(healthBody("scripted"));
+    fetchMock.mockResolvedValue(partnerBody("scripted"));
     const scripted = render(await TermsPage());
     expect(scripted.container).toHaveTextContent("The practice partner is scripted, not a person");
     expect(scripted.container).not.toHaveTextContent(/AI provider|is an AI/);
     scripted.unmount();
 
     forgetPracticePartnerKind();
-    fetchMock.mockResolvedValue(healthBody("live"));
+    fetchMock.mockResolvedValue(partnerBody("live"));
     const live = render(await TermsPage());
     expect(live.container).toHaveTextContent("The practice partner is an AI, not a person");
     expect(live.container).toHaveTextContent(/our AI provider/);
   });
 
   it("how it works says nothing leaves PitchPerfect in the scripted demo, and labels the partner truthfully", async () => {
-    fetchMock.mockResolvedValue(healthBody("scripted"));
+    fetchMock.mockResolvedValue(partnerBody("scripted"));
     const scripted = render(await HowItWorksPage());
     expect(scripted.container).toHaveTextContent(
       "In this demo your text isn’t sent to an AI provider.",
@@ -333,7 +333,7 @@ describe("final review: the legal pages describe the partner that is really runn
     scripted.unmount();
 
     forgetPracticePartnerKind();
-    fetchMock.mockResolvedValue(healthBody("live"));
+    fetchMock.mockResolvedValue(partnerBody("live"));
     const live = render(await HowItWorksPage());
     expect(live.container).toHaveTextContent("sent to our AI provider");
     expect(live.container).toHaveTextContent("labelled as AI wherever it appears");
@@ -341,7 +341,7 @@ describe("final review: the legal pages describe the partner that is really runn
   });
 
   it("asks the api about the partner once a minute, not once a render", async () => {
-    fetchMock.mockResolvedValue(healthBody("scripted"));
+    fetchMock.mockResolvedValue(partnerBody("scripted"));
     render(await PrivacyPage());
     render(await TermsPage());
     render(await HowItWorksPage());

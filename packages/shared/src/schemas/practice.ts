@@ -43,8 +43,8 @@ export const PRACTICE_PARTNER_KINDS = ["scripted", "live", "browser"] as const;
 /**
  * How the practice partner runs. `scripted` is the offline demo persona (`COACH_PROVIDER=fake`),
  * which runs on our own server and sends nothing to an AI provider; `live` means a real model is
- * behind the coach. Reported on `GET /api/health` and `GET /api/practice/quota` so the web app can
- * describe the partner truthfully; when the coach can't be reached it is reported as `live`.
+ * behind the coach. Reported on `GET /api/practice/partner` and `GET /api/practice/quota` so the web
+ * app can describe the partner truthfully; when the coach can't be reached it is reported as `live`.
  * `browser` is the static demo's scripted partner running in the visitor's own browser tab, which
  * the api never reports.
  */
@@ -61,6 +61,15 @@ export const scoredStudentTurns = (
 /** The kinds the api reports and a student's practice consent is given for. */
 export const REPORTED_PARTNER_KINDS = ["scripted", "live"] as const;
 export type ReportedPartnerKind = (typeof REPORTED_PARTNER_KINDS)[number];
+
+/**
+ * `GET /api/practice/partner`: public, because the legal pages and the practice notice must say
+ * whether an AI provider receives what students type.
+ */
+export const PracticePartnerResponseSchema = z.object({
+  practicePartner: z.enum(REPORTED_PARTNER_KINDS),
+});
+export type PracticePartnerResponse = z.infer<typeof PracticePartnerResponseSchema>;
 
 /** `GET /api/practice/quota`: sessions started today and this month (UTC), against the limits. */
 export interface PracticeQuota {

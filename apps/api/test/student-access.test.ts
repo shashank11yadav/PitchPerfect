@@ -61,8 +61,8 @@ const ACCOUNT_ROUTES: RouteCase[] = [
   { method: "get", path: "/auth/me" },
 ];
 
-/** The public job board. */
-const PUBLIC_ROUTES = ["GET /jobs", "GET /jobs/:slug"];
+/** The public job board, and which practice partner runs (the legal pages must say). */
+const PUBLIC_ROUTES = ["GET /jobs", "GET /jobs/:slug", "GET /practice/partner"];
 
 /** Routes whose id belongs to one student: anyone else gets the same answer as an unknown id. */
 const OWNED_ROUTES = STUDENT_ROUTES.filter(

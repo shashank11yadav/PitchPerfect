@@ -1,5 +1,5 @@
 import "server-only";
-import { HealthResponseSchema, type PracticePartnerKind } from "@pitchperfect/shared";
+import { PracticePartnerResponseSchema, type PracticePartnerKind } from "@pitchperfect/shared";
 import { PAGES_EXPORT } from "./pages-export";
 import { serverApi } from "./server-api";
 
@@ -10,8 +10,8 @@ let cached: { kind: PracticePartnerKind; until: number } | undefined;
 
 /**
  * Which partner this deployment runs, for server-rendered copy (privacy, terms, how it works).
- * The api reports it on `/api/health`; the answer is kept for a minute so pages rendered under
- * load don't each ask again. If the api can't be reached the partner is described as a live
+ * The api reports it on `/api/practice/partner`; the answer is kept for a minute so pages rendered
+ * under load don't each ask again. If the api can't be reached the partner is described as a live
  * model, the disclosure that is safe to be wrong about.
  */
 export async function practicePartnerKind(): Promise<PracticePartnerKind> {
@@ -21,7 +21,8 @@ export async function practicePartnerKind(): Promise<PracticePartnerKind> {
   if (cached && now < cached.until) return cached.kind;
   let kind: PracticePartnerKind = "live";
   try {
-    kind = (await serverApi("/api/health", HealthResponseSchema)).practicePartner;
+    kind = (await serverApi("/api/practice/partner", PracticePartnerResponseSchema))
+      .practicePartner;
   } catch {
     // Unreachable api: live wording, for the next minute as well.
   }
