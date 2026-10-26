@@ -2,7 +2,7 @@
  * Nonces remembered at once. Far above what the api sends in two minutes; past it, a signed
  * request is turned away until older nonces expire, never let through unchecked.
  */
-export const NONCE_CAPACITY = 100_000;
+const NONCE_CAPACITY = 100_000;
 
 export type NonceVerdict = "fresh" | "replayed" | "full";
 
