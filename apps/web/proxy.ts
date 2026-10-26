@@ -6,9 +6,12 @@ const PROTECTED_PREFIXES = ["/app", "/employer"];
 const startsWithSegment = (pathname: string, prefix: string) =>
   pathname === prefix || pathname.startsWith(`${prefix}/`);
 
-/** The policy from docs/security.md. Development adds what React's dev tooling needs. */
+/**
+ * The policy from docs/security.md. Development adds what React's dev tooling needs; only an
+ * explicit `NODE_ENV=development` (as `next dev` sets) does, so an unset one stays strict.
+ */
 function contentSecurityPolicy(nonce: string): string {
-  const dev = process.env.NODE_ENV !== "production";
+  const dev = process.env.NODE_ENV === "development";
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,

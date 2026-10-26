@@ -45,9 +45,14 @@ describe("proxy: content security policy", () => {
     expect(nonceOf(proxy(request("/")).headers.get("content-security-policy"))).not.toBe(nonce);
   });
 
-  it("allows eval only outside production, for React's dev tooling", () => {
+  it("allows eval only in development, for React's dev tooling", () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(proxy(request("/")).headers.get("content-security-policy")).toContain("'unsafe-eval'");
+  });
+
+  it("keeps the strict policy when NODE_ENV is unset", () => {
+    vi.stubEnv("NODE_ENV", undefined);
+    expect(proxy(request("/")).headers.get("content-security-policy")).not.toContain("unsafe-eval");
   });
 });
 

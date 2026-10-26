@@ -2,7 +2,8 @@ import { fileURLToPath } from "node:url";
 import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
 
-const isProd = process.env.NODE_ENV === "production";
+/** Only an explicit development run (`next dev`, plain http) leaves HSTS out; unset is production. */
+const isDev = process.env.NODE_ENV === "development";
 
 /**
  * `PAGES_EXPORT=1`: the static demo for GitHub Pages (docs/deploy.md). No server, so no rewrites,
@@ -21,9 +22,9 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "microphone=(self), camera=(), geolocation=()" },
-  ...(isProd
-    ? [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]
-    : []),
+  ...(isDev
+    ? []
+    : [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]),
 ];
 
 const serverConfig: NextConfig = {
