@@ -8,6 +8,7 @@ import {
   EmployerProfile,
   Job,
   PracticeAttempt,
+  PracticeStart,
   StudentProfile,
   User,
 } from "../src/db/models/index.js";
@@ -21,6 +22,7 @@ import {
   createApplication,
   createAttempt,
   createEmployer,
+  createStarts,
   createStudent,
 } from "./helpers/factories.js";
 
@@ -342,6 +344,7 @@ describe("runAdmin", () => {
     const companyIndexes = await Company.collection.indexes();
     expect(companyIndexes.find((index) => index.key.slug === 1)?.unique).toBe(true);
     expect(run.text()).toMatch(/practiceattempts/i);
+    expect(run.text()).toMatch(/practicestarts/i);
   });
 
   it("list-unverified shows only unverified companies with their owners", async () => {
@@ -520,9 +523,10 @@ describe("runPurge", () => {
     expect((await reload(finished._id))?.status).toBe("completed");
   });
 
-  it("deletes start placeholders older than five minutes", async () => {
+  it("deletes start placeholders older than five minutes and gives their sessions back", async () => {
     const placeholder = async (minutes: number) => {
       const { user } = await createStudent();
+      await createStarts(user._id, 1, minutesAgo(minutes));
       return PracticeAttempt.create({
         studentId: user._id,
         skill: "pitching",
@@ -539,6 +543,10 @@ describe("runPurge", () => {
     expect(result.placeholdersDeleted).toBe(1);
     expect(await PracticeAttempt.findById(crashed._id)).toBeNull();
     expect(await PracticeAttempt.findById(planning._id)).not.toBeNull();
+    const startsOf = async (studentId: mongoose.Types.ObjectId) =>
+      (await PracticeStart.findOne({ studentId }).lean())?.starts;
+    expect(await startsOf(crashed.studentId)).toBe(0);
+    expect(await startsOf(planning.studentId)).toBe(1);
   });
 
   it("deletes an attempt that is both expired and stale instead of abandoning it", async () => {

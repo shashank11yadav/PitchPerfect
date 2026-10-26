@@ -61,6 +61,15 @@ class StallableCoach implements CoachClient {
   }
 }
 
+/** A promise and the function that settles it, to hold a step until the test lets it go. */
+export function deferred() {
+  let resolve: () => void = () => undefined;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 interface PracticeHarness {
   app: Express;
   stub: StubCoach;

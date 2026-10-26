@@ -4,6 +4,7 @@ export { Company } from "./company.js";
 export { EmployerProfile } from "./employer-profile.js";
 export { Job } from "./job.js";
 export { PracticeAttempt } from "./practice-attempt.js";
+export { PracticeStart } from "./practice-start.js";
 export { SavedJob } from "./saved-job.js";
 export { StudentProfile } from "./student-profile.js";
 export { UsageDay } from "./usage-day.js";

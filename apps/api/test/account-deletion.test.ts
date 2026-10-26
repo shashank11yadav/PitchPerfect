@@ -8,6 +8,7 @@ import {
   EmployerProfile,
   Job,
   PracticeAttempt,
+  PracticeStart,
   SavedJob,
   StudentProfile,
   User,
@@ -22,6 +23,7 @@ import {
   createAttempt,
   createEmployer,
   createJob,
+  createStarts,
   createStudent,
   signIn,
 } from "./helpers/factories.js";
@@ -48,6 +50,7 @@ describe("DELETE /api/me as a student", () => {
     await session.put("/api/me/resume").attach("file", tinyPdf(), "cv.pdf").expect(200);
     const attempt = await createAttempt(account.user._id);
     await createAttempt(account.user._id);
+    await createStarts(account.user._id, 2);
     await createApplication({
       jobId: job._id,
       studentId: account.user._id,
@@ -68,6 +71,7 @@ describe("DELETE /api/me as a student", () => {
     expect(await User.countDocuments({ _id: user._id })).toBe(0);
     expect(await StudentProfile.countDocuments({ userId: user._id })).toBe(0);
     expect(await PracticeAttempt.countDocuments({ studentId: user._id })).toBe(0);
+    expect(await PracticeStart.countDocuments({ studentId: user._id })).toBe(0);
     expect(await Application.countDocuments({ studentId: user._id })).toBe(0);
     expect(await SavedJob.countDocuments({ studentId: user._id })).toBe(0);
     expect(await AuthToken.countDocuments({ userId: user._id })).toBe(0);
@@ -80,11 +84,13 @@ describe("DELETE /api/me as a student", () => {
     const other = await createStudent();
     await createApplication({ jobId: job._id, studentId: other.user._id });
     await createAttempt(other.user._id);
+    await createStarts(other.user._id, 1);
 
     await session.delete("/api/me").send({ currentPassword: password }).expect(204);
 
     expect(await Application.countDocuments({ studentId: other.user._id })).toBe(1);
     expect(await PracticeAttempt.countDocuments({ studentId: other.user._id })).toBe(1);
+    expect(await PracticeStart.countDocuments({ studentId: other.user._id })).toBe(1);
     expect(await Job.countDocuments({ _id: job._id })).toBe(1);
     expect(await User.countDocuments({ _id: other.user._id })).toBe(1);
   });

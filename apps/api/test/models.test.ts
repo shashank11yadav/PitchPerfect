@@ -14,6 +14,7 @@ import {
   EmployerProfile,
   Job,
   PracticeAttempt,
+  PracticeStart,
   SavedJob,
   StudentProfile,
   UsageDay,
@@ -28,11 +29,17 @@ import {
   toPublicUser,
   toStudentProfileView,
 } from "../src/db/mappers.js";
+import { reserveStart } from "../src/modules/practice/quota.js";
 import { useTestDb } from "./helpers/db.js";
 
 useTestDb();
 
 const oid = () => new Types.ObjectId();
+const QUOTA = {
+  PRACTICE_DAILY_LIMIT: 5,
+  PRACTICE_MONTHLY_LIMIT: 30,
+  PRACTICE_DAILY_TOKEN_BUDGET: 2_000_000,
+};
 
 const userInput = (email = "ada@example.test") => ({
   email,
@@ -195,6 +202,19 @@ describe("indexes", () => {
     expect(ttl?.expireAfterSeconds).toBe(0);
     const history = await indexOf(PracticeAttempt as never, "studentId,startedAt");
     expect(history?.key).toEqual({ studentId: 1, startedAt: -1 });
+  });
+
+  it("keeps one start ledger row per student and month, expiring after the month", async () => {
+    await PracticeStart.syncIndexes();
+
+    const ttl = await indexOf(PracticeStart as never, "expiresAt");
+    expect(ttl?.expireAfterSeconds).toBe(0);
+    const key = await indexOf(PracticeStart as never, "studentId,month");
+    expect(key?.unique).toBe(true);
+    const studentId = new Types.ObjectId();
+    await reserveStart(QUOTA, studentId.toString(), new Date("2026-03-10T15:00:00Z"));
+    const row = await PracticeStart.findOne({ studentId }).lean();
+    expect(row?.expiresAt).toEqual(new Date("2026-04-01T00:00:00Z"));
   });
 
   it("expires auth tokens at expiresAt via a TTL index", async () => {

@@ -1,4 +1,4 @@
-import { slugify } from "@pitchperfect/shared";
+import { slugify, utcMonth } from "@pitchperfect/shared";
 import mongoose from "mongoose";
 import {
   Application,
@@ -6,6 +6,7 @@ import {
   EmployerProfile,
   Job,
   PracticeAttempt,
+  PracticeStart,
   StudentProfile,
   User,
 } from "../../src/db/models/index.js";
@@ -142,6 +143,23 @@ export function createAttempt(
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     ...overrides,
   });
+}
+
+/** `count` session starts in the student's quota ledger, as if made at `at`. */
+export async function createStarts(
+  studentId: mongoose.Types.ObjectId,
+  count: number,
+  at: Date = new Date(),
+) {
+  const day = at.toISOString().slice(0, 10);
+  await PracticeStart.updateOne(
+    { studentId, month: day.slice(0, 7) },
+    {
+      $inc: { starts: count, [`days.${day}`]: count },
+      $setOnInsert: { expiresAt: utcMonth(at, 1) },
+    },
+    { upsert: true },
+  );
 }
 
 /** Signs `agent` in through the real route; returns the agent with a CSRF token for the new session. */

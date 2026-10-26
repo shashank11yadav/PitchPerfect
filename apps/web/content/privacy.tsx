@@ -231,6 +231,11 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
           Rate-limit counters (the hashed IP address and email keys used to stop abuse): from one
           minute to an hour, depending on the action, then deleted automatically.
         </li>
+        <li>
+          How many practice sessions you started each day, for the daily and monthly limits: until
+          the end of that month, then deleted automatically. Deleting a session doesn&apos;t remove
+          it from this count.
+        </li>
         <li>Everything else: until you delete it or delete your account.</li>
       </ul>
     ),
@@ -247,7 +252,7 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         <ul>
           <li>
             <strong>Students:</strong> deleting your account removes your account, profile, résumé,
-            saved jobs, applications and practice sessions.
+            saved jobs, applications, practice sessions and the count of sessions you started.
           </li>
           <li>
             <strong>Employers:</strong> deleting your account removes your account, your company,

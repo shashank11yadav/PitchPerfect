@@ -7,6 +7,7 @@ import { csrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
 import { errorOf } from "./helpers/error-body.js";
 import {
+  deferred,
   practiceStudent,
   sendTurn,
   sendTurnAndLeave,
@@ -44,14 +45,6 @@ async function activeAttempt() {
 }
 
 const attemptOf = (attemptId: string) => PracticeAttempt.findById(attemptId).lean();
-
-function deferred() {
-  let resolve: () => void = () => undefined;
-  const promise = new Promise<void>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
-}
 
 /** The documented estimate for an unanswered turn: request characters / 4 in, the reply cap out. */
 const estimatedUsage = (request: CoachTurnRequest | undefined) => ({

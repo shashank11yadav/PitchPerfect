@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import * as models from "../db/models/index.js";
-import { AuthToken, Company, PracticeAttempt, User } from "../db/models/index.js";
+import { AuthToken, Company, PracticeAttempt, PracticeStart, User } from "../db/models/index.js";
 import { verificationForCompany } from "../services/company-verification.js";
 
 /** Where the admin CLI writes: normal output and problems. */
@@ -30,7 +30,7 @@ async function findCompany(reference: string) {
 }
 
 /** Collections with a TTL index the app relies on to clear expired documents. */
-const TTL_MODELS = [PracticeAttempt, AuthToken];
+const TTL_MODELS = [PracticeAttempt, PracticeStart, AuthToken];
 
 async function migrate(_args: readonly string[], io: AdminIo): Promise<void> {
   for (const model of Object.values(models)) {
@@ -45,7 +45,7 @@ async function migrate(_args: readonly string[], io: AdminIo): Promise<void> {
     );
     if (!ttl) throw new AdminError(`${model.collection.name}: the expiry (TTL) index is missing`);
   }
-  io.out("TTL indexes present on practiceattempts and authtokens");
+  io.out(`TTL indexes present on ${TTL_MODELS.map((model) => model.collection.name).join(", ")}`);
 }
 
 async function listUnverified(_args: readonly string[], io: AdminIo): Promise<void> {

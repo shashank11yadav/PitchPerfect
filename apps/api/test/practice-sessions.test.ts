@@ -9,6 +9,7 @@ import { errorOf } from "./helpers/error-body.js";
 import {
   createApplication,
   createAttempt,
+  createStarts,
   createEmployer,
   createJob,
   signIn,
@@ -184,7 +185,7 @@ describe("POST /api/practice/sessions", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-03-10T18:00:00Z"));
     const { session, user } = await practiceStudent(harness.app);
-    for (let index = 0; index < 5; index += 1) await createAttempt(user._id);
+    await createStarts(user._id, 5);
 
     const { res } = await startPractice(session);
 
@@ -232,7 +233,7 @@ describe("POST /api/practice/sessions", () => {
 
   it("leaves the active session alone when the quota refuses a new one", async () => {
     const { session, user } = await practiceStudent(harness.app);
-    for (let index = 0; index < 4; index += 1) await createAttempt(user._id);
+    await createStarts(user._id, 4);
     const current = await startPractice(session);
     expect(current.res.status).toBe(201);
 
@@ -323,6 +324,9 @@ describe("POST /api/practice/sessions", () => {
     const retried = await startPractice(session);
     expect(retried.res.status).toBe(201);
     expect(await PracticeAttempt.findById(placeholder._id)).toBeNull();
+    // The refused start gave its session back; only the retried one counts.
+    const quota = await session.agent.get("/api/practice/quota");
+    expect((quota.body as { dailyUsed: number }).dailyUsed).toBe(1);
   });
 
   it("hides an attempt that is still being planned", async () => {

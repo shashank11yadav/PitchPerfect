@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import {
   LIMITS,
   type CoachPlanRequest,
@@ -11,7 +10,14 @@ import { ConflictError } from "../../errors.js";
 import { htmlToPlainText } from "../../services/html-sanitizer.js";
 import { isDuplicateKey } from "../auth/service.js";
 import { findListedJob } from "../jobs/service.js";
-import { assertCanStart, recordUsage, STALE_START_MS } from "./quota.js";
+import {
+  recordUsage,
+  refundStart,
+  removePlaceholder,
+  removeStalePlaceholders,
+  reserveStart,
+  STALE_START_MS,
+} from "./quota.js";
 import { coachOf, sessionEndsAt, type PracticeDeps } from "./service.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -64,9 +70,9 @@ async function claimStart(deps: PracticeDeps, studentId: string, input: StartPra
 }
 
 /**
- * Starts a session: checks quota and budget, abandons the student's active one, claims a
- * `starting` placeholder (which counts toward the quota while planning), plans the scenario, and
- * activates it. A failed plan removes the placeholder, so it never counts.
+ * Starts a session: reserves one of the student's sessions (checking quota and budget), abandons
+ * the student's active one, claims a `starting` placeholder, plans the scenario, and activates it.
+ * A start that never gets a plan gives its session back.
  */
 export async function startSession(
   deps: PracticeDeps,
@@ -77,25 +83,27 @@ export async function startSession(
   const request = await planRequest(studentId, input);
   const now = new Date();
 
-  await PracticeAttempt.deleteMany({
-    studentId,
-    status: "starting",
-    startedAt: mongoose.trusted({ $lt: new Date(now.getTime() - STALE_START_MS) }),
-  });
-  // Checked first, so a refused start leaves the current session untouched. That session already
+  await removeStalePlaceholders(new Date(now.getTime() - STALE_START_MS), studentId);
+  // Reserved first, so a refused start leaves the current session untouched. That session already
   // counts toward the quota.
-  await assertCanStart(deps.config, studentId, now);
+  await reserveStart(deps.config, studentId, now);
   await PracticeAttempt.updateMany(
     { studentId, status: "active" },
     { $set: { status: "abandoned", endedAt: now, turnLockUntil: null } },
   );
-  const placeholder = await claimStart(deps, studentId, input, now);
+  let placeholder;
+  try {
+    placeholder = await claimStart(deps, studentId, input, now);
+  } catch (error) {
+    await refundStart(studentId, now);
+    throw error;
+  }
 
   let plan;
   try {
     plan = await coach.plan(request);
   } catch (error) {
-    await PracticeAttempt.deleteOne({ _id: placeholder._id, status: "starting" });
+    await removePlaceholder(placeholder);
     throw error;
   }
   const attempt = await PracticeAttempt.findOneAndUpdate(

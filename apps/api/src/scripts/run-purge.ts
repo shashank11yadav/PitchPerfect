@@ -1,10 +1,14 @@
 import mongoose from "mongoose";
 import { LIMITS } from "@pitchperfect/shared";
 import { Application, AuthToken, PracticeAttempt } from "../db/models/index.js";
+import { removeStalePlaceholders } from "../modules/practice/quota.js";
 
 /** A session still `active` this long after it started can never finish: its turn limit plus an hour. */
 const STALE_ACTIVE_MS = LIMITS.sessionSeconds * 1000 + 60 * 60 * 1000;
-/** A session start that has been planning this long crashed; its placeholder is removed. */
+/**
+ * A session start that has been planning this long crashed; its placeholder is removed and its
+ * session given back.
+ */
 const STALE_PLACEHOLDER_MS = 5 * 60 * 1000;
 
 export interface PurgeResult {
@@ -20,7 +24,7 @@ export interface PurgeResult {
 /**
  * The backstop for the TTL indexes: removes expired attempts and spent or expired tokens, frees
  * applications from attempts that are gone, marks long-dead `active` sessions abandoned, and removes
- * placeholders of session starts that never finished.
+ * placeholders of session starts that never finished, giving their sessions back.
  * Runs on the open Mongoose connection; safe to repeat.
  */
 export async function runPurge(now: Date): Promise<PurgeResult> {
@@ -50,16 +54,15 @@ export async function runPurge(now: Date): Promise<PurgeResult> {
     { status: "abandoned", turnLockUntil: null },
   );
 
-  const placeholders = await PracticeAttempt.deleteMany({
-    status: "starting",
-    startedAt: mongoose.trusted({ $lt: new Date(now.getTime() - STALE_PLACEHOLDER_MS) }),
-  });
+  const placeholdersDeleted = await removeStalePlaceholders(
+    new Date(now.getTime() - STALE_PLACEHOLDER_MS),
+  );
 
   return {
     attemptsDeleted: attempts.deletedCount,
     tokensDeleted: tokens.deletedCount,
     attemptsAbandoned: abandoned.modifiedCount,
     sharesCleared: detached.modifiedCount,
-    placeholdersDeleted: placeholders.deletedCount,
+    placeholdersDeleted,
   };
 }

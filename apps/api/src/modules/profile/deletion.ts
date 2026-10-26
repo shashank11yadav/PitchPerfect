@@ -6,6 +6,7 @@ import {
   EmployerProfile,
   Job,
   PracticeAttempt,
+  PracticeStart,
   SavedJob,
   StudentProfile,
   User,
@@ -19,6 +20,8 @@ async function deleteStudentData(userId: string): Promise<void> {
   if (profile?.resumeFileId) await deleteResume(profile.resumeFileId);
   await Promise.all([
     PracticeAttempt.deleteMany({ studentId: userId }),
+    // The quota ledger goes too: a deleted account's id is never reused, so it guards nothing.
+    PracticeStart.deleteMany({ studentId: userId }),
     Application.deleteMany({ studentId: userId }),
     SavedJob.deleteMany({ studentId: userId }),
   ]);
