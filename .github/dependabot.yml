@@ -19,3 +19,20 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  # The base images of the three Dockerfiles. Dependabot reads only literal `FROM` lines, so the
+  # Dockerfiles name the image in each stage instead of through a build argument.
+  - package-ecosystem: docker
+    directories:
+      - /apps/api
+      - /apps/coach
+      - /apps/web
+    schedule:
+      interval: weekly
+    groups:
+      docker-images:
+        patterns:
+          - "*"
+    ignore:
+      # The images follow the runtime in .nvmrc (22); a Node major is bumped by hand.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]

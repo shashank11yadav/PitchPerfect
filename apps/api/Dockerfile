@@ -3,11 +3,9 @@
 #   docker build -f apps/api/Dockerfile -t pitchperfect-api .
 # Configuration comes from the environment at run time (apps/api/.env.example lists it).
 
-ARG NODE_IMAGE=node:22.23.3-alpine3.23
-
 # Only the manifests of the workspaces this image needs. npm installs from the lockfile and skips
 # workspaces that aren't present, so the coach and web dependencies stay out of the image.
-FROM ${NODE_IMAGE} AS manifests
+FROM node:22.23.3-alpine3.23 AS manifests
 WORKDIR /repo
 COPY package.json package-lock.json .npmrc ./
 COPY packages/shared/package.json packages/shared/
@@ -28,7 +26,7 @@ RUN npm ci --ignore-scripts --no-audit --omit=dev \
       --workspace packages/shared --workspace apps/api \
   && npm cache clean --force
 
-FROM ${NODE_IMAGE} AS runtime
+FROM node:22.23.3-alpine3.23 AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=deps /repo ./

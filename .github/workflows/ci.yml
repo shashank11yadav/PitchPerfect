@@ -1,8 +1,16 @@
 name: CI
 
+# Pull requests run here; a push runs only on main, so a push to a PR branch isn't checked twice.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# A newer push to the same pull request cancels the run it supersedes. Runs on main all finish, so
+# every merged commit keeps its result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

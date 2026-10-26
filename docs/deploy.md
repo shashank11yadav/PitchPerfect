@@ -43,7 +43,7 @@ The live site at https://shashank11yadav.github.io/PitchPerfect/ is a static exp
 - Sign-in, sign-up, `/app/*` and `/employer/*` show a short note with the way to the practice room, the jobs and the repository. The normal build serves `/practice/*` and `/learn/*` as "not found"; they exist only in the export.
 - There are no response headers on Pages, so the page carries a `<meta http-equiv="Content-Security-Policy">` (see [security.md](security.md#the-static-demo)). The site's own `proxy.ts` and `/api` rewrite are not part of the export.
 
-Check it locally with `npm run e2e:pages`, which builds the export, serves it under `/PitchPerfect/` on port 3100 (`E2E_PAGES_PORT` moves it) from `e2e/pages/static-server.mjs` and runs `e2e/pages/demo.spec.ts`. CI's `e2e-pages` job runs the same check on every push and pull request, and the `build` job in `pages.yml` (`npm ci`, Chromium, `npm run e2e:pages`, then the upload) runs it again before the `deploy` job publishes, so a broken demo is never deployed. `PAGES_EXPORT` is unset for the normal build, the dev server and the full e2e suite.
+Check it locally with `npm run e2e:pages`, which builds the export, serves it under `/PitchPerfect/` on port 3100 (`E2E_PAGES_PORT` moves it) from `e2e/pages/static-server.mjs` and runs `e2e/pages/demo.spec.ts`. CI's `e2e-pages` job runs the same check on every pull request and every push to `main`, and the `build` job in `pages.yml` (`npm ci`, Chromium, `npm run e2e:pages`, then the upload) runs it again before the `deploy` job publishes, so a broken demo is never deployed. `PAGES_EXPORT` is unset for the normal build, the dev server and the full e2e suite.
 
 ## Container images
 
