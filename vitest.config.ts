@@ -73,6 +73,8 @@ export default defineConfig({
           globalSetup: [apiGlobalSetup],
           // The first run downloads a MongoDB binary for mongodb-memory-server.
           hookTimeout: 180_000,
+          // Tests that sign up several accounts pay for argon2id each time; shared CI runners are slow.
+          testTimeout: 15_000,
           include: ["test/**/*.test.ts", "src/**/*.test.ts"],
         },
       },
