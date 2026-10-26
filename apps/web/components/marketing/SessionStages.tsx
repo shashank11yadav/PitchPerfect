@@ -12,7 +12,7 @@ const STAGE_NOTES: Record<Stage, string> = {
   discovery: "Ask about the problem, what it costs them, and who decides.",
   pitch: "Tie what you sell to what they just told you.",
   objection: "They raise the concerns they were holding back.",
-  close: "Agree on a next step, or find out what's in the way.",
+  close: "Agree on a next step, or find out what’s in the way.",
 };
 
 interface StageShowcaseProps {

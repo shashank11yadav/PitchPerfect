@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <StatusMessage
-      title="We couldn't find that page"
+      title="We couldn’t find that page"
       description="The link may be old, or the page may have moved."
     >
       <Link href="/" className={buttonClasses()}>

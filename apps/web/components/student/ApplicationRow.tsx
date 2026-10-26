@@ -115,8 +115,8 @@ export function ApplicationRow({ application, onChange }: ApplicationRowProps) {
         title="Withdraw this application?"
         description={
           <>
-            {job.companyName} will see that you withdrew from {job.title}. You can&apos;t apply to
-            this job again afterwards.
+            {job.companyName} will see that you withdrew from {job.title}. You can’t apply to this
+            job again afterwards.
           </>
         }
         confirmLabel="Withdraw application"

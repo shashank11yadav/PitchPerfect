@@ -26,9 +26,9 @@ export function ForgotPasswordForm() {
     return (
       <DoneMessage title="Check your inbox">
         <p className="text-lede text-ink">
-          If there&apos;s an account for{" "}
-          <strong className="font-semibold break-all">{sentTo}</strong>, we&apos;ve sent it a link
-          to choose a new password. The link works for {LIMITS.resetTokenMinutes} minutes.
+          If there’s an account for <strong className="font-semibold break-all">{sentTo}</strong>,
+          we’ve sent it a link to choose a new password. The link works for{" "}
+          {LIMITS.resetTokenMinutes} minutes.
         </p>
         <p>
           <Link href="/signin" className={AUTH_LINK}>

@@ -103,7 +103,7 @@ async function request(path: string, init: RequestInit): Promise<Response> {
     throw new ApiError(
       0,
       "network_error",
-      "We couldn't reach PitchPerfect. Check your connection and try again.",
+      "We couldn’t reach PitchPerfect. Check your connection and try again.",
     );
   }
 }
@@ -210,7 +210,7 @@ function parseMessage(block: string): PracticeEvent | null {
     throw new ApiError(
       502,
       "upstream_error",
-      "The practice partner sent a reply we couldn't read.",
+      "The practice partner sent a reply we couldn’t read.",
     );
   }
   return parsed.data;

@@ -25,7 +25,7 @@ export const SAMPLE_WEIGHTED: RubricKey = "objections";
 export const SAMPLE_TRANSCRIPT = [
   {
     role: "partner",
-    text: "I've got about ten minutes before a carrier call. What are you here to show me?",
+    text: "I’ve got about ten minutes before a carrier call. What are you here to show me?",
   },
   {
     role: "student",
@@ -37,7 +37,7 @@ export const SAMPLE_TRANSCRIPT = [
   },
   {
     role: "student",
-    text: "Our planner rebuilds the day's routes in minutes when someone is out, so dispatch stops firefighting.",
+    text: "Our planner rebuilds the day’s routes in minutes when someone is out, so dispatch stops firefighting.",
   },
   {
     role: "partner",
@@ -45,7 +45,7 @@ export const SAMPLE_TRANSCRIPT = [
   },
   {
     role: "student",
-    text: "That's fair, and I'd be skeptical too. What if we started with one depot for a month, and you only continue if your dispatchers actually use it?",
+    text: "That’s fair, and I’d be skeptical too. What if we started with one depot for a month, and you only continue if your dispatchers actually use it?",
   },
 ] as const;
 
@@ -108,15 +108,15 @@ export const DISCOVERY_MOMENT: RoomMoment = {
   transcript: [
     {
       role: "partner",
-      text: "We're doing fine, honestly. What did you want to talk about?",
+      text: "We’re doing fine, honestly. What did you want to talk about?",
     },
     {
       role: "student",
-      text: "Thanks, Daniel. When a technician's job runs long, what happens to the rest of their day?",
+      text: "Thanks, Daniel. When a technician’s job runs long, what happens to the rest of their day?",
     },
     {
       role: "partner",
-      text: "The office calls the next customers and pushes them back. Some days that's the whole afternoon.",
+      text: "The office calls the next customers and pushes them back. Some days that’s the whole afternoon.",
     },
     {
       role: "student",
@@ -131,7 +131,7 @@ const dimensions: Scorecard["dimensions"] = [
     key: "clarity",
     score: 4,
     justification: "Each turn made one point, and the pitch fit in a single sentence.",
-    evidence: "Our planner rebuilds the day's routes in minutes when someone is out",
+    evidence: "Our planner rebuilds the day’s routes in minutes when someone is out",
   },
   {
     key: "value",
@@ -157,7 +157,7 @@ const dimensions: Scorecard["dimensions"] = [
     key: "objections",
     score: 4,
     justification: "Acknowledged the bad past experience, then answered it with a low-risk pilot.",
-    evidence: "That's fair, and I'd be skeptical too.",
+    evidence: "That’s fair, and I’d be skeptical too.",
   },
   {
     key: "confidence",

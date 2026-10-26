@@ -17,7 +17,7 @@ export const metadata = pageMetadata(PUBLIC_PAGES.employers);
 const FEATURES: Statement[] = [
   {
     title: "Post a role",
-    body: "Write the description, list the skills, set the pay and the workplace, and publish when you're ready. Drafts stay private.",
+    body: "Write the description, list the skills, set the pay and the workplace, and publish when you’re ready. Drafts stay private.",
   },
   {
     title: "Candidates rehearse your role",
@@ -37,14 +37,14 @@ const FEATURES: Statement[] = [
   },
   {
     title: "A verified badge",
-    body: "Confirm a work email on your company's domain and your listings show as verified, to candidates and to search engines.",
+    body: "Confirm a work email on your company’s domain and your listings show as verified, to candidates and to search engines.",
   },
 ];
 
 const VERIFY_STEPS = [
-  "Sign up with your work email, and add your company's name and website.",
+  "Sign up with your work email, and add your company’s name and website.",
   "Confirm the email with the one-time link we send. Free and throwaway email providers never count as a company domain.",
-  "If the email's domain matches the website's, you're verified. Unverified listings still go live, with a badge.",
+  "If the email’s domain matches the website’s, you’re verified. Unverified listings still go live, with a badge.",
 ];
 
 /** Each step starts further in than the last, so the three read as a sequence without numbers. */
@@ -84,9 +84,9 @@ export default function EmployersPage() {
             </InViewItem>
             <InViewItem>
               <p className="mt-6 max-w-[42ch] text-lede text-ink">
-                A shared scorecard links to the candidate&apos;s practice session. If they delete
-                that session or withdraw, it stops being shared. Résumés download as PDF files and
-                never open in the browser.
+                A shared scorecard links to the candidate’s practice session. If they delete that
+                session or withdraw, it stops being shared. Résumés download as PDF files and never
+                open in the browser.
               </p>
             </InViewItem>
           </InView>
@@ -118,8 +118,8 @@ export default function EmployersPage() {
           <div className="lg:col-span-7 lg:col-start-6 lg:row-start-1">
             <SectionTitle id="verify-heading">How verification works</SectionTitle>
             <p className="mt-4 max-w-[52ch] text-lede text-ink">
-              It&apos;s an automatic domain check. It tells candidates the person posting really has
-              a company email. It doesn&apos;t mean we vouch for the job.
+              It’s an automatic domain check. It tells candidates the person posting really has a
+              company email. It doesn’t mean we vouch for the job.
             </p>
             <InView as="ol" className="mt-10 flex flex-col gap-4">
               {VERIFY_STEPS.map((step, index) => (
@@ -144,7 +144,7 @@ export default function EmployersPage() {
 
       <CtaBand
         title="Post your first sales role"
-        body="Create an employer account, post a role, and review applicants who've practiced the call."
+        body="Create an employer account, post a role, and review applicants who’ve practiced the call."
         primary={{ href: "/signup/employer", label: "Post a job" }}
         secondary={{ href: "/jobs", label: "See current jobs" }}
       />

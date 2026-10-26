@@ -20,7 +20,7 @@ export function Loading({ label, lines = 3 }: { label: string; lines?: number })
 export function LoadError({ what, onRetry }: { what: string; onRetry: () => void }) {
   return (
     <div className="flex flex-col items-start gap-2">
-      <p className="text-ink">We couldn&apos;t load {what}. It may be a connection problem.</p>
+      <p className="text-ink">We couldn’t load {what}. It may be a connection problem.</p>
       <button
         type="button"
         onClick={onRetry}

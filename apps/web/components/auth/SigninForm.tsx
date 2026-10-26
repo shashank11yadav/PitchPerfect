@@ -12,7 +12,7 @@ import { SubmitRow } from "./form-parts";
 import { PasswordField } from "./PasswordField";
 
 /** Never says which of the two was wrong, the same way the api doesn't. */
-const NO_MATCH = "That email and password don't match an account. Check both and try again.";
+const NO_MATCH = "That email and password don’t match an account. Check both and try again.";
 
 interface SigninFormProps {
   /** The `next` query parameter; `SignedOutOnly` only follows it if `safeNext` allows it. */
@@ -40,7 +40,7 @@ function Form() {
         throw new ApiError(
           503,
           "session_unavailable",
-          "You're signed in, but we couldn't load your account. Try again in a moment.",
+          "You’re signed in, but we couldn’t load your account. Try again in a moment.",
         );
       }
     },

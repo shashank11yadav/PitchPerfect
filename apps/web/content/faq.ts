@@ -9,12 +9,12 @@ export const HOME_FAQ: readonly FaqItem[] = [
   {
     question: "Is the practice partner a real person?",
     answer:
-      "No. It's software that plays a buyer, say a busy operations lead or a skeptical manager. Depending on how the site is set up, that's a scripted partner or a live model from OpenAI or Anthropic; the public demo uses the scripted one. It's labelled for what it is wherever it appears, and if you sincerely ask whether it's human, it tells you.",
+      "No. It’s software that plays a buyer, say a busy operations lead or a skeptical manager. Depending on how the site is set up, that’s a scripted partner or a live model from OpenAI or Anthropic; the public demo uses the scripted one. It’s labelled for what it is wherever it appears, and if you sincerely ask whether it’s human, it tells you.",
   },
   {
     question: "Do I have to talk out loud?",
     answer:
-      "No, you can type. Voice uses your browser's own speech recognition, with captions always on. If your browser can't do speech, or you'd rather not, text mode is one click away.",
+      "No, you can type. Voice uses your browser’s own speech recognition, with captions always on. If your browser can’t do speech, or you’d rather not, text mode is one click away.",
   },
   {
     question: "What does the scorecard measure?",
@@ -40,21 +40,21 @@ export const HOME_FAQ: readonly FaqItem[] = [
 export const PRACTICE_FAQ: readonly FaqItem[] = [
   {
     question: "How long is a practice session?",
-    answer: `${sentence(SESSION_LENGTH)} You can end it early, and it's scored on what you said up to then.`,
+    answer: `${sentence(SESSION_LENGTH)} You can end it early, and it’s scored on what you said up to then.`,
   },
   {
     question: "How does the partner decide what to say?",
-    answer: `Every session starts from a scenario: a buyer with a name, a job, a personality and ${String(LIMITS.hiddenObjectionsMin)} or ${String(LIMITS.hiddenObjectionsMax)} objections they keep to themselves. The call moves through opening, discovery, pitch, objection and close. Once you've pitched, the buyer brings up those objections, and warms up if you handle them well.`,
+    answer: `Every session starts from a scenario: a buyer with a name, a job, a personality and ${String(LIMITS.hiddenObjectionsMin)} or ${String(LIMITS.hiddenObjectionsMax)} objections they keep to themselves. The call moves through opening, discovery, pitch, objection and close. Once you’ve pitched, the buyer brings up those objections, and warms up if you handle them well.`,
   },
   {
     question: "Are the quotes in my scorecard real?",
     answer:
-      "Yes. Each quote is checked word for word against your transcript. If one doesn't match, it's dropped instead of shown.",
+      "Yes. Each quote is checked word for word against your transcript. If one doesn’t match, it’s dropped instead of shown.",
   },
   {
     question: "Can I practice for a specific job?",
     answer:
-      "Yes. Start a session from a job's page and the scenario is built from that job's title, description and skills, so the buyer and their objections fit the role.",
+      "Yes. Start a session from a job’s page and the scenario is built from that job’s title, description and skills, so the buyer and their objections fit the role.",
   },
   {
     question: "What happens to my voice?",

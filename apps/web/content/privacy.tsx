@@ -32,8 +32,8 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         </li>
         <li>An employer sees only what you send with an application to their job.</li>
         <li>
-          There are three cookies: one keeps you signed in, two protect your forms. We don&apos;t
-          use advertising, analytics or tracking cookies.
+          There are three cookies: one keeps you signed in, two protect your forms. We don’t use
+          advertising, analytics or tracking cookies.
         </li>
         <li>You can delete any practice session, or your whole account, whenever you like.</li>
       </ul>
@@ -45,8 +45,8 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
     body: (
       <p>
         PitchPerfect is open-source software for practicing sales conversations and hiring for
-        entry-level sales roles. In this policy, &ldquo;we&rdquo; means whoever operates this
-        PitchPerfect site. To reach us, contact {CONTACT}.
+        entry-level sales roles. In this policy, “we” means whoever operates this PitchPerfect site.
+        To reach us, contact {CONTACT}.
       </p>
     ),
   },
@@ -75,11 +75,11 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         </li>
         <li>
           <strong>Jobs and applications:</strong> jobs you save, jobs you apply to, the scorecard
-          you chose to share, each application&apos;s status, and interview times and links.
+          you chose to share, each application’s status, and interview times and links.
         </li>
         <li>
-          <strong>Employers:</strong> your job title; your company&apos;s name, website, LinkedIn
-          page, pitch and logo link; your job posts; and your notes on applicants&apos; status.
+          <strong>Employers:</strong> your job title; your company’s name, website, LinkedIn page,
+          pitch and logo link; your job posts; and your notes on applicants’ status.
         </li>
         <li>
           <strong>Technical records:</strong> request logs with an ID, the page or endpoint, the
@@ -116,15 +116,15 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
     body: (
       <>
         <p>
-          Voice practice uses your browser&apos;s built-in speech recognition. PitchPerfect never
+          Voice practice uses your browser’s built-in speech recognition. PitchPerfect never
           receives or stores audio; only the text you choose to send reaches us. Some browsers
           recognize speech by sending the audio to their maker (Google, Apple or Microsoft), under
-          that company&apos;s own privacy terms. Where your browser offers on-device recognition, it
-          is used automatically.
+          that company’s own privacy terms. Where your browser offers on-device recognition, it is
+          used automatically.
         </p>
         <p>
-          The partner&apos;s replies are read aloud by your browser&apos;s own speech voices. Text
-          mode is always available if you would rather not use your microphone.
+          The partner’s replies are read aloud by your browser’s own speech voices. Text mode is
+          always available if you would rather not use your microphone.
         </p>
       </>
     ),
@@ -151,10 +151,10 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         {partner === "live" && (
           <li>
             <strong>{AI_PROVIDER}</strong> receives the text of your practice turns, the scenario
-            and, if you practiced for a job, that job&apos;s title, description and skills. Before
+            and, if you practiced for a job, that job’s title, description and skills. Before
             anything is sent, email addresses, phone numbers, card and bank account numbers, and
-            Social Security numbers are replaced with placeholders. We don&apos;t add your name or
-            email address, but anything you say in a session is sent as you said it.
+            Social Security numbers are replaced with placeholders. We don’t add your name or email
+            address, but anything you say in a session is sent as you said it.
           </li>
         )}
         <li>
@@ -233,8 +233,8 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         </li>
         <li>
           How many practice sessions you started each day, for the daily and monthly limits: until
-          the end of that month, then deleted automatically. Deleting a session doesn&apos;t remove
-          it from this count.
+          the end of that month, then deleted automatically. Deleting a session doesn’t remove it
+          from this count.
         </li>
         <li>Everything else: until you delete it or delete your account.</li>
       </ul>
@@ -297,8 +297,8 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
       <p>
         You can see and change your profile, email address and password in your settings, choose
         whether to share a scorecard each time you apply, practice in text mode instead of voice,
-        and delete sessions or your whole account. We don&apos;t offer a download of your data yet;
-        ask {CONTACT} if you need a copy.
+        and delete sessions or your whole account. We don’t offer a download of your data yet; ask{" "}
+        {CONTACT} if you need a copy.
       </p>
     ),
   },

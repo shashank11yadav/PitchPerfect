@@ -93,8 +93,8 @@ export default async function JobPage({ params }: JobPageProps) {
         title="We couldn’t load this job"
         lead={
           <p>
-            The job board isn&apos;t answering right now. The listing is probably still there; try
-            again in a minute.
+            The job board isn’t answering right now. The listing is probably still there; try again
+            in a minute.
           </p>
         }
         actions={

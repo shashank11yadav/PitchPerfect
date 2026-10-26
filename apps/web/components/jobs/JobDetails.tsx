@@ -66,16 +66,16 @@ function CompanyNote({ company }: { company: PublicCompany }) {
   if (company.verification === "verified") {
     return (
       <p>
-        Verified means the employer confirmed a work email on the company&apos;s own website domain.
-        It tells you who posted the job. It isn&apos;t a recommendation.
+        Verified means the employer confirmed a work email on the company’s own website domain. It
+        tells you who posted the job. It isn’t a recommendation.
       </p>
     );
   }
   return (
     <p>
-      {company.name} hasn&apos;t confirmed an email on its website&apos;s domain yet, so we
-      don&apos;t know for sure who posted this. Look the company up yourself before you share
-      anything beyond your application.
+      {company.name} hasn’t confirmed an email on its website’s domain yet, so we don’t know for
+      sure who posted this. Look the company up yourself before you share anything beyond your
+      application.
     </p>
   );
 }
@@ -170,7 +170,7 @@ export function JobDetails({
                   id="job-skills-heading"
                   className="mt-8 font-sans text-small font-normal text-muted"
                 >
-                  Skills they&apos;re hiring for
+                  Skills they’re hiring for
                 </Section>
                 <ul aria-label="Skills" className="mt-2 flex flex-wrap gap-2">
                   {job.skills.map((skill) => (

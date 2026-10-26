@@ -53,7 +53,7 @@ function ApplicationsLink({ dark }: { dark: boolean }) {
 function AppliedNote({ dark }: { dark: boolean }) {
   return (
     <>
-      You&apos;ve already applied to this job. It&apos;s in <ApplicationsLink dark={dark} />.
+      You’ve already applied to this job. It’s in <ApplicationsLink dark={dark} />.
     </>
   );
 }
@@ -180,7 +180,7 @@ export function ApplyActions({ jobId, slug, dark = false }: ApplyActionsProps) {
   if (viewer === "loading") {
     controls = (
       <div aria-busy="true" className="flex items-center gap-7">
-        <span className="sr-only">Checking whether you&apos;re signed in</span>
+        <span className="sr-only">Checking whether you’re signed in</span>
         <span className={cn(placeholder, "h-12 w-36")} />
         <span className={cn(placeholder, "h-5 w-24")} />
       </div>
@@ -204,7 +204,7 @@ export function ApplyActions({ jobId, slug, dark = false }: ApplyActionsProps) {
   } else if (viewer === "employer") {
     controls = (
       <p className={cn("max-w-[36ch]", text)}>
-        You&apos;re signed in as an employer. Applying is for student accounts.
+        You’re signed in as an employer. Applying is for student accounts.
       </p>
     );
   } else {

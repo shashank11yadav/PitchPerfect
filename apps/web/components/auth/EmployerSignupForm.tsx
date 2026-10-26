@@ -20,8 +20,8 @@ const INITIAL = {
 const REQUIRED = {
   email: "Enter your work email address",
   jobTitle: "Enter your job title",
-  "company.name": "Enter your company's name",
-  "company.website": "Enter your company's website",
+  "company.name": "Enter your company’s name",
+  "company.website": "Enter your company’s website",
 };
 
 export function EmployerSignupForm() {

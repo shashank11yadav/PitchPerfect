@@ -40,8 +40,3 @@ export function truncateText(text: string, max: number): string {
   const lastSpace = cut.lastIndexOf(" ");
   return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s,.;:–-]+$/, "")}…`;
 }
-
-/** Display type: turns the straight apostrophes inside words ("That's") into curly ones. */
-export function curlyApostrophes(text: string): string {
-  return text.replace(/(\p{L})'(\p{L})/gu, "$1’$2");
-}

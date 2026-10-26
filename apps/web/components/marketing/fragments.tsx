@@ -214,7 +214,7 @@ export function JobPracticeFragment() {
 
 /** A seller's turn with contact details in it; the email and number must never break. */
 const TYPED_PARTS = [
-  "I'll send the one-pager tonight. Reach me at ",
+  "I’ll send the one-pager tonight. Reach me at ",
   { keep: "dana.k@example.test" },
   " or ",
   { keep: "617-555-0142" },

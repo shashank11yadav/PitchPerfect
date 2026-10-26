@@ -24,7 +24,7 @@ function lengthHint(length: number): string {
   if (length < MIN) {
     return `At least ${String(MIN)} characters: ${String(MIN - length)} more to go.`;
   }
-  return "That's long enough. Another word or two would make it harder to guess.";
+  return "That’s long enough. Another word or two would make it harder to guess.";
 }
 
 /** A password input with a show/hide toggle (`aria-pressed`) and an optional length hint. */

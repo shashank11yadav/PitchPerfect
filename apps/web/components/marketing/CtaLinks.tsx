@@ -16,7 +16,7 @@ const START_PRACTICING: CtaLink = {
 };
 const IM_HIRING: CtaLink = PAGES_EXPORT
   ? { href: "/jobs", label: "Browse the jobs" }
-  : { href: "/employers", label: "I'm hiring" };
+  : { href: "/employers", label: "I’m hiring" };
 
 interface CtaLinksProps {
   primary?: CtaLink;

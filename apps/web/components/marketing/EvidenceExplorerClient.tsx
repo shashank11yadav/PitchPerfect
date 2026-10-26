@@ -83,7 +83,7 @@ export function EvidenceExplorerClient({
         <div className="flex items-center gap-5">
           <ScoreRing score={overall} />
           <p className="max-w-[22ch] text-small text-ink">
-            {skillTitle} counts double here, because it&apos;s the skill being practiced.
+            {skillTitle} counts double here, because it’s the skill being practiced.
           </p>
         </div>
         <ul aria-label="Rubric scores" className="mt-8 flex flex-wrap gap-2 lg:flex-col lg:gap-1">
@@ -126,7 +126,7 @@ export function EvidenceExplorerClient({
           <p className="mt-1 text-ink">{current.justification}</p>
           {!current.evidence && (
             <p className="mt-1 text-ink">
-              This score is about the whole call, so there&apos;s no single line to mark.
+              This score is about the whole call, so there’s no single line to mark.
             </p>
           )}
         </div>

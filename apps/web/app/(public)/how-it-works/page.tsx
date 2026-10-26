@@ -12,7 +12,6 @@ import { ScoreBands, StageStory } from "@/components/marketing/SessionStages";
 import { StatementRows, type Statement } from "@/components/marketing/StatementRows";
 import { PRACTICE_FAQ } from "@/content/faq";
 import { SESSION_LENGTH } from "@/content/limits";
-import { curlyApostrophes } from "@/lib/plain-text";
 import { practicePartnerKind } from "@/lib/practice-partner";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
 
@@ -39,10 +38,10 @@ const safeguards = (partner: PracticePartnerKind): Statement[] => [
     title: "Personal details removed",
     body:
       partner === "live"
-        ? "Email addresses, phone numbers, card and bank account numbers, and Social Security numbers are removed from your text before it's stored or sent to our AI provider."
+        ? "Email addresses, phone numbers, card and bank account numbers, and Social Security numbers are removed from your text before it’s stored or sent to our AI provider."
         : partner === "scripted"
-          ? "Email addresses, phone numbers, card and bank account numbers, and Social Security numbers are removed from your text before it's stored. In this demo your text isn't sent to an AI provider."
-          : "Email addresses, phone numbers, card and bank account numbers, and Social Security numbers are removed from your text before it's kept in this tab. In this demo your text isn't sent anywhere.",
+          ? "Email addresses, phone numbers, card and bank account numbers, and Social Security numbers are removed from your text before it’s stored. In this demo your text isn’t sent to an AI provider."
+          : "Email addresses, phone numbers, card and bank account numbers, and Social Security numbers are removed from your text before it’s kept in this tab. In this demo your text isn’t sent anywhere.",
   },
   {
     title: "Session limits",
@@ -58,8 +57,8 @@ export default async function HowItWorksPage() {
         title="From a lesson to a scorecard"
         lead={
           <p>
-            A lesson, a call with a buyer who pushes back, and a scorecard you can act on.
-            Here&apos;s what happens at each step, and where your data goes.
+            A lesson, a call with a buyer who pushes back, and a scorecard you can act on. Here’s
+            what happens at each step, and where your data goes.
           </p>
         }
         actions={<CtaLinks />}
@@ -89,13 +88,13 @@ export default async function HowItWorksPage() {
             <SectionTitle id="scoring-heading">How scoring works</SectionTitle>
             <p className="mt-4 max-w-[46ch] text-lede text-ink">
               When the call ends, your transcript is scored from 1 to 5 on seven rubric lines. The
-              overall score is built from those, with the practiced skill&apos;s line counted twice,
-              and scaled to 0 to 100.
+              overall score is built from those, with the practiced skill’s line counted twice, and
+              scaled to 0 to 100.
             </p>
           </div>
           <figure className="lg:col-span-6 lg:col-start-1 lg:row-start-1">
             <blockquote className="max-w-[22ch] font-display text-[clamp(1.75rem,3vw,2.25rem)] leading-[1.2] font-semibold text-navy">
-              &ldquo;{curlyApostrophes(OBJECTION_QUOTE)}&rdquo;
+              “{OBJECTION_QUOTE}”
             </blockquote>
             <figcaption className="mt-4 max-w-[44ch] text-ink">
               The line that earned the sample call its objection handling score, 4 out of 5.

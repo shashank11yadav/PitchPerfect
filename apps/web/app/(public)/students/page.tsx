@@ -36,7 +36,7 @@ const FEATURES: Statement[] = [
   },
   {
     title: "Practice for a real job",
-    body: "Start from any job listing and the scenario is built from that role's title, description and skills.",
+    body: "Start from any job listing and the scenario is built from that role’s title, description and skills.",
   },
   {
     title: "Apply with proof",

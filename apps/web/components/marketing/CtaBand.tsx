@@ -13,7 +13,7 @@ interface CtaBandProps {
 /** The close of every public page: one field of brand blue, the only place it fills a band. */
 export function CtaBand({
   title = "Practice the call before it counts",
-  body = "Pick a skill, talk it through with the practice partner, and read your scorecard. Apply when you're ready.",
+  body = "Pick a skill, talk it through with the practice partner, and read your scorecard. Apply when you’re ready.",
   primary,
   secondary,
 }: CtaBandProps) {

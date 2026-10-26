@@ -167,7 +167,7 @@ export function RequireRole({ role, children }: RequireRoleProps) {
   if (status === "unavailable" && !leaving) {
     return (
       <div role="alert" className="flex flex-col items-start gap-4 py-10 text-ink">
-        <p>We can&apos;t reach your account right now. Try again in a moment.</p>
+        <p>We can’t reach your account right now. Try again in a moment.</p>
         <button
           type="button"
           disabled={retrying}
@@ -212,7 +212,7 @@ export function SignedOutOnly({ next, children }: SignedOutOnlyProps) {
   return (
     <Checking
       label={
-        status === "loading" ? "Checking whether you're signed in" : "Taking you to your account"
+        status === "loading" ? "Checking whether you’re signed in" : "Taking you to your account"
       }
     />
   );

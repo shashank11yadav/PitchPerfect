@@ -43,7 +43,7 @@ describe("the sample jobs on the public pages", () => {
     }
   });
 
-  it("show the hiring job's real pay, place and skills in the job post", () => {
+  it("show the hiring job’s real pay, place and skills in the job post", () => {
     render(<JobPostFragment />);
     const seeded = SEED_JOBS.find(
       (job) =>
@@ -78,7 +78,7 @@ describe("RedactionFragment", () => {
     const typed = screen.getByTestId("typed-turn").textContent;
     const stored = screen.getByTestId("stored-turn").textContent;
     expect(stored).toBe(redactPii(typed));
-    expect(stored).toBe("I'll send the one-pager tonight. Reach me at [email] or [phone].");
+    expect(stored).toBe("I’ll send the one-pager tonight. Reach me at [email] or [phone].");
   });
 
   it("uses reserved example contact details and keeps them from breaking across lines", () => {

@@ -31,8 +31,8 @@ function Unavailable({ query }: { query: JobQuery }) {
   return (
     <ListNote title="We couldn’t load the jobs">
       <p>
-        The job board isn&apos;t answering right now. Your search is still in the form above; try
-        again in a minute.
+        The job board isn’t answering right now. Your search is still in the form above; try again
+        in a minute.
       </p>
       <Link href={jobsHref(query)} className={textLink}>
         Try again
@@ -56,8 +56,8 @@ function NoResults({ query, total }: { query: JobQuery; total: number }) {
     return (
       <ListNote title="No jobs match that search">
         <p>
-          Search looks at job titles and skills. Try a shorter word, like &ldquo;sales&rdquo; or
-          &ldquo;discovery&rdquo;, or set workplace and job type back to any.
+          Search looks at job titles and skills. Try a shorter word, like “sales” or “discovery”, or
+          set workplace and job type back to any.
         </p>
         <Link href="/jobs" className={textLink}>
           Show every job

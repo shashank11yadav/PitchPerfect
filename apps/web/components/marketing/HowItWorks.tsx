@@ -15,7 +15,7 @@ const BRIEF = [
   },
   {
     verb: "Get hired",
-    body: "Read your scorecard, then apply for sales roles and attach the one you're proudest of.",
+    body: "Read your scorecard, then apply for sales roles and attach the one you’re proudest of.",
   },
 ] as const;
 
@@ -27,12 +27,12 @@ const STEPS: readonly { verb: string; body: string; fragment: ReactNode }[] = [
   },
   {
     verb: "Practice",
-    body: "Call a buyer with a name, a job and a few objections they won't mention up front. Talk or type, and stop when you like.",
+    body: "Call a buyer with a name, a job and a few objections they won’t mention up front. Talk or type, and stop when you like.",
     fragment: <PracticeFragment />,
   },
   {
     verb: "Get hired",
-    body: "Apply to entry-level sales roles and attach the scorecard you're proudest of. You pick which one, or none.",
+    body: "Apply to entry-level sales roles and attach the scorecard you’re proudest of. You pick which one, or none.",
     fragment: <ApplyFragment />,
   },
 ];

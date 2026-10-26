@@ -220,7 +220,7 @@ test("the footer and the about page name who built it and link out to him", asyn
   const main = page.getByRole("main");
   await expect(main).toContainText("Built by Shashank Yadav.");
   await expect(main).toContainText("its partner is the scripted one, running in your browser");
-  await expect(main.getByRole("link", { name: "project's issues on GitHub" })).toHaveAttribute(
+  await expect(main.getByRole("link", { name: "project’s issues on GitHub" })).toHaveAttribute(
     "href",
     "https://github.com/shashank11yadav/PitchPerfect/issues",
   );

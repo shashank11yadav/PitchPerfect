@@ -37,8 +37,8 @@ export default function HomePage() {
           <InViewItem>
             <p className="mt-6 max-w-[52ch] text-statement text-ink">
               The call ends with a score out of 100 and seven rubric scores, each with a reason.
-              Pick one to see the words it&apos;s based on. Quotes are checked against your
-              transcript, so none are made up.
+              Pick one to see the words it’s based on. Quotes are checked against your transcript,
+              so none are made up.
             </p>
           </InViewItem>
         </InView>

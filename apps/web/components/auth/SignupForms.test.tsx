@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 describe("StudentSignupForm", () => {
-  it("can't be submitted without confirming the student is 18 or older", async () => {
+  it("can’t be submitted without confirming the student is 18 or older", async () => {
     const fetchMock = serveApi({});
     render(<StudentSignupForm />);
     await fillStudent();
@@ -40,12 +40,12 @@ describe("StudentSignupForm", () => {
     const age = screen.getByRole("checkbox", { name: /18 or older/i });
     expect(age).toBeRequired();
     expect(age).toHaveAttribute("aria-invalid", "true");
-    expect(age).toHaveAccessibleDescription(/confirm that you're 18 or older/i);
+    expect(age).toHaveAccessibleDescription(/confirm that you’re 18 or older/i);
     expect(age).toHaveFocus();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("offers every US state and the schema's graduation years", () => {
+  it("offers every US state and the schema’s graduation years", () => {
     serveApi({});
     render(<StudentSignupForm />);
     const states = within(screen.getByLabelText(/state/i)).getAllByRole("option");
@@ -65,7 +65,7 @@ describe("StudentSignupForm", () => {
     expect(years).toHaveLength(max - min + 1);
   });
 
-  it("sends the shared schema's shape, then shows the same inbox message for any email", async () => {
+  it("sends the shared schema’s shape, then shows the same inbox message for any email", async () => {
     let sent: unknown;
     serveApi({
       "GET /api/auth/csrf": csrf,
@@ -97,7 +97,7 @@ describe("StudentSignupForm", () => {
     });
   });
 
-  it("shows the server's password policy error on the password field", async () => {
+  it("shows the server’s password policy error on the password field", async () => {
     serveApi({
       "GET /api/auth/csrf": csrf,
       "POST /api/auth/signup": () =>

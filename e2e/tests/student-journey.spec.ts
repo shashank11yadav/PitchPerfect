@@ -23,9 +23,9 @@ async function signUp(page: Page, email: string): Promise<void> {
   await page.getByLabel("Major").fill("Communications");
   await page.getByLabel("Graduation year").selectOption({ index: 1 });
   await page.getByLabel("State").selectOption("OH");
-  await page.getByLabel("Role you're aiming for").fill("Sales development representative");
+  await page.getByLabel("Role you’re aiming for").fill("Sales development representative");
   await page.getByLabel("Industry").fill("Software");
-  await page.getByLabel("I'm 18 or older").check();
+  await page.getByLabel("I’m 18 or older").check();
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByRole("heading", { name: "Check your inbox" })).toBeVisible();
 }

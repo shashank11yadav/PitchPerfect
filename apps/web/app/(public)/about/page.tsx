@@ -28,16 +28,16 @@ export default function AboutPage() {
         </SectionTitle>
         <div className="flex max-w-[60ch] flex-col gap-5 text-statement text-ink lg:col-span-7 lg:col-start-6">
           <p>
-            You learn sales by doing it. The trouble is that most people&apos;s first real attempts
+            You learn sales by doing it. The trouble is that most people’s first real attempts
             happen in an interview or on a live call, where a fumbled answer costs something.
           </p>
           <p>
             PitchPerfect is somewhere to get those first attempts over with. You talk to a buyer who
-            reacts to what you say, then read a scorecard that shows what worked, what didn&apos;t,
-            and a better way to say it.
+            reacts to what you say, then read a scorecard that shows what worked, what didn’t, and a
+            better way to say it.
           </p>
           <p>
-            When you&apos;re ready, the job board connects you with employers hiring for entry-level
+            When you’re ready, the job board connects you with employers hiring for entry-level
             sales, and you decide whether they see your practice.
           </p>
         </div>
@@ -79,10 +79,9 @@ export default function AboutPage() {
           </h2>{" "}
           <p className="inline">
             PitchPerfect is open source under the MIT license. In the full app the practice partner
-            runs as its own service, stores nothing, and can&apos;t be reached from the internet. It
-            can use a live model from OpenAI or Anthropic, or a scripted partner when no key is set.
-            The public demo has no server, so its partner is the scripted one, running in your
-            browser.
+            runs as its own service, stores nothing, and can’t be reached from the internet. It can
+            use a live model from OpenAI or Anthropic, or a scripted partner when no key is set. The
+            public demo has no server, so its partner is the scripted one, running in your browser.
           </p>
         </div>
         <div className="flex max-w-[36ch] flex-col gap-4 text-ink lg:col-span-4 lg:col-start-9">
@@ -99,7 +98,7 @@ export default function AboutPage() {
           <p>
             Questions and bug reports go to the{" "}
             <a href={ISSUES_URL} rel="noopener noreferrer" className={LINK}>
-              project&apos;s issues on GitHub
+              project’s issues on GitHub
             </a>
             . Please report a security problem to{" "}
             <a href={AUTHOR.github} rel="noopener noreferrer" className={LINK}>

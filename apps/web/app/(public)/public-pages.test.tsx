@@ -97,7 +97,7 @@ describe("home page", () => {
     const hrefs = (name: string) =>
       screen.getAllByRole("link", { name }).map((link) => link.getAttribute("href"));
     expect(new Set(hrefs("Start practicing"))).toEqual(new Set(["/signup/student"]));
-    expect(new Set(hrefs("I'm hiring"))).toEqual(new Set(["/employers"]));
+    expect(new Set(hrefs("I’m hiring"))).toEqual(new Set(["/employers"]));
   });
 
   it("carries Organization, WebSite and FAQPage structured data", () => {
@@ -138,7 +138,7 @@ describe("privacy page", () => {
     expect(main).toHaveTextContent(/no (advertising|analytics|tracking)/i);
   });
 
-  it("links every contact line to the owner's GitHub profile", async () => {
+  it("links every contact line to the owner’s GitHub profile", async () => {
     const { container } = render(await PrivacyPage());
     const contacts = within(container).getAllByRole("link", { name: "Shashank Yadav on GitHub" });
     expect(contacts).toHaveLength(4);
@@ -154,7 +154,7 @@ describe("privacy page", () => {
 });
 
 describe("terms page", () => {
-  it("sends questions to the owner's GitHub profile", async () => {
+  it("sends questions to the owner’s GitHub profile", async () => {
     const { container } = render(await TermsPage());
     const changes = container.querySelector("#changes + div");
     expect(changes).toHaveTextContent("Questions go to Shashank Yadav on GitHub.");
@@ -172,7 +172,7 @@ describe("about page", () => {
     const href = (name: string) => screen.getByRole("link", { name }).getAttribute("href");
     expect(href("GitHub")).toBe("https://github.com/shashank11yadav");
     expect(href("shashankyadav.dev")).toBe("https://www.shashankyadav.dev/");
-    expect(href("project's issues on GitHub")).toBe(
+    expect(href("project’s issues on GitHub")).toBe(
       "https://github.com/shashank11yadav/PitchPerfect/issues",
     );
     expect(href("Shashank Yadav directly")).toBe("https://github.com/shashank11yadav");
@@ -239,12 +239,12 @@ describe("numbers in the copy come from the shared limits", () => {
 });
 
 describe("fix round 1", () => {
-  it("shows Maya's persona card once on the home page", () => {
+  it("shows Maya’s persona card once on the home page", () => {
     render(<HomePage />);
     expect(screen.getAllByRole("region", { name: "Maya Chen" })).toHaveLength(1);
   });
 
-  it("gives the employers page its own applicants, not the home page's", () => {
+  it("gives the employers page its own applicants, not the home page’s", () => {
     const { container } = render(<EmployersPage />);
     expect(container).not.toHaveTextContent("Jordan Ellis");
     // One hiring story: the applicant list, the job post and the invite are all the SDR role.
@@ -281,7 +281,7 @@ describe("final review: the legal pages describe the partner that is really runn
   const SCRIPTED =
     "This demo’s practice partner is scripted and runs on our server; what you say isn’t sent to an AI provider.";
 
-  it("privacy keeps the AI provider wording when the api can't say otherwise", async () => {
+  it("privacy keeps the AI provider wording when the api can’t say otherwise", async () => {
     const { container } = render(await PrivacyPage());
     expect(container).toHaveTextContent(
       "our AI provider (OpenAI or Anthropic, depending on configuration)",
@@ -307,7 +307,7 @@ describe("final review: the legal pages describe the partner that is really runn
     expect(container).not.toHaveTextContent("cannot be reached from the internet");
   });
 
-  it("terms call the partner scripted when the coach runs the demo, and AI when it doesn't", async () => {
+  it("terms call the partner scripted when the coach runs the demo, and AI when it doesn’t", async () => {
     fetchMock.mockResolvedValue(healthBody("scripted"));
     const scripted = render(await TermsPage());
     expect(scripted.container).toHaveTextContent("The practice partner is scripted, not a person");
@@ -325,7 +325,7 @@ describe("final review: the legal pages describe the partner that is really runn
     fetchMock.mockResolvedValue(healthBody("scripted"));
     const scripted = render(await HowItWorksPage());
     expect(scripted.container).toHaveTextContent(
-      "In this demo your text isn't sent to an AI provider.",
+      "In this demo your text isn’t sent to an AI provider.",
     );
     expect(scripted.container).not.toHaveTextContent(/sent to our AI provider/);
     expect(scripted.container).toHaveTextContent("labelled as a scripted demo wherever it appears");
@@ -355,12 +355,12 @@ describe("final review: the legal pages describe the partner that is really runn
     about.unmount();
     const { container } = render(<HomePage />);
     expect(container).toHaveTextContent(
-      "that's a scripted partner or a live model from OpenAI or Anthropic; the public demo uses the scripted one",
+      "that’s a scripted partner or a live model from OpenAI or Anthropic; the public demo uses the scripted one",
     );
     expect(container).not.toHaveTextContent(/labelled as AI everywhere/);
   });
 
-  it("no page that can't ask the api calls the partner an AI", () => {
+  it("no page that can’t ask the api calls the partner an AI", () => {
     for (const Page of [HomePage, StudentsPage, EmployersPage, AboutPage]) {
       const { container, unmount } = render(<PublicLayout>{Page()}</PublicLayout>);
       expect(container).not.toHaveTextContent(/\bAI\b/);
@@ -371,7 +371,7 @@ describe("final review: the legal pages describe the partner that is really runn
     }
   });
 
-  it("terms don't claim every employer must sign up with a company address", async () => {
+  it("terms don’t claim every employer must sign up with a company address", async () => {
     const { container } = render(await TermsPage());
     expect(container).toHaveTextContent(
       "should use an address at that company; otherwise the company shows as unverified until we approve it",

@@ -69,7 +69,7 @@ export function VerifyEmailStatus({ token }: VerifyEmailStatusProps) {
   if (phase === "verified") {
     return (
       <DoneMessage title="Your email is confirmed">
-        <p className="text-lede text-ink">Thanks. That&apos;s all we needed.</p>
+        <p className="text-lede text-ink">Thanks. That’s all we needed.</p>
         {session.status !== "loading" && (
           <p>
             {signedIn ? (
@@ -89,7 +89,7 @@ export function VerifyEmailStatus({ token }: VerifyEmailStatusProps) {
 
   if (phase === "failed") {
     return (
-      <DoneMessage title="We couldn't confirm your email">
+      <DoneMessage title="We couldn’t confirm your email">
         <p className="text-lede text-ink">{problem}</p>
         <div>
           <Button
@@ -110,7 +110,7 @@ export function VerifyEmailStatus({ token }: VerifyEmailStatusProps) {
   if (signedIn?.emailVerifiedAt) {
     next = (
       <>
-        <p className="text-ink">Your email is already confirmed, so there&apos;s nothing to do.</p>
+        <p className="text-ink">Your email is already confirmed, so there’s nothing to do.</p>
         <p>
           <Link href={roleHome(signedIn.role)} className={AUTH_LINK}>
             Go to your dashboard

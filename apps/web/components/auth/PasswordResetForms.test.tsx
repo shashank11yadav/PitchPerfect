@@ -41,7 +41,7 @@ describe("ForgotPasswordForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "Send reset link" }));
 
     expect(await screen.findByRole("heading", { name: "Check your inbox" })).toHaveFocus();
-    expect(screen.getByText(/if there's an account for/i)).toHaveTextContent("sam@example.test");
+    expect(screen.getByText(/if there’s an account for/i)).toHaveTextContent("sam@example.test");
     expect(screen.getByText(/30 minutes/)).toBeInTheDocument();
     expect(sent).toEqual({ email: "sam@example.test" });
   });
@@ -91,7 +91,7 @@ describe("ResetPasswordForm", () => {
     expect(sent).toEqual({ token: TOKEN, password: "a much longer passphrase" });
   });
 
-  it("shows the server's password policy error on the field", async () => {
+  it("shows the server’s password policy error on the field", async () => {
     serveApi({
       "GET /api/auth/csrf": csrf,
       "POST /api/auth/reset-password": () =>

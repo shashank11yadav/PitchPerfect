@@ -10,8 +10,8 @@ export const termsSections = (partner: PracticePartnerKind): readonly LegalSecti
     title: "About these terms",
     body: (
       <p>
-        These terms apply when you use this PitchPerfect site. &ldquo;We&rdquo; means whoever
-        operates it. By creating an account you agree to these terms and to the privacy policy.
+        These terms apply when you use this PitchPerfect site. “We” means whoever operates it. By
+        creating an account you agree to these terms and to the privacy policy.
       </p>
     ),
   },
@@ -48,9 +48,9 @@ export const termsSections = (partner: PracticePartnerKind): readonly LegalSecti
         <p>
           Each session is capped at {L.turns} of your turns, {L.minutes} minutes, and {L.characters}{" "}
           characters per turn. There are also daily and monthly limits on how many sessions you can
-          start. Please keep sessions about sales practice. Don&apos;t try to make the partner
-          reveal its instructions, play a different role, or produce harmful content. Sessions that
-          keep going off track are ended.
+          start. Please keep sessions about sales practice. Don’t try to make the partner reveal its
+          instructions, play a different role, or produce harmful content. Sessions that keep going
+          off track are ended.
         </p>
       </>
     ),
@@ -81,10 +81,10 @@ export const termsSections = (partner: PracticePartnerKind): readonly LegalSecti
           to consider them for your role.
         </li>
         <li>
-          A verified badge means your work email matches your company&apos;s website. Changing the
-          company&apos;s name or moving its website to another domain removes the badge until we
-          approve the company again. It is not an endorsement. We may suspend a company, which hides
-          its jobs everywhere.
+          A verified badge means your work email matches your company’s website. Changing the
+          company’s name or moving its website to another domain removes the badge until we approve
+          the company again. It is not an endorsement. We may suspend a company, which hides its
+          jobs everywhere.
         </li>
       </ul>
     ),
@@ -95,8 +95,8 @@ export const termsSections = (partner: PracticePartnerKind): readonly LegalSecti
     body: (
       <p>
         PitchPerfect connects candidates and employers but is not part of any hiring decision or
-        employment relationship. We don&apos;t guarantee interviews, offers or the accuracy of job
-        posts. Employers decide who they shortlist, interview and hire.
+        employment relationship. We don’t guarantee interviews, offers or the accuracy of job posts.
+        Employers decide who they shortlist, interview and hire.
       </p>
     ),
   },

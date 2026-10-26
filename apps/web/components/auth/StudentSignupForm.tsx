@@ -24,7 +24,7 @@ const INITIAL = {
 };
 
 const REQUIRED = {
-  ageConfirmed: "Confirm that you're 18 or older. PitchPerfect is for adults only.",
+  ageConfirmed: "Confirm that you’re 18 or older. PitchPerfect is for adults only.",
   ...STUDENT_FIELD_MESSAGES,
 };
 
@@ -62,7 +62,7 @@ export function StudentSignupForm() {
 
       <FieldGroup legend="The job you want">
         <Field
-          label="Role you're aiming for"
+          label="Role you’re aiming for"
           hint="For example, sales development representative"
           required
           error={errors.targetRole}
@@ -82,7 +82,7 @@ export function StudentSignupForm() {
       <Checkbox
         {...register("ageConfirmed")}
         required
-        label="I'm 18 or older"
+        label="I’m 18 or older"
         error={errors.ageConfirmed}
       />
     </SignupFormShell>

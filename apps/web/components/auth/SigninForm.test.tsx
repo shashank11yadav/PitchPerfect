@@ -74,7 +74,7 @@ describe("SigninForm", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("says the credentials don't match without blaming either field", async () => {
+  it("says the credentials don’t match without blaming either field", async () => {
     serveApi({
       "GET /api/auth/csrf": csrf,
       "POST /api/auth/signin": () =>
@@ -84,7 +84,7 @@ describe("SigninForm", () => {
     await fillAndSubmit();
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("That email and password don't match an account.");
+    expect(alert).toHaveTextContent("That email and password don’t match an account.");
     expect(alert.textContent).not.toMatch(/no account|unknown|wrong password|not found/i);
     expect(screen.getByLabelText(/email/i)).not.toHaveAttribute("aria-invalid");
     expect(screen.getByLabelText(/^password/i)).not.toHaveAttribute("aria-invalid");
@@ -145,7 +145,7 @@ describe("SigninForm", () => {
     });
   });
 
-  it("says so when the sign-in worked but the account can't be loaded", async () => {
+  it("says so when the sign-in worked but the account can’t be loaded", async () => {
     serveApi({
       ...signinAs("student"),
       "GET /api/auth/me": () => errorResponse(503, "internal_error", "Down"),
