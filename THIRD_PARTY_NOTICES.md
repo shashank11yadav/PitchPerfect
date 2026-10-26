@@ -56,3 +56,33 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 - Source: https://github.com/mziyut/disposable-email-domains-js (its list comes from https://github.com/disposable-email-domains/disposable-email-domains)
 - License: CC0 1.0 Universal (public domain dedication, https://creativecommons.org/publicdomain/zero/1.0/legalcode); no notice is required, it is listed here for completeness
 - Used for: the throwaway mail domains that never verify a company (`apps/api/src/services/company-verification.ts`). The package is installed from npm and not modified.
+
+## SecLists
+
+- Source: https://github.com/danielmiessler/SecLists (commit c205c36a445bff37f8e58a9ec829105cd4975c58), `Passwords/Common-Credentials/xato-net-10-million-passwords-1000000.txt`
+- License: MIT
+- Used for: the offline breached-password list (`apps/api/src/services/password-policy.ts`), checked when the online lookup is turned off or doesn't answer. It reads `apps/api/src/services/data/common-passwords.txt`. That file keeps the 7,000 most common entries of 12 to 128 printable ASCII characters, lowercased and deduplicated, leaving out entries that contain `@`. Its header names the source and carries this notice.
+
+```
+MIT License
+
+Copyright (c) 2018 Daniel Miessler
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
