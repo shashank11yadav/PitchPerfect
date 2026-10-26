@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ApplicationList } from "@/components/student/ApplicationList";
-import { pageParam, type SearchParams } from "../search-params";
+import { pageParam, type SearchParams } from "@/lib/search-params";
 
 export const metadata: Metadata = { title: "Applications" };
 

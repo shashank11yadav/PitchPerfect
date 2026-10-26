@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { StudentJobs } from "@/components/student/StudentJobs";
 import { parseJobQuery } from "@/lib/job-query";
 import { PAGES_EXPORT } from "@/lib/pages-export";
-import type { SearchParams } from "../search-params";
+import type { SearchParams } from "@/lib/search-params";
 
 export const metadata: Metadata = { title: "Jobs" };
 

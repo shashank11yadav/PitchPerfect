@@ -1,6 +1,7 @@
 import {
   CoachTurnEvent,
   LIMITS,
+  parseSseBody,
   redactPii,
   type CoachPlanResponse,
   type CoachScoreResponse,
@@ -89,10 +90,7 @@ async function postJson<T>(post: Post, path: string, body: unknown): Promise<T> 
 }
 
 function sseEvents(body: string): CoachTurnEvent[] {
-  return body
-    .split("\n")
-    .filter((line) => line.startsWith("data: "))
-    .map((line) => CoachTurnEvent.parse(JSON.parse(line.slice("data: ".length)) as unknown));
+  return parseSseBody(body).map(({ data }) => CoachTurnEvent.parse(JSON.parse(data) as unknown));
 }
 
 /** One student turn. Like the api, it redacts personal data before forwarding the text. */

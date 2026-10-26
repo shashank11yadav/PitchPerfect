@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { JobTable } from "@/components/employer/JobTable";
-import { jobStatusParam, type SearchParams } from "../search-params";
+import { jobStatusParam, type SearchParams } from "@/lib/search-params";
 
 export const metadata: Metadata = { title: "Jobs" };
 

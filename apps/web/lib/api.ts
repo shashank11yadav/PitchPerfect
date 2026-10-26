@@ -1,4 +1,4 @@
-import { PracticeEvent } from "@pitchperfect/shared";
+import { PracticeEvent, readSseMessages, type SseMessage } from "@pitchperfect/shared";
 import { PAGES_EXPORT } from "./pages-export";
 
 /** An error response from the api, or a failure to reach it (`status` 0). */
@@ -185,23 +185,11 @@ export async function apiFetch<T = unknown>(
   return schema ? schema.parse(data) : (data as T);
 }
 
-/** One SSE message (lines up to a blank line) as a `PracticeEvent`, or null for comments only. */
-function parseMessage(block: string): PracticeEvent | null {
-  let type = "message";
-  const data: string[] = [];
-  for (const line of block.split("\n")) {
-    if (line === "" || line.startsWith(":")) continue;
-    const colon = line.indexOf(":");
-    const field = colon === -1 ? line : line.slice(0, colon);
-    const value = colon === -1 ? "" : line.slice(colon + 1).replace(/^ /, "");
-    if (field === "event") type = value;
-    else if (field === "data") data.push(value);
-  }
-  if (data.length === 0) return null;
-
+/** One SSE message as a `PracticeEvent`: the event name is its type. */
+function parseMessage({ event: type, data }: SseMessage): PracticeEvent {
   let payload: unknown;
   try {
-    payload = JSON.parse(data.join("\n"));
+    payload = JSON.parse(data);
   } catch {
     payload = undefined;
   }
@@ -233,31 +221,9 @@ export async function apiStream(
   const res = await send(path, { method: "POST", body, signal, accept: "text/event-stream" });
   if (!res.body) return;
 
-  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
-  let buffer = "";
-  /** Emits every complete message; `final` also emits a last message without a blank line. */
-  const flush = (final: boolean) => {
-    // A trailing CR may be the first half of a CRLF split across chunks.
-    const end = !final && buffer.endsWith("\r") ? buffer.length - 1 : buffer.length;
-    const blocks = buffer.slice(0, end).replace(/\r\n?/g, "\n").split("\n\n");
-    const rest = final ? "" : (blocks.pop() ?? "");
-    buffer = rest + buffer.slice(end);
-    for (const block of blocks) {
-      const event = parseMessage(block);
-      if (event) onEvent(event);
-    }
-  };
-
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += value;
-      flush(false);
-    }
-    flush(true);
-  } catch (error) {
-    await reader.cancel().catch(() => undefined);
-    throw error;
+  // An event the stream ends without a blank line after still counts. Stopping on an error
+  // cancels the stream.
+  for await (const message of readSseMessages(res.body, { keepUnterminated: true })) {
+    onEvent(parseMessage(message));
   }
 }

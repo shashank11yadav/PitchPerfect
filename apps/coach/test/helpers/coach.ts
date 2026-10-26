@@ -1,4 +1,9 @@
-import type { ScenarioPrivate, ScenarioPublic, TranscriptEntry } from "@pitchperfect/shared";
+import {
+  parseSseBody,
+  type ScenarioPrivate,
+  type ScenarioPublic,
+  type TranscriptEntry,
+} from "@pitchperfect/shared";
 import { signRequest } from "@pitchperfect/shared/hmac";
 import type { FastifyInstance } from "fastify";
 import { buildCoachApp } from "../../src/app.js";
@@ -54,15 +59,10 @@ export interface SseEvent {
 
 /** Parses `event:`/`data:` frames; comment lines (heartbeats) are skipped. */
 export function parseSse(body: string): SseEvent[] {
-  return body
-    .split("\n\n")
-    .filter((frame) => frame.trim() !== "" && !frame.startsWith(":"))
-    .map((frame) => {
-      const lines = frame.split("\n");
-      const event = lines.find((line) => line.startsWith("event: "))?.slice(7) ?? "";
-      const data = lines.find((line) => line.startsWith("data: "))?.slice(6) ?? "null";
-      return { event, data: JSON.parse(data) as unknown };
-    });
+  return parseSseBody(body).map(({ event, data }) => ({
+    event,
+    data: JSON.parse(data) as unknown,
+  }));
 }
 
 export const scenarioPublic = (): ScenarioPublic => ({

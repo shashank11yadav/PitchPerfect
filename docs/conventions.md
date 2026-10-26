@@ -19,7 +19,7 @@ These rules apply to every workspace. If a rule here conflicts with a habit, the
 ## No duplication (DRY rules that matter here)
 
 - **Schemas live once** in `packages/shared/src/schemas`. api validates requests with them; web uses the same schemas for form validation and response typing. Never re-declare a request/response type by hand.
-- **Constants live once**: skills, rubric dimensions, enums, limits → `packages/shared`. So do the helpers more than one app needs: `slugify`, the UTC day/month helpers, `redactTurn`/`redactPii`, and the fictional seed data.
+- **Constants live once**: skills, rubric dimensions, enums, limits → `packages/shared`. So do the helpers more than one app needs: `slugify`, the UTC day/month helpers, `redactTurn`/`redactPii`, the job-description HTML allowlist, the `text/event-stream` reader, and the fictional seed data.
 - **The practice partner lives once** in `packages/partner`: prompts, guardrails, the scripted provider, and `planScenario`/`runTurn`/`scoreTranscript`. coach and the static demo call it; neither re-implements a step.
 - **UI lives once**: one `Navbar` for the public site and one `AppShell` for both signed-in areas (links passed in by role), one auth form family (`AuthCard`, `SignupFormShell`, `form-parts`), one `JobDetails` used by public, student, and employer views (actions passed as props), one `ProfileForm` driven by a field config. If you're about to copy a component, add a prop instead.
 - **Server patterns live once**: ownership checks are helpers (`requireJobOwnedBy(employer)`, `requireApplicationForEmployer(...)`); status changes on applications go through one `transitionApplication(app, to, actor)` function with an allowed-transitions table.

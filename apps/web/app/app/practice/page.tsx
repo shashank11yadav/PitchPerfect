@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PracticeOverview } from "@/components/practice/SkillGrid";
-import { jobIdParam, type SearchParams } from "../search-params";
+import { jobIdParam, type SearchParams } from "@/lib/search-params";
 
 export const metadata: Metadata = { title: "Practice" };
 

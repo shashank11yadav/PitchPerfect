@@ -83,6 +83,8 @@ packages/
       text.ts, time.ts      slugify and turn-text helpers; UTC day/month helpers for quotas
       env.ts, hmac.ts       server-only env parsing and request signing (the ./env and ./hmac subpaths)
       meeting-links.ts      the video call services an interview link may point at
+      html-allowlist.ts     the job-description HTML allowlist both sanitizers use (api on write, web on render)
+      sse.ts                the text/event-stream reader: the coach's stream in the api, the api's in the browser
       seed-data.ts          the fictional companies and jobs (api seed, static demo board; the ./seed-data subpath)
       zod-config.ts         jitless zod, so schemas parse under the web CSP
       index.ts

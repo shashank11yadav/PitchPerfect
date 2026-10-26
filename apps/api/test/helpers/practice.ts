@@ -3,7 +3,12 @@ import type { Express } from "express";
 import type { DestinationStream } from "pino";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll } from "vitest";
-import { PracticeEvent, type CoachTurnEvent, type CoachTurnRequest } from "@pitchperfect/shared";
+import {
+  parseSseBody,
+  PracticeEvent,
+  type CoachTurnEvent,
+  type CoachTurnRequest,
+} from "@pitchperfect/shared";
 import { User } from "../../src/db/models/index.js";
 import { createHttpCoachClient, type CoachClient } from "../../src/services/coach-client.js";
 import { makeTestApp } from "./app.js";
@@ -126,21 +131,15 @@ export interface StreamEvent {
 }
 
 /**
- * Parses `event:`/`data:` frames from an SSE body (comment lines are skipped) and checks each one
- * against the shared `PracticeEvent` contract.
+ * Parses the frames of an SSE body (comment lines are skipped) and checks each one against the
+ * shared `PracticeEvent` contract.
  */
 function parseEvents(body: string): StreamEvent[] {
-  return body
-    .split("\n\n")
-    .filter((frame) => frame.trim() !== "" && !frame.startsWith(":"))
-    .map((frame) => {
-      const lines = frame.split("\n");
-      const event = lines.find((line) => line.startsWith("event: "))?.slice(7) ?? "";
-      const data = lines.find((line) => line.startsWith("data: "))?.slice(6) ?? "null";
-      const parsed = JSON.parse(data) as Record<string, unknown>;
-      PracticeEvent.parse({ ...parsed, type: event });
-      return { event, data: parsed };
-    });
+  return parseSseBody(body).map(({ event, data }) => {
+    const parsed = JSON.parse(data) as Record<string, unknown>;
+    PracticeEvent.parse({ ...parsed, type: event });
+    return { event, data: parsed };
+  });
 }
 
 export const sessionsPath = "/api/practice/sessions";

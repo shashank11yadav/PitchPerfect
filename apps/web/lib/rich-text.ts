@@ -1,15 +1,15 @@
+import { JOB_HTML_LINK_REL } from "@pitchperfect/shared";
 import { Link } from "@tiptap/extension-link";
 import type { EditorView } from "@tiptap/pm/view";
 import { StarterKit } from "@tiptap/starter-kit";
 
 /**
  * The job description editor's schema. It has exactly the nodes and marks of the shared HTML
- * allowlist (`html-allowlist.ts`, docs/security.md "Stored XSS"): p, br, strong, em, u, ul, ol,
- * li, h3, h4, blockquote and https/mailto links. Anything else, typed, pasted or loaded, has no
- * place in the schema, so it never reaches the HTML the editor puts out. The api sanitizes again.
+ * allowlist (`html-allowlist.ts` in `@pitchperfect/shared`, docs/security.md "Stored XSS"): p,
+ * br, strong, em, u, ul, ol, li, h3, h4, blockquote and https/mailto links. Anything else, typed,
+ * pasted or loaded, has no place in the schema, so it never reaches the HTML the editor puts out.
+ * The api sanitizes again.
  */
-
-const LINK_REL = "noopener noreferrer nofollow";
 
 const NOT_A_LINK = "That doesn’t look like a web address or an email address.";
 const ONLY_HTTPS = "Use a link that starts with https://.";
@@ -104,7 +104,11 @@ export function jobDescriptionExtensions() {
       // href, rel, target in the sanitizer's own order, so saved HTML round-trips unchanged.
       renderHTML({ HTMLAttributes }) {
         const href = typeof HTMLAttributes.href === "string" ? HTMLAttributes.href : "";
-        return ["a", { href: isAllowedHref(href) ? href : "", rel: LINK_REL, target: "_blank" }, 0];
+        return [
+          "a",
+          { href: isAllowedHref(href) ? href : "", rel: JOB_HTML_LINK_REL, target: "_blank" },
+          0,
+        ];
       },
     }).configure({
       protocols: ["https", "mailto"],

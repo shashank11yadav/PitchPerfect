@@ -1,26 +1,29 @@
 import sanitizeHtml from "sanitize-html";
-import { stripInvisible } from "@pitchperfect/shared";
+import {
+  JOB_HTML_LINK_ATTRIBUTES,
+  JOB_HTML_LINK_REL,
+  JOB_HTML_LINK_SCHEMES,
+  JOB_HTML_SAFE_HREF,
+  JOB_HTML_TAGS,
+  stripInvisible,
+} from "@pitchperfect/shared";
 
-const LINK_REL = "noopener noreferrer nofollow";
-
-/** The allowlist from docs/security.md ("Stored XSS"). Everything else is dropped. */
-const SAFE_HREF = /^(?:https:|mailto:)/i;
-
+/** The shared allowlist from docs/security.md ("Stored XSS"). Everything else is dropped. */
 const JOB_HTML: sanitizeHtml.IOptions = {
-  allowedTags: ["p", "br", "strong", "em", "u", "ul", "ol", "li", "h3", "h4", "a", "blockquote"],
-  allowedAttributes: { a: ["href", "rel", "target"] },
-  allowedSchemes: ["https", "mailto"],
+  allowedTags: [...JOB_HTML_TAGS],
+  allowedAttributes: { a: [...JOB_HTML_LINK_ATTRIBUTES] },
+  allowedSchemes: [...JOB_HTML_LINK_SCHEMES],
   allowProtocolRelative: false,
   transformTags: {
     // Runs before the attribute and scheme filters, so only `href` can survive from the input.
     // `allowedSchemes` ignores relative and schemeless URLs, so the check is repeated here.
     a: (tagName, attribs): sanitizeHtml.Tag => {
       const { href } = attribs;
-      if (href === undefined || !SAFE_HREF.test(href.trim())) {
+      if (href === undefined || !JOB_HTML_SAFE_HREF.test(href.trim())) {
         // "span" is not an allowed tag, so the anchor goes and its text stays.
         return { tagName: "span", attribs: {} };
       }
-      return { tagName, attribs: { href, rel: LINK_REL, target: "_blank" } };
+      return { tagName, attribs: { href, rel: JOB_HTML_LINK_REL, target: "_blank" } };
     },
   },
 };

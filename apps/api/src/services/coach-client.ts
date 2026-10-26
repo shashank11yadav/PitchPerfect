@@ -3,6 +3,7 @@ import {
   CoachPlanResponseSchema,
   CoachScoreResponseSchema,
   CoachTurnEvent,
+  readSseMessages,
   type CoachPlanRequest,
   type CoachPlanResponse,
   type CoachScoreRequest,
@@ -91,14 +92,8 @@ function normalize(error: unknown, signal: AbortSignal | undefined): unknown {
   return error instanceof AppError ? error : new UpstreamError();
 }
 
-function parseFrame(frame: string): CoachTurnEvent | null {
-  const data = frame
-    .split("\n")
-    .filter((line) => line.startsWith("data:"))
-    .map((line) => line.slice("data:".length).trimStart())
-    .join("\n");
-  // Heartbeat comments and empty frames carry no data.
-  if (data === "") return null;
+/** The event a frame's data carries; the coach puts the event type in the data too. */
+function parseEvent(data: string): CoachTurnEvent {
   let json: unknown;
   try {
     json = JSON.parse(data);
@@ -112,17 +107,9 @@ function parseFrame(frame: string): CoachTurnEvent | null {
 
 /** Yields each `CoachTurnEvent` as soon as its frame is complete. */
 async function* readEvents(body: ReadableStream<Uint8Array>): AsyncGenerator<CoachTurnEvent> {
-  const decoder = new TextDecoder();
-  let buffer = "";
-  for await (const chunk of body) {
-    buffer += decoder.decode(chunk, { stream: true });
-    let end = buffer.indexOf("\n\n");
-    while (end !== -1) {
-      const event = parseFrame(buffer.slice(0, end));
-      buffer = buffer.slice(end + 2);
-      if (event) yield event;
-      end = buffer.indexOf("\n\n");
-    }
+  for await (const { data } of readSseMessages(body)) {
+    // Heartbeat comments carry no message, and an empty one carries nothing to read.
+    if (data !== "") yield parseEvent(data);
   }
 }
 

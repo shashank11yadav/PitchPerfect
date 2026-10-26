@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PracticeHistory } from "@/components/practice/PracticeHistory";
-import { pageParam, skillParam, type SearchParams } from "../search-params";
+import { pageParam, skillParam, type SearchParams } from "@/lib/search-params";
 
 export const metadata: Metadata = { title: "History" };
 

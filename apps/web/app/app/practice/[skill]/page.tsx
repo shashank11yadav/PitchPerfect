@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PracticeRoom } from "@/components/practice/PracticeRoom";
 import { exportOnly } from "@/lib/pages-export";
-import { jobIdParam, type SearchParams } from "../../search-params";
+import { jobIdParam, type SearchParams } from "@/lib/search-params";
 
 /** The export lists every dynamic route; its layout shows the demo note for all of them. */
 export const generateStaticParams = exportOnly(() => SKILL_SLUGS.map((skill) => ({ skill })));
