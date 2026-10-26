@@ -30,7 +30,8 @@ function moderatorFor(env: {
 
 const envSchema = z
   .object({
-    NODE_ENV: unsetIfEmpty(z.enum(["development", "test", "production"]).default("development")),
+    // Unset means production: development and test behaviour must be asked for.
+    NODE_ENV: unsetIfEmpty(z.enum(["development", "test", "production"]).default("production")),
     HOST: unsetIfEmpty(z.string().min(1).default("127.0.0.1")),
     PORT: port(4100),
     LOG_LEVEL: unsetIfEmpty(

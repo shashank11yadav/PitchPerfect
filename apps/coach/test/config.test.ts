@@ -25,6 +25,7 @@ describe("loadCoachConfig", () => {
 
   it("treats empty optional variables as unset and applies defaults", () => {
     const config = loadCoachConfig({
+      NODE_ENV: "development",
       COACH_SHARED_SECRET: devEnv().COACH_SHARED_SECRET,
       OPENAI_API_KEY: "",
       COACH_MODEL: "",
@@ -98,6 +99,41 @@ describe("loadCoachConfig", () => {
     const secret = devEnv().COACH_SHARED_SECRET;
     expect(problemsFor(prodEnv({ COACH_SHARED_SECRET: secret }))).toContain("COACH_SHARED_SECRET");
     expect(loadCoachConfig(prodEnv()).isProd).toBe(true);
+  });
+
+  describe("an unset NODE_ENV", () => {
+    const withoutNodeEnv = (env: NodeJS.ProcessEnv) => {
+      const copy = { ...env };
+      delete copy.NODE_ENV;
+      return copy;
+    };
+
+    it("is production: an explicit provider and a real secret are required", () => {
+      for (const env of [withoutNodeEnv(devEnv()), devEnv({ NODE_ENV: "" })]) {
+        const message = problemsFor({ ...env, COACH_PROVIDER: "" });
+        expect(message).toContain("COACH_PROVIDER");
+        expect(message).toContain("COACH_SHARED_SECRET");
+      }
+    });
+
+    it("refuses a live provider with no moderator", () => {
+      const env = withoutNodeEnv(
+        prodEnv({
+          COACH_PROVIDER: "anthropic",
+          ANTHROPIC_API_KEY: "placeholder-key",
+          COACH_MODEL: "model-a",
+          COACH_SCORING_MODEL: "model-b",
+          COACH_MODERATOR: "none",
+        }),
+      );
+      expect(problemsFor(env)).toContain("COACH_MODERATOR");
+    });
+
+    it("gives a complete production env the production settings", () => {
+      const config = loadCoachConfig(withoutNodeEnv(prodEnv()));
+      expect(config.NODE_ENV).toBe("production");
+      expect(config.isProd).toBe(true);
+    });
   });
 
   describe("COACH_PROVIDER in production", () => {
