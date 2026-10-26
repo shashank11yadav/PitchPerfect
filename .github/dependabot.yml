@@ -15,10 +15,16 @@ updates:
       # A TypeScript major is a planned migration, not a weekly bump.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+  # The workflows pin each action to a commit SHA with a `# vX.Y.Z` comment; Dependabot moves both
+  # to the new release's commit. `/` covers every file in .github/workflows.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
   # The base images of the three Dockerfiles. Dependabot reads only literal `FROM` lines, so the
   # Dockerfiles name the image in each stage instead of through a build argument.
   - package-ecosystem: docker
