@@ -46,7 +46,7 @@ export function practiceHandlers(deps: PracticeDeps) {
       const left = watchDisconnect(res);
       const { params, body } = getInput<WithId & { body: typeof TurnSchema }>(res);
       const coach = coachOf(deps);
-      const prepared = await prepareTurn(userOf(res).id, params.id);
+      const prepared = await prepareTurn(deps.config, userOf(res).id, params.id);
       if (left.aborted) {
         // Gone before the turn started: the coach is never called and nothing is charged.
         if (prepared.kind === "ready") await releaseTurnLock(prepared.lock);

@@ -16,6 +16,8 @@ export const LIMITS = {
   dailyQuota: 5,
   monthlyQuota: 30,
   dailyTokenBudget: 2_000_000,
+  /** One student's tokens per UTC day: about five ordinary sessions, an eighth of the budget. */
+  studentDailyTokenLimit: 250_000,
   attemptRetentionDays: 180,
 
   // Coach output token caps per call type

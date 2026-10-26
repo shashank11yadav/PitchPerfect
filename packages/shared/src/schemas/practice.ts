@@ -56,10 +56,15 @@ export interface PracticeQuota {
   dailyLimit: number;
   monthlyUsed: number;
   monthlyLimit: number;
-  /** False when either limit is used up or `budgetExhausted`. */
+  /** False when either limit is used up, `budgetExhausted`, or `tokenLimitReached`. */
   available: boolean;
   /** Today's global token budget is spent: no one can start a session until the next UTC day. */
   budgetExhausted: boolean;
+  /**
+   * The student has used their own tokens for today (`PRACTICE_STUDENT_DAILY_TOKEN_LIMIT`): no new
+   * session or turn until the next UTC day, though a session in progress can still be scored.
+   */
+  tokenLimitReached: boolean;
   /** The next UTC midnight, when the daily count starts over. */
   resetsAt: string;
   practicePartner: PracticePartnerKind;

@@ -45,7 +45,8 @@ export const Quota: Parser<PracticeQuota> = {
       // Anything but a clear "scripted" (or the demo's "browser") is disclosed as a live model.
       const { practicePartner: kind } = data;
       const practicePartner = kind === "scripted" || kind === "browser" ? kind : "live";
-      return { ...data, practicePartner } as unknown as PracticeQuota;
+      const tokenLimitReached = data.tokenLimitReached === true;
+      return { ...data, practicePartner, tokenLimitReached } as unknown as PracticeQuota;
     }
     throw unexpected("/practice/quota");
   },

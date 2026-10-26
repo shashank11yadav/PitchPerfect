@@ -31,6 +31,10 @@ function resetNote(quota: PracticeQuota): string {
   if (dailyUsed >= dailyLimit) {
     return `You’ve used today’s sessions. The count starts over ${formatResetTime(resetsAt)}.`;
   }
+  // Sessions are left, but this student's partner time for today is used up.
+  if (quota.tokenLimitReached) {
+    return `You’ve used today’s practice allowance. It comes back ${formatResetTime(resetsAt)}.`;
+  }
   return `The daily count starts over ${formatResetTime(resetsAt)}.`;
 }
 

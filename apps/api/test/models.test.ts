@@ -39,6 +39,7 @@ const QUOTA = {
   PRACTICE_DAILY_LIMIT: 5,
   PRACTICE_MONTHLY_LIMIT: 30,
   PRACTICE_DAILY_TOKEN_BUDGET: 2_000_000,
+  PRACTICE_STUDENT_DAILY_TOKEN_LIMIT: 250_000,
 };
 
 const userInput = (email = "ada@example.test") => ({

@@ -1,4 +1,5 @@
 import {
+  CoachErrorBodySchema,
   CoachPlanResponseSchema,
   CoachScoreResponseSchema,
   CoachTurnEvent,
@@ -7,6 +8,7 @@ import {
   type CoachScoreRequest,
   type CoachScoreResponse,
   type CoachTurnRequest,
+  type Usage,
 } from "@pitchperfect/shared";
 import { signRequest } from "@pitchperfect/shared/hmac";
 import type { ZodType } from "zod";
@@ -53,18 +55,34 @@ function providerOf(body: unknown): string | undefined {
   return typeof body.provider === "string" ? body.provider : undefined;
 }
 
-function errorCodeOf(body: unknown): string | undefined {
-  if (typeof body !== "object" || body === null || !("error" in body)) return undefined;
-  const { error } = body;
-  if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
-  return typeof error.code === "string" ? error.code : undefined;
+type TokenUsage = Pick<Usage, "inputTokens" | "outputTokens">;
+
+const NO_USAGE: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+
+/** What each failed call cost, when the coach's answer says; see `usageOfFailure`. */
+const failureUsage = new WeakMap<Error, TokenUsage>();
+
+/**
+ * What a failed coach call used: the usage the coach reported with its error, or nothing for a
+ * call it turned away (a 4xx, or 503 with nothing spent). Undefined when it isn't known (no
+ * answer, a timeout, or a 5xx that names no usage): the caller charges an estimate then.
+ */
+export function usageOfFailure(error: unknown): TokenUsage | undefined {
+  return error instanceof Error ? failureUsage.get(error) : undefined;
 }
 
 async function failureOf(res: Response): Promise<Error> {
-  const code = errorCodeOf(await res.json().catch(() => null));
-  if (res.status === 503 && code === "practice_unavailable") return new PracticeUnavailableError();
-  if (res.status === 400 && code === "not_enough_turns") return new NotEnoughTurnsError();
-  return new UpstreamError();
+  const parsed = CoachErrorBodySchema.safeParse(await res.json().catch(() => null));
+  const code = parsed.data?.error.code;
+  const error =
+    res.status === 503 && code === "practice_unavailable"
+      ? new PracticeUnavailableError()
+      : res.status === 400 && code === "not_enough_turns"
+        ? new NotEnoughTurnsError()
+        : new UpstreamError();
+  const usage = parsed.data?.usage ?? (res.status < 500 || res.status === 503 ? NO_USAGE : null);
+  if (usage) failureUsage.set(error, usage);
+  return error;
 }
 
 /** The caller's abort passes through untouched; everything else becomes `UpstreamError`. */

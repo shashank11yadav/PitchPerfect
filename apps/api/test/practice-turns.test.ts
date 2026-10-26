@@ -48,10 +48,13 @@ async function activeAttempt() {
 
 const attemptOf = (attemptId: string) => PracticeAttempt.findById(attemptId).lean();
 
-/** The documented estimate for an unanswered turn: request characters / 4 in, the reply cap out. */
+/**
+ * The documented estimate for an unanswered turn: request characters / 4 plus 1,500 tokens of
+ * instructions for each of the guard, the reply and one check in, and the three caps out.
+ */
 const estimatedUsage = (request: CoachTurnRequest | undefined) => ({
-  input: Math.ceil(JSON.stringify(request).length / 4),
-  output: 200,
+  input: Math.ceil(JSON.stringify(request).length / 4) + 3 * 1500,
+  output: 50 + 200 + 50,
 });
 
 describe("POST /api/practice/sessions/:id/turns", () => {
@@ -341,10 +344,12 @@ describe("POST /api/practice/sessions/:id/turns", () => {
       { role: "student", text: "Hello, call me on [phone]", flagged: true },
     ]);
     expect((stored?.tokens.input ?? 0) - (before?.tokens.input ?? 0)).toBe(estimate.input);
-    expect((stored?.tokens.output ?? 0) - (before?.tokens.output ?? 0)).toBe(200);
+    expect((stored?.tokens.output ?? 0) - (before?.tokens.output ?? 0)).toBe(estimate.output);
     const usageAfter = await UsageDay.findOne().lean();
     expect((usageAfter?.inputTokens ?? 0) - (usageBefore?.inputTokens ?? 0)).toBe(estimate.input);
-    expect((usageAfter?.outputTokens ?? 0) - (usageBefore?.outputTokens ?? 0)).toBe(200);
+    expect((usageAfter?.outputTokens ?? 0) - (usageBefore?.outputTokens ?? 0)).toBe(
+      estimate.output,
+    );
 
     harness.coach.interrupt = null;
     const next = await sendTurn(session, attemptId, "Hello, do you have a minute?");
@@ -376,7 +381,9 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     const estimate = estimatedUsage(turn.mock.calls[0]?.[0]);
     const usageAfter = await UsageDay.findOne().lean();
     expect((usageAfter?.inputTokens ?? 0) - (usageBefore?.inputTokens ?? 0)).toBe(estimate.input);
-    expect((usageAfter?.outputTokens ?? 0) - (usageBefore?.outputTokens ?? 0)).toBe(200);
+    expect((usageAfter?.outputTokens ?? 0) - (usageBefore?.outputTokens ?? 0)).toBe(
+      estimate.output,
+    );
   });
 
   it("does not call the coach when the student left before the turn started", async () => {

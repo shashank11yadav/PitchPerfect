@@ -162,6 +162,20 @@ export async function createStarts(
   );
 }
 
+/** `tokens` of practice usage in the student's ledger, as if spent at `at`. */
+export async function createTokenUse(
+  studentId: mongoose.Types.ObjectId,
+  tokens: number,
+  at: Date = new Date(),
+) {
+  const day = at.toISOString().slice(0, 10);
+  await PracticeStart.updateOne(
+    { studentId, month: day.slice(0, 7) },
+    { $inc: { [`tokens.${day}`]: tokens }, $setOnInsert: { expiresAt: utcMonth(at, 1) } },
+    { upsert: true },
+  );
+}
+
 /** Signs `agent` in through the real route; returns the agent with a CSRF token for the new session. */
 export async function signIn(
   agent: TestAgent,

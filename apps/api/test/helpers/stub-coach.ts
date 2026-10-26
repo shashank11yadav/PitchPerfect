@@ -4,6 +4,8 @@ import { buildCoachApp, type CoachAppOptions } from "@pitchperfect/coach/app";
 interface InjectedFailure {
   status: number;
   code: string;
+  /** What the failed call reports it used, as the coach does for a plan or score. */
+  usage?: { inputTokens: number; outputTokens: number };
 }
 
 export interface StubCoach {
@@ -53,6 +55,7 @@ export async function startStubCoach(sharedSecret: string): Promise<StubCoach> {
     if (failure) {
       await reply.code(failure.status).send({
         error: { code: failure.code, message: "Injected failure", requestId: request.id },
+        ...(failure.usage && { usage: { provider: "fake", model: "fake", ...failure.usage } }),
       });
     }
   });

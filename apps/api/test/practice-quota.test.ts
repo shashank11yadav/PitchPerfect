@@ -49,6 +49,7 @@ describe("GET /api/practice/quota", () => {
       monthlyLimit: 30,
       available: true,
       budgetExhausted: false,
+      tokenLimitReached: false,
       resetsAt: "2026-03-11T00:00:00.000Z",
       // The test coach runs the fake provider, so the partner is the scripted one.
       practicePartner: "scripted",
@@ -150,6 +151,7 @@ describe("GET /api/practice/quota", () => {
       PRACTICE_DAILY_LIMIT: 5,
       PRACTICE_MONTHLY_LIMIT: 30,
       PRACTICE_DAILY_TOKEN_BUDGET: 2_000_000,
+      PRACTICE_STUDENT_DAILY_TOKEN_LIMIT: 250_000,
     };
 
     const results = await Promise.allSettled(

@@ -2,7 +2,7 @@ import type { AttemptView, PracticeEvent } from "@pitchperfect/shared";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { apiStream } from "@/lib/api";
+import { ApiError, apiStream } from "@/lib/api";
 import { pageOf, renderSignedIn, studentMe } from "@/components/student/test-fixtures";
 import {
   bodyOf,
@@ -223,6 +223,21 @@ describe("PracticeRoom", () => {
     expect(screen.getByRole("textbox", { name: "Your turn" })).toBeEnabled();
   });
 
+  it("says why a turn was refused once today's allowance is used, and points to ending", async () => {
+    const user = userEvent.setup();
+    stream.mockRejectedValueOnce(
+      new ApiError(429, "token_limit_reached", "Allowance used", undefined, 3600),
+    );
+    render(<PracticeRoom attempt={activeAttempt()} />);
+    await user.type(screen.getByRole("textbox", { name: "Your turn" }), "Hello there.{Enter}");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/You’ve used today’s practice allowance/);
+    expect(alert).toHaveTextContent(/End the call to get your scorecard/);
+    expect(screen.getByText("20 turns left")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /End/ })).toBeEnabled();
+  });
+
   it("adds a line on Shift+Enter instead of sending", async () => {
     const user = userEvent.setup();
     render(<PracticeRoom attempt={activeAttempt()} />);
@@ -440,6 +455,20 @@ describe("PracticeRoom before the call", () => {
     });
     await user.click(await screen.findByRole("button", { name: "Start the call" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/paused for everyone/);
+  });
+
+  it("explains a start refused because the student used today's allowance", async () => {
+    const user = userEvent.setup();
+    showLobby({
+      "POST /api/practice/sessions": () =>
+        errorResponse(429, "token_limit_reached", "Allowance used", {
+          headers: { "retry-after": "3600" },
+        }),
+    });
+    await user.click(await screen.findByRole("button", { name: "Start the call" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /You’ve used today’s practice allowance. You can start another call/,
+    );
   });
 
   it("offers to resume a session that's still running", async () => {

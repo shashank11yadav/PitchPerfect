@@ -21,6 +21,7 @@ export function devEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
     PRACTICE_DAILY_LIMIT: "5",
     PRACTICE_MONTHLY_LIMIT: "30",
     PRACTICE_DAILY_TOKEN_BUDGET: "2000000",
+    PRACTICE_STUDENT_DAILY_TOKEN_LIMIT: "250000",
     PRACTICE_RETENTION_DAYS: "180",
     HIBP_ENABLED: "false",
     REDIS_URL: "",

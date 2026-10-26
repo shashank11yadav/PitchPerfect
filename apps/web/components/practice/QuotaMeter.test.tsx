@@ -21,6 +21,7 @@ const quota = (overrides: Partial<PracticeQuota> = {}): PracticeQuota => ({
   monthlyLimit: 30,
   available: true,
   budgetExhausted: false,
+  tokenLimitReached: false,
   resetsAt: "2026-10-21T00:00:00.000Z",
   practicePartner: "live",
   ...overrides,
@@ -52,6 +53,15 @@ describe("QuotaMeter", () => {
     render(<QuotaMeter quota={quota({ dailyUsed: 5, available: false })} />);
     expect(
       screen.getByText("You’ve used today’s sessions. The count starts over today at 8:00 PM EDT."),
+    ).toBeInTheDocument();
+  });
+
+  it("says when the student's own allowance comes back once it is used", () => {
+    render(<QuotaMeter quota={quota({ tokenLimitReached: true, available: false })} />);
+    expect(
+      screen.getByText(
+        "You’ve used today’s practice allowance. It comes back today at 8:00 PM EDT.",
+      ),
     ).toBeInTheDocument();
   });
 });

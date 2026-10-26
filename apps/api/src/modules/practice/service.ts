@@ -18,7 +18,8 @@ import type { PracticeAttemptAttrs } from "../../db/models/practice-attempt.js";
 import { ConflictError, NotFoundError, PracticeUnavailableError } from "../../errors.js";
 import { NotEnoughTurnsError, type CoachClient } from "../../services/coach-client.js";
 import type { CoachProbe } from "../../services/coach-probe.js";
-import { recordUsage } from "./quota.js";
+import { chargeFailedCall, recordUsage } from "./quota.js";
+import { estimateFailedScore } from "./text.js";
 import {
   acquireTurnLock,
   releaseTurnLock,
@@ -139,15 +140,22 @@ async function scoreLocked(deps: PracticeDeps, lock: TurnLock): Promise<AttemptV
     return finish(attempt, "abandoned");
   }
 
+  const request = { skill: attempt.skill, ...scenarioOf(attempt), transcript };
   let result;
   try {
-    result = await coachOf(deps).score({
-      skill: attempt.skill,
-      ...scenarioOf(attempt),
-      transcript,
-    });
+    result = await coachOf(deps).score(request);
   } catch (error) {
     if (error instanceof NotEnoughTurnsError) return finish(attempt, "abandoned");
+    // A failed score can still have used tokens.
+    const charged = await chargeFailedCall(attempt.studentId, error, () =>
+      estimateFailedScore(request),
+    );
+    if (charged) {
+      await PracticeAttempt.updateOne(
+        { _id: attempt._id },
+        { $inc: { "tokens.input": charged.inputTokens, "tokens.output": charged.outputTokens } },
+      );
+    }
     // Still active, so the student can try ending again.
     await releaseTurnLock(lock);
     throw error;
@@ -157,7 +165,7 @@ async function scoreLocked(deps: PracticeDeps, lock: TurnLock): Promise<AttemptV
   attempt.tokens.input += result.usage.inputTokens;
   attempt.tokens.output += result.usage.outputTokens;
   const view = await finish(attempt, "completed");
-  await recordUsage(result.usage, new Date());
+  await recordUsage(attempt.studentId, result.usage, new Date());
   return view;
 }
 

@@ -38,6 +38,7 @@ describe("loadConfig", () => {
       ["PRACTICE_DAILY_LIMIT", 5],
       ["PRACTICE_MONTHLY_LIMIT", 30],
       ["PRACTICE_DAILY_TOKEN_BUDGET", 2_000_000],
+      ["PRACTICE_STUDENT_DAILY_TOKEN_LIMIT", 250_000],
       ["PRACTICE_RETENTION_DAYS", 180],
       ["PORT", 4000],
       ["SMTP_PORT", 1025],

@@ -47,6 +47,7 @@ const envSchema = z
     PRACTICE_DAILY_LIMIT: integer(LIMITS.dailyQuota),
     PRACTICE_MONTHLY_LIMIT: integer(LIMITS.monthlyQuota),
     PRACTICE_DAILY_TOKEN_BUDGET: integer(LIMITS.dailyTokenBudget),
+    PRACTICE_STUDENT_DAILY_TOKEN_LIMIT: integer(LIMITS.studentDailyTokenLimit),
     PRACTICE_RETENTION_DAYS: integer(LIMITS.attemptRetentionDays),
     HIBP_ENABLED: flag.default(true),
     REDIS_URL: optional(z.string()),

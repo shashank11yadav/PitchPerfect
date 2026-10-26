@@ -8,6 +8,7 @@ import {
   type Stage,
   type Usage,
 } from "@pitchperfect/shared";
+import type { Config } from "../../config.js";
 import { PracticeAttempt } from "../../db/models/index.js";
 import {
   AppError,
@@ -17,7 +18,7 @@ import {
   UpstreamError,
 } from "../../errors.js";
 import type { CoachClient } from "../../services/coach-client.js";
-import { recordUsage } from "./quota.js";
+import { assertTokensLeft, recordUsage } from "./quota.js";
 import { scenarioOf, sessionEndsAt, studentTurnsOf, visible } from "./service.js";
 import type { PracticeStream } from "./sse.js";
 import { estimateUnansweredTurn } from "./text.js";
@@ -34,9 +35,15 @@ export type PreparedTurn =
 
 /**
  * Claims the attempt for one turn. A session that can take no more turns answers `ended` (without
- * holding the lock); a turn already in flight, or a session that has ended otherwise, is `409`.
+ * holding the lock); a turn already in flight, or a session that has ended otherwise, is `409`; a
+ * student who has used today's tokens gets `429 token_limit_reached` and can still end the
+ * session to have it scored.
  */
-export async function prepareTurn(studentId: string, attemptId: string): Promise<PreparedTurn> {
+export async function prepareTurn(
+  config: Config,
+  studentId: string,
+  attemptId: string,
+): Promise<PreparedTurn> {
   const now = new Date();
   const lock = await acquireTurnLock(attemptId, studentId, now);
   if (!lock) {
@@ -61,6 +68,12 @@ export async function prepareTurn(studentId: string, attemptId: string): Promise
   if (reason) {
     await releaseTurnLock(lock);
     return { kind: "ended", reason };
+  }
+  try {
+    await assertTokensLeft(config, studentId, now);
+  } catch (error) {
+    await releaseTurnLock(lock);
+    throw error;
   }
   return { kind: "ready", lock };
 }
@@ -106,6 +119,8 @@ interface TurnProgress {
   started: boolean;
   /** True once the turn's outcome is stored; nothing more is charged after that. */
   stored: boolean;
+  /** What the coach said a failed turn used, from its `error` event. */
+  reported?: TokenUsage | undefined;
 }
 
 async function relayTurn(
@@ -128,6 +143,7 @@ async function relayTurn(
         stream.send({ type: "retract", text: redactPii(event.text) });
         break;
       case "error":
+        progress.reported = event.usage;
         // Only codes the browser knows are passed on.
         throw event.code === "practice_unavailable"
           ? new PracticeUnavailableError()
@@ -146,7 +162,7 @@ async function relayTurn(
           },
         );
         progress.stored = true;
-        await recordUsage(event.usage, new Date());
+        await recordUsage(attempt.studentId, event.usage, new Date());
         stream.send({ type: "done", stage, turnsLeft, finalText });
         if (turnsLeft === 0) stream.send({ type: "ended", reason: "turn_limit" });
         return { outcome: "done", stage, usage: event.usage };
@@ -159,7 +175,7 @@ async function relayTurn(
           { $inc: tokensOf(event.usage) },
         );
         progress.stored = true;
-        await recordUsage(event.usage, new Date());
+        await recordUsage(attempt.studentId, event.usage, new Date());
         stream.send({ type: "support", text: event.text });
         return { outcome: "support", stage: attempt.stage, usage: event.usage };
       }
@@ -185,7 +201,7 @@ async function relayTurn(
           },
         );
         progress.stored = true;
-        await recordUsage(event.usage, new Date());
+        await recordUsage(attempt.studentId, event.usage, new Date());
         stream.send({ type: "redirect", text });
         if (endedByGuard) stream.send({ type: "ended", reason: "guard_limit" });
         else if (turnsLeft === 0) stream.send({ type: "ended", reason: "turn_limit" });
@@ -204,13 +220,16 @@ async function relayTurn(
 /**
  * A turn the coach started but never finished still costs a turn and tokens, so leaving
  * mid-reply can't be used to get around the turn limit, quota, or budget. The student's text is
- * kept flagged (never replayed or scored), with no partner reply, and the usage is estimated.
+ * kept flagged (never replayed or scored), with no partner reply. The usage is what the coach's
+ * `error` event reported, or an estimate when there was none (the client left, or the stream
+ * broke off).
  */
 async function chargeUnanswered(
   { attempt }: TurnLock,
   request: CoachTurnRequest,
+  reported: TokenUsage | undefined,
 ): Promise<TokenUsage> {
-  const usage = estimateUnansweredTurn(request);
+  const usage = reported ?? estimateUnansweredTurn(request);
   await PracticeAttempt.updateOne(
     { _id: attempt._id, status: "active" },
     {
@@ -220,7 +239,7 @@ async function chargeUnanswered(
       $inc: tokensOf(usage),
     },
   );
-  await recordUsage(usage, new Date());
+  await recordUsage(attempt.studentId, usage, new Date());
   return usage;
 }
 
@@ -253,7 +272,7 @@ export async function runTurn(ctx: TurnContext, lock: TurnLock, text: string): P
       ctx.log.error({ attemptId, errorName }, "turn failed");
     }
     const charged = (aborted || progress.started) && !progress.stored;
-    const usage = charged ? await chargeUnanswered(lock, request) : undefined;
+    const usage = charged ? await chargeUnanswered(lock, request, progress.reported) : undefined;
     result = { ...result, outcome: code, usage };
     // A turn the coach had started is counted (charged here, or already stored); a refusal before
     // it started is not, and the browser keeps its turn.

@@ -95,6 +95,15 @@ export class BudgetExhaustedError extends AppError {
   }
 }
 
+export class TokenLimitError extends AppError {
+  constructor(
+    retryAfterSec: number,
+    message = "You've used today's practice allowance. It resets at midnight UTC",
+  ) {
+    super("token_limit_reached", 429, message, undefined, retryAfterSec);
+  }
+}
+
 export class UpstreamError extends AppError {
   constructor(message = "A service we depend on isn't responding") {
     super("upstream_error", 502, message);

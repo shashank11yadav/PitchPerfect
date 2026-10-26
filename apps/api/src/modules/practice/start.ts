@@ -11,6 +11,7 @@ import { htmlToPlainText } from "../../services/html-sanitizer.js";
 import { isDuplicateKey } from "../auth/service.js";
 import { findListedJob } from "../jobs/service.js";
 import {
+  chargeFailedCall,
   recordUsage,
   refundStart,
   removePlaceholder,
@@ -19,6 +20,7 @@ import {
   STALE_START_MS,
 } from "./quota.js";
 import { coachOf, sessionEndsAt, type PracticeDeps } from "./service.js";
+import { estimateFailedPlan } from "./text.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Job text sent to the planner is clipped to this many characters. */
@@ -104,6 +106,8 @@ export async function startSession(
     plan = await coach.plan(request);
   } catch (error) {
     await removePlaceholder(placeholder);
+    // The session is given back, but tokens the failed plan used are still charged.
+    await chargeFailedCall(studentId, error, () => estimateFailedPlan(request));
     throw error;
   }
   const attempt = await PracticeAttempt.findOneAndUpdate(
@@ -120,7 +124,7 @@ export async function startSession(
     },
     { returnDocument: "after" },
   );
-  await recordUsage(plan.usage, new Date(), { session: true });
+  await recordUsage(studentId, plan.usage, new Date(), { session: true });
   if (!attempt) throw new ConflictError("conflict", "That practice session was replaced");
 
   return {

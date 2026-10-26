@@ -38,6 +38,11 @@ export function startProblem(error: unknown): Problem {
         code,
         message: `Practice is paused for everyone for the rest of today. It opens again ${inLocalTime(error.retryAfterSec ?? 0)}.`,
       };
+    case "token_limit_reached":
+      return {
+        code,
+        message: `You’ve used today’s practice allowance. You can start another call ${inLocalTime(error.retryAfterSec ?? 0)}.`,
+      };
     case "email_not_verified":
       return {
         code,
@@ -76,6 +81,12 @@ export function turnProblem(error: unknown): { code: string; message?: string } 
     return {
       code,
       message: "That’s a lot of turns in a few minutes. Wait a moment and try again.",
+    };
+  }
+  if (code === "token_limit_reached" && error instanceof ApiError) {
+    return {
+      code,
+      message: `You’ve used today’s practice allowance, so your partner can’t take more turns. End the call to get your scorecard. You can practice again ${inLocalTime(error.retryAfterSec ?? 0)}.`,
     };
   }
   return { code };

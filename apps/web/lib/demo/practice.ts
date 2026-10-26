@@ -100,6 +100,7 @@ export function demoQuota(now = new Date()): PracticeQuota {
     monthlyLimit: LIMITS.monthlyQuota,
     available: dailyUsed < LIMITS.dailyQuota && monthlyUsed < LIMITS.monthlyQuota,
     budgetExhausted: false,
+    tokenLimitReached: false,
     resetsAt: utcDay(now, 1).toISOString(),
     practicePartner: "browser",
   };
