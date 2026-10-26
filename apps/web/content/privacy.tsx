@@ -32,8 +32,9 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         </li>
         <li>An employer sees only what you send with an application to their job.</li>
         <li>
-          There are three cookies: one keeps you signed in, two protect your forms. We don’t use
-          advertising, analytics or tracking cookies.
+          There are four cookies: one keeps you signed in, two protect your forms, and one lets a
+          browser you signed in with before keep signing in while someone else is guessing your
+          password. We don’t use advertising, analytics or tracking cookies.
         </li>
         <li>You can delete any practice session, or your whole account, whenever you like.</li>
       </ul>
@@ -209,6 +210,12 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
           <li>
             <strong>pp.aid</strong> is a random ID that ties that security token to your browser
             before you sign in.
+          </li>
+          <li>
+            <strong>pp.device</strong> is set when you sign in or reset your password. It holds a
+            date and a signature, not your email or account, and lasts {L.signinDeviceDays} days.
+            After many wrong passwords for your email we pause new sign-ins to it for a while; a
+            browser with this cookie can still sign in with the right password.
           </li>
         </ul>
         <p>There are no advertising, analytics or tracking cookies, and no third-party scripts.</p>

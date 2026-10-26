@@ -17,6 +17,7 @@ export const COPY_LIMITS = {
   resetMinutes: String(LIMITS.resetTokenMinutes),
   sessionRollingDays: String(LIMITS.sessionRollingDays),
   sessionAbsoluteDays: String(LIMITS.sessionAbsoluteDays),
+  signinDeviceDays: String(LIMITS.signinDeviceDays),
 } as const;
 
 const L = COPY_LIMITS;

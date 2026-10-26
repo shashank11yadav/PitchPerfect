@@ -5,6 +5,7 @@ import {
   emailChanged,
   interviewScheduled,
   resetPassword,
+  signinLimited,
   signupAttemptExistingAccount,
   verifyEmail,
 } from "../src/services/email-templates.js";
@@ -28,6 +29,16 @@ describe("email templates", () => {
     expect(email.text).toContain(RESET_LINK);
     expect(email.html).toContain(`href="${RESET_LINK}"`);
     expect(email.text).toMatch(/30 minutes/);
+  });
+
+  it("signinLimited links to the reset page and says known browsers still get in", () => {
+    const email = signinLimited(RESET_LINK);
+
+    expect(email.text).toContain(RESET_LINK);
+    expect(email.html).toContain(`href="${RESET_LINK}"`);
+    expect(email.text).toMatch(/15 minutes/);
+    expect(email.text).toMatch(/signed in with before can still sign in/);
+    expect(email.text).toMatch(/expires in 30 minutes/);
   });
 
   it("signupAttemptExistingAccount offers sign-in and password reset", () => {

@@ -47,6 +47,8 @@ export const LIMITS = {
   resetTokenMinutes: 30,
   sessionRollingDays: 7,
   sessionAbsoluteDays: 30,
+  /** How long a browser that signed in stays exempt from another browser's failed sign-ins. */
+  signinDeviceDays: 90,
 
   // Profile fields
   nameMaxLength: 60,

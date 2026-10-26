@@ -1,12 +1,14 @@
 import type { Router } from "express";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LIMITS } from "@pitchperfect/shared";
 import { byIp } from "../src/middleware/rate-limit.js";
+import { DEVICE_COOKIE, deviceToken, isKnownDevice } from "../src/modules/auth/known-device.js";
 import { makeTestApp } from "./helpers/app.js";
-import { csrfAgent, type CsrfAgent } from "./helpers/csrf.js";
+import { csrfAgent, withCsrf, type CsrfAgent } from "./helpers/csrf.js";
 import { useTestDb } from "./helpers/db.js";
 import { errorOf } from "./helpers/error-body.js";
-import { createStudent } from "./helpers/factories.js";
+import { createStudent, signIn, TEST_PASSWORD } from "./helpers/factories.js";
 
 useTestDb();
 
@@ -28,7 +30,7 @@ function extraRoutes(router: Router): void {
 }
 
 // One trusted hop, so each test can pick the client address with X-Forwarded-For.
-const { app } = makeTestApp({ env: { TRUST_PROXY: "1" }, extraRoutes });
+const { app, config, mailer } = makeTestApp({ env: { TRUST_PROXY: "1" }, extraRoutes });
 
 const signin = (agent: CsrfAgent, from: string, body: { email: string; password: string }) =>
   agent.post("/api/auth/signin").set("X-Forwarded-For", from).send(body);
@@ -161,6 +163,149 @@ describe("failed sign-ins to one email from many addresses", () => {
   });
 });
 
+describe("the owner of an email someone is guessing", () => {
+  const PREFIX = "198.51.100";
+
+  afterEach(() => {
+    mailer.sent.length = 0;
+  });
+
+  /** `count` wrong passwords for `email`, each from a new address, from a browser with no history. */
+  async function guess(email: string, count = EMAIL_FAILURES) {
+    const attacker = await csrfAgent(app);
+    for (let i = 0; i < count; i++) {
+      await signin(attacker, `${PREFIX}.${String(i + 1)}`, { email, password: WRONG_PASSWORD });
+    }
+    return attacker;
+  }
+
+  /** The owner's browser after one successful sign-in and a sign-out, as on any later visit. */
+  async function knownBrowser(email: string, password: string) {
+    const browser = await signIn(request.agent(app), email, password);
+    await browser.post("/api/auth/signout").expect(204);
+    return withCsrf(browser.agent);
+  }
+
+  /** The reset token in the most recent email to `to`. */
+  function resetTokenSentTo(to: string): string {
+    const text = mailer.sent.filter((message) => message.to === to).at(-1)?.text ?? "";
+    const token = /\/reset-password\?token=([A-Za-z0-9_-]+)/.exec(text)?.[1];
+    if (!token) throw new Error(`no reset link in the last email to ${to}`);
+    return token;
+  }
+
+  it("still signs in from a browser that signed in before, however many guesses arrive", async () => {
+    const { email, password } = await createStudent({ email: "owner@example.test" });
+    const browser = await knownBrowser(email, password);
+
+    await guess(email, EMAIL_FAILURES * 3);
+
+    await signin(browser, "192.0.2.50", { email, password }).expect(200);
+    // A browser with no sign-in behind it still waits out the window.
+    await signin(await csrfAgent(app), "192.0.2.51", { email, password }).expect(429);
+  });
+
+  it(`caps guessing at ${String(EMAIL_FAILURES)} even from a browser that signed in before`, async () => {
+    const { email, password } = await createStudent({ email: "owner@example.test" });
+    const browser = await knownBrowser(email, password);
+
+    for (let i = 0; i < EMAIL_FAILURES; i++) {
+      await signin(browser, `${PREFIX}.${String(i + 1)}`, {
+        email,
+        password: WRONG_PASSWORD,
+      }).expect(401);
+    }
+
+    const capped = await signin(browser, "192.0.2.52", { email, password: WRONG_PASSWORD });
+    expect(capped.status).toBe(429);
+    expect(errorOf(capped).code).toBe("rate_limited");
+  });
+
+  it("doesn't let a browser that signed in to one account skip the limit on another", async () => {
+    const { email, password } = await createStudent({ email: "owner@example.test" });
+    const mallory = await createStudent({ email: "mallory@example.test" });
+    const browser = await knownBrowser(mallory.email, mallory.password);
+    await guess(email);
+
+    await signin(browser, "192.0.2.53", { email, password }).expect(429);
+  });
+
+  it("sets the device cookie on sign-in, httpOnly and only for the auth routes", async () => {
+    const { email, password } = await createStudent({ email: "owner@example.test" });
+    const res = await signin(await csrfAgent(app), "192.0.2.54", { email, password }).expect(200);
+
+    const cookie = ((res.headers["set-cookie"] ?? []) as string[]).find((value) =>
+      value.startsWith(`${DEVICE_COOKIE}=`),
+    );
+    expect(cookie).toMatch(/; Path=\/api\/auth/);
+    expect(cookie).toMatch(/; HttpOnly/);
+    expect(cookie).toMatch(/; SameSite=Lax/);
+    expect(cookie).toMatch(new RegExp(`; Max-Age=${String(LIMITS.signinDeviceDays * 86_400)}`));
+    expect(cookie).not.toContain("owner");
+  });
+
+  it("trusts a device cookie only for its own email, unaltered and unexpired", () => {
+    const secret = config.SESSION_SECRET;
+    const issuedAt = new Date("2026-03-10T12:00:00Z");
+    const token = deviceToken(secret, "owner@example.test", issuedAt);
+    const later = (days: number) => new Date(issuedAt.getTime() + days * 86_400_000);
+
+    expect(isKnownDevice(secret, "owner@example.test", token, later(1))).toBe(true);
+    expect(isKnownDevice(secret, "mallory@example.test", token, later(1))).toBe(false);
+    expect(isKnownDevice(secret, "owner@example.test", `${token.slice(0, -2)}AA`, later(1))).toBe(
+      false,
+    );
+    expect(isKnownDevice("x".repeat(48), "owner@example.test", token, later(1))).toBe(false);
+    expect(
+      isKnownDevice(secret, "owner@example.test", token, later(LIMITS.signinDeviceDays + 1)),
+    ).toBe(false);
+    expect(isKnownDevice(secret, "owner@example.test", undefined, later(1))).toBe(false);
+  });
+
+  it("emails the owner once per window when the limit trips, with a reset link", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const { email } = await createStudent({ email: "owner@example.test" });
+
+    await guess(email, EMAIL_FAILURES + 5);
+
+    await vi.waitFor(() => {
+      expect(mailer.sent.filter((message) => message.to === email)).toHaveLength(1);
+    });
+    expect(resetTokenSentTo(email)).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    await guess(email, 3);
+    expect(mailer.sent.filter((message) => message.to === email)).toHaveLength(1);
+
+    vi.setSystemTime(Date.now() + FAILURE_WINDOW_MS + 1000);
+    await guess(email, EMAIL_FAILURES + 1);
+    await vi.waitFor(() => {
+      expect(mailer.sent.filter((message) => message.to === email)).toHaveLength(2);
+    });
+  });
+
+  it("sends nothing when the email has no account", async () => {
+    await guess("nobody@example.test", EMAIL_FAILURES + 2);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mailer.sent).toHaveLength(0);
+  });
+
+  it("lets the owner in on the browser that used the emailed reset link", async () => {
+    const { email } = await createStudent({ email: "owner@example.test" });
+    await guess(email, EMAIL_FAILURES + 1);
+    await vi.waitFor(() => {
+      expect(mailer.sent).toHaveLength(1);
+    });
+    const browser = await csrfAgent(app);
+    const password = `${TEST_PASSWORD}-renewed`;
+
+    await browser
+      .post("/api/auth/reset-password")
+      .send({ token: resetTokenSentTo(email), password })
+      .expect(200);
+
+    await signin(browser, "192.0.2.55", { email, password }).expect(200);
+  });
+});
+
 describe("the client address behind proxies (docs/deploy.md)", () => {
   const CLIENT = "203.0.113.7";
   const SPOOFS = ["198.51.100.1", "198.51.100.2", "198.51.100.3", "198.51.100.4", "10.0.0.1"];
@@ -201,6 +346,37 @@ describe("the client address behind proxies (docs/deploy.md)", () => {
     const blocked = await agent
       .post("/api/auth/signin")
       .set("X-Forwarded-For", header("198.51.100.99"))
+      .send({ email, password: WRONG_PASSWORD });
+    expect(blocked.status).toBe(429);
+  });
+
+  it("ignores X-Forwarded-For with the default TRUST_PROXY", async () => {
+    const env = { TRUST_PROXY: undefined };
+    const { app: plain } = makeTestApp({ env, extraRoutes });
+    const keyOf = async (header?: string) => {
+      const req = request(plain).get("/api/__test/ip-key");
+      const res = header === undefined ? await req : await req.set("X-Forwarded-For", header);
+      return (res.body as { key: string }).key;
+    };
+
+    const own = await keyOf();
+    for (const spoof of SPOOFS) {
+      expect(await keyOf(spoof)).toBe(own);
+      expect(await keyOf(`${spoof}, ${CLIENT}`)).toBe(own);
+    }
+
+    const agent = await csrfAgent(plain);
+    const { email } = await createStudent();
+    for (const spoof of SPOOFS) {
+      await agent
+        .post("/api/auth/signin")
+        .set("X-Forwarded-For", spoof)
+        .send({ email, password: WRONG_PASSWORD })
+        .expect(401);
+    }
+    const blocked = await agent
+      .post("/api/auth/signin")
+      .set("X-Forwarded-For", "198.51.100.99")
       .send({ email, password: WRONG_PASSWORD });
     expect(blocked.status).toBe(429);
   });

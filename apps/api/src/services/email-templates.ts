@@ -117,6 +117,22 @@ export function resetPassword(link: string): EmailContent {
   });
 }
 
+/** Sent when wrong passwords for this address trip the sign-in limit (at most once per window). */
+export function signinLimited(resetLink: string): EmailContent {
+  return render(`Sign-ins to your ${BRAND} account are paused`, {
+    heading: "Too many wrong passwords for your account",
+    paragraphs: [
+      `There have been many sign-ins with a wrong password for this email address, so ${BRAND} is refusing new sign-ins to it for 15 minutes.`,
+      "Browsers you have signed in with before can still sign in as usual. On any other browser, wait 15 minutes, or reset your password with the link below: the browser you reset it in can sign in straight away.",
+    ],
+    action: { label: "Reset password", url: resetLink },
+    footnotes: [
+      `This link works once and expires in ${String(LIMITS.resetTokenMinutes)} minutes. Resetting signs you out everywhere.`,
+      "If these were your own attempts, you don't need to do anything. Your password hasn't changed.",
+    ],
+  });
+}
+
 export function signupAttemptExistingAccount(signinLink: string, resetLink: string): EmailContent {
   return render(`Someone tried to sign up to ${BRAND} with your email`, {
     heading: "You already have an account",

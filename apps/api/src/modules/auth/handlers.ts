@@ -10,6 +10,7 @@ import { userOf } from "../../middleware/auth.js";
 import type { Csrf } from "../../middleware/csrf.js";
 import { destroySession, regenerateSession } from "../../middleware/session.js";
 import { getInput } from "../../middleware/validate.js";
+import { rememberDevice } from "./known-device.js";
 import {
   getMe,
   requestPasswordReset,
@@ -51,6 +52,7 @@ export function authHandlers(deps: AuthDeps, csrf: Pick<Csrf, "issueCsrfToken">)
     const { body } = getInput<{ body: typeof SigninSchema }>(res);
     const { user, identity } = await signIn(body);
     await regenerateSession(req, identity);
+    rememberDevice(deps.config, res, body.email);
     res.json({ user });
   };
 
@@ -71,7 +73,9 @@ export function authHandlers(deps: AuthDeps, csrf: Pick<Csrf, "issueCsrfToken">)
 
   const reset: RequestHandler = async (_req, res) => {
     const { body } = getInput<{ body: typeof ResetPasswordSchema }>(res);
-    await resetPassword(deps, body);
+    const { email } = await resetPassword(deps, body);
+    // Following the emailed link proves the inbox, so this browser counts as the owner's.
+    rememberDevice(deps.config, res, email);
     res.json(OK);
   };
 

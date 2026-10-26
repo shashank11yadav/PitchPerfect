@@ -295,6 +295,25 @@ export async function requestPasswordReset(
   });
 }
 
+/**
+ * Tells the owner of `email`, if it has an account, that sign-ins to it are being refused after
+ * too many wrong passwords, with a link to reset the password. Nothing is awaited: the 429 is sent
+ * at once for known and unknown emails alike, and a failure is only logged.
+ */
+export function warnSigninLimited(deps: AuthDeps, log: MailFailureLog, email: string): void {
+  if (!email) return;
+  const send = async () => {
+    const user = await User.findOne({ email }).select("_id email").lean();
+    if (!user) return;
+    const token = await createToken(user._id.toString(), "reset_password", RESET_TTL_MS);
+    const content = emails.signinLimited(appLink(deps.config, "/reset-password", token));
+    await sendSafely(deps.mailer, { to: user.email, ...content }, log, "signin_limited");
+  };
+  send().catch(() => {
+    log.error({ emailKind: "signin_limited" }, "sign-in warning could not be sent");
+  });
+}
+
 /** Ends every session of the user (they check the version on each request); returns the new one. */
 export async function bumpSessionVersion(userId: string): Promise<number> {
   const user = await User.findByIdAndUpdate(
@@ -309,11 +328,12 @@ export async function bumpSessionVersion(userId: string): Promise<number> {
 /**
  * Sets a new password from a reset link and signs the user out everywhere. The token is only used
  * up once the new password passes the policy, so a rejected password doesn't burn the link.
+ * Returns the account's email, so the browser that reset it can be remembered.
  */
 export async function resetPassword(
   deps: AuthDeps,
   { token, password }: ResetPassword,
-): Promise<void> {
+): Promise<{ email: string }> {
   const userId = await peekToken(token, "reset_password");
   const user = await User.findById(userId).select("email").lean();
   if (!user) throw invalidTokenError();
@@ -324,4 +344,5 @@ export async function resetPassword(
   // One write: the new password and the revocation of every session land together.
   await User.updateOne({ _id: userId }, { $set: { passwordHash }, $inc: { sessionVersion: 1 } });
   await AuthToken.deleteMany({ userId, type: "reset_password", usedAt: null });
+  return { email: user.email };
 }

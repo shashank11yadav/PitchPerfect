@@ -30,6 +30,14 @@ export interface RateLimitOptions {
    * taken back off the counter. For limits on failed attempts, such as wrong passwords.
    */
   failedOnly?: boolean;
+  /** Requests this returns true for are neither counted nor limited by this limiter. */
+  skip?: (req: Request) => boolean;
+  /**
+   * Called with the first request a window refuses (the one that goes one over the limit), so
+   * whatever it starts happens about once per window and key. It runs before the 429 is sent, so
+   * it must not throw or wait.
+   */
+  onLimitReached?: (req: Request) => void;
 }
 
 const hashed = (key: string) => createHash("sha256").update(key).digest("hex");
@@ -57,10 +65,13 @@ export function rateLimit(name: string, options: RateLimitOptions): RequestHandl
       : { keyGenerator: options.key, store: createRateLimitStore(name) }),
     skipFailedRequests: options.successfulOnly ?? false,
     skipSuccessfulRequests: options.failedOnly ?? false,
+    ...(options.skip ? { skip: options.skip } : {}),
     standardHeaders: "draft-8",
     legacyHeaders: false,
     handler: (req, _res, next) => {
-      const resetTime = (req as Request & { rateLimit?: RateLimitInfo }).rateLimit?.resetTime;
+      const info = (req as Request & { rateLimit?: RateLimitInfo }).rateLimit;
+      if (info?.used === options.limit + 1) options.onLimitReached?.(req);
+      const resetTime = info?.resetTime;
       const wait = resetTime ? resetTime.getTime() - Date.now() : options.windowMs;
       next(new RateLimitedError(Math.max(1, Math.ceil(wait / 1000))));
     },

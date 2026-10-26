@@ -11,7 +11,8 @@ import type { Csrf } from "../../middleware/csrf.js";
 import { byIp, byUser, rateLimit } from "../../middleware/rate-limit.js";
 import { validate } from "../../middleware/validate.js";
 import { authHandlers } from "./handlers.js";
-import type { AuthDeps } from "./service.js";
+import { fromKnownDevice } from "./known-device.js";
+import { warnSigninLimited, type AuthDeps } from "./service.js";
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -37,6 +38,7 @@ export interface AuthRouteDeps extends AuthDeps {
 /** `/api/auth/*` per docs/api.md. Limiters are created once here, not per request. */
 export function authRoutes({ csrf, ...deps }: AuthRouteDeps): Router {
   const handle = authHandlers(deps, csrf);
+  const knownDevice = (req: Request) => fromKnownDevice(deps.config, req, emailKey(req));
   // The 5-per-minute window is also the backoff: a blocked client waits out the window.
   const signinLimit = rateLimit("signin", { windowMs: MINUTE_MS, limit: 5, key: byIpAndEmail });
   // Credential stuffing tries many emails from one address: cap its failures across all emails.
@@ -48,14 +50,28 @@ export function authRoutes({ csrf, ...deps }: AuthRouteDeps): Router {
     failedOnly: true,
   });
   // Guessing one account's password from many addresses: cap that email's failures across all
-  // addresses. It slows the email down for at most the window and never locks the account, so
-  // someone hammering an address can delay its owner by minutes, not shut them out (docs/roadmap.md).
-  // Unknown emails are counted the same way, so the answer says nothing about which exist.
+  // addresses. Over the cap, every sign-in to the email is refused until the window ends, the
+  // right password included, except from a browser holding a `pp.device` cookie for it (one
+  // that signed in or reset the password before), which has a cap of its own. Someone guessing
+  // can therefore hold off new browsers but never the owner's own. The first refusal in a window
+  // emails the owner a reset link; resetting from it marks that browser too. Unknown emails are
+  // counted the same way, so the answer says nothing about which exist (docs/security.md).
   const signinEmailFailures = rateLimit("signin-email-failures", {
     windowMs: SIGNIN_FAILURE_WINDOW_MS,
     limit: 10,
     key: emailKey,
     failedOnly: true,
+    skip: knownDevice,
+    onLimitReached: (req) => {
+      warnSigninLimited(deps, req.log, emailKey(req));
+    },
+  });
+  const signinDeviceFailures = rateLimit("signin-device-failures", {
+    windowMs: SIGNIN_FAILURE_WINDOW_MS,
+    limit: 10,
+    key: emailKey,
+    failedOnly: true,
+    skip: (req) => !knownDevice(req),
   });
   const signupLimit = rateLimit("signup", { windowMs: HOUR_MS, limit: 3, key: byIp });
   const resendLimit = rateLimit("resend-verification", {
@@ -89,6 +105,7 @@ export function authRoutes({ csrf, ...deps }: AuthRouteDeps): Router {
     signinLimit,
     signinIpFailures,
     signinEmailFailures,
+    signinDeviceFailures,
     validate({ body: SigninSchema }),
     handle.signin,
   );
