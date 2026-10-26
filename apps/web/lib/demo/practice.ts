@@ -13,7 +13,9 @@ import {
 } from "@pitchperfect/partner";
 import { FakeProvider } from "@pitchperfect/scripted-partner";
 import {
+  CHECK_IN_LINE,
   LIMITS,
+  maySignalSelfHarm,
   redactPii,
   redactTurn,
   secondsUntil,
@@ -212,8 +214,16 @@ export function deleteDemoAttempt(id: string): void {
   }));
 }
 
+/**
+ * Unflagged entries, without any student line that may signal self-harm: re-checked here so a
+ * line stored before the rules caught it is never scored, nor counted toward a score.
+ */
 const usable = (view: AttemptView): TranscriptEntry[] =>
-  view.transcript.filter((entry) => !entry.flagged).map(({ role, text }) => ({ role, text }));
+  view.transcript
+    .filter(
+      (entry) => !entry.flagged && !(entry.role === "student" && maySignalSelfHarm(entry.text)),
+    )
+    .map(({ role, text }) => ({ role, text }));
 
 function finish(stored: StoredAttempt, status: "completed" | "abandoned", now: Date) {
   const view: AttemptView = { ...stored.view, status, endedAt: now.toISOString() };
@@ -283,9 +293,10 @@ export async function runDemoTurn(
     throw error;
   }
   // As on the api: a student in crisis gets the support message before anything that could
-  // refuse the turn (an ended session, the turn limit, the time limit). Nothing is kept.
-  if (signalsSelfHarm(text)) {
-    onEvent({ type: "support", text: SUPPORT_LINE });
+  // refuse the turn (an ended session, the turn limit, the time limit). Nothing is kept. The
+  // scripted partner has no model guard to read an unclear line, so that gets a gentle check-in.
+  if (maySignalSelfHarm(text)) {
+    onEvent({ type: "support", text: signalsSelfHarm(text) ? SUPPORT_LINE : CHECK_IN_LINE });
     return;
   }
   if (view.status !== "active" && view.status !== "ended_by_guard") {

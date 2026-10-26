@@ -2,6 +2,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import mongoose from "mongoose";
 import {
   LIMITS,
+  maySignalSelfHarm,
   type AttemptListQuery,
   type AttemptStatus,
   type AttemptSummary,
@@ -75,10 +76,16 @@ export function scenarioOf(attempt: LockedAttempt): {
   };
 }
 
-/** Unflagged entries only: guardrail redirects are never replayed or scored. */
+/**
+ * Unflagged entries only: guardrail redirects are never replayed or scored. A student line that
+ * may signal self-harm is left out too, re-checked here so one stored before the rules caught it
+ * is never scored, nor counted toward a score.
+ */
 const usableTranscript = (attempt: LockedAttempt): TranscriptEntry[] =>
   attempt.transcript
-    .filter((entry) => !entry.flagged)
+    .filter(
+      (entry) => !entry.flagged && !(entry.role === "student" && maySignalSelfHarm(entry.text)),
+    )
     .map((entry) => ({ role: entry.role, text: entry.text }));
 
 export async function getAttempt(studentId: string, attemptId: string): Promise<AttemptView> {

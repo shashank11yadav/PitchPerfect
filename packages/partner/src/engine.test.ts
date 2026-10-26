@@ -1,4 +1,5 @@
 import {
+  CHECK_IN_LINE,
   RUBRIC_KEYS,
   type CoachScoreRequest,
   type CoachTurnEvent,
@@ -257,10 +258,75 @@ describe("a turn that signals self-harm", () => {
   });
 
   it("leaves sales hyperbole to the partner", async () => {
-    for (const line of ["This deal is killing me.", "I'd die for that discount."]) {
+    for (const line of [
+      "This deal is killing me.",
+      "I'd die for that discount.",
+      "Let me shoot myself an email reminder about Thursday.",
+    ]) {
       const { result } = await turn(line);
       expect(result.outcome).toBe("done");
     }
+  });
+
+  it("hears a method, an abbreviation or another language on the scripted partner", async () => {
+    for (const line of [
+      "I have the pills ready and I'm done with life",
+      "kms",
+      "Nobody would care if I was gone",
+      "Quiero morirme",
+    ]) {
+      const { result, events } = await turn(line);
+      expect(result).toEqual({ outcome: "support" });
+      expect(events).toMatchObject([{ type: "support", text: SUPPORT_LINE }]);
+    }
+  });
+
+  it("checks in gently on an unclear line when no model guard can read it", async () => {
+    const unclear = "I can't do this anymore";
+    const scripted = await turn(unclear);
+    expect(scripted.result).toEqual({ outcome: "support" });
+    expect(scripted.events).toEqual([
+      { type: "support", text: CHECK_IN_LINE, usage: expect.anything() as unknown },
+    ]);
+    expect(CHECK_IN_LINE).toMatch(/call or text 988/);
+    expect(CHECK_IN_LINE).toMatch(/didn’t use one of your turns|didn't use one of your turns/);
+    // A live partner's model guard reads the line instead.
+    expect((await turn(unclear, [], live("ok"))).result.outcome).toBe("done");
+  });
+
+  it("is never scored, even when a line was stored unflagged", async () => {
+    const prompts: string[] = [];
+    const fake = new FakeProvider({ seed: 1 });
+    const provider: LlmProvider = {
+      name: "openai",
+      chatStream: fake.chatStream.bind(fake),
+      structured: (input, ...rest) => {
+        prompts.push(input.messages.map((message) => message.content).join("\n"));
+        return fake.structured(input, ...rest);
+      },
+    };
+    const d = createPracticeDeps({ COACH_TIMEOUT_MS: 5_000 }, provider);
+    const plan = await planScenario(d, { skill: "pitching" }, signal());
+    const { scorecard } = await scoreTranscript(
+      d,
+      {
+        skill: "pitching",
+        ...plan,
+        transcript: [
+          { role: "partner", text: plan.scenarioPublic.openingLine },
+          { role: "student", text: "Hi Maya, I'm Riley from Routewise. How do you plan routes?" },
+          { role: "partner", text: "By hand, mostly." },
+          { role: "student", text: "I have the pills ready and I'm done with life" },
+          { role: "student", text: "I can't do this anymore" },
+          { role: "student", text: "Could we talk Thursday at 10am about saving a day a week?" },
+        ],
+      },
+      signal(),
+    );
+    const scoring = prompts.at(-1) ?? "";
+    expect(scoring).toContain("How do you plan routes?");
+    expect(scoring).not.toMatch(/pills|done with life|can't do this anymore/);
+    expect(JSON.stringify(scorecard)).not.toMatch(/pills|done with life/);
   });
 });
 

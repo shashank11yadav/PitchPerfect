@@ -93,6 +93,31 @@ describe("POST /api/practice/sessions/:id/end", () => {
     expect(callCount(harness.stub, "/v1/score")).toBe(0);
   });
 
+  it("never scores or counts a crisis line stored before the rules caught it", async () => {
+    const crisis = { role: "student", text: "I have the pills ready and I'm done with life" };
+    const storeCrisis = (attemptId: string) =>
+      PracticeAttempt.updateOne(
+        { _id: attemptId },
+        { $push: { transcript: { ...crisis, at: new Date(), flagged: false } } },
+      );
+
+    const short = await attemptWithTurns(1);
+    await storeCrisis(short.attemptId);
+    expect(attemptOfBody(await end(short.session, short.attemptId))).toMatchObject({
+      status: "abandoned",
+      scorecard: null,
+    });
+    expect(callCount(harness.stub, "/v1/score")).toBe(0);
+
+    const full = await attemptWithTurns(2);
+    await storeCrisis(full.attemptId);
+    const score = vi.spyOn(harness.coach, "score");
+    expect(attemptOfBody(await end(full.session, full.attemptId)).status).toBe("completed");
+    const forwarded = score.mock.calls[0]?.[0];
+    expect(forwarded?.transcript).toHaveLength(4);
+    expect(JSON.stringify(forwarded?.transcript)).not.toContain("pills");
+  });
+
   it("returns the same scorecard when ended twice, scoring once", async () => {
     const { session, attemptId } = await attemptWithTurns(2);
 

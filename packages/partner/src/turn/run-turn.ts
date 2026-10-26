@@ -1,4 +1,11 @@
-import { LIMITS, signalsSelfHarm, type CoachTurnRequest, type Stage } from "@pitchperfect/shared";
+import {
+  CHECK_IN_LINE,
+  LIMITS,
+  maySignalSelfHarm,
+  signalsSelfHarm,
+  type CoachTurnRequest,
+  type Stage,
+} from "@pitchperfect/shared";
 import { reliably, usageOf } from "../deps.js";
 import { confirmsAttack, ruleCheck } from "../guardrails/guard-rules.js";
 import { redirectLine, SUPPORT_LINE } from "../prompts/fixed-lines.js";
@@ -66,15 +73,16 @@ async function judge(text: string, ctx: TurnContext): Promise<Verdict> {
 }
 
 /** PitchPerfect, out of character: crisis resources instead of a reply. Never a strike. */
-async function support(ctx: TurnContext): Promise<TurnResult> {
+async function support(ctx: TurnContext, text = SUPPORT_LINE): Promise<TurnResult> {
   const usage = usageOf(ctx.deps, ctx.meter, "turn");
-  await ctx.sink.send({ type: "support", text: SUPPORT_LINE, usage });
+  await ctx.sink.send({ type: "support", text, usage });
   return { outcome: "support" };
 }
 
 /**
  * One student turn, already validated. A turn that signals self-harm, by the rules or the model
- * guard, gets the `support` message and nothing else. Otherwise: rule and model guard (a fixed
+ * guard, gets the `support` message and nothing else; with the scripted provider, which has no
+ * model guard, a turn that only may signal it gets the gentler check-in instead. Otherwise: rule and model guard (a fixed
  * `redirect` line when the text is off the call, with `strike` set for a confirmed attack), else
  * the streamed persona reply (`delta` events, then `done` with the checked final text and the
  * stage). A provider failure propagates; the host turns it into its own `error` event.
@@ -82,6 +90,9 @@ async function support(ctx: TurnContext): Promise<TurnResult> {
 export async function runTurn(turn: CoachTurnRequest, ctx: TurnContext): Promise<TurnResult> {
   // Before any guard or model call: someone who may be at risk is never redirected or struck.
   if (signalsSelfHarm(turn.studentText)) return support(ctx);
+  if (ctx.deps.provider.name === "fake" && maySignalSelfHarm(turn.studentText)) {
+    return support(ctx, CHECK_IN_LINE);
+  }
   const { category, strike } = await judge(turn.studentText, ctx);
   if (category === "self_harm") return support(ctx);
   if (category !== "ok") {

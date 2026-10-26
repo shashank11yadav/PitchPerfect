@@ -2,6 +2,7 @@ import {
   computeOverall,
   getSkill,
   LIMITS,
+  maySignalSelfHarm,
   ScorecardSchema,
   type CoachScoreRequest,
   type CoachScoreResponse,
@@ -22,23 +23,25 @@ export class NotEnoughTurnsError extends Error {
   }
 }
 
+/** A student line the guard rules hold back, or one that may signal self-harm: never scored. */
+const unscorable = (entry: TranscriptEntry) =>
+  entry.role === "student" && (ruleCheck(entry.text) !== null || maySignalSelfHarm(entry.text));
+
 /**
- * The transcript with every student line the guard rules hold back marked flagged, so it is
- * never scored. Lines are flagged when they are said; this also covers a transcript stored
- * before a rule existed, such as a note to the grader.
+ * The transcript with every unscorable student line marked flagged, so it is never scored.
+ * Lines are flagged or kept out when they are said; this also covers a transcript stored before
+ * a rule existed, such as a note to the grader or a crisis line the rules then missed.
  */
 const withSuspectsFlagged = (transcript: readonly TranscriptEntry[]): TranscriptEntry[] =>
   transcript.map((entry) =>
-    entry.role === "student" && entry.flagged !== true && ruleCheck(entry.text) !== null
-      ? { ...entry, flagged: true }
-      : entry,
+    entry.flagged !== true && unscorable(entry) ? { ...entry, flagged: true } : entry,
   );
 
 /**
  * Grades one finished call: the model scores the transcript, then any quote the student did not
  * say is dropped and `overall` is computed from the dimension scores. Flagged and suspect student
- * lines are left out of what is graded. Usage goes to `meter` as well, so a host can charge what a
- * failed score used.
+ * lines, and any that may signal self-harm, are left out of what is graded. Usage goes to `meter`
+ * as well, so a host can charge what a failed score used.
  */
 export async function scoreTranscript(
   deps: PracticeDeps,
