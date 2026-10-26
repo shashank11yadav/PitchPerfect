@@ -3,11 +3,20 @@ title = "PitchPerfect gitleaks config"
 [extend]
 useDefault = true
 
+# Every file is scanned, `.env.example` files included. Only values that are plainly placeholders
+# are let through, matched against the whole detected secret: the `dev-only-` values that config.ts
+# rejects in production, change-me and replace-me, words such as your-api-key or <api-key>, ${NAME},
+# and runs of x's or stars. Anything with more than that, such as change-me-<real value>, is
+# still reported.
 [allowlist]
-description = "Local-development placeholders that are rejected in production by config.ts"
+description = "Placeholder values, never real secrets"
+regexTarget = "secret"
 regexes = [
-  '''dev-only-[a-z0-9-]+''',
-]
-paths = [
-  '''(^|/)\.env\.example$''',
+  '''^dev-only-[A-Za-z0-9_-]*$''',
+  '''^(?i)(change|replace)[-_]?me$''',
+  '''^(?i)your[-_][a-z_-]+$''',
+  '''^<[a-z0-9_-]+>$''',
+  '''^\$\{[A-Za-z_][A-Za-z0-9_]*\}$''',
+  '''^(?i)x{3,}$''',
+  '''^\*{3,}$''',
 ]
