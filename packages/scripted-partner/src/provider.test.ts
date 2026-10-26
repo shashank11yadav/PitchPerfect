@@ -553,8 +553,8 @@ describe("FakeProvider", () => {
       for (let seed = 1; seed <= 12; seed += 1) {
         replies.add(await buyer([INTENT_LINES.pitch], { stage: "pitch", seed }));
       }
-      for (const reply of replies) expect(reply).not.toMatch(/\bBut We're\b|But The\b/);
-      expect([...replies].some((reply) => /But we're mid-quarter|honest\. We're/.test(reply))).toBe(
+      for (const reply of replies) expect(reply).not.toMatch(/\bBut We’re\b|But The\b/);
+      expect([...replies].some((reply) => /But we’re mid-quarter|honest\. We’re/.test(reply))).toBe(
         true,
       );
     });

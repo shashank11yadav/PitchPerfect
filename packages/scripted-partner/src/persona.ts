@@ -40,6 +40,12 @@ const TAG = /\s*\[\[stage:\w+\]\]\s*$/;
 const unescape = (text: string) =>
   text.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
 
+/**
+ * The persona's lines are written with curly apostrophes. Its own earlier lines are read back in
+ * that form, so one sent with straight ones (an older transcript) still counts as said.
+ */
+const curly = (text: string) => text.replace(/(?<=\p{L})'(?=\p{L})/gu, "’");
+
 const DEFAULT_SCENARIO: Scenario = {
   firstName: "the buyer",
   who: "",
@@ -84,7 +90,9 @@ function readContext(system: string, messages: readonly ChatMessage[]): Context 
     current: STAGES.find((candidate) => candidate === stage),
     lastTurn: /final turn/i.test(system),
     turns: turns.filter(Boolean),
-    said: messages.filter((m) => m.role === "assistant").map((m) => m.content.replace(TAG, "")),
+    said: messages
+      .filter((m) => m.role === "assistant")
+      .map((m) => curly(m.content.replace(TAG, ""))),
   };
 }
 
@@ -101,24 +109,24 @@ const capitalized = (text: string) => `${text.charAt(0).toUpperCase()}${text.sli
 /** A hidden objection as the person would say it out loud. */
 function spoken(objection: string): string {
   const said = objection
-    .replace(/\bWe are\b/g, "We're")
-    .replace(/\bI am\b/g, "I'm")
-    .replace(/\bcannot\b/g, "can't")
-    .replace(/\bdo not\b/g, "don't")
-    .replace(/\bis not\b/g, "isn't")
+    .replace(/\bWe are\b/g, "We’re")
+    .replace(/\bI am\b/g, "I’m")
+    .replace(/\bcannot\b/g, "can’t")
+    .replace(/\bdo not\b/g, "don’t")
+    .replace(/\bis not\b/g, "isn’t")
     .trim();
-  return /[.!?]$/.test(said) ? said : `${said}.`;
+  return curly(/[.!?]$/.test(said) ? said : `${said}.`);
 }
 
 function lowerFirst(text: string): string {
-  return /^(?:I\b|I'|[A-Z]{2})/.test(text)
+  return /^(?:I\b|I['’]|[A-Z]{2})/.test(text)
     ? text
     : `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 }
 
 /** An objection after a lead-in that runs into it ("Maybe. But we're…"); "I" keeps its capital. */
 const OBJECTION_LEADS: readonly ((objection: string) => string)[] = [
-  (objection) => `I'll be honest. ${objection}`,
+  (objection) => `I’ll be honest. ${objection}`,
   (objection) => `Sounds fine on paper. ${objection}`,
   (objection) => `Maybe. But ${lowerFirst(objection)}`,
 ];
@@ -215,7 +223,7 @@ function guestFor(voice: Lines, line: string): string {
 const BOOKING_LINES = {
   accept: {
     make: (When: string, guest: string) =>
-      `${When} works. Send the invite and I'll bring ${guest}.`,
+      `${When} works. Send the invite and I’ll bring ${guest}.`,
     shape: /^(.+?) works\. Send the invite/,
   },
   acceptPlain: {
@@ -224,12 +232,12 @@ const BOOKING_LINES = {
   },
   acceptMaybe: {
     make: (When: string, colleague: string) =>
-      `${When} should work. Send me the details and I'll check with ${colleague}.`,
+      `${When} should work. Send me the details and I’ll check with ${colleague}.`,
     shape: /^(.+?) should work\. Send me the details/,
   },
   acceptBetter: {
     make: (When: string, guest: string) =>
-      `${When} works better for me. Send the invite and I'll bring ${guest}.`,
+      `${When} works better for me. Send the invite and I’ll bring ${guest}.`,
     shape: /^(.+?) works better for me\./,
   },
   counter: {
@@ -239,15 +247,15 @@ const BOOKING_LINES = {
   },
   refuseAgain: {
     make: (Day: string, offered: string, time: string) =>
-      `Like I said, ${Day}'s no good for me. ${offered}${time} I can do.`,
-    shape: /^Like I said, (\w+day)'s no good for me\. (\w+day)/,
+      `Like I said, ${Day}’s no good for me. ${offered}${time} I can do.`,
+    shape: /^Like I said, (\w+day)’s no good for me\. (\w+day)/,
   },
   refuseShort: {
-    make: (Day: string, offered: string) => `${Day} still doesn't work. ${offered}?`,
-    shape: /^(\w+day) still doesn't work\. (\w+day)\?/,
+    make: (Day: string, offered: string) => `${Day} still doesn’t work. ${offered}?`,
+    shape: /^(\w+day) still doesn’t work\. (\w+day)\?/,
   },
   forDay: {
-    make: (day: string) => `For ${day}, yes? Send it and I'll be there.`,
+    make: (day: string) => `For ${day}, yes? Send it and I’ll be there.`,
     shape: /^For (\w+day), yes\?/,
   },
   forDayShort: {
@@ -267,8 +275,8 @@ const BOOKING_LINES = {
     shape: /^Yes, (.+?)\. See you then/,
   },
   sameShort: {
-    make: (Day: string) => `That's the one. Talk ${Day}.`,
-    shape: /^That's the one\. Talk (\w+day)/,
+    make: (Day: string) => `That’s the one. Talk ${Day}.`,
+    shape: /^That’s the one\. Talk (\w+day)/,
   },
   switchTo: {
     make: (When: string) => `${When} is fine too. Send the new invite.`,
@@ -280,12 +288,12 @@ const BOOKING_LINES = {
   },
   keep: {
     make: (booked: string) =>
-      `Let's keep it to ${midSentence(booked)}, if that's all the same to you. Send me the invite.`,
-    shape: /^Let's keep it to (.+?), if/,
+      `Let’s keep it to ${midSentence(booked)}, if that’s all the same to you. Send me the invite.`,
+    shape: /^Let’s keep it to (.+?), if/,
   },
   keepShort: {
-    make: (booked: string) => `We've got ${midSentence(booked)} already. One meeting is plenty.`,
-    shape: /^We've got (.+?) already\./,
+    make: (booked: string) => `We’ve got ${midSentence(booked)} already. One meeting is plenty.`,
+    shape: /^We’ve got (.+?) already\./,
   },
   confirmTable: {
     make: (When: string) => `${When} works, yes. Send the invite.`,
@@ -332,7 +340,7 @@ export function readBooking(said: readonly string[]): Booking {
   let booked: string | undefined;
   let countered: string | undefined;
   const refused: string[] = [];
-  for (const line of said) {
+  for (const line of said.map(curly)) {
     const accepted = ACCEPTS.map((entry) => entry.shape.exec(line)?.[1]).find(Boolean);
     if (accepted !== undefined) {
       booked = /^\w+day|^next week|^tomorrow|^\d/i.test(accepted)
@@ -350,7 +358,7 @@ export function readBooking(said: readonly string[]): Booking {
       booked = undefined;
     }
   }
-  const last = said.at(-1) ?? "";
+  const last = curly(said.at(-1) ?? "");
   const dayAsked =
     DAY_ASKED.has(last) ||
     COUNTERS.some((entry) => entry.shape.test(last)) ||
@@ -423,7 +431,7 @@ function decisionReply(context: Context, voice: Lines): readonly string[] {
   return alreadySaid(said, spoken(signOff))
     ? [
         `Like I said, my manager has the final word. ${who} would want a say too.`,
-        `My manager, in the end. I'd want ${voice.colleague} in the room as well.`,
+        `My manager, in the end. I’d want ${voice.colleague} in the room as well.`,
       ]
     : [spoken(signOff), `${spoken(signOff)} ${who} would want a say too.`];
 }
@@ -456,8 +464,8 @@ function replyFor(context: Context, line: string, next: Next): Reply {
     return {
       stage: "close",
       lines: [
-        "I need to jump onto another call. Send me a short email with what we covered and I'll take it from there.",
-        "I have to run, but this was useful. Put it in an email and I'll pass it along.",
+        "I need to jump onto another call. Send me a short email with what we covered and I’ll take it from there.",
+        "I have to run, but this was useful. Put it in an email and I’ll pass it along.",
       ],
     };
   }
@@ -480,8 +488,8 @@ function replyFor(context: Context, line: string, next: Next): Reply {
         stage: current ?? "opening",
         // The scripted demo has no live model behind it, and must not claim to be one.
         lines: [
-          `I'm PitchPerfect's scripted practice partner playing ${scenario.firstName}, a demo with no live model behind it. But go on, what were you saying?`,
-          `I'm PitchPerfect's scripted practice partner, playing ${scenario.firstName} for this call. There's no live model here, just a demo. Carry on.`,
+          `I’m PitchPerfect’s scripted practice partner playing ${scenario.firstName}, a demo with no live model behind it. But go on, what were you saying?`,
+          `I’m PitchPerfect’s scripted practice partner, playing ${scenario.firstName} for this call. There’s no live model here, just a demo. Carry on.`,
         ],
       };
     case "name_check":
@@ -548,7 +556,7 @@ function replyFor(context: Context, line: string, next: Next): Reply {
         stage: at(kind === "contact" ? "close" : here),
         lines: when
           ? [
-              `${When} is fine. Send me the draft tonight and I'll forward it.`,
+              `${When} is fine. Send me the draft tonight and I’ll forward it.`,
               `I can do ${when}. Send me what you want it to say first.`,
             ]
           : voice.favour,
@@ -558,8 +566,8 @@ function replyFor(context: Context, line: string, next: Next): Reply {
         stage: at(kind === "contact" ? "close" : here),
         lines: when
           ? [
-              `${When} is fine. Send it when it's ready.`,
-              `${When} works. I'll read it when it lands.`,
+              `${When} is fine. Send it when it’s ready.`,
+              `${When} works. I’ll read it when it lands.`,
             ]
           : voice.offer[reading.offer ?? "generic"],
       };

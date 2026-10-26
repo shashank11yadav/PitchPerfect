@@ -375,7 +375,7 @@ describe("heuristicScorecard", () => {
       expect(scorecard.strongerLine).toEqual({
         original: "Could we book a demo on Thursday at 10am for your team?",
         improved:
-          "Once I've heard how you handle it today, could we book a demo on Thursday at 10am for your team?",
+          "Once I’ve heard how you handle it today, could we book a demo on Thursday at 10am for your team?",
       });
     });
 

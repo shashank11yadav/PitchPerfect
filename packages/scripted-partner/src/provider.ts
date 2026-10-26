@@ -110,9 +110,9 @@ const HIRING_MANAGERS: Cast = {
     },
   ],
   objections: [
-    "You don't have direct sales experience yet.",
+    "You don’t have direct sales experience yet.",
     "We usually hire people with a year of quota-carrying experience.",
-    "I'm not sure why you want sales rather than marketing.",
+    "I’m not sure why you want sales rather than marketing.",
   ],
   winConditions: [
     "The student opens with one clear point about themself.",
@@ -140,16 +140,16 @@ const CONTACTS: Cast = {
     },
   ],
   objections: [
-    "I haven't talked to that person in a while.",
-    "I'm not sure I know your work well enough to vouch for you.",
-    "I don't want to put my name on an intro that goes nowhere.",
+    "I haven’t talked to that person in a while.",
+    "I’m not sure I know your work well enough to vouch for you.",
+    "I don’t want to put my name on an intro that goes nowhere.",
   ],
   winConditions: [
     "The student names the exact person they want to meet.",
     "The student offers to write the introduction themself.",
     "The student suggests a specific follow-up date.",
   ],
-  opening: (first) => `Hey, good to hear from you. It's ${first}. What's up?`,
+  opening: (first) => `Hey, good to hear from you. It’s ${first}. What’s up?`,
 };
 
 /** Who the student talks to for a skill. */

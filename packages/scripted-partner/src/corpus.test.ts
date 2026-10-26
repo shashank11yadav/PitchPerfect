@@ -157,13 +157,13 @@ function replyTo({
   return personaReply(1, prompt);
 }
 
-const OPERATIONS = /front desk|spreadsheet|dispatcher|phones patients|skipped|depends who's on/i;
+const OPERATIONS = /front desk|spreadsheet|dispatcher|phones patients|skipped|depends who’s on/i;
 const ACCEPT_OR_COUNTER = /works\.|is packed|I can do|should work|any better/i;
 /** The persona asking for a repeat: only right when the words were noise. */
 const NOT_HEARD = /say that again|once more|missed that/i;
 
 const OPENER_REPLY =
-  /why|what's this about|what made you|reach out|calling|meet you|background|drew you|tell me|going on|what can I do/i;
+  /why|what’s this about|what made you|reach out|calling|meet you|background|drew you|tell me|going on|what can I do/i;
 const SMALL_TALK_REPLY =
   /thanks|busy|good|fine|not bad|quiet|highlights|weather|been a while|few minutes|go ahead|speaking/i;
 
@@ -257,10 +257,10 @@ const CORPUS: Row[] = [
   row("hi", "greeting", { stage: "opening", reply: /who|what can I do|hello|hi/i }),
   row("hello?", "greeting", { stage: "opening", reply: /who|what can I do|hello|hi/i }),
   row("Hello there.", "greeting", { stage: "opening" }),
-  row("Is this Ruth?", "name_check", { stage: "opening", reply: /speaking|it is|who's this/i }),
+  row("Is this Ruth?", "name_check", { stage: "opening", reply: /speaking|it is|who’s this/i }),
   row("Thanks for taking my call.", "thanks", {
     stage: "opening",
-    reply: /what's this about|what can I do|go ahead/i,
+    reply: /what’s this about|what can I do|go ahead/i,
     not: /what else did you want to ask/i,
   }),
   row("hi! thanks so much for making time", "thanks", {
@@ -290,7 +290,7 @@ const CORPUS: Row[] = [
     not: OPERATIONS,
   }),
   row("did you catch the game last night", "small_talk", {
-    reply: /highlights|game|missed|didn't|no\b|busy/i,
+    reply: /highlights|game|missed|didn’t|no\b|busy/i,
     not: OPERATIONS,
   }),
   row("any plans for the weekend?", "small_talk", {
@@ -316,7 +316,7 @@ const CORPUS: Row[] = [
   row("Hey! It's been forever, how's everything going", "small_talk", {
     voice: "contact",
     stage: "opening",
-    reply: /been a while|good|busy|what's new|what's up/i,
+    reply: /been a while|good|busy|what’s new|what’s up/i,
   }),
   row("hey! long time. how have you been", "small_talk", {
     voice: "contact",
@@ -1104,7 +1104,7 @@ const CORPUS: Row[] = [
   row("Hi Lena! Hope you're doing well. Got a minute?", "small_talk", {
     voice: "contact",
     stage: "opening",
-    reply: /sure|few minutes|what's up|going on/i,
+    reply: /sure|few minutes|what’s up|going on/i,
   }),
   row("I'll send the draft Thursday morning and check in with you next Monday.", "follow_up", {
     voice: "contact",
@@ -1130,7 +1130,7 @@ const CORPUS: Row[] = [
   ),
   row("Thanks. I work with regional carriers on same-day route changes.", "opener", {
     stage: "opening",
-    reply: /mean for us|in practice|who's this for/i,
+    reply: /mean for us|in practice|who’s this for/i,
     not: /not following/i,
   }),
   row("Before I go on, how are routes planned at your place each morning?", "process_question", {
@@ -1243,7 +1243,7 @@ const CORPUS: Row[] = [
   row("Interesting. What tool are you using for reminders right now?", "tool_question"),
   row("And how well is it working for you?", "quality_question"),
   row("If you could change one thing about it, what would it be?", "detail_question", {
-    reply: /I'd want|wish|minutes|reach|change|one thing/i,
+    reply: /I’d want|wish|minutes|reach|change|one thing/i,
     not: /not sure I follow|think about that/i,
   }),
   row("What would it mean for the clinics if no-shows dropped by half?", "detail_question", {
@@ -1339,7 +1339,7 @@ const CORPUS: Row[] = [
   row("Hey Lena, it's Aisha! How's everything going?", "opener", {
     voice: "contact",
     stage: "opening",
-    reply: /Aisha|good|what's going on|what's up/i,
+    reply: /Aisha|good|what’s going on|what’s up/i,
   }),
   row("Good! So I'm graduating in May and I'm looking at SDR roles.", "target", {
     voice: "contact",
@@ -1404,7 +1404,7 @@ const CORPUS: Row[] = [
     reply: /example|who else|company like ours/i,
   }),
   row("oh by the way did you see the game last night", "small_talk", {
-    reply: /highlights|game|missed|didn't|no\b|busy/i,
+    reply: /highlights|game|missed|didn’t|no\b|busy/i,
   }),
   row("anyway um what does your boss care about most", "detail_question", {
     reply: /cost|calls|deliver|numbers|budget|overtime|customers/i,
@@ -1417,7 +1417,7 @@ const CORPUS: Row[] = [
   row("thursday works for me too then", "proposal", {
     stage: "close",
     before: BOOKED_THURSDAY,
-    reply: /Thursday|see you|that's the one/i,
+    reply: /Thursday|see you|that’s the one/i,
   }),
   row("ok sweet talk then bye", "wrap_up", {
     stage: "close",
@@ -1443,18 +1443,18 @@ const CORPUS: Row[] = [
   }),
   row("Morning! Sorry for the cold call.", "unclear", {
     stage: "opening",
-    reply: /who|call about|what can I do|what's this/i,
+    reply: /who|call about|what can I do|what’s this/i,
   }),
   row("I'll keep this short, I promise.", "unclear", {
     stage: "opening",
-    reply: /who|call about|what can I do|what's this|go ahead/i,
+    reply: /who|call about|what can I do|what’s this|go ahead/i,
   }),
   // Single lines, discovery.
   row("Who ends up fixing the routes when that happens?", "owner_question", {
     reply: /dispatch lead|dispatcher|manager/i,
   }),
   row("If you could wave a magic wand, what would you change?", "detail_question", {
-    reply: /I'd want|wish|minutes|change|one thing/i,
+    reply: /I’d want|wish|minutes|change|one thing/i,
   }),
   row("What's the biggest headache in dispatch right now?", "detail_question", {
     reply: /reroutes|sick calls|time|mornings|honestly/i,
@@ -1483,7 +1483,7 @@ const CORPUS: Row[] = [
     reply: /customer|\$|overtime|refund/i,
   }),
   row("So the main issue is the Monday reroutes, is that right?", "detail_question", {
-    reply: /that's it|yes|right|exactly|and the|pretty much/i,
+    reply: /that’s it|yes|right|exactly|and the|pretty much/i,
     not: /not sure I follow/i,
   }),
   row(
@@ -1706,7 +1706,7 @@ const CORPUS: Row[] = [
   }),
   row("Great. We work with multi-site retailers on stock counts and reordering.", "opener", {
     before: ["I've got a few minutes, Dev. Go ahead."],
-    reply: /mean for us|in practice|who's this for/i,
+    reply: /mean for us|in practice|who’s this for/i,
   }),
   row(
     "And what does a stock-out on a weekend actually cost one of your stores?",
@@ -1876,7 +1876,7 @@ const CORPUS: Row[] = [
     reply: /worse|better|same|slowly|volume/i,
   }),
   row("What would good look like for you here?", "detail_question", {
-    reply: /I'd want|one thing|wish|reach|minutes/i,
+    reply: /I’d want|one thing|wish|reach|minutes/i,
   }),
   row("Anything I should have asked and didn't?", "detail_question", {
     reply: /only that|one more|worth|out the/i,
@@ -1920,7 +1920,7 @@ const CORPUS: Row[] = [
   row("Hey, it's Dan. How've things been at the agency?", "opener", {
     voice: "contact",
     stage: "opening",
-    reply: /Dan|good|what's going on/i,
+    reply: /Dan|good|what’s going on/i,
     not: /how they hire/i,
   }),
   row("Are you still in contact with Grace?", "relationship_question", {
@@ -2082,7 +2082,7 @@ const CORPUS: Row[] = [
   ].map((line) =>
     row(line, "small_talk", {
       stage: "opening",
-      reply: /few minutes|go ahead|fine|what's this about/i,
+      reply: /few minutes|go ahead|fine|what’s this about/i,
       not: ACCEPT_OR_COUNTER,
       after: "opening",
     }),
@@ -2501,7 +2501,7 @@ describe("whole calls through the real prompts", () => {
     expect(turns[6]?.partner).toMatch(/posting|base|range/i);
     expect(turns[7]?.partner).toMatch(/team lead|me\b/i);
     expect(turns[8]?.partner).toMatch(/Tuesday/);
-    const refused = /is packed|no good|can't do/i.test(turns[8]?.partner ?? "");
+    const refused = /is packed|no good|can’t do/i.test(turns[8]?.partner ?? "");
     if (refused) {
       expect(turns[9]?.partner).not.toMatch(/Tuesday at 3pm works/);
       expect(turns[9]?.partner).toMatch(/Tuesday|Thursday/);
@@ -2553,7 +2553,7 @@ describe("whole calls through the real prompts", () => {
       expect(turn.partner).not.toMatch(OPERATIONS);
       expect(turn.partner).not.toMatch(/Mondays are the worst|It is, honestly|Say more/i);
     }
-    expect(turns[3]?.partner).toMatch(/highlights|game|missed|didn't|no\b|busy/i);
+    expect(turns[3]?.partner).toMatch(/highlights|game|missed|didn’t|no\b|busy/i);
     expect(turns[4]?.partner).toMatch(OPENER_REPLY);
     expect(turns[6]?.partner).toMatch(/Thursday/);
     expect(turns[6]?.stage).toBe("close");

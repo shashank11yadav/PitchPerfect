@@ -255,11 +255,11 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
         reason:
           "You asked for the meeting in your first turn, before they had a reason to say yes.",
         quote: ask,
-        fix: "Make the ask at the end, once they've told you what matters to them.",
+        fix: "Make the ask at the end, once they’ve told you what matters to them.",
         // Still the ask, now earned by what they've said.
         rewrite: (line: string) =>
           kindOf(line) === "ask"
-            ? `Once I've heard how you handle it today, ${followOn(line)}`
+            ? `Once I’ve heard how you handle it today, ${followOn(line)}`
             : null,
       },
   ].filter((part) => part !== false);
@@ -335,10 +335,10 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
       valueScore >= 4
         ? `You talked about them, with “you” and “your”, in ${plural(youTurns, "turn")} and named what would get better for them.`
         : benefits.length > 0
-          ? `You named ${benefits.length === 1 ? "a benefit" : plural(benefits.length, "benefit")}, but in your terms. Tie it to something they told you, so it's about their problem.`
-          : "You described what you do, not what they'd get. Name one thing that changes for them.",
+          ? `You named ${benefits.length === 1 ? "a benefit" : plural(benefits.length, "benefit")}, but in your terms. Tie it to something they told you, so it’s about their problem.`
+          : "You described what you do, not what they’d get. Name one thing that changes for them.",
     evidence: quotes.value,
-    strength: valueScore >= 4 ? "You framed it around what they'd get, not what you sell." : null,
+    strength: valueScore >= 4 ? "You framed it around what they’d get, not what you sell." : null,
     improvement: "Name one thing that gets better for them, in the words they used.",
     // The line where they said what they do, which is where the benefit belongs.
     fallback:
@@ -370,7 +370,7 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
         const kind = kindOf(line);
         if (kind === "question") return null;
         return kind === "ask"
-          ? `From what you've told me, it's worth a closer look. ${line}`
+          ? `From what you’ve told me, it’s worth a closer look. ${line}`
           : `${bare(line)}. ${ASK_LINE}`;
       }),
   };
@@ -380,7 +380,7 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
     score: discoveryScore,
     justification:
       questions.length === 0
-        ? "You didn't ask a single question. Even one, like how they handle it today, changes the call."
+        ? "You didn’t ask a single question. Even one, like how they handle it today, changes the call."
         : open.length === 0
           ? `You asked ${plural(questions.length, "question")}, but ${questions.length === 1 ? "it" : "each one"} could be answered with yes or no. Start with how or what to get them talking.`
           : discoveryScore >= 4
@@ -413,19 +413,19 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
       ? proof
         ? "When they pushed back, you agreed it was fair before answering, and you backed it up with something concrete."
         : "You acknowledged the pushback, which keeps them talking. Add one fact or result next time so the answer has weight."
-      : "No line shows you acknowledging their pushback. When it comes, say it's fair, ask what's behind it, then answer with one fact.",
+      : "No line shows you acknowledging their pushback. When it comes, say it’s fair, ask what’s behind it, then answer with one fact.",
     evidence: quotes.objections,
     strength: acknowledged
       ? "You took the pushback calmly and said it was fair before answering."
       : null,
     improvement:
-      "When they push back, say it's fair, ask what's behind it, then answer with one fact.",
+      "When they push back, say it’s fair, ask what’s behind it, then answer with one fact.",
     // Only the line that answered pushback can become a better answer to it. Without one, a
     // pitch or a closing ask rewritten as an objection reply would make no sense.
     fallback: null,
     rewrite: (line) =>
       kindOf(line) === "statement"
-        ? "That's a fair concern. Can I ask what's behind it before I answer?"
+        ? "That’s a fair concern. Can I ask what’s behind it before I answer?"
         : null,
   };
 
@@ -452,7 +452,7 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
     justification: timed
       ? `You asked for a specific time, ${time ?? "a set day"}, so all they had to do was say yes.`
       : ask
-        ? "You asked for a next step but left the time open. Offer a day and a time so it's easy to agree."
+        ? "You asked for a next step but left the time open. Offer a day and a time so it’s easy to agree."
         : "You never asked for anything, so the call ended without a next step. Ask for a meeting before you hang up.",
     evidence: quotes.cta,
     strength: timed
