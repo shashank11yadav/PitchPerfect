@@ -100,7 +100,7 @@ icon-card grids.
 
 Each component is implemented once:
 
-- **Primitives:** `Button` (primary/secondary/ghost/danger; sizes sm/md/lg; `loading`), `Field` (label + control + hint + error; wraps Input/Textarea/Select), `Checkbox`, `RadioGroup`, `Badge`, `Card`, `Tabs`, `Modal` (focus trap, Esc, return focus), `Toast` (aria-live polite), `Skeleton`, `EmptyState`, `Pagination`, `DataTable`.
+- **Primitives:** `Button` (primary/secondary/ghost/danger; sizes sm/md/lg; `loading`), `Field` (label + control + hint + error; wraps Input/Textarea/Select), `Checkbox`, `RadioGroup`, `Badge`, `Card`, `Tabs`, `Modal` (focus trap, Esc, return focus), `Skeleton`, `EmptyState`, `Pagination`, `DataTable`.
 - **Navigation:** `Navbar` (public), `AppShell` (sidebar/topbar/bottom tabs, links passed in by role), `Footer`.
 - **Domain:** `SkillGrid`, `LessonContent`, `JobCard`, `JobDetails` (actions slot), `JobForm` (with `RichTextEditor`), `ApplicationRow`, `StatusPill`, `PersonaCard`, `TranscriptBubble`, `MicButton`, `ScoreRing`, `RubricBar`, `Scorecard`, `QuotaMeter`, `ConsentDialog`, `SafeHtml`.
 
