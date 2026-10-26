@@ -24,7 +24,6 @@ function EmailForm({ onChanged }: { onChanged: (email: string) => Promise<void> 
         currentPassword: "Enter your current password",
       },
       apiMessages: {
-        email_taken: "That email already belongs to another account.",
         invalid_credentials: "Your current password isn’t right.",
       },
     },
@@ -65,7 +64,7 @@ export function ChangeEmailForm() {
         key={round}
         onChanged={(email) =>
           changed(
-            `We sent a link to ${email}. Click it to confirm the new address. Your old address got a note about the change.`,
+            `If ${email} can be used, we sent it a link to confirm the change. Check that inbox.`,
           )
         }
       />

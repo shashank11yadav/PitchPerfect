@@ -138,14 +138,14 @@ describe("ChangeEmailForm", () => {
     });
   });
 
-  it("says when the address is taken", async () => {
-    setup({
-      "POST /api/me/change-email": () => errorResponse(409, "email_taken", "Email already in use"),
-    });
+  it("answers the same way whether or not the new address is free", async () => {
+    setup({ "POST /api/me/change-email": () => jsonResponse({ ok: true }) });
     renderSignedIn(<ChangeEmailForm />);
     await userEvent.type(await screen.findByLabelText(/new email/i), "taken@example.test");
     await userEvent.type(screen.getByLabelText(/current password/i), "the old passphrase");
     await userEvent.click(screen.getByRole("button", { name: "Change email" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/another account/i);
+    expect(
+      await screen.findByText(/If taken@example.test can be used, we sent it a link/),
+    ).toBeVisible();
   });
 });
