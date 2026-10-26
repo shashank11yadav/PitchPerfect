@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ATTACK_LINES, BENIGN_LINES } from "./guard-corpus.js";
+import { ATTACK_LINES, BENIGN_LINES, UNCLEAR_LINES } from "./guard-corpus.js";
 import { confirmsAttack, ruleCheck } from "./guard-rules.js";
 
 /** Lines the rules hold back as suspect: redirected, but not a strike by themselves. */
@@ -24,6 +24,12 @@ describe("the benign corpus", () => {
   });
 });
 
+describe("the unclear lines", () => {
+  it("never count toward ending a session", () => {
+    expect(counted(UNCLEAR_LINES)).toEqual([]);
+  });
+});
+
 describe("the attack corpus", () => {
   it("is flagged as suspect, every line", () => {
     expect(ATTACK_LINES.filter((line) => ruleCheck(line) === null)).toEqual([]);
@@ -34,7 +40,7 @@ describe("the attack corpus", () => {
   });
 
   it("is only ever confirmed when the rules flag it too", () => {
-    for (const line of [...ATTACK_LINES, ...BENIGN_LINES]) {
+    for (const line of [...ATTACK_LINES, ...BENIGN_LINES, ...UNCLEAR_LINES]) {
       if (confirmsAttack(line)) expect(ruleCheck(line)).not.toBeNull();
     }
   });
