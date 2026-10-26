@@ -1,6 +1,6 @@
 import { RUBRIC_DIMENSIONS, ScorecardSchema, type Scorecard } from "@pitchperfect/shared";
 import { describe, expect, it } from "vitest";
-import { heuristicScorecard, keepsKind, plural } from "./scorecard.js";
+import { heuristicScorecard, isOpenQuestion, keepsKind, plural } from "./scorecard.js";
 
 const STRONG = [
   "Hi, I'm Riley. I help dispatch teams plan routes faster. How do you plan routes today?",
@@ -80,6 +80,22 @@ const EARLY_ASK = [
   "I hear you, and teams like yours save 4 hours a week, which helps your leads. What would that be worth to you?",
 ];
 
+/** Open questions behind lead-ins: "Before I pitch, …", "So, …". */
+const LEAD_IN_OPEN = [
+  "Hi, I'm Riley from Routewise. Before I pitch, what does a normal week look like?",
+  "So, how do your dispatchers handle a driver calling in sick?",
+  "Our planner rebuilds routes in minutes, so your team stops firefighting.",
+  "Could we book 20 minutes on Thursday at 10am?",
+];
+
+/** Closed questions behind lead-ins and tag questions. */
+const LEAD_IN_CLOSED = [
+  "Hi, I'm Riley from Routewise. Before I pitch, you plan routes in spreadsheets, right?",
+  "So, do your dispatchers replan by hand when someone calls in sick?",
+  "Our planner rebuilds routes in minutes, so your team stops firefighting.",
+  "Could we book 20 minutes on Thursday at 10am?",
+];
+
 const card = (turns: readonly string[]) => heuristicScorecard(turns, "value");
 
 /** Every sentence the card says about the student. */
@@ -89,6 +105,45 @@ const prose = (scorecard: Scorecard) => [
   ...scorecard.improvements,
   scorecard.strongerLine.improved,
 ];
+
+describe("isOpenQuestion", () => {
+  it.each([
+    "What does a normal week look like?",
+    "Before I pitch, what does a normal week look like?",
+    "Before I pitch what does a normal week look like?",
+    "So, how do you plan routes today?",
+    "So how do you plan routes today?",
+    "Okay, and why did you switch last year?",
+    "Out of curiosity, which team feels it most?",
+    "If you could change one thing, what would it be?",
+    "I'm curious, who else is involved in the decision?",
+    "Got it. And where does it break down?",
+    "How do you handle it today, roughly?",
+    "Walk me through a normal morning.",
+    "Can you walk me through a normal morning?",
+    "Could you tell me how you plan routes today?",
+    "Tell me about the last time a driver called in sick?",
+    "Do you have a minute, and how do you plan routes today?",
+  ])("reads %j as open", (sentence) => {
+    expect(isOpenQuestion(sentence)).toBe(true);
+  });
+
+  it.each([
+    "Do you use spreadsheets?",
+    "Before I pitch, do you have a minute?",
+    "So, is it the price?",
+    "You plan routes in spreadsheets, right?",
+    "Before I pitch, you plan routes in spreadsheets, don't you?",
+    "That's slow, isn't it?",
+    "What do you think, is it worth a look?",
+    "And you're on Routewise already?",
+    "Okay, so are you the one who signs off?",
+    "Have you tried a planner before, or not?",
+    "Would that help?",
+  ])("reads %j as closed", (sentence) => {
+    expect(isOpenQuestion(sentence)).toBe(false);
+  });
+});
 
 describe("plural", () => {
   it("picks the word form for the count", () => {
@@ -154,6 +209,21 @@ describe("heuristicScorecard", () => {
     // Hedges come out of the rewritten line.
     const hedgy = card(HEDGY).strongerLine;
     expect(hedgy.improved).not.toMatch(/\b(um|sorry|just|maybe|kind of)\b/i);
+  });
+
+  it("counts an open question behind a lead-in as open", () => {
+    const discovery = card(LEAD_IN_OPEN).dimensions.find(({ key }) => key === "discovery");
+    expect(discovery?.justification).not.toMatch(/yes or no/);
+    // The closing ask ends in a question mark too, and it is not an open question.
+    expect(discovery?.justification).toMatch(/3 questions, 2 of them open/);
+    expect(card(LEAD_IN_OPEN).strengths.join(" ")).toMatch(/2 open questions/);
+  });
+
+  it("counts closed questions behind lead-ins and tags as yes-or-no", () => {
+    const discovery = card(LEAD_IN_CLOSED).dimensions.find(({ key }) => key === "discovery");
+    expect(discovery?.justification).toMatch(/yes or no/);
+    const { original, improved } = card(LEAD_IN_CLOSED).strongerLine;
+    expect(keepsKind(original, improved)).toBe(true);
   });
 
   it("scores different calls differently", () => {
@@ -351,6 +421,8 @@ describe("heuristicScorecard", () => {
       CLOSING_ASK,
       UNTIMED_ASK,
       EARLY_ASK,
+      LEAD_IN_OPEN,
+      LEAD_IN_CLOSED,
     };
 
     it("never rewrites a closing ask as a reply to an objection", () => {

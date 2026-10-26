@@ -94,7 +94,42 @@ const followOn = (line: string) =>
 const withLine = (line: string, extra: string) =>
   kindOf(line) === "statement" ? `${bare(line)}. ${extra}` : `${extra} ${line}`;
 
-const OPEN_QUESTION = /^(what|how|why|which|where|who|tell me|walk me)\b/i;
+/** A clause that asks them to talk: a wh- word, or a request to tell or walk through. */
+const OPEN_START =
+  /^(?:what|how|why|which|where|who|whom|whose|tell me|walk me|talk me|take me|help me understand|describe|explain|(?:can|could|would|will) you (?:please )?(?:tell|walk|talk|take|show|describe|explain|share)|i(?:'d| would) (?:love|like) to (?:hear|know|understand|learn))\b/i;
+/** A clause that can be answered yes or no: it starts with a helping verb. */
+const CLOSED_START =
+  /^(?:do|does|did|is|are|was|were|am|can|could|would|will|should|shall|may|might|have|has|had|any|(?:is|are|was|were|do|does|did|can|could|would|wo|should|have|has|had)n't)\b/i;
+/** Words that open a clause without changing what it asks: "So,", "And", "Before I pitch,". */
+const LEAD_IN =
+  /^(?:so|and|but|or|okay|ok|well|now|then|also|alright|right|great|got it|sure|cool|honestly|actually|quick question|just curious|out of curiosity|i'm curious|i am curious|before i (?:pitch|start|begin|go on|dive in|jump in))\b[\s,]*/i;
+
+/** The clause with its lead-ins taken off: "and so how do you…" is "how do you…". */
+function withoutLeadIns(clause: string): string {
+  let rest = clause.trim();
+  for (let next = rest.replace(LEAD_IN, ""); next !== rest; next = rest.replace(LEAD_IN, "")) {
+    rest = next;
+  }
+  return rest;
+}
+
+/**
+ * True when the question in `sentence` is open. The question is the last clause that asks
+ * something, after any lead-in ("Before I pitch, what…", "So how…") and before any tag ("…,
+ * right?", "…, roughly?"). A tag that asks something itself ("…, don't you?") makes it closed, and
+ * so does a question that only states what it checks ("And you're on Routewise already?").
+ */
+export function isOpenQuestion(sentence: string): boolean {
+  const end = sentence.lastIndexOf("?");
+  const asked = (end === -1 ? sentence : sentence.slice(0, end)).replace(/’/g, "'");
+  const question = asked.split(/[.!]\s+/).at(-1) ?? "";
+  const clauses = question.split(/\s*[,;:—–]\s*|\s+-\s+/).map(withoutLeadIns);
+  for (const clause of clauses.reverse()) {
+    if (OPEN_START.test(clause)) return true;
+    if (CLOSED_START.test(clause)) return false;
+  }
+  return false;
+}
 const PROOF = /\b(\d+|for example|customers|teams like|case study|results)\b/i;
 const YOU = /\b(you|your|yours)\b/i;
 const HEDGES = [
@@ -187,12 +222,12 @@ function judge(turns: readonly string[]): Record<RubricKey, Judgement> {
   const lastStatement = sentences.findLast((sentence) => kindOf(sentence) === "statement");
 
   const questions = sentences.filter((sentence) => sentence.includes("?"));
-  const open = questions.filter((sentence) => OPEN_QUESTION.test(sentence));
+  const open = questions.filter(isOpenQuestion);
   const questionTurns = turnsWith((sentence) => sentence.includes("?"));
-  const openTurns = turnsWith((sentence) => sentence.includes("?") && OPEN_QUESTION.test(sentence));
+  const openTurns = turnsWith((sentence) => sentence.includes("?") && isOpenQuestion(sentence));
   // An ask phrased as a question is the call to action, not a closed discovery question.
   const closed = questions.find(
-    (sentence) => !OPEN_QUESTION.test(sentence) && kindOf(sentence) === "question",
+    (sentence) => !isOpenQuestion(sentence) && kindOf(sentence) === "question",
   );
   const averageWords = turns.length ? Math.round(wordCount(all) / turns.length) : 0;
   const longest = [...sentences].sort((a, b) => wordCount(b) - wordCount(a))[0] ?? "";
