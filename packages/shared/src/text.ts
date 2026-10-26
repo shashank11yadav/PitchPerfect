@@ -10,9 +10,13 @@ const INVISIBLE_CHARS =
   // eslint-disable-next-line no-misleading-character-class -- matching lone variation selectors is the point
   /[\p{Cf}\u{E0000}-\u{E007F}\uFE00-\uFE0F\u{E0100}-\u{E01EF}\u180B-\u180F\u034F\u115F\u1160\u3164\uFFA0]/gu;
 
-/** Strips control characters (keeping newlines), collapses runs of spaces, and trims. */
+/**
+ * A student turn as every service reads it: control characters (keeping newlines) and invisible
+ * characters stripped, runs of spaces collapsed, and trimmed. The turn schema, the partner's input
+ * check and `redactTurn` all use it, so the api, the coach and the demo see the same text.
+ */
 export function normalizeTurnText(text: string): string {
-  return text.replace(CONTROL_CHARS, "").replace(HORIZONTAL_SPACE_RUNS, " ").trim();
+  return stripInvisible(text.replace(CONTROL_CHARS, "")).replace(HORIZONTAL_SPACE_RUNS, " ").trim();
 }
 
 /**

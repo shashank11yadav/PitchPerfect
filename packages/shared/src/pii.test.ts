@@ -84,6 +84,11 @@ describe("redactTurn", () => {
     );
   });
 
+  it("redacts what invisible characters were hiding", () => {
+    expect(redactTurn("call 617\u200b555\u200b0100")).toBe("call [phone]");
+    expect(redactTurn("a.b\u200b@example.test")).toBe("[email]");
+  });
+
   it("keeps a placeholder that fits within the limit", () => {
     const text = `${"z".repeat(990)} a@b.co`;
     expect(redactTurn(text)).toBe(`${"z".repeat(990)} [email]`);

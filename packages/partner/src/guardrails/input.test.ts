@@ -24,6 +24,11 @@ describe("sanitizeInput", () => {
   it("rejects text that is empty after normalization", () => {
     expect(() => sanitizeInput(" \t\u0007 \n ")).toThrow(InputError);
     expect(() => sanitizeInput("")).toThrow(InputError);
+    expect(() => sanitizeInput("\u200b".repeat(10))).toThrow(InputError);
+  });
+
+  it("strips invisible characters", () => {
+    expect(sanitizeInput("Great\u200b call\u2060")).toBe("Great call");
   });
 
   it("does not echo the text in the error", () => {

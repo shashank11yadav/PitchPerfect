@@ -17,6 +17,11 @@ describe("normalizeTurnText", () => {
   it("returns an empty string for whitespace and control characters only", () => {
     expect(normalizeTurnText(" \t\u0007 \n ")).toBe("");
   });
+
+  it("strips invisible characters before collapsing spaces", () => {
+    expect(normalizeTurnText("Hi\u200b \u200bthere\u2060 ")).toBe("Hi there");
+    expect(normalizeTurnText("\u200b".repeat(10))).toBe("");
+  });
 });
 
 describe("countChars", () => {

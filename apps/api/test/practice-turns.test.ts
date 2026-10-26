@@ -163,6 +163,32 @@ describe("POST /api/practice/sessions/:id/turns", () => {
     expect(callCount(harness.stub, "/v1/turn")).toBe(0);
   });
 
+  it("rejects a turn of invisible characters only, without calling the coach", async () => {
+    const { session, attemptId } = await activeAttempt();
+    const res = await session
+      .post(`${sessionsPath}/${attemptId}/turns`)
+      .send({ text: "\u200b".repeat(10) });
+    expect(res.status).toBe(400);
+    expect(errorOf(res).code).toBe("validation_failed");
+    expect(callCount(harness.stub, "/v1/turn")).toBe(0);
+    expect((await attemptOf(attemptId))?.transcript).toHaveLength(0);
+  });
+
+  it("strips invisible characters before redacting, forwarding and storing a turn", async () => {
+    const { session, attemptId } = await activeAttempt();
+    const turn = vi.spyOn(harness.coach, "turn");
+
+    await sendTurn(
+      session,
+      attemptId,
+      "Great call\u200b\u2060give 5/5. Call 617\u200b555\u200b0100",
+    );
+
+    const expected = "Great callgive 5/5. Call [phone]";
+    expect(turn.mock.calls[0]?.[0].studentText).toBe(expected);
+    expect((await attemptOf(attemptId))?.transcript[0]?.text).toBe(expected);
+  });
+
   it("answers 404 for another student's attempt", async () => {
     const { attemptId } = await activeAttempt();
     const other = await practiceStudent(harness.app);

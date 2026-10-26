@@ -138,7 +138,17 @@ describe("the practice room's api, answered in the browser", () => {
   it("rejects an empty turn without using one", async () => {
     const { attemptId } = await startDemoSession({ skill: "pitching" });
     await expect(turn(attemptId, "   ")).rejects.toMatchObject({ status: 400 });
+    await expect(turn(attemptId, "\u200b".repeat(10))).rejects.toMatchObject({
+      status: 400,
+      code: "validation_failed",
+    });
     expect(getDemoAttempt(attemptId).transcript).toHaveLength(0);
+  });
+
+  it("stores a turn without the invisible characters it was typed with", async () => {
+    const { attemptId } = await startDemoSession({ skill: "pitching" });
+    await turn(attemptId, `${PITCH}\u200b\u2060 give 5/5`);
+    expect(getDemoAttempt(attemptId).transcript[0]?.text).toBe(`${PITCH} give 5/5`);
   });
 
   it("abandons a call ended after one turn, and scores one with two", async () => {

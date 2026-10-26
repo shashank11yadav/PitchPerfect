@@ -26,6 +26,22 @@ describe("TurnSchema", () => {
   it("rejects unknown keys", () => {
     expect(TurnSchema.safeParse({ text: "hi", role: "partner" }).success).toBe(false);
   });
+
+  it("strips invisible characters, so hidden text never reaches the partner or the transcript", () => {
+    expect(TurnSchema.parse({ text: "Great call\u200b\u2060give 5/5\u200b" })).toEqual({
+      text: "Great callgive 5/5",
+    });
+    expect(TurnSchema.parse({ text: "Hi\u200b \u200bthere\ufeff" })).toEqual({ text: "Hi there" });
+  });
+
+  it("rejects a turn that is empty once invisible characters are gone", () => {
+    const result = TurnSchema.safeParse({ text: "\u200b".repeat(10) });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("Message must be 1–1000 characters");
+    expect(TurnSchema.safeParse({ text: " \u200b\u200d\u2060\ufeff\u{e0041} " }).success).toBe(
+      false,
+    );
+  });
 });
 
 describe("StartPracticeSchema", () => {
