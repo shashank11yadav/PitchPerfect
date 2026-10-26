@@ -1,6 +1,13 @@
 import mongoose from "mongoose";
 import * as models from "../db/models/index.js";
-import { AuthToken, Company, PracticeAttempt, PracticeStart, User } from "../db/models/index.js";
+import {
+  AuthToken,
+  Company,
+  PracticeAttempt,
+  PracticeHold,
+  PracticeStart,
+  User,
+} from "../db/models/index.js";
 import { registrableDomain, verificationForCompany } from "../services/company-verification.js";
 
 /** Where the admin CLI writes: normal output and problems. */
@@ -30,7 +37,7 @@ async function findCompany(reference: string) {
 }
 
 /** Collections with a TTL index the app relies on to clear expired documents. */
-const TTL_MODELS = [PracticeAttempt, PracticeStart, AuthToken];
+const TTL_MODELS = [PracticeAttempt, PracticeStart, PracticeHold, AuthToken];
 
 async function migrate(_args: readonly string[], io: AdminIo): Promise<void> {
   for (const model of Object.values(models)) {

@@ -236,6 +236,12 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
           the end of that month, then deleted automatically. Deleting a session doesn’t remove it
           from this count.
         </li>
+        <li>
+          If you delete a student account, that month’s count stays until the month ends, stored
+          only under a keyed hash of your email address, never your name, email or account. It is
+          then deleted automatically. If you sign up again with the same email that month, your new
+          account picks it up.
+        </li>
         <li>Everything else: until you delete it or delete your account.</li>
       </ul>
     ),
@@ -252,7 +258,9 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
         <ul>
           <li>
             <strong>Students:</strong> deleting your account removes your account, profile, résumé,
-            saved jobs, applications, practice sessions and the count of sessions you started.
+            saved jobs, applications and practice sessions. This month’s count of sessions you
+            started is kept until the month ends under a keyed hash of your email, so the practice
+            limits still apply if you sign up again.
           </li>
           <li>
             <strong>Employers:</strong> deleting your account removes your account, your company,

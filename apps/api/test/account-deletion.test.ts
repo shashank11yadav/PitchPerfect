@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import request from "supertest";
 import { afterEach, describe, expect, it } from "vitest";
+import { utcMonth } from "@pitchperfect/shared";
 import {
   Application,
   AuthToken,
@@ -25,7 +26,9 @@ import {
   createJob,
   createStarts,
   createStudent,
+  createTokenUse,
   signIn,
+  TEST_PASSWORD,
 } from "./helpers/factories.js";
 import { tinyPdf } from "./helpers/pdf.js";
 
@@ -296,5 +299,77 @@ describe("DELETE /api/me as an employer", () => {
     expect(await Company.countDocuments({ _id: other.company._id })).toBe(1);
     expect(await Job.countDocuments({ _id: otherJob._id })).toBe(1);
     expect((await Application.findOne({ jobId: otherJob._id }))?.status).toBe("applied");
+  });
+});
+
+describe("the practice count after a student deletes their account", () => {
+  const holds = () => mongoose.connection.collection("practiceholds");
+
+  const signupAs = async (email: string) =>
+    (await csrfAgent(app)).post("/api/auth/signup").send({
+      role: "student",
+      firstName: "Riley",
+      lastName: "Example",
+      email,
+      password: TEST_PASSWORD,
+      school: "Example State University",
+      major: "Marketing",
+      gradYear: new Date().getUTCFullYear() + 1,
+      targetRole: "Sales development rep",
+      industry: "Software",
+      state: "MA",
+      ageConfirmed: true,
+    });
+
+  async function deleteStudentWithUse(email: string) {
+    const account = await createStudent({ email });
+    await createStarts(account.user._id, 3);
+    await createTokenUse(account.user._id, 1234);
+    const session = await signIn(request.agent(app), account.email, account.password);
+    await session.delete("/api/me").send({ currentPassword: account.password }).expect(204);
+    return account;
+  }
+
+  it("keeps this month's count under a keyed hash of the email until the month ends", async () => {
+    const { user } = await deleteStudentWithUse("returning@example.test");
+
+    const held = await holds().find().toArray();
+    expect(held).toHaveLength(1);
+    const stored = JSON.stringify(held);
+    expect(stored).not.toMatch(/returning|example\.test/i);
+    expect(stored).not.toContain(user.id);
+    expect(held[0]?.emailKey).toMatch(/^[0-9a-f]{64}$/);
+    expect(held[0]?.expiresAt).toEqual(utcMonth(new Date(), 1));
+    expect(held[0]?.starts).toBe(3);
+    expect(await PracticeStart.countDocuments({ studentId: user._id })).toBe(0);
+  });
+
+  it("gives a new account with the same email that count, not a fresh one", async () => {
+    await deleteStudentWithUse("returning@example.test");
+
+    expect((await signupAs("  Returning@Example.TEST ")).status).toBe(201);
+
+    const user = await User.findOne({ email: "returning@example.test" }).lean();
+    const row = await PracticeStart.findOne({ studentId: user?._id });
+    const day = new Date().toISOString().slice(0, 10);
+    expect(row?.starts).toBe(3);
+    expect(row?.days.get(day)).toBe(3);
+    expect(row?.tokens.get(day)).toBe(1234);
+    expect(await holds().countDocuments()).toBe(0);
+
+    // Deleting that account again holds the whole count once more, not twice.
+    const session = await signIn(request.agent(app), "returning@example.test", TEST_PASSWORD);
+    await session.delete("/api/me").send({ currentPassword: TEST_PASSWORD }).expect(204);
+    expect((await holds().findOne())?.starts).toBe(3);
+  });
+
+  it("starts a different email from nothing", async () => {
+    await deleteStudentWithUse("returning@example.test");
+
+    expect((await signupAs("someone-else@example.test")).status).toBe(201);
+
+    const user = await User.findOne({ email: "someone-else@example.test" }).lean();
+    expect(await PracticeStart.countDocuments({ studentId: user?._id })).toBe(0);
+    expect(await holds().countDocuments()).toBe(1);
   });
 });

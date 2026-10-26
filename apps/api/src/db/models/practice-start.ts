@@ -20,14 +20,19 @@ export interface PracticeStartAttrs {
   expiresAt: Date;
 }
 
+/** A month's counts, as both the ledger and a deleted student's hold (`practiceholds`) keep them. */
+export const ledgerMonthFields = {
+  month: { type: String, required: true, match: /^\d{4}-\d{2}$/ },
+  starts: { type: Number, default: 0, min: 0 },
+  days: { type: Map, of: { type: Number, min: 0 }, default: {} },
+  tokens: { type: Map, of: { type: Number, min: 0 }, default: {} },
+  expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } },
+} as const;
+
 const practiceStartSchema = new Schema<PracticeStartAttrs>(
   {
     studentId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    month: { type: String, required: true, match: /^\d{4}-\d{2}$/ },
-    starts: { type: Number, default: 0, min: 0 },
-    days: { type: Map, of: { type: Number, min: 0 }, default: {} },
-    tokens: { type: Map, of: { type: Number, min: 0 }, default: {} },
-    expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } },
+    ...ledgerMonthFields,
   },
   schemaOptions(),
 );

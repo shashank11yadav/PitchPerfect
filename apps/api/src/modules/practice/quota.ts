@@ -28,7 +28,7 @@ export interface TokenUsage {
 const dayKey = (now: Date) => now.toISOString().slice(0, 10);
 
 /** `YYYY-MM` of the UTC month, the key of a student's start ledger row. */
-const monthKey = (now: Date) => now.toISOString().slice(0, 7);
+export const monthKey = (now: Date) => now.toISOString().slice(0, 7);
 
 /** Seconds until the next UTC midnight; the `Retry-After` for anything that resets daily. */
 const secondsToMidnight = (now: Date) => secondsUntil(now, utcDay(now, 1));
@@ -249,7 +249,7 @@ export async function chargeFailedCall(
  * Runs an `$inc` update as an upsert. Two first upserts can race; the loser finds the row the
  * winner created (a duplicate key on `key`) and updates it instead.
  */
-async function upsertRow(
+export async function upsertRow(
   update: (options: { upsert?: boolean }) => Promise<unknown>,
   key: string,
 ): Promise<void> {

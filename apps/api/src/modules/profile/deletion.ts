@@ -1,4 +1,5 @@
 import type { Role } from "@pitchperfect/shared";
+import type { Config } from "../../config.js";
 import {
   Application,
   AuthToken,
@@ -15,15 +16,25 @@ import { deleteResume } from "../../services/files.js";
 import type { MailFailureLog, Mailer } from "../../services/mailer.js";
 import { anyOf, closeOpenApplications, type ClosingJob } from "../applications/closing.js";
 import { removeResumeCopies } from "../applications/resume-copies.js";
+import { holdLedger } from "../practice/ledger-hold.js";
 
-async function deleteStudentData(userId: string): Promise<void> {
+interface DeletionDeps {
+  config: Config;
+  mailer: Mailer;
+}
+
+async function deleteStudentData(config: Config, userId: string): Promise<void> {
+  // This month's practice count is held under a keyed hash of the email, so signing up again
+  // with it doesn't give a fresh quota (docs/security.md).
+  const user = await User.findById(userId).select("email").lean();
+  if (user) await holdLedger(config, userId, user.email, new Date());
   const profile = await StudentProfile.findOne({ userId }).select("resumeFileId").lean();
   if (profile?.resumeFileId) await deleteResume(profile.resumeFileId);
   // Before the applications go, or their résumé copies would be left with nothing pointing at them.
   await removeResumeCopies({ studentId: userId });
   await Promise.all([
     PracticeAttempt.deleteMany({ studentId: userId }),
-    // The quota ledger goes too: a deleted account's id is never reused, so it guards nothing.
+    // Earlier months of the ledger go too: they are never read again.
     PracticeStart.deleteMany({ studentId: userId }),
     Application.deleteMany({ studentId: userId }),
     SavedJob.deleteMany({ studentId: userId }),
@@ -67,11 +78,11 @@ async function deleteEmployerData(mailer: Mailer, log: MailFailureLog, userId: s
  * Sessions need no sweep: they are rejected as soon as their user no longer exists.
  */
 export async function deleteAccount(
-  mailer: Mailer,
+  { config, mailer }: DeletionDeps,
   log: MailFailureLog,
   user: { id: string; role: Role },
 ): Promise<void> {
-  if (user.role === "student") await deleteStudentData(user.id);
+  if (user.role === "student") await deleteStudentData(config, user.id);
   else await deleteEmployerData(mailer, log, user.id);
   await AuthToken.deleteMany({ userId: user.id });
   await User.deleteOne({ _id: user.id });

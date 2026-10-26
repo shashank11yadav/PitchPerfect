@@ -31,6 +31,7 @@ import { sendSafely, type MailFailureLog, type Mailer } from "../../services/mai
 import { checkPassword, PASSWORD_PROBLEM_MESSAGES } from "../../services/password-policy.js";
 import { hashPassword, verifyAgainstDummy, verifyPassword } from "../../services/passwords.js";
 import { consumeToken, createToken, invalidTokenError, peekToken } from "../../services/tokens.js";
+import { restoreLedger } from "../practice/ledger-hold.js";
 
 type CompanyInput = Extract<Signup, { role: "employer" }>["company"];
 
@@ -175,6 +176,10 @@ export async function signUp(deps: AuthDeps, log: MailFailureLog, input: Signup)
 
   try {
     await createRoleProfile(user._id, input);
+    // A deleted account's practice count for this month, held under its email, comes back.
+    if (input.role === "student") {
+      await restoreLedger(deps.config, user._id, user.email, new Date());
+    }
   } catch (error) {
     await removeAccount(user._id);
     throw error;

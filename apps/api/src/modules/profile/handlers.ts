@@ -63,7 +63,7 @@ export function profileHandlers(deps: ProfileDeps) {
     const { body } = getInput<{ body: typeof DeleteAccountSchema }>(res);
     const user = userOf(res);
     await requireCurrentPassword(user.id, body.currentPassword);
-    await deleteAccount(deps.mailer, req.log, user);
+    await deleteAccount(deps, req.log, user);
     await destroySession(req, res);
     res.status(204).end();
   };
