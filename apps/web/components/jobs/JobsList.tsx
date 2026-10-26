@@ -95,7 +95,7 @@ export function JobsList({ query, result }: JobsListProps) {
   const pages = Math.ceil(result.total / result.pageSize);
   return (
     <>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 pb-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 pb-4 md:pb-6">
         <h2 id="results-heading" className="text-section text-navy">
           {hasFilters(query)
             ? `${plural(result.total, "job matches", "jobs match")} your search`

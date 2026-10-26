@@ -21,7 +21,7 @@ export function JobFilters({ query, action = "/jobs" }: { query: JobQuery; actio
       aria-label="Search jobs"
       method="get"
       action={formAction(action)}
-      className="grid grid-cols-2 gap-x-4 gap-y-5 sm:gap-x-6 lg:grid-cols-12 lg:items-end"
+      className="grid grid-cols-2 gap-x-4 gap-y-3 sm:gap-x-6 md:gap-y-5 lg:grid-cols-12 lg:items-end"
     >
       <Field label="Search" className="col-span-2 lg:col-span-5">
         <Input

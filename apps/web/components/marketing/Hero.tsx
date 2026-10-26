@@ -74,16 +74,19 @@ interface PageHeroProps {
   title: ReactNode;
   lead: ReactNode;
   actions?: ReactNode;
+  /** Tighter on phones, for a page whose content should start on the first screen. */
+  compact?: boolean;
 }
 
 /** Inner pages: the title on the left, the lead and actions at the opposite end of its baseline. */
-export function PageHero({ title, lead, actions }: PageHeroProps) {
+export function PageHero({ title, lead, actions, compact = false }: PageHeroProps) {
   return (
     <div className="pp-on-dark bg-navy text-white">
       <div
         className={cn(
           WRAP,
-          "grid gap-y-8 pt-14 pb-16 md:pt-24 md:pb-24 lg:grid-cols-12 lg:gap-x-6",
+          "grid md:gap-y-8 md:pt-24 md:pb-24 lg:grid-cols-12 lg:gap-x-6",
+          compact ? "gap-y-3 pt-8 pb-8" : "gap-y-8 pt-14 pb-16",
         )}
       >
         <h1 className="max-w-[19ch] text-title font-bold text-white lg:col-span-8">{title}</h1>

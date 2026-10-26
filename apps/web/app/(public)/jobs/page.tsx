@@ -33,15 +33,17 @@ export default async function JobsPage({
   return (
     <>
       <PageHero
+        compact
         title="Sales jobs for people starting out"
         lead={
           <>
-            <p>
+            {/* On a phone the listings come first; each card shows its pay and badge anyway. */}
+            <p className="max-md:hidden">
               Entry-level roles in sales development, customer success and business development.
               Each listing names its pay, and shows whether the employer has verified its domain.
             </p>
             {PAGES_EXPORT && (
-              <p className="mt-4">
+              <p className="max-md:text-small md:mt-4">
                 The listings in this demo are samples: the companies are fictional and none of these
                 jobs is open.
               </p>
@@ -50,7 +52,7 @@ export default async function JobsPage({
         }
       />
       <div className="bg-primary-soft">
-        <div className={cn(WRAP, "py-10 md:py-12")}>
+        <div className={cn(WRAP, "py-5 md:py-12")}>
           {query ? (
             <JobFilters query={query} />
           ) : (
@@ -60,7 +62,7 @@ export default async function JobsPage({
           )}
         </div>
       </div>
-      <Section labelledBy="results-heading" className="py-14 md:py-20">
+      <Section labelledBy="results-heading" className="pt-8 pb-14 md:py-20">
         {query ? (
           <JobsList query={query} result={result} />
         ) : (
