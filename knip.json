@@ -3,7 +3,6 @@
   "workspaces": {
     ".": {
       "entry": [
-        "scripts/*.mjs",
         "e2e/global-setup.ts",
         "e2e/screenshots.ts",
         "e2e/{tests,smoke,pages}/**/*.spec.ts",
