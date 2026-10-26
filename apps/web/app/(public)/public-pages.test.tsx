@@ -8,6 +8,7 @@ import EmployersPage, { metadata as employers } from "./employers/page";
 import HowItWorksPage, { metadata as howItWorks } from "./how-it-works/page";
 import PublicLayout from "./layout";
 import HomePage, { metadata as home } from "./page";
+import { privacySections } from "@/content/privacy";
 import PrivacyPage, { metadata as privacy } from "./privacy/page";
 import StudentsPage, { metadata as students } from "./students/page";
 import TermsPage, { metadata as terms } from "./terms/page";
@@ -295,6 +296,15 @@ describe("final review: the legal pages describe the partner that is really runn
     expect(container).not.toHaveTextContent(/our AI provider/);
     expect(container.querySelector("#processors + div")).toHaveTextContent(/scripted/);
     expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/api\/health$/);
+  });
+
+  it("privacy says the in-browser partner keeps practice on the device", () => {
+    const security = privacySections("browser").find((section) => section.id === "security");
+    const { container } = render(<>{security?.body}</>);
+    expect(container).toHaveTextContent(
+      "runs in your browser tab, so nothing you say to it leaves",
+    );
+    expect(container).not.toHaveTextContent("cannot be reached from the internet");
   });
 
   it("terms call the partner scripted when the coach runs the demo, and AI when it doesn't", async () => {

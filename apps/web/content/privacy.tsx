@@ -270,10 +270,12 @@ export const privacySections = (partner: PracticePartnerKind): readonly LegalSec
       <p>
         Passwords are hashed with argon2id. Sessions use secure, HTTP-only cookies. Every request is
         checked so people can only reach their own data, and employers can only reach applications
-        to their own jobs. Résumés are only ever downloaded, never shown in the browser. The
-        practice partner service cannot be reached from the internet. No system is perfectly secure;
-        if you find a security problem, please report it privately to {CONTACT}, not in a public
-        issue.
+        to their own jobs. Résumés are only ever downloaded, never shown in the browser.{" "}
+        {partner === "browser"
+          ? "In this demo the practice partner runs in your browser tab, so nothing you say to it leaves your device."
+          : "The practice partner service cannot be reached from the internet."}{" "}
+        No system is perfectly secure; if you find a security problem, please report it privately to{" "}
+        {CONTACT}, not in a public issue.
       </p>
     ),
   },

@@ -63,7 +63,7 @@ The GitHub Pages site ([deploy.md](deploy.md#github-pages-demo)) is files only, 
 
 ## Reporting
 
-Found a vulnerability? Please open a private security advisory on the [GitHub repository](https://github.com/shashank11yadav/PitchPerfect), or email the maintainer listed on the GitHub profile. Do not open a public issue. Expect an acknowledgement within 72 hours.
+Found a vulnerability? Please report it privately to [Shashank Yadav on GitHub](https://github.com/shashank11yadav) or through [shashankyadav.dev](https://www.shashankyadav.dev/). Do not open a public issue. Expect an acknowledgement within 72 hours.
 
 ## Pre-release security checklist
 

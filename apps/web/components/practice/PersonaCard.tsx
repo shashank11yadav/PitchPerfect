@@ -69,7 +69,7 @@ export function PersonaCard({
             <Title id={id} className="font-display text-body font-semibold text-navy">
               {persona.personaName}
             </Title>
-            <Badge tone="info">
+            <Badge tone="info" className="whitespace-nowrap">
               <BadgeIcon aria-hidden="true" className="size-3" />
               {badge}
             </Badge>
