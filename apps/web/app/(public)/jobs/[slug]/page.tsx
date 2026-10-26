@@ -60,6 +60,13 @@ interface JobPageProps {
 
 const HIDDEN = { index: false, follow: false };
 
+/**
+ * Whether search engines may see this listing as a real job: only a verified employer's, and never
+ * the static demo's, whose listings are all samples. Anything else is `noindex` with no
+ * `JobPosting`, so a crawler never takes a sample or an unproven employer for an opening.
+ */
+const indexable = (company: PublicCompany) => !PAGES_EXPORT && company.verification === "verified";
+
 export async function generateMetadata({ params }: JobPageProps): Promise<Metadata> {
   const loaded = await loadJob((await params).slug);
   if (loaded.kind === "missing") return { title: "Job not found", robots: HIDDEN };
@@ -71,8 +78,7 @@ export async function generateMetadata({ params }: JobPageProps): Promise<Metada
     title: `${job.title} at ${company.name}`,
     description: truncateText(summary, DESCRIPTION_MAX),
     path: `/jobs/${job.slug}`,
-    // Unverified employers stay out of search until they prove who they are.
-    noindex: company.verification !== "verified",
+    noindex: !indexable(company),
   });
 }
 
@@ -111,7 +117,7 @@ export default async function JobPage({ params }: JobPageProps) {
   const { job, company } = loaded;
   return (
     <>
-      {company.verification === "verified" && <JsonLd data={jobPostingJsonLd(job, company)} />}
+      {indexable(company) && <JsonLd data={jobPostingJsonLd(job, company)} />}
       <JobDetails
         variant="page"
         job={job}

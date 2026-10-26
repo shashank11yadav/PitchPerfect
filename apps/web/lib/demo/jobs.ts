@@ -1,17 +1,18 @@
+import type { Page, PublicCompany, PublicJob, PublicJobSummary } from "@pitchperfect/shared";
 import {
-  slugify,
-  type Page,
-  type PublicCompany,
-  type PublicJob,
-  type PublicJobSummary,
-} from "@pitchperfect/shared";
-import { SEED_COMPANIES, SEED_JOBS } from "@pitchperfect/shared/seed-data";
+  SEED_COMPANIES,
+  SEED_JOBS,
+  seedCompanySlug,
+  seedJobSlug,
+} from "@pitchperfect/shared/seed-data";
 import type { JobQuery } from "@/lib/job-query";
 
 /**
  * The job board of the static demo: the api's seed data as the api would answer it, built once at
- * module load. Draft and archived jobs are left out, as the public board leaves them out. Dates
- * and ids are fixed, so the export is the same from one build to the next.
+ * module load, with the same slugs the seed gives them. Draft and archived jobs are left out, as
+ * the public board leaves them out. Dates and ids are fixed, so the export is the same from one
+ * build to the next. Every listing here is a sample: the board says so once, and the job pages
+ * stay out of search (app/(public)/jobs).
  */
 
 export interface DemoJob {
@@ -26,13 +27,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** A 24-character hex id, the shape the app expects of an api id. */
 const hexId = (n: number) => n.toString(16).padStart(24, "0");
 
-/** "zentrova-analytics.example" → "zentrova": the company's slug and its jobs' slug suffix. */
-const firstLabel = (host: string) => host.split(".")[0]?.split("-")[0] ?? host;
-
 const COMPANIES: readonly PublicCompany[] = SEED_COMPANIES.map((company, index) => ({
   id: hexId(1000 + index),
   name: company.name,
-  slug: firstLabel(company.host),
+  slug: seedCompanySlug(company),
   website: `https://${company.host}`,
   linkedinUrl: null,
   pitch: company.pitch,
@@ -42,10 +40,11 @@ const COMPANIES: readonly PublicCompany[] = SEED_COMPANIES.map((company, index) 
 
 export const DEMO_JOBS: readonly DemoJob[] = SEED_JOBS.flatMap((seed, index) => {
   const company = COMPANIES[seed.company];
-  if (seed.status !== "active" || !company) return [];
+  const source = SEED_COMPANIES[seed.company];
+  if (seed.status !== "active" || !company || !source) return [];
   const job: PublicJob = {
     id: hexId(index + 1),
-    slug: slugify(seed.title, company.slug),
+    slug: seedJobSlug(seed, source),
     title: seed.title,
     location: seed.location,
     workplace: seed.workplace,

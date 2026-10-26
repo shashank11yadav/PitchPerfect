@@ -17,6 +17,15 @@ describe("the baked job board", () => {
     expect(new Set(DEMO_JOBS.map(({ job }) => job.slug)).size).toBe(DEMO_JOBS.length);
   });
 
+  it("uses the slugs the api seed gives the same jobs: the title, then the company", () => {
+    const zentrova = DEMO_JOBS.filter(({ company }) => company.name === "Zentrova Analytics");
+    expect(zentrova.map(({ job }) => job.slug)).toEqual([
+      "sales-development-representative-zentrova-analytics",
+      "account-executive-intern-zentrova-analytics",
+    ]);
+    expect(zentrova[0]?.company.slug).toBe("zentrova-analytics");
+  });
+
   it("finds a job by slug and by id, and nothing for an unknown one", () => {
     const [first] = DEMO_JOBS;
     expect(first).toBeDefined();

@@ -35,9 +35,10 @@ export const DEMO_EMPLOYER_NAME = { first: "Morgan", last: "Ellis" } as const;
 
 /** The demo employer's own company, so signing in as them shows real applicants. */
 export const DEMO_COMPANY: SeedCompany = {
-  name: "Pitchwell Demo Hiring Co",
-  host: "pitchwell-demo.example",
-  pitch: "A made-up company for trying out PitchPerfect as an employer.",
+  name: "Lanecrest Freight Visibility",
+  host: "lanecrest.example",
+  pitch:
+    "A shipment dashboard for regional distributors: every load on one screen, with late ones flagged before the customer calls.",
   verification: "verified",
   employer: { ...DEMO_EMPLOYER_NAME, jobTitle: "Head of talent" },
 };
@@ -51,13 +52,13 @@ export const DEMO_JOBS: readonly SeedJob[] = [
     workplace: "remote",
     employmentType: "full_time",
     descriptionHtml: description(
-      "Open conversations with operations teams and book demos for the sales lead.",
+      "Book first meetings with operations directors who still track deliveries in spreadsheets and phone calls to drivers.",
       [
-        "Write short, personal outreach to new prospects",
-        "Run first calls and note what each buyer cares about",
-        "Hand warm leads to the sales lead with clear notes",
+        "Call and email operations and dispatch leads at distributors with 20 to 200 trucks on the road",
+        "Run short discovery calls: how they track loads today and what a late delivery costs them",
+        "Book demos for our two account executives and write the handoff notes",
       ],
-      "A friendly, made-up role for exploring how employers review applicants.",
+      "Six weeks of ramp with a reduced target, then twelve qualified meetings a month. Our buyers pick up the phone, so you will talk more than you type.",
     ),
     skills: ["Cold outreach", "Discovery questions", "Follow-up"],
     pay: salary(50_000, 58_000, true),
@@ -70,13 +71,13 @@ export const DEMO_JOBS: readonly SeedJob[] = [
     workplace: "remote",
     employmentType: "internship",
     descriptionHtml: description(
-      "Help the team keep its lead lists and weekly reports in good shape.",
+      "Keep the CRM clean enough that the sales team trusts it.",
       [
-        "Clean up lead records and remove duplicates",
-        "Build a simple weekly pipeline report",
-        "Suggest one small process fix each month",
+        "Merge duplicate accounts and fill in missing fleet sizes and contacts",
+        "Build the Monday pipeline report in a spreadsheet",
+        "Sit in on one sales call a week and suggest one process fix a month",
       ],
-      "A made-up internship for exploring how employers post and manage jobs.",
+      "Twelve weeks, 15 to 20 hours a week around your classes, with a mentor on the sales team.",
     ),
     skills: ["Spreadsheets", "Attention to detail", "Reporting"],
     pay: hourly(17, 20),

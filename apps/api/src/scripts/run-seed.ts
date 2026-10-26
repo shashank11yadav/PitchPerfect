@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { Types } from "mongoose";
-import { LIMITS, PaySchema, slugify, type Role } from "@pitchperfect/shared";
+import { LIMITS, PaySchema, type Role } from "@pitchperfect/shared";
 import {
   Application,
   Company,
@@ -26,6 +26,8 @@ import {
 import {
   SEED_COMPANIES,
   SEED_JOBS,
+  seedCompanySlug,
+  seedJobSlug,
   type SeedCompany,
   type SeedJob,
 } from "@pitchperfect/shared/seed-data";
@@ -83,10 +85,6 @@ async function ensure(
   return made._id;
 }
 
-/** Deterministic, so a re-run finds the same document: `zentrova-analytics-demo01`. */
-const seedSlug = (name: string, position: number) =>
-  slugify(name, `demo${String(position).padStart(2, "0")}`);
-
 async function assertDemoPassword(password: string | undefined): Promise<string> {
   if (password === undefined || password === "") {
     throw new SeedError("SEED_DEMO_PASSWORD is required when seeding with --demo");
@@ -139,14 +137,16 @@ function ensureUser(ctx: Context, spec: UserSpec): Promise<Types.ObjectId> {
   );
 }
 
-/** The company at `position` (1-based, for its slug), created with `owner` if it is missing. */
+/**
+ * The company, created with `owner` if it is missing. Its slug is fixed by the seed data, so a
+ * re-run finds the same document.
+ */
 async function seedCompany(
   ctx: Context,
   seed: SeedCompany,
-  position: number,
   owner: UserSpec,
 ): Promise<Types.ObjectId> {
-  const slug = seedSlug(seed.name, position);
+  const slug = seedCompanySlug(seed);
   const id = await ensure(
     ctx.result.companies,
     Company.findOne({ slug }).select("_id").lean(),
@@ -171,18 +171,21 @@ async function ensureEmployerProfile(companyId: Types.ObjectId, jobTitle: string
   if (company) await EmployerProfile.create({ userId: company.ownerId, jobTitle, companyId });
 }
 
-/** Jobs get slug positions counting on from `firstPosition`; `company` indexes into `companyIds`. */
+/** `company` indexes into `companies`, and `companyIds` holds their ids in the same order. */
 async function seedJobs(
   ctx: Context,
   jobs: readonly SeedJob[],
+  companies: readonly SeedCompany[],
   companyIds: readonly Types.ObjectId[],
-  firstPosition: number,
 ): Promise<Types.ObjectId[]> {
   const ids: Types.ObjectId[] = [];
   for (const [index, seed] of jobs.entries()) {
+    const company = companies[seed.company];
     const companyId = companyIds[seed.company];
-    if (!companyId) throw new Error(`Seed job "${seed.title}" names a company that does not exist`);
-    const slug = seedSlug(seed.title, firstPosition + index);
+    if (!company || !companyId) {
+      throw new Error(`Seed job "${seed.title}" names a company that does not exist`);
+    }
+    const slug = seedJobSlug(seed, company);
     ids.push(
       await ensure(ctx.result.jobs, Job.findOne({ slug }).select("_id").lean(), () =>
         Job.create({
@@ -275,13 +278,13 @@ async function seedDemoStudent(ctx: Context, jobIds: readonly Types.ObjectId[]):
 
 /** The demo employer's own company and jobs, then the demo student. */
 async function seedDemo(ctx: Context): Promise<void> {
-  const companyId = await seedCompany(ctx, DEMO_COMPANY, SEED_COMPANIES.length + 1, {
+  const companyId = await seedCompany(ctx, DEMO_COMPANY, {
     email: DEMO_EMPLOYER_EMAIL,
     role: "employer",
     name: DEMO_EMPLOYER_NAME,
     password: ctx.demoPassword,
   });
-  const jobIds = await seedJobs(ctx, DEMO_JOBS, [companyId], SEED_JOBS.length + 1);
+  const jobIds = await seedJobs(ctx, DEMO_JOBS, [DEMO_COMPANY], [companyId]);
   await seedDemoStudent(ctx, jobIds);
 }
 
@@ -308,16 +311,16 @@ export async function runSeed(options: SeedOptions): Promise<SeedResult> {
   };
 
   const companyIds: Types.ObjectId[] = [];
-  for (const [index, seed] of SEED_COMPANIES.entries()) {
+  for (const seed of SEED_COMPANIES) {
     companyIds.push(
-      await seedCompany(ctx, seed, index + 1, {
+      await seedCompany(ctx, seed, {
         email: `hiring@${seed.host}`,
         role: "employer",
         name: seed.employer,
       }),
     );
   }
-  await seedJobs(ctx, SEED_JOBS, companyIds, 1);
+  await seedJobs(ctx, SEED_JOBS, SEED_COMPANIES, companyIds);
   if (options.demo) await seedDemo(ctx);
   return ctx.result;
 }

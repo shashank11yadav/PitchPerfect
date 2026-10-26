@@ -35,10 +35,18 @@ export default async function JobsPage({
       <PageHero
         title="Sales jobs for people starting out"
         lead={
-          <p>
-            Entry-level roles in sales development, customer success and business development. Each
-            listing names its pay, and shows whether the employer has verified its domain.
-          </p>
+          <>
+            <p>
+              Entry-level roles in sales development, customer success and business development.
+              Each listing names its pay, and shows whether the employer has verified its domain.
+            </p>
+            {PAGES_EXPORT && (
+              <p className="mt-4">
+                The listings in this demo are samples: the companies are fictional and none of these
+                jobs is open.
+              </p>
+            )}
+          </>
         }
       />
       <div className="bg-primary-soft">

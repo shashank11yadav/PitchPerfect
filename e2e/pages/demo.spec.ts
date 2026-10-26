@@ -90,6 +90,29 @@ test("the job board lists the seeded jobs, filters in the browser and opens a jo
   await expect(page.getByRole("heading", { name: "No jobs match that search" })).toBeVisible();
 });
 
+test("the board says once that its jobs are samples, and no sample goes to search engines", async ({
+  page,
+}) => {
+  await page.goto(at("jobs/"));
+  await expect(page.getByText(/^The listings in this demo are samples/)).toHaveCount(1);
+
+  const results = page.locator('section[aria-labelledby="results-heading"]');
+  const target = (await results.locator('a[href*="/jobs/"]').first().getAttribute("href")) ?? "";
+  // A natural slug: the title, then the company.
+  expect(target).toMatch(/\/jobs\/[a-z-]+-[a-z]+(?:-[a-z]+)*\/$/);
+  expect(target).not.toMatch(/demo\d/);
+  await page.goto(target);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  const jsonLd = await page.locator('script[type="application/ld+json"]').allTextContents();
+  expect(jsonLd.join("\n")).not.toContain("JobPosting");
+  await expect(page.getByText(/^The listings in this demo are samples/)).toHaveCount(0);
+
+  const sitemap = await (await page.request.get(at("sitemap.xml"))).text();
+  expect(sitemap).toContain("/PitchPerfect/jobs/</loc>");
+  expect(sitemap).not.toMatch(/\/jobs\/[a-z0-9-]+\/<\/loc>/);
+});
+
 test("a lesson renders and leads into its practice room", async ({ page }) => {
   await page.goto(at("learn/pitching/"));
   await expect(page.getByRole("heading", { name: "Pitching", level: 2 })).toBeVisible();

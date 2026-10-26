@@ -1,6 +1,13 @@
 import mongoose from "mongoose";
 import { describe, expect, it } from "vitest";
-import { computeOverall, getSkill, LIMITS, PaySchema, ScorecardSchema } from "@pitchperfect/shared";
+import {
+  computeOverall,
+  getSkill,
+  LIMITS,
+  PaySchema,
+  ScorecardSchema,
+  slugify,
+} from "@pitchperfect/shared";
 import {
   Application,
   AuthToken,
@@ -72,7 +79,9 @@ describe("runSeed", () => {
     expect(companies.filter((c) => c.verification === "verified")).toHaveLength(6);
     for (const company of companies) {
       expect(new URL(company.website).hostname).toMatch(/\.example$/);
-      expect(company.slug).toMatch(/-demo\d{2}$/);
+      // Named like a real company page: the host's first label, "zentrova-analytics".
+      expect(company.slug).toBe(new URL(company.website).hostname.split(".")[0]);
+      expect(company.pitch).not.toMatch(/made[- ]up|demo/i);
       expect(await EmployerProfile.countDocuments({ companyId: company._id })).toBe(1);
     }
     const employers = await User.find({ role: "employer" }).lean();
@@ -90,6 +99,9 @@ describe("runSeed", () => {
     await runSeed({ demo: true, password: DEMO_PASSWORD });
 
     const jobs = await Job.find().lean();
+    const companySlugs = new Map(
+      (await Company.find().lean()).map((company) => [company._id.toString(), company.slug]),
+    );
     expect(jobs.map((job) => job.slug).sort()).toEqual(slugs);
     expect(jobs).toHaveLength(16);
     expect(jobs.filter((job) => job.status === "draft")).toHaveLength(1);
@@ -98,7 +110,9 @@ describe("runSeed", () => {
     expect(new Set(jobs.map((job) => job.workplace)).size).toBeGreaterThan(1);
     expect(new Set(jobs.map((job) => job.employmentType)).size).toBeGreaterThan(1);
     for (const job of jobs) {
-      expect(job.slug).toMatch(/-demo\d{2}$/);
+      // The title and the company, as a job board names a listing.
+      expect(job.slug).toBe(slugify(job.title, companySlugs.get(job.companyId.toString()) ?? ""));
+      expect(job.descriptionHtml).not.toMatch(/made[- ]up/i);
       expect(PaySchema.safeParse(job.pay).success).toBe(true);
       expect(job.descriptionHtml).toBe(sanitizeJobHtml(job.descriptionHtml));
       expect(job.descriptionHtml.length).toBeGreaterThan(40);
@@ -144,7 +158,7 @@ describe("runSeed", () => {
     const profile = await EmployerProfile.findOne({ userId: employer?._id }).lean();
     const company = await Company.findById(profile?.companyId).lean();
     expect(company?.verification).toBe("verified");
-    expect(company?.website).toBe("https://pitchwell-demo.example");
+    expect(company?.website).toBe("https://lanecrest.example");
     expect(company?.ownerId.toString()).toBe(employer?._id.toString());
     expect(await Job.countDocuments({ companyId: company?._id, status: "active" })).toBe(2);
     const application = await Application.findOne().lean();
@@ -288,7 +302,7 @@ describe("runSeed", () => {
       attempts: 2,
       applications: 1,
     });
-    const first = await Company.findOne({ slug: /-demo01$/ }).lean();
+    const first = await Company.findOne({ slug: "zentrova-analytics" }).lean();
     const owner = await User.findById(first?.ownerId).lean();
     expect(owner?.email).toMatch(/^hiring@/);
   });

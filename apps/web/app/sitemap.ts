@@ -5,7 +5,6 @@ import {
 } from "@pitchperfect/shared";
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
-import { DEMO_JOBS } from "@/lib/demo/jobs";
 import { PAGES_EXPORT, staticMetadataRoute } from "@/lib/pages-export";
 
 import { absoluteUrl, PUBLIC_PAGES } from "@/lib/seo";
@@ -32,7 +31,10 @@ async function activeJobs(): Promise<PublicJobSummary[]> {
 /** Pre-rendered in the static export only; see `staticMetadataRoute`. */
 export const generateStaticParams = staticMetadataRoute;
 
-/** Static public pages, plus active jobs of verified companies (docs/design-system.md, SEO). */
+/**
+ * Static public pages, plus active jobs of verified companies (docs/design-system.md, SEO). The
+ * static demo lists no jobs: its board is samples, and its job pages are `noindex`.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Built per request, so new jobs appear without a rebuild. The static demo bakes its board.
   if (!PAGES_EXPORT) await connection();
@@ -48,7 +50,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const pages = [...paths, ...demoPaths].map((path) => ({ url: absoluteUrl(path) }));
 
   // If the api can't be reached, the static pages are still worth serving.
-  const jobs = PAGES_EXPORT ? DEMO_JOBS.map(({ job }) => job) : await activeJobs().catch(() => []);
+  const jobs = PAGES_EXPORT ? [] : await activeJobs().catch(() => []);
   const jobEntries = jobs
     .filter((job) => job.company.verification === "verified")
     // No lastModified: publishedAt says when a job went live, not when its page last changed.

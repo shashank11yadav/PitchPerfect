@@ -95,6 +95,15 @@ describe("sitemap", () => {
     expect((await sitemap()).map((entry) => entry.url)).toEqual(STATIC_URLS);
   });
 
+  it("lists no jobs in the static demo, whose board is samples", async () => {
+    vi.stubEnv("PAGES_EXPORT", "1");
+    const { sitemap } = await load();
+    const urls = (await sitemap()).map((entry) => entry.url);
+    expect(urls).toContain("https://example.test/jobs/");
+    expect(urls.filter((url) => url.includes("/jobs/") && !url.endsWith("/jobs/"))).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("still lists the static pages when the api fails part way", async () => {
     fetchMock
       .mockResolvedValueOnce(page([summary("verified-one", "verified")], 1, 60))

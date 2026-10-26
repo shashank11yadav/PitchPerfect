@@ -1,5 +1,6 @@
 import type { EmploymentType, JobStatus, Workplace } from "./enums.js";
 import type { JobPay } from "./schemas/jobs.js";
+import { slugify } from "./text.js";
 
 /**
  * Fictional demo content, shared by the api's seed script and the static demo's job board. Every
@@ -28,7 +29,8 @@ export const SEED_COMPANIES: readonly SeedCompany[] = [
   {
     name: "Halvane Health Cloud",
     host: "halvane-health-cloud.example",
-    pitch: "Scheduling and billing software that helps small clinics spend less time on paperwork.",
+    pitch:
+      "Scheduling and billing software for independent clinics with one to ten providers, so the front desk spends less of the day on paperwork.",
     verification: "verified",
     employer: { first: "Avery", last: "Lindqvist", jobTitle: "Recruiting lead" },
   },
@@ -42,14 +44,16 @@ export const SEED_COMPANIES: readonly SeedCompany[] = [
   {
     name: "Orvexa Payments",
     host: "orvexa-payments.example",
-    pitch: "Simple card and invoice payments for freelancers and very small shops.",
+    pitch:
+      "Card and invoice payments for freelancers and very small shops, paid out the next business day.",
     verification: "unverified",
     employer: { first: "Sasha", last: "Brandt", jobTitle: "Founder" },
   },
   {
     name: "Lumivale Learning Systems",
     host: "lumivale-learning.example",
-    pitch: "A learning platform that helps training teams build and track short courses.",
+    pitch:
+      "A course builder and completion tracker for company training teams of two to twenty people.",
     verification: "verified",
     employer: { first: "Quinn", last: "Abara", jobTitle: "People operations manager" },
   },
@@ -75,6 +79,18 @@ export interface SeedJob {
   pay: JobPay;
   status: JobStatus;
 }
+
+/** A company's slug: the first label of its host, so "zentrova-analytics.example" is "zentrova-analytics". */
+export const seedCompanySlug = (company: SeedCompany): string =>
+  company.host.split(".")[0] ?? company.host;
+
+/**
+ * A job's slug: its title, then its company's slug, the way a job board names a listing
+ * ("sales-development-representative-zentrova-analytics"). A company never lists two jobs under
+ * one title, so the slug is unique, and the api seed and the static demo agree on it.
+ */
+export const seedJobSlug = (job: Pick<SeedJob, "title">, company: SeedCompany): string =>
+  slugify(job.title, seedCompanySlug(company));
 
 /** Intro, a bulleted list of duties, and a closing line, as simple allowed HTML. */
 export function description(intro: string, duties: readonly string[], closing: string): string {
@@ -115,7 +131,7 @@ export const SEED_JOBS: readonly SeedJob[] = [
         "Keep every conversation logged so the team can follow up",
         "Sit in on the Friday pipeline review and say what you heard that week",
       ],
-      "No experience needed beyond curiosity and a willingness to practice. We coach you weekly.",
+      "No sales experience needed. You get a two-week ramp, a weekly call review with your manager, and then a target of ten qualified meetings a month.",
     ),
     skills: ["Cold outreach", "Discovery questions", "CRM basics"],
     pay: salary(52_000, 60_000, true),
@@ -168,10 +184,11 @@ export const SEED_JOBS: readonly SeedJob[] = [
     descriptionHtml: description(
       "Be the first friendly voice new clinics hear after they sign up.",
       [
-        "Guide new customers through setup and training",
-        "Check in on usage and spot customers who need help",
+        "Run setup calls with each new clinic's front desk and office manager",
+        "Check usage at 30 and 60 days and call the clinics that have stalled",
+        "Write up the questions that keep coming up so the help center can answer them",
       ],
-      "Great for someone who likes teaching and solving problems one customer at a time.",
+      "You will look after about forty new clinics a quarter. Good for someone who likes teaching and solving problems one customer at a time.",
     ),
     skills: ["Onboarding", "Empathy", "Clear writing"],
     pay: salary(48_000, 56_000, false),
