@@ -19,7 +19,7 @@ import type { PracticeAttemptAttrs } from "../../db/models/practice-attempt.js";
 import { ConflictError, NotFoundError, PracticeUnavailableError } from "../../errors.js";
 import { NotEnoughTurnsError, type CoachClient } from "../../services/coach-client.js";
 import type { CoachProbe } from "../../services/coach-probe.js";
-import { chargeFailedCall, recordUsage } from "./quota.js";
+import { assertTokensLeft, chargeFailedCall, recordUsage } from "./quota.js";
 import { estimateFailedScore } from "./text.js";
 import {
   acquireTurnLock,
@@ -39,6 +39,8 @@ export interface PracticeDeps {
 const SESSION_MS = LIMITS.sessionSeconds * 1000;
 /** Scoring needs at least this many unflagged student turns. */
 const MIN_SCORED_TURNS = 2;
+/** Scoring calls that cost tokens one session may make: the first and two retries. */
+const MAX_SCORE_TRIES = 3;
 const END_POLL_MS = 100;
 
 /** Matches every attempt except a `starting` placeholder, which no one ever sees. */
@@ -142,12 +144,30 @@ async function finish(
 /**
  * Scores a locked attempt, or abandons it when there are fewer than two unflagged student turns.
  * A coach is needed only for the scoring itself.
+ *
+ * Scoring calls that cost tokens are counted on the attempt (`scoreTries`). The first is always
+ * made, even once the student has used today's tokens: the turns already paid for the scorecard.
+ * A retry after a failed call is made only while the student is under their daily token cap
+ * (`429 token_limit_reached` otherwise, and the session stays active), and when the third try
+ * fails the session is closed unscored. A call the coach turned away costs nothing and isn't
+ * counted.
  */
 async function scoreLocked(deps: PracticeDeps, lock: TurnLock): Promise<AttemptView> {
   const { attempt } = lock;
   const transcript = usableTranscript(attempt);
-  if (transcript.filter((entry) => entry.role === "student").length < MIN_SCORED_TURNS) {
+  if (
+    transcript.filter((entry) => entry.role === "student").length < MIN_SCORED_TURNS ||
+    attempt.scoreTries >= MAX_SCORE_TRIES
+  ) {
     return finish(attempt, "abandoned");
+  }
+  if (attempt.scoreTries > 0) {
+    try {
+      await assertTokensLeft(deps.config, attempt.studentId.toString(), new Date());
+    } catch (error) {
+      await releaseTurnLock(lock);
+      throw error;
+    }
   }
 
   const request = { skill: attempt.skill, ...scenarioOf(attempt), transcript };
@@ -161,19 +181,28 @@ async function scoreLocked(deps: PracticeDeps, lock: TurnLock): Promise<AttemptV
       estimateFailedScore(request),
     );
     if (charged) {
+      attempt.scoreTries += 1;
       await PracticeAttempt.updateOne(
         { _id: attempt._id },
-        { $inc: { "tokens.input": charged.inputTokens, "tokens.output": charged.outputTokens } },
+        {
+          $inc: {
+            "tokens.input": charged.inputTokens,
+            "tokens.output": charged.outputTokens,
+            scoreTries: 1,
+          },
+        },
       );
     }
+    if (attempt.scoreTries >= MAX_SCORE_TRIES) await finish(attempt, "abandoned");
     // Still active, so the student can try ending again.
-    await releaseTurnLock(lock);
+    else await releaseTurnLock(lock);
     throw error;
   }
   attempt.scorecard = result.scorecard;
   attempt.markModified("scorecard");
   attempt.tokens.input += result.usage.inputTokens;
   attempt.tokens.output += result.usage.outputTokens;
+  attempt.scoreTries += 1;
   const view = await finish(attempt, "completed");
   await recordUsage(attempt.studentId, result.usage, new Date());
   return view;

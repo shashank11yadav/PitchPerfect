@@ -238,6 +238,19 @@ describe("PracticeRoom", () => {
     expect(screen.getByRole("button", { name: /End/ })).toBeEnabled();
   });
 
+  it("says why a turn was refused once today's practice budget is spent, and points to ending", async () => {
+    const user = userEvent.setup();
+    stream.mockRejectedValueOnce(new ApiError(429, "budget_exhausted", "Paused", undefined, 3600));
+    render(<PracticeRoom attempt={activeAttempt()} />);
+    await user.type(screen.getByRole("textbox", { name: "Your turn" }), "Hello there.{Enter}");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/Practice is paused for everyone for the rest of today/);
+    expect(alert).toHaveTextContent(/End the call to get your scorecard/);
+    expect(screen.getByText("20 turns left")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /End/ })).toBeEnabled();
+  });
+
   it("adds a line on Shift+Enter instead of sending", async () => {
     const user = userEvent.setup();
     render(<PracticeRoom attempt={activeAttempt()} />);
@@ -300,6 +313,25 @@ describe("PracticeRoom", () => {
         expect.objectContaining({ method: "POST" }),
       );
     });
+  });
+
+  it("says when a scoring retry has to wait for today's allowance to reset", async () => {
+    const user = userEvent.setup();
+    serveApi({
+      "GET /api/auth/csrf": csrf,
+      "POST /api/practice/sessions/65f1c0ffee00000000000b01/end": () =>
+        errorResponse(429, "token_limit_reached", "Allowance used", {
+          headers: { "retry-after": "3600" },
+        }),
+    });
+    render(<PracticeRoom attempt={activeAttempt()} />);
+
+    await user.click(screen.getByRole("button", { name: "End session" }));
+    await user.click(screen.getByRole("button", { name: "End and score" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /You’ve used today’s practice allowance, so scoring can’t be tried again until/,
+    );
   });
 
   it("goes back to a fresh start screen on Practice again after scoring in place", async () => {

@@ -161,6 +161,36 @@ describe("tokens a failed coach call used", () => {
   });
 });
 
+describe("today's global token budget", () => {
+  it("refuses a turn once it is spent, and the session can still be ended and scored", async () => {
+    const { session } = await practiceStudent(harness.app);
+    const { attemptId } = await startPractice(session);
+    await sendTurns(session, attemptId, 2);
+    await UsageDay.updateOne(
+      { day: DAY },
+      { $set: { inputTokens: CONFIG.PRACTICE_DAILY_TOKEN_BUDGET, outputTokens: 0 } },
+    );
+    const turnsBefore = callCount(harness.stub, "/v1/turn");
+
+    const { res } = await sendTurn(session, attemptId, "One more question about routing?");
+
+    expect(res.status).toBe(429);
+    expect(errorOf(res)).toMatchObject({
+      code: "budget_exhausted",
+      message: "Practice is at capacity for today. End the session to get your scorecard",
+    });
+    expect(res.headers["retry-after"]).toBe(String(9 * 60 * 60));
+    expect(callCount(harness.stub, "/v1/turn")).toBe(turnsBefore);
+    const stored = await PracticeAttempt.findById(attemptId).lean();
+    expect(stored).toMatchObject({ status: "active", turnLockUntil: null });
+    expect(stored?.transcript.filter((entry) => entry.role === "student")).toHaveLength(2);
+
+    const ended = await session.post(`${sessionsPath}/${attemptId}/end`);
+    expect(ended.status).toBe(200);
+    expect((ended.body as { attempt: { status: string } }).attempt.status).toBe("completed");
+  });
+});
+
 describe("support turns", () => {
   it("charges what a support turn used to the student, without keeping the turn", async () => {
     const { session, user } = await practiceStudent(harness.app);
@@ -266,6 +296,32 @@ describe("the student's daily token cap", () => {
     const ended = await session.post(`${sessionsPath}/${attemptId}/end`);
     expect(ended.status).toBe(200);
     expect((ended.body as { attempt: { status: string } }).attempt.status).toBe("completed");
+  });
+
+  it("makes the first scoring call at the cap, but no retry", async () => {
+    const { session, user } = await practiceStudent(harness.app);
+    const { attemptId } = await startPractice(session);
+    await sendTurns(session, attemptId, 2);
+    await createTokenUse(user._id, LIMIT);
+    harness.stub.fail("/v1/score", { status: 502, code: "upstream_error" });
+
+    expect((await session.post(`${sessionsPath}/${attemptId}/end`)).status).toBe(502);
+    expect(callCount(harness.stub, "/v1/score")).toBe(1);
+
+    harness.stub.clear();
+    const retried = await session.post(`${sessionsPath}/${attemptId}/end`);
+
+    expect(retried.status).toBe(429);
+    expect(errorOf(retried).code).toBe("token_limit_reached");
+    expect(retried.headers["retry-after"]).toBe(String(9 * 60 * 60));
+    expect(callCount(harness.stub, "/v1/score")).toBe(0);
+    const stored = await PracticeAttempt.findById(attemptId).lean();
+    expect(stored).toMatchObject({ status: "active", turnLockUntil: null, scoreTries: 1 });
+
+    // The cap resets at midnight UTC, and the session can be scored then.
+    vi.setSystemTime(new Date("2026-03-11T00:01:00Z"));
+    const next = await session.post(`${sessionsPath}/${attemptId}/end`);
+    expect((next.body as { attempt: { status: string } }).attempt.status).toBe("completed");
   });
 
   it("loses no tokens when usage from many calls lands at once", async () => {

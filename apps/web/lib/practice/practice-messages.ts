@@ -89,6 +89,12 @@ export function turnProblem(error: unknown): { code: string; message?: string } 
       message: `You’ve used today’s practice allowance, so your partner can’t take more turns. End the call to get your scorecard. You can practice again ${inLocalTime(error.retryAfterSec ?? 0)}.`,
     };
   }
+  if (code === "budget_exhausted" && error instanceof ApiError) {
+    return {
+      code,
+      message: `Practice is paused for everyone for the rest of today, so your partner can’t take more turns. End the call to get your scorecard. Practice opens again ${inLocalTime(error.retryAfterSec ?? 0)}.`,
+    };
+  }
   return { code };
 }
 
@@ -100,6 +106,12 @@ export function endProblem(error: unknown): Problem {
   }
   if (code === "network_error" && error instanceof ApiError)
     return { code, message: error.message };
+  if (code === "token_limit_reached" && error instanceof ApiError) {
+    return {
+      code,
+      message: `You’ve used today’s practice allowance, so scoring can’t be tried again until ${inLocalTime(error.retryAfterSec ?? 0)}.`,
+    };
+  }
   return {
     code,
     message: "We couldn’t score the session just now. Nothing is lost: try ending it again.",

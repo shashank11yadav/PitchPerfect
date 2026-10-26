@@ -109,6 +109,20 @@ export async function assertTokensLeft(
 }
 
 /**
+ * Throws `budget_exhausted` once today's global token budget is spent, with `Retry-After` at the
+ * next UTC midnight. Turns check this before calling the coach; ending and scoring don't, so a
+ * session in progress can still get its scorecard.
+ */
+export async function assertBudgetLeft(config: QuotaConfig, now: Date): Promise<void> {
+  if (await budgetSpent(config, now)) {
+    throw new BudgetExhaustedError(
+      secondsToMidnight(now),
+      "Practice is at capacity for today. End the session to get your scorecard",
+    );
+  }
+}
+
+/**
  * Counts a start in the student's ledger row for this month unless the day or the month is used
  * up, or the student's tokens today have reached their cap. The checks and the count are one
  * conditional update, so parallel starts can't go over.

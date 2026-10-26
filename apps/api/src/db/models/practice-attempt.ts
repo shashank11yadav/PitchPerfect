@@ -39,6 +39,8 @@ export interface PracticeAttemptAttrs {
   provider: LlmProvider;
   model: string;
   tokens: { input: number; output: number };
+  /** Scoring calls made for this session, failed ones included; capped per session. */
+  scoreTries: number;
   startedAt: Date;
   endedAt?: Date;
   expiresAt: Date;
@@ -109,6 +111,7 @@ const practiceAttemptSchema = new Schema<PracticeAttemptAttrs>(
       input: { type: Number, default: 0, min: 0 },
       output: { type: Number, default: 0, min: 0 },
     },
+    scoreTries: { type: Number, default: 0, min: 0 },
     startedAt: { type: Date, default: Date.now },
     endedAt: Date,
     expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } },

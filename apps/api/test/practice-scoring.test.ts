@@ -161,6 +161,24 @@ describe("POST /api/practice/sessions/:id/end", () => {
     expect(attemptOfBody(retried).status).toBe("completed");
   });
 
+  it("makes at most three scoring calls for a session, then closes it unscored", async () => {
+    const { session, attemptId } = await attemptWithTurns(2);
+    harness.stub.fail("/v1/score", { status: 502, code: "upstream_error" });
+
+    for (let index = 0; index < 3; index += 1) {
+      expect((await end(session, attemptId)).status).toBe(502);
+    }
+    expect(callCount(harness.stub, "/v1/score")).toBe(3);
+    const stored = await PracticeAttempt.findById(attemptId).lean();
+    expect(stored).toMatchObject({ status: "abandoned", scorecard: null, scoreTries: 3 });
+
+    harness.stub.clear();
+    const after = await end(session, attemptId);
+    expect(after.status).toBe(200);
+    expect(attemptOfBody(after)).toMatchObject({ status: "abandoned", scorecard: null });
+    expect(callCount(harness.stub, "/v1/score")).toBe(0);
+  });
+
   it("still scores a session that ran past its time limit", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const { session, attemptId } = await attemptWithTurns(2);

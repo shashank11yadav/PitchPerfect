@@ -18,7 +18,7 @@ import {
   UpstreamError,
 } from "../../errors.js";
 import type { CoachClient } from "../../services/coach-client.js";
-import { assertTokensLeft, recordUsage } from "./quota.js";
+import { assertBudgetLeft, assertTokensLeft, recordUsage } from "./quota.js";
 import { scenarioOf, sessionEndsAt, studentTurnsOf, visible } from "./service.js";
 import type { PracticeStream } from "./sse.js";
 import { estimateUnansweredTurn } from "./text.js";
@@ -35,9 +35,10 @@ export type PreparedTurn =
 
 /**
  * Claims the attempt for one turn. A session that can take no more turns answers `ended` (without
- * holding the lock); a turn already in flight, or a session that has ended otherwise, is `409`; a
- * student who has used today's tokens gets `429 token_limit_reached` and can still end the
- * session to have it scored.
+ * holding the lock); a turn already in flight, or a session that has ended otherwise, is `409`. A
+ * student who has used today's tokens gets `429 token_limit_reached`, and every student gets
+ * `429 budget_exhausted` once today's global token budget is spent; either way the session can
+ * still be ended and scored.
  */
 export async function prepareTurn(
   config: Config,
@@ -71,6 +72,7 @@ export async function prepareTurn(
   }
   try {
     await assertTokensLeft(config, studentId, now);
+    await assertBudgetLeft(config, now);
   } catch (error) {
     await releaseTurnLock(lock);
     throw error;
