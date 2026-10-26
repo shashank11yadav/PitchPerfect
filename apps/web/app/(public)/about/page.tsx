@@ -1,9 +1,10 @@
+import { AUTHOR } from "@pitchperfect/shared";
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { PageHero } from "@/components/marketing/Hero";
 import { Section, SectionTitle } from "@/components/marketing/Section";
 import { COPY_LIMITS as L } from "@/content/limits";
 import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
-import { AUTHOR, ISSUES_URL } from "@/lib/site";
+import { ISSUES_URL } from "@/lib/site";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.about);
 

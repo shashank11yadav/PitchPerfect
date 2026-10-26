@@ -6,7 +6,7 @@ import type {
 } from "@pitchperfect/shared";
 import { getInput, type IdParamSchema } from "../../middleware/validate.js";
 import { streamResume } from "../../services/files.js";
-import type { Mailer } from "../../services/mailer.js";
+import type { LinkingMailer } from "../../services/mailer.js";
 import {
   assertNotWithdrawn,
   listApplicants,
@@ -22,7 +22,7 @@ interface Params {
   params: typeof IdParamSchema;
 }
 
-export function applicantsHandlers(deps: { mailer: Mailer }) {
+export function applicantsHandlers(deps: LinkingMailer) {
   const owned = (res: Parameters<RequestHandler>[1]) =>
     requireApplicationForEmployer(companyOf(res)._id, getInput<Params>(res).params.id);
 
@@ -54,7 +54,7 @@ export function applicantsHandlers(deps: { mailer: Mailer }) {
     interview: (async (req, res) => {
       const { body } = getInput<{ body: typeof InterviewSchema }>(res);
       const application = await scheduleInterview(
-        deps.mailer,
+        deps,
         req.log,
         companyOf(res),
         await owned(res),

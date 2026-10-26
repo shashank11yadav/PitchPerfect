@@ -1,6 +1,7 @@
 // Must stay first: configures zod before any schema module runs.
 import "./zod-config.js";
 
+export * from "./author.js";
 export * from "./enums.js";
 export * from "./html-allowlist.js";
 export * from "./limits.js";

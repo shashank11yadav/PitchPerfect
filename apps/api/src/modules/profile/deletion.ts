@@ -13,7 +13,7 @@ import {
   User,
 } from "../../db/models/index.js";
 import { deleteResume } from "../../services/files.js";
-import type { MailFailureLog, Mailer } from "../../services/mailer.js";
+import type { LinkingMailer, MailFailureLog, Mailer } from "../../services/mailer.js";
 import { anyOf, closeOpenApplications, type ClosingJob } from "../applications/closing.js";
 import { removeResumeCopies } from "../applications/resume-copies.js";
 import { holdLedger } from "../practice/ledger-hold.js";
@@ -44,7 +44,7 @@ async function deleteStudentData(config: Config, userId: string): Promise<void> 
 
 /** Closes open applications (reason `employer_left`) and drops every interview slot: the jobs are going away. */
 async function closeApplications(
-  mailer: Mailer,
+  mail: LinkingMailer,
   log: MailFailureLog,
   company: { name: string },
   jobs: ClosingJob[],
@@ -53,15 +53,15 @@ async function closeApplications(
     { jobId: anyOf(jobs.map((job) => job._id)) },
     { $unset: { interview: 1 } },
   );
-  await closeOpenApplications(mailer, log, company, jobs, "employer_left");
+  await closeOpenApplications(mail, log, company, jobs, "employer_left");
 }
 
-async function deleteEmployerData(mailer: Mailer, log: MailFailureLog, userId: string) {
+async function deleteEmployerData(mail: LinkingMailer, log: MailFailureLog, userId: string) {
   const company = await Company.findOne({ ownerId: userId }).select("name").lean();
   if (company) {
     const jobs = await Job.find({ companyId: company._id }).select("title").lean();
     const jobIds = jobs.map((job) => job._id);
-    await closeApplications(mailer, log, company, jobs);
+    await closeApplications(mail, log, company, jobs);
     await Promise.all([
       SavedJob.deleteMany({ jobId: anyOf(jobIds) }),
       PracticeAttempt.updateMany({ jobId: anyOf(jobIds) }, { $unset: { jobId: 1 } }),
@@ -83,7 +83,7 @@ export async function deleteAccount(
   user: { id: string; role: Role },
 ): Promise<void> {
   if (user.role === "student") await deleteStudentData(config, user.id);
-  else await deleteEmployerData(mailer, log, user.id);
+  else await deleteEmployerData({ mailer, config }, log, user.id);
   await AuthToken.deleteMany({ userId: user.id });
   await User.deleteOne({ _id: user.id });
 }

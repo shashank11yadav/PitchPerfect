@@ -6,7 +6,8 @@ import {
 } from "@pitchperfect/shared";
 import { Application, User } from "../../db/models/index.js";
 import * as emails from "../../services/email-templates.js";
-import { sendSafely, type MailFailureLog, type Mailer } from "../../services/mailer.js";
+import { sendSafely, type LinkingMailer, type MailFailureLog } from "../../services/mailer.js";
+import { appLink } from "../auth/service.js";
 import { transitionApplication } from "./transitions.js";
 
 /** A job whose applications are being closed. */
@@ -39,9 +40,12 @@ async function snapshotJobs(company: { name: string }, jobs: ClosingJob[]): Prom
   );
 }
 
-/** One email per student, naming every one of their jobs that closed (in the order they applied). */
+/**
+ * One email per student, naming every one of their jobs that closed (in the order they applied),
+ * with a link to the job board.
+ */
 async function notifyApplicants(
-  mailer: Mailer,
+  { mailer, config }: LinkingMailer,
   log: MailFailureLog,
   company: { name: string },
   jobs: ClosingJob[],
@@ -67,7 +71,11 @@ async function notifyApplicants(
     [...titlesByStudent].flatMap(([studentId, jobTitles]) => {
       const to = emailOf.get(studentId);
       if (to === undefined) return [];
-      const content = emails.applicationsClosed({ jobTitles, company: company.name });
+      const content = emails.applicationsClosed({
+        jobTitles,
+        company: company.name,
+        jobsLink: appLink(config, "/jobs"),
+      });
       return [sendSafely(mailer, { to, ...content }, log, "applications_closed")];
     }),
   );
@@ -79,7 +87,7 @@ async function notifyApplicants(
  * title. Safe to repeat: a second run finds nothing open and sends nothing.
  */
 export async function closeOpenApplications(
-  mailer: Mailer,
+  mail: LinkingMailer,
   log: MailFailureLog,
   company: { name: string },
   jobs: ClosingJob[],
@@ -109,5 +117,5 @@ export async function closeOpenApplications(
     .select("jobId studentId")
     .sort({ createdAt: 1 })
     .lean();
-  await notifyApplicants(mailer, log, company, jobs, closed);
+  await notifyApplicants(mail, log, company, jobs, closed);
 }

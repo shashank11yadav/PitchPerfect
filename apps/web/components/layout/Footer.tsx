@@ -1,5 +1,6 @@
+import { AUTHOR } from "@pitchperfect/shared";
 import Link from "next/link";
-import { AUTHOR, LEGAL_NAV, PUBLIC_NAV, SITE_NAME, TAGLINE, type NavLink } from "@/lib/site";
+import { LEGAL_NAV, PUBLIC_NAV, SITE_NAME, TAGLINE, type NavLink } from "@/lib/site";
 import { Logo } from "./Logo";
 
 const EXTERNAL_LINK = "pp-link rounded-control font-semibold text-white";

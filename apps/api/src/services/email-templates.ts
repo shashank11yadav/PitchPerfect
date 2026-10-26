@@ -1,4 +1,4 @@
-import { LIMITS, singleLine, type CompanyVerification } from "@pitchperfect/shared";
+import { AUTHOR, LIMITS, singleLine, type CompanyVerification } from "@pitchperfect/shared";
 
 export interface EmailContent {
   subject: string;
@@ -65,7 +65,7 @@ function render(subject: string, body: EmailBody): EmailContent {
   const button = action
     ? `<p style="margin:24px 0"><a href="${escapeHtml(action.url)}" style="background:${BRAND_BLUE};color:#ffffff;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block">${escapeHtml(action.label)}</a></p>` +
       paragraph(
-        `If the button doesn't work, copy this link into your browser: ${action.url}`,
+        `If the button doesn’t work, copy this link into your browser: ${action.url}`,
         "margin:0 0 16px;font-size:13px;color:#555555;word-break:break-all",
       )
     : "";
@@ -100,7 +100,7 @@ export function verifyEmail(link: string): EmailContent {
     action: { label: "Verify email", url: link },
     footnotes: [
       `This link works once and expires in ${String(LIMITS.verifyTokenHours)} hours.`,
-      `If you didn't create a ${BRAND} account, you can ignore this email.`,
+      `If you didn’t create a ${BRAND} account, you can ignore this email.`,
     ],
   });
 }
@@ -112,7 +112,7 @@ export function resetPassword(link: string): EmailContent {
     action: { label: "Reset password", url: link },
     footnotes: [
       `This link works once and expires in ${String(LIMITS.resetTokenMinutes)} minutes. Resetting signs you out everywhere.`,
-      "If you didn't ask for this, you can ignore this email. Your password stays the same.",
+      "If you didn’t ask for this, you can ignore this email. Your password stays the same.",
     ],
   });
 }
@@ -128,7 +128,7 @@ export function signinLimited(resetLink: string): EmailContent {
     action: { label: "Reset password", url: resetLink },
     footnotes: [
       `This link works once and expires in ${String(LIMITS.resetTokenMinutes)} minutes. Resetting signs you out everywhere.`,
-      "If these were your own attempts, you don't need to do anything. Your password hasn't changed.",
+      "If these were your own attempts, you don’t need to do anything. Your password hasn’t changed.",
     ],
   });
 }
@@ -142,7 +142,7 @@ export function signupAttemptExistingAccount(signinLink: string, resetLink: stri
     ],
     action: { label: "Sign in", url: signinLink },
     secondary: { label: "Reset your password", url: resetLink },
-    footnotes: ["If it wasn't you, you can ignore this email."],
+    footnotes: ["If it wasn’t you, you can ignore this email."],
   });
 }
 
@@ -159,19 +159,23 @@ export function emailChangeToExistingAccount(signinLink: string, resetLink: stri
     ],
     action: { label: "Sign in", url: signinLink },
     secondary: { label: "Reset your password", url: resetLink },
-    footnotes: ["If it wasn't you, you can ignore this email. Your account stays as it is."],
+    footnotes: ["If it wasn’t you, you can ignore this email. Your account stays as it is."],
   });
 }
 
-/** Sent to the previous address after an email change, so a takeover can't go unnoticed. */
+/**
+ * Sent to the previous address after an email change, so a takeover can't go unnoticed. The link
+ * reaches the person who runs PitchPerfect, the same contact the privacy policy names.
+ */
 export function emailChanged(): EmailContent {
   return render(`Your ${BRAND} email was changed`, {
     heading: "Your email address was changed",
     paragraphs: [
       `The email address on your ${BRAND} account was just changed, so this address no longer receives account email.`,
-      "If you made this change, you don't need to do anything.",
-      `If you didn't, someone else may have your password. Contact the ${BRAND} team right away.`,
+      "If you made this change, you don’t need to do anything.",
+      `If you didn’t, someone else may have your password. Contact the ${BRAND} team right away with the link below.`,
     ],
+    action: { label: `Contact the ${BRAND} team`, url: AUTHOR.github },
   });
 }
 
@@ -186,26 +190,45 @@ const UTC_DATE_TIME = new Intl.DateTimeFormat("en-US", {
   hourCycle: "h23",
 });
 
+/** What the invite says about the company, as its badge on the site would. */
+function companyStanding(
+  company: string,
+  details: {
+    companyVerification: CompanyVerification;
+    companySample: boolean;
+    companyDomain: string;
+  },
+): string {
+  if (details.companySample) {
+    return `${company} is a sample company on ${BRAND}, made up for the demo: its website is on a domain reserved for examples.`;
+  }
+  return details.companyVerification === "verified"
+    ? `${company} is a verified company on ${BRAND}: it controls ${details.companyDomain}.`
+    : `${company} is not verified on ${BRAND}.`;
+}
+
 /**
  * The invite says in plain text where the link really goes and whether the company is verified,
- * so a student can tell a real invite from a look-alike before clicking.
+ * so a student can tell a real invite from a look-alike before clicking. The email can't know
+ * which practice partner the site runs, so it doesn't call it AI.
  */
 export function interviewScheduled(details: {
   jobTitle: string;
   company: string;
   companyVerification: CompanyVerification;
+  /** The company's website is on a reserved domain (`isSampleWebsite`). */
+  companySample: boolean;
   /** The registrable domain the company's badge vouches for, e.g. "acme-demo.example". */
   companyDomain: string;
   startsAtUtc: Date;
   meetingUrl: string;
+  /** The job's page on the site, from `APP_URL`. */
+  jobLink: string;
 }): EmailContent {
   const when = `${UTC_DATE_TIME.format(details.startsAtUtc)} UTC`;
   const host = new URL(details.meetingUrl).hostname;
   const company = userText(details.company);
-  const standing =
-    details.companyVerification === "verified"
-      ? `${company} is a verified company on ${BRAND}: it controls ${details.companyDomain}.`
-      : `${company} is not verified on ${BRAND}.`;
+  const standing = companyStanding(company, details);
   return render(`Interview scheduled: ${details.jobTitle} at ${details.company}`, {
     heading: "You have an interview",
     paragraphs: [
@@ -215,8 +238,9 @@ export function interviewScheduled(details: {
       standing,
     ],
     action: { label: "Join the meeting", url: details.meetingUrl },
+    secondary: { label: `Open the job on ${BRAND}`, url: details.jobLink },
     footnotes: [
-      `Want a warm-up? Open the job on ${BRAND} and run a practice call for it with the AI practice partner.`,
+      `Want a warm-up? Open the job on ${BRAND} and run a practice call for it with the practice partner.`,
     ],
   });
 }
@@ -227,6 +251,8 @@ const LIST = new Intl.ListFormat("en", { style: "long", type: "conjunction" });
 export function applicationsClosed(details: {
   jobTitles: string[];
   company: string;
+  /** The public job board, from `APP_URL`. */
+  jobsLink: string;
 }): EmailContent {
   const plural = details.jobTitles.length > 1;
   return render(`Applications closed: ${LIST.format(details.jobTitles)}`, {
@@ -235,7 +261,8 @@ export function applicationsClosed(details: {
       : "This job is no longer taking applications",
     paragraphs: [
       `${userText(details.company)} closed applications for ${LIST.format(details.jobTitles.map(userText))}. Thanks for applying.`,
-      `There are more roles on ${BRAND} whenever you're ready.`,
+      `There are more roles on ${BRAND} whenever you’re ready.`,
     ],
+    action: { label: "Browse open roles", url: details.jobsLink },
   });
 }

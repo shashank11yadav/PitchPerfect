@@ -6,7 +6,7 @@ import type {
   JobUpdateSchema,
 } from "@pitchperfect/shared";
 import { getInput, type IdParamSchema } from "../../middleware/validate.js";
-import type { MailFailureLog, Mailer } from "../../services/mailer.js";
+import type { LinkingMailer, MailFailureLog } from "../../services/mailer.js";
 import {
   changeJobStatus,
   createJob,
@@ -22,7 +22,7 @@ interface Params {
 }
 
 /** Thin handlers: validated input in, service call, response out. */
-export function jobsHandlers(deps: { mailer: Mailer }) {
+export function jobsHandlers(deps: LinkingMailer) {
   const owned = (res: Parameters<RequestHandler>[1]) =>
     requireJobOwnedBy(companyOf(res)._id, getInput<Params>(res).params.id);
 
@@ -49,13 +49,7 @@ export function jobsHandlers(deps: { mailer: Mailer }) {
     setStatus: (async (req, res) => {
       const { body } = getInput<{ body: typeof JobStatusUpdateSchema }>(res);
       const log: MailFailureLog = req.log;
-      const job = await changeJobStatus(
-        deps.mailer,
-        log,
-        companyOf(res),
-        await owned(res),
-        body.status,
-      );
+      const job = await changeJobStatus(deps, log, companyOf(res), await owned(res), body.status);
       res.json({ job });
     }) satisfies RequestHandler,
 

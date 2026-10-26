@@ -48,7 +48,7 @@ const DUPLICATE_KEY_CODE = 11000;
 const SLUG_SUFFIX_SPACE = 36 ** 6;
 
 /** A page of the web app, always built from `APP_URL` (never the request's Host). */
-export function appLink(config: Config, path: string, token?: string): string {
+export function appLink(config: Pick<Config, "APP_URL">, path: string, token?: string): string {
   const base = config.APP_URL.endsWith("/") ? config.APP_URL : `${config.APP_URL}/`;
   const url = new URL(path.replace(/^\//, ""), base);
   if (token !== undefined) url.searchParams.set("token", token);

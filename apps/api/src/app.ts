@@ -113,7 +113,7 @@ export function createApp(
   api.use(jobRoutes());
   api.use(applicationRoutes());
   api.use("/practice", practiceRoutes({ config, coach: deps.coach, coachProbe }));
-  api.use("/employer", employerRoutes({ mailer: deps.mailer }));
+  api.use("/employer", employerRoutes({ config, mailer: deps.mailer }));
   api.use(healthRoutes(coachProbe));
   extraRoutes?.(api);
   app.use("/api", api);

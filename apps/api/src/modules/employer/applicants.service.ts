@@ -1,6 +1,7 @@
 import type { Types } from "mongoose";
 import {
   isMeetingServiceHost,
+  isSampleWebsite,
   MEETING_SERVICE_NAMES,
   scoredStudentTurns,
   type ApplicationStatus,
@@ -19,11 +20,12 @@ import {
   sameCompanyDomain,
 } from "../../services/company-verification.js";
 import * as emails from "../../services/email-templates.js";
-import { sendSafely, type MailFailureLog, type Mailer } from "../../services/mailer.js";
+import { sendSafely, type LinkingMailer, type MailFailureLog } from "../../services/mailer.js";
 import { anyOf, OPEN_STATUSES } from "../applications/closing.js";
 import { appliedResumeId, resumeAccessOpen } from "../applications/resume-copies.js";
 import { completedAttemptIds } from "../applications/service.js";
 import { transitionApplication } from "../applications/transitions.js";
+import { appLink } from "../auth/service.js";
 import type { ApplicationDoc, CompanyDoc, JobDoc } from "./ownership.js";
 
 /** Applications with their students' public details; any whose student is gone are left out. */
@@ -161,7 +163,7 @@ export async function setSaved(application: ApplicationDoc, saved: boolean): Pro
  * student. The link must open a known video call service or the company's own domain.
  */
 export async function scheduleInterview(
-  mailer: Mailer,
+  { mailer, config }: LinkingMailer,
   log: MailFailureLog,
   company: CompanyDoc,
   { application, job }: { application: ApplicationDoc; job: JobDoc },
@@ -184,9 +186,11 @@ export async function scheduleInterview(
       jobTitle: job.title,
       company: company.name,
       companyVerification: company.verification,
+      companySample: isSampleWebsite(company.website),
       companyDomain: badgeDomain(company) ?? new URL(company.website).hostname,
       startsAtUtc,
       meetingUrl,
+      jobLink: appLink(config, `/jobs/${job.slug}`),
     });
     await sendSafely(mailer, { to: student.email, ...content }, log, "interview_scheduled");
   }

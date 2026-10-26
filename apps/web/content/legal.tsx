@@ -1,4 +1,4 @@
-import { AUTHOR } from "@/lib/site";
+import { AUTHOR } from "@pitchperfect/shared";
 
 /**
  * When the legal templates last changed: the day of the last commit to privacy.tsx, terms.tsx or

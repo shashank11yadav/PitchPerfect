@@ -107,7 +107,9 @@ describe("meeting links", () => {
 });
 
 describe("the invite email", () => {
-  it("names the link's real host in plain text and the company's verified status", async () => {
+  // The test company's website is on a reserved `.example` domain, so the email calls it a sample;
+  // email-templates.test.ts covers the wording for a real verified company.
+  it("names the link's real host in plain text, the company's standing, and the job", async () => {
     const { invite, shortlisted } = await setup();
     const application = await shortlisted();
 
@@ -116,8 +118,9 @@ describe("the invite email", () => {
     const [message] = mailer.sent;
     expect(message?.text).toContain("The meeting link opens us02web.zoom.us.");
     expect(message?.html).toContain("The meeting link opens us02web.zoom.us.");
-    expect(message?.text).toContain(
-      "Applied Dynamics is a verified company on PitchPerfect: it controls applied-dynamics.example.",
+    expect(message?.text).toContain("Applied Dynamics is a sample company on PitchPerfect");
+    expect(message?.text).toMatch(
+      /Open the job on PitchPerfect: http:\/\/localhost:3000\/jobs\/field-rep-/,
     );
   });
 });

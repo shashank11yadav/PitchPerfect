@@ -16,7 +16,7 @@ import {
 import { requireRole, requireVerified } from "../../middleware/auth.js";
 import { byUser, rateLimit } from "../../middleware/rate-limit.js";
 import { IdParamSchema, validate } from "../../middleware/validate.js";
-import type { Mailer } from "../../services/mailer.js";
+import type { LinkingMailer } from "../../services/mailer.js";
 import { applicantsHandlers } from "./applicants.handlers.js";
 import { companyHandlers } from "./company.handlers.js";
 import { dashboardHandlers } from "./dashboard.handlers.js";
@@ -31,7 +31,7 @@ const WRITES_PER_MINUTE = 60;
  * ownership helpers, so another company's ids are indistinguishable from missing ones. A suspended
  * company can only read its own company profile.
  */
-export function employerRoutes(deps: { mailer: Mailer }): Router {
+export function employerRoutes(deps: LinkingMailer): Router {
   const jobs = jobsHandlers(deps);
   const applicants = applicantsHandlers(deps);
   const writeLimit = rateLimit("employer-writes", {

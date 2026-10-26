@@ -14,7 +14,7 @@ import { toEmployerJob, toEmployerJobSummary } from "../../db/mappers.js";
 import { Application, Job, PracticeAttempt, SavedJob } from "../../db/models/index.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../errors.js";
 import { htmlToPlainText, sanitizeJobHtml } from "../../services/html-sanitizer.js";
-import type { MailFailureLog, Mailer } from "../../services/mailer.js";
+import type { LinkingMailer, MailFailureLog } from "../../services/mailer.js";
 import { isDuplicateKey } from "../auth/service.js";
 import { closeOpenApplications } from "../applications/closing.js";
 import type { CompanyDoc, JobDoc } from "./ownership.js";
@@ -119,7 +119,7 @@ function invalidStatusChange(from: JobStatus, to: JobStatus): ValidationError {
  * is reactivated. Going back to draft is not allowed, so a draft never has applicants.
  */
 export async function changeJobStatus(
-  mailer: Mailer,
+  mail: LinkingMailer,
   log: MailFailureLog,
   company: CompanyDoc,
   job: JobDoc,
@@ -146,7 +146,7 @@ export async function changeJobStatus(
   }
   // Also when it was already archived, so a run that failed half-way can be finished by repeating it.
   if (to === "archived") {
-    await closeOpenApplications(mailer, log, company, [current], "job_archived");
+    await closeOpenApplications(mail, log, company, [current], "job_archived");
   }
   return viewJob(current);
 }

@@ -12,6 +12,12 @@ export interface Mailer {
   send(message: MailMessage): Promise<void>;
 }
 
+/** A mailer, and the web app's address for emails that link back to a page there. */
+export interface LinkingMailer {
+  mailer: Mailer;
+  config: Pick<Config, "APP_URL">;
+}
+
 type SmtpConfig = Pick<
   Config,
   "SMTP_HOST" | "SMTP_PORT" | "SMTP_SECURE" | "SMTP_USER" | "SMTP_PASS" | "MAIL_FROM" | "isProd"

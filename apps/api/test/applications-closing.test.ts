@@ -17,6 +17,7 @@ afterEach(() => {
 });
 
 const log = { error: () => undefined };
+const APP = { APP_URL: "https://app.example.test" };
 
 describe("closeOpenApplications", () => {
   it("emails only the students whose applications this run closed", async () => {
@@ -37,9 +38,10 @@ describe("closeOpenApplications", () => {
         .updateOne({ _id: withdrawing._id }, { $set: { status: "withdrawn" } })
         .then(() => original(...args))) as typeof original);
 
-    await closeOpenApplications(mailer, log, company, [job], "job_archived");
+    await closeOpenApplications({ mailer, config: APP }, log, company, [job], "job_archived");
 
     expect(mailer.sent.map((message) => message.to)).toEqual([kept.email]);
+    expect(mailer.sent[0]?.text).toContain("Browse open roles: https://app.example.test/jobs");
     expect((await Application.findById(withdrawing._id))?.status).toBe("withdrawn");
   });
 
@@ -50,7 +52,7 @@ describe("closeOpenApplications", () => {
     const student = await createStudent();
     await createApplication({ jobId: job._id, studentId: student.user._id, status: "hired" });
 
-    await closeOpenApplications(mailer, log, company, [job], "job_archived");
+    await closeOpenApplications({ mailer, config: APP }, log, company, [job], "job_archived");
 
     expect(mailer.sent).toHaveLength(0);
   });

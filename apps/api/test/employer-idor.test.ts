@@ -11,7 +11,7 @@ import { call, employerSession, studentSession, type Method } from "./helpers/se
 
 useTestDb();
 
-const { app, mailer } = makeTestApp();
+const { app, config, mailer } = makeTestApp();
 
 interface RouteCase {
   method: Method;
@@ -68,7 +68,7 @@ const url = (route: RouteCase, ids: { job: string; application: string }) =>
 
 describe("employer route table", () => {
   it("covers every employer route that takes an id", () => {
-    const routes = registered(employerRoutes({ mailer }));
+    const routes = registered(employerRoutes({ mailer, config }));
     const withId = routes.filter((route) => route.includes(":id")).sort();
     expect(ID_ROUTES.map(key).sort()).toEqual(withId);
   });

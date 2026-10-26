@@ -11,7 +11,7 @@ import { call, employerSession, studentSession, type Method } from "./helpers/se
 
 useTestDb();
 
-const { app, mailer } = makeTestApp();
+const { app, config, mailer } = makeTestApp();
 
 interface RouteCase {
   method: Method;
@@ -80,7 +80,7 @@ async function suspendedWorld() {
 
 describe("a suspended company", () => {
   it("lists every employer route but GET /company as blocked", () => {
-    const routes = registered(employerRoutes({ mailer }));
+    const routes = registered(employerRoutes({ mailer, config }));
     expect([...BLOCKED.map(key), "GET /company"].sort()).toEqual(routes.sort());
   });
 
