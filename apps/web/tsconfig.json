@@ -24,13 +24,13 @@
   "exclude": ["node_modules"],
   "references": [
     {
-      "path": "../../packages/shared"
+      "path": "../../packages/shared/tsconfig.build.json"
     },
     {
       "path": "../../packages/partner/tsconfig.build.json"
     },
     {
-      "path": "../../packages/scripted-partner"
+      "path": "../../packages/scripted-partner/tsconfig.build.json"
     }
   ]
 }

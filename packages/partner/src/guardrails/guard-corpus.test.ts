@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ATTACK_LINES, BENIGN_LINES, UNCLEAR_LINES } from "./guard-corpus.js";
+import { ATTACK_LINES, BENIGN_LINES, UNCLEAR_LINES } from "./guard-corpus.fixtures.js";
 import { confirmsAttack, ruleCheck } from "./guard-rules.js";
 
 /** Lines the rules hold back as suspect: redirected, but not a strike by themselves. */

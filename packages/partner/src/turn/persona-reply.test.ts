@@ -10,7 +10,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { createPracticeDeps, type PracticeDeps } from "../deps.js";
 import { CANARY } from "../guardrails/canary.js";
 import { CircuitBreaker } from "../guardrails/circuit-breaker.js";
-import { LEAK_SCENARIO } from "../guardrails/leak-corpus.js";
+import { LEAK_SCENARIO } from "../guardrails/leak-corpus.fixtures.js";
 import { planScenario } from "../plan.js";
 import { FALLBACK_LINE } from "../prompts/fixed-lines.js";
 import { createUsageMeter, ProviderError, type LlmProvider, type Moderator } from "../provider.js";

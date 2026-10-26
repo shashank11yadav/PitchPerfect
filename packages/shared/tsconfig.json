@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist",
+    "outDir": "node_modules/.cache/tsc",
+    "emitDeclarationOnly": true,
     "types": ["node"]
   },
   "include": ["src"]

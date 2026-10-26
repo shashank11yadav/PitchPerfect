@@ -8,5 +8,8 @@
   },
   "include": ["src"],
   // The tests run the engine with the scripted provider, which builds on tsconfig.build.json.
-  "references": [{ "path": "../shared" }, { "path": "../scripted-partner" }]
+  "references": [
+    { "path": "../shared/tsconfig.build.json" },
+    { "path": "../scripted-partner/tsconfig.build.json" }
+  ]
 }

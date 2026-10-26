@@ -13,14 +13,14 @@ import { FALLBACK_LINE, redirectLine } from "../prompts/fixed-lines.js";
 import { buildTurnPrompt, TURN_LEAK_SOURCE } from "../prompts/persona-turn.js";
 import { splitStageTag } from "../turn/reply-filter.js";
 import { CANARY, canaryCheck, containsCanary, randomCanary } from "./canary.js";
-import { BENIGN_LINES, BENIGN_REPLIES } from "./guard-corpus.js";
+import { BENIGN_LINES, BENIGN_REPLIES } from "./guard-corpus.fixtures.js";
 import {
   canaryVariants,
   LEAK_SCENARIO,
   SCENARIO_BENIGN,
   SCENARIO_VARIANTS,
   type LeakVariant,
-} from "./leak-corpus.js";
+} from "./leak-corpus.fixtures.js";
 import {
   createLeakScanner,
   createScenarioLeakScanner,

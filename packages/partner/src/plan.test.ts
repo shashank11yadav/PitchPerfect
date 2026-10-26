@@ -3,7 +3,7 @@ import { SEED_COMPANIES, SEED_JOBS, type SeedJob } from "@pitchperfect/shared/se
 import { describe, expect, it } from "vitest";
 import { createPracticeDeps } from "./deps.js";
 import { FakeProvider } from "@pitchperfect/scripted-partner";
-import { INJECTED_JOBS, type InjectedJob } from "./guardrails/injected-jobs.js";
+import { INJECTED_JOBS, type InjectedJob } from "./guardrails/injected-jobs.fixtures.js";
 import { planScenario } from "./plan.js";
 import { buildPlanPrompt } from "./prompts/persona-plan.js";
 import type { Scenario } from "./safe-scenario.js";

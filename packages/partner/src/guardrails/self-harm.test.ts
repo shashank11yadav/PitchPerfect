@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ATTACK_LINES, BENIGN_LINES } from "./guard-corpus.js";
+import { ATTACK_LINES, BENIGN_LINES } from "./guard-corpus.fixtures.js";
 import { maySignalSelfHarm, signalsSelfHarm } from "@pitchperfect/shared";
 
 /** A student saying they might hurt themselves: each one gets the support message. */

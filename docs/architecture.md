@@ -68,7 +68,7 @@ packages/
       deps.ts               provider + circuit breaker, retry and timeout per call, structured-output repair
       metering.ts           token usage per call, charged in full when the provider never reports it
       prompts/              persona-plan.ts, persona-turn.ts, scorer.ts, guard.ts, moderation.ts, blocks.ts, fixed-lines.ts, skill-guides.ts
-      guardrails/           input.ts, guard-rules.ts, output.ts, reply-rules.ts, moderator.ts, canary.ts, canonical.ts, leak-scan.ts, scenario-check.ts, circuit-breaker.ts; guard-corpus.ts, leak-corpus.ts and injected-jobs.ts are test corpora
+      guardrails/           input.ts, guard-rules.ts, output.ts, reply-rules.ts, moderator.ts, canary.ts, canonical.ts, leak-scan.ts, scenario-check.ts, circuit-breaker.ts; guard-corpus.fixtures.ts, leak-corpus.fixtures.ts and injected-jobs.fixtures.ts are test corpora
       scoring/              verify-quotes.ts (evidence must be a verbatim student quote)
       plan.ts, turn/, score.ts  the three steps of a session, without a transport; safe-scenario.ts is the fallback persona
   scripted-partner/
