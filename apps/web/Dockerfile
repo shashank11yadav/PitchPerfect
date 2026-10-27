@@ -4,7 +4,7 @@
 # API_ORIGIN is baked in at build time: Next.js compiles the `/api` rewrite into the build, so an
 # image only ever proxies to the api it was built for. Rebuild to point it somewhere else.
 
-FROM node:22.23.3-alpine3.23 AS build
+FROM node:22.23.4-alpine3.23 AS build
 WORKDIR /repo
 # Only the manifests of the workspaces this image needs. npm installs from the lockfile and skips
 # workspaces that aren't present, so the api and coach dependencies stay out of the build.
@@ -26,7 +26,7 @@ ENV API_ORIGIN=${API_ORIGIN} NEXT_OUTPUT=standalone NEXT_TELEMETRY_DISABLED=1
 RUN npm run build -w packages/shared && npm run build -w packages/partner \
   && npm run build -w packages/scripted-partner && npm run build -w apps/web
 
-FROM node:22.23.3-alpine3.23 AS runtime
+FROM node:22.23.4-alpine3.23 AS runtime
 ARG API_ORIGIN=http://api:4000
 # HOSTNAME is the address the standalone server binds to; Docker sets it to the container id.
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000 \
