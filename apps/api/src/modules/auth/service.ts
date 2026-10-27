@@ -78,7 +78,7 @@ export async function assertPasswordAllowed(
   if (!result.ok) throw new ValidationError({ [field]: PASSWORD_PROBLEM_MESSAGES[result.reason] });
 }
 
-export async function sendVerificationEmail(
+async function sendVerificationEmail(
   deps: AuthDeps,
   log: MailFailureLog,
   user: { id: string; email: string },
