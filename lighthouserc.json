@@ -16,10 +16,12 @@
     },
     "assert": {
       "assertions": {
-        "categories:performance": [
+        "categories:performance": ["error", { "minScore": 0.9, "aggregationMethod": "median-run" }],
+        "largest-contentful-paint": [
           "error",
-          { "minScore": 0.85, "aggregationMethod": "median-run" }
+          { "maxNumericValue": 3000, "aggregationMethod": "median-run" }
         ],
+        "bf-cache": ["error", { "minScore": 1, "aggregationMethod": "median-run" }],
         "categories:accessibility": [
           "error",
           { "minScore": 0.9, "aggregationMethod": "median-run" }

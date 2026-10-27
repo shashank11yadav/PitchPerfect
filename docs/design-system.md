@@ -107,8 +107,8 @@ Each component is implemented once:
 ## Motion
 
 - **Hero grain:** the voice control inline in the h1 sits on a grainy field of the brand blues (`.pp-grain` in `app/globals.css`), all CSS. A color layer twice the strip's size drifts and turns over 9 s, alternating (a transform, so the compositor runs it with no script and no repaint per frame), under an SVG noise tile. Under reduced motion the field stands still.
-- **Entrances:** `components/motion/in-view.tsx` (adapted from Motion Primitives) staggers a section's parts in as it first scrolls into view: 24 px rise with opacity, 700 ms, ease-out `cubic-bezier(.22,1,.36,1)`. Server HTML and anything already on screen render finished, so nothing waits for scripts and nothing flickers; `useEntryReveal` decides.
-- **Streamed reply:** in the public previews, the last partner reply arrives letter by letter (`text-effect.tsx`), over a transparent copy that keeps its space and gives screen readers the sentence once. The live practice room shows the reply exactly as it streams (the api sends it in bursts while it checks the text) and then swaps in the checked final text; it adds no typing effect of its own.
+- **Entrances:** `components/motion/in-view.tsx` (adapted from Motion Primitives) staggers a section's parts in as it first scrolls into view: 24 px rise with opacity, 700 ms, ease-out `cubic-bezier(.22,1,.36,1)`, 80 ms between parts. It is CSS transitions on a `data-reveal` attribute (`app/globals.css`), with no animation library. Server HTML and anything already on screen render finished, so nothing waits for scripts and nothing flickers; `useEntryReveal` decides.
+- **Streamed reply:** in the public previews, the last partner reply arrives letter by letter (`text-effect.tsx`, which uses `motion` and loads only when a reply is found off screen), over a transparent copy that keeps its space and gives screen readers the sentence once. The live practice room shows the reply exactly as it streams (the api sends it in bursts while it checks the text) and then swaps in the checked final text; it adds no typing effect of its own.
 - **Feedback:** buttons scale to 0.97 on press (`.pp-press`); text links show their underline on hover (`.pp-link`); the voice meters breathe.
 - **Reduced motion:** every one of these is off. The global rule also cuts CSS transitions and animations to 0.01 ms.
 
@@ -137,7 +137,14 @@ Each component is implemented once:
   - `JobPosting` on `/jobs/[slug]` (verified companies that aren't samples only), with `title`, `description`, `datePosted`, `validThrough`, `employmentType`, `hiringOrganization`, `jobLocation` or `jobLocationType: TELECOMMUTE`, and `baseSalary` when present.
 - Semantic structure: one `h1` per page, ordered headings, `<main>`, `<nav>`, `<footer>`, descriptive link text, and `alt` on every meaningful image.
 - Performance:
-  - Public pages are server-rendered per request with minimal client JS, and use `next/image` for images.
-  - No layout shift from fonts (`next/font`).
-  - Lighthouse ≥ 90 in all four categories locally. CI checks accessibility, best practices and SEO at ≥ 90 and performance at ≥ 85, because shared CI runners score a few points lower than a laptop.
+  - Public pages are server-rendered per request with minimal client JS. Text is in the server HTML and paints without scripts: nothing above the fold starts hidden, and entrances only hide what is still off screen after hydration.
+  - Mobile Lighthouse simulates the load, and counts every script that runs before the largest text is painted as part of that paint. On a local `next start` the scripts arrive before that paint, so the simulated phone LCP follows the JavaScript a page loads up front. Keep that small:
+    - No animation library in the up-front scripts. Entrances are CSS; `motion` loads only for the streamed-reply effect, on demand.
+    - No zod on pages without forms: `@pitchperfect/shared` declares its side effects (`index.js`, `zod-config.js`), so importing a constant doesn't bring in the schemas, and `apiStream` (which validates practice events) lives in `lib/api-stream.ts`, apart from the `apiFetch` every page loads.
+    - Code only the static demo renders is loaded with `next/dynamic` (the demo job board on `/jobs`).
+    - `next/image` for raster images. The SVG wordmark is a plain `<img>`, since `next/image` never resizes an SVG and its client code would load on every page.
+  - Fonts: `next/font` self-hosts and preloads them, with `display: swap` and metric-matched fallbacks (`adjustFontFallback`), so text paints at once in the fallback and hardly moves when the font arrives.
+  - Back/forward cache: public pages send `Cache-Control: private, no-cache` (set in `proxy.ts`; the nonce needs a fresh render, not `no-store`), and nothing registers an `unload` handler (`bfcache.test.ts`). The app, employer and sign-in pages stay `no-store`. The practice room closes its reply stream and the microphone on `pagehide`, and a page restored signed in asks the api about the session again.
+  - Measured with `npx lighthouse@12.6.1` (mobile, median of 3) against `next start`: LCP 2.6 s on `/`, 2.3 s on `/jobs`, 2.5 s on `/students`, performance 97–99, and the back/forward cache audit passing. About 1.8 s of that is the document, CSS and fonts; the rest is the React and Next runtime (about 120 kB gzipped), which every page needs to hydrate.
+  - Lighthouse ≥ 90 in all four categories locally. CI checks accessibility, best practices, SEO and performance at ≥ 90, LCP at ≤ 3 s and the back/forward cache audit (`lighthouserc.json`); shared CI runners score a few points lower than a laptop.
 - `noindex` on the app, employer, auth, and unverified-company job pages.
