@@ -33,7 +33,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-The adapted components depend on `motion` 14.4.0 (MIT, https://github.com/motiondivision/motion), installed from npm.
+`text-effect.tsx` depends on `motion` 14.6.0 (MIT, https://github.com/motiondivision/motion), installed from npm. `in-view.tsx` uses CSS transitions instead and loads no animation library.
 
 ## email-providers
 
