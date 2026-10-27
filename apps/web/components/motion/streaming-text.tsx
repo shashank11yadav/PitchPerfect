@@ -1,8 +1,17 @@
 "use client";
 
+import { lazy, Suspense } from "react";
 import { cn } from "@/lib/cn";
-import { TextEffect } from "./text-effect";
 import { useEntryReveal } from "./use-entry-reveal";
+
+/**
+ * The letter-by-letter effect and the animation library behind it, fetched only once a line is
+ * found off screen after hydration. A line that renders static (on screen, or reduced motion)
+ * never loads either, so they stay out of the scripts a page needs to paint.
+ */
+const TextEffect = lazy(() =>
+  import("./text-effect").then((module) => ({ default: module.TextEffect })),
+);
 
 interface StreamingTextProps {
   text: string;
@@ -21,9 +30,17 @@ export function StreamingText({ text, className }: StreamingTextProps) {
       <span className={phase === "static" ? undefined : "opacity-0"}>{text}</span>
       {phase !== "static" && (
         <span aria-hidden="true" className="absolute inset-0">
-          <TextEffect as="span" per="char" delay={0.4} speedReveal={1.5} trigger={phase === "play"}>
-            {text}
-          </TextEffect>
+          <Suspense fallback={null}>
+            <TextEffect
+              as="span"
+              per="char"
+              delay={0.4}
+              speedReveal={1.5}
+              trigger={phase === "play"}
+            >
+              {text}
+            </TextEffect>
+          </Suspense>
         </span>
       )}
     </span>

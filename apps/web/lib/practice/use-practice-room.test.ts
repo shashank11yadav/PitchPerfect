@@ -2,14 +2,12 @@ import type { PracticeEvent } from "@pitchperfect/shared";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { completedAttempt } from "@/components/practice/test-fixtures";
-import { ApiError, apiStream } from "@/lib/api";
+import { ApiError } from "@/lib/api";
+import { apiStream } from "@/lib/api-stream";
 import { jsonResponse, serveApi } from "@/lib/test-api";
 import { usePracticeRoom } from "./use-practice-room";
 
-vi.mock("@/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/api")>()),
-  apiStream: vi.fn(),
-}));
+vi.mock("@/lib/api-stream", () => ({ apiStream: vi.fn() }));
 
 const stream = vi.mocked(apiStream);
 const ID = "65f1c0ffee00000000000b01";

@@ -1,7 +1,7 @@
 import { LIMITS, PublicJobSummaryPageSchema } from "@pitchperfect/shared";
+import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { JobFilters } from "@/components/jobs/JobFilters";
-import { DemoJobFilters, JobsBrowser } from "@/components/jobs/JobsBrowser";
 import { JobsList } from "@/components/jobs/JobsList";
 import { CtaBand } from "@/components/marketing/CtaBand";
 import { PageHero } from "@/components/marketing/Hero";
@@ -14,6 +14,17 @@ import { pageMetadata, PUBLIC_PAGES } from "@/lib/seo";
 import { serverApi } from "@/lib/server-api";
 
 export const metadata = pageMetadata(PUBLIC_PAGES.jobs);
+
+/*
+ * The static demo's browser-side board, loaded only where it renders: a server build never shows
+ * it, so its code (the query parser and its schemas, the baked listings) stays out of the page.
+ */
+const DemoJobFilters = dynamic(() =>
+  import("@/components/jobs/JobsBrowser").then((module) => module.DemoJobFilters),
+);
+const JobsBrowser = dynamic(() =>
+  import("@/components/jobs/JobsBrowser").then((module) => module.JobsBrowser),
+);
 
 const PAGE_SIZE = LIMITS.pageSizeDefault;
 

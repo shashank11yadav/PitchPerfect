@@ -2,7 +2,8 @@
 
 import { LIMITS, type AttemptView, type PracticeEvent, type SkillSlug } from "@pitchperfect/shared";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { ApiError, apiFetch, apiStream } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
+import { apiStream } from "@/lib/api-stream";
 import { OneAttempt, StartedPractice } from "@/lib/student-api";
 import { attemptPath, browserUrl, practiceHref } from "./paths";
 import { endProblem, startProblem, turnProblem } from "./practice-messages";

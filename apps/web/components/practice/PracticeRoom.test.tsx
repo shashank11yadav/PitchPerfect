@@ -2,7 +2,8 @@ import type { AttemptView, PracticeEvent } from "@pitchperfect/shared";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiStream } from "@/lib/api";
+import { ApiError } from "@/lib/api";
+import { apiStream } from "@/lib/api-stream";
 import { pageOf, renderSignedIn, studentMe } from "@/components/student/test-fixtures";
 import {
   bodyOf,
@@ -16,10 +17,7 @@ import {
 import { PracticeRoom } from "./PracticeRoom";
 import { completedAttempt } from "./test-fixtures";
 
-vi.mock("@/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/api")>()),
-  apiStream: vi.fn(),
-}));
+vi.mock("@/lib/api-stream", () => ({ apiStream: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),

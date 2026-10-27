@@ -21,70 +21,43 @@
  * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
- * Changes from the original: the server render and anything already on screen start in the
- * visible state (`initial={false}`), so content never waits on scripts and never flickers; only
- * content still off screen after hydration is hidden and revealed once. Reduced motion keeps it
- * static. Children can join a stagger through `InViewItem`. Typed for this repo's lint rules.
+ * Changes from the original: the motion components are replaced by a `data-reveal` attribute and
+ * CSS transitions (app/globals.css, "Entry reveals"), so pages built from these sections load no
+ * animation library. The server render and anything already on screen start in the visible
+ * state, so content never waits on scripts and never flickers; only content still off screen
+ * after hydration is hidden and revealed once. Reduced motion keeps it static. Children join the
+ * stagger through `InViewItem`. Typed for this repo's lint rules.
  */
 
-import { motion, type Transition, type Variants } from "motion/react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useEntryReveal } from "./use-entry-reveal";
 
-/** Shared timing (docs/design-system.md, Motion). */
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-
-const containerVariants: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
-};
-
-/** Rises 24 px with opacity; hiding is instant because it happens off screen. */
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 24, transition: { duration: 0 } },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: EASE_OUT } },
-};
-
-const ELEMENTS = {
-  div: motion.div,
-  section: motion.section,
-  ul: motion.ul,
-  ol: motion.ol,
-  li: motion.li,
-  figure: motion.figure,
-} as const;
+type Tag = "div" | "section" | "ul" | "ol" | "li" | "figure";
 
 interface InViewProps {
   children: ReactNode;
-  /** Defaults to a stagger container; pass item variants to animate the element itself. */
-  variants?: Variants;
-  transition?: Transition;
-  as?: keyof typeof ELEMENTS;
+  as?: Tag;
   className?: string;
   id?: string;
   "aria-labelledby"?: string;
 }
 
 /** Reveals its content once, as it first scrolls into view. */
-export function InView({
-  children,
-  variants = containerVariants,
-  transition,
-  as = "div",
-  ...props
-}: InViewProps) {
+export function InView({ children, as = "div", ...props }: InViewProps) {
   const { ref, phase } = useEntryReveal<HTMLDivElement>();
-  const Component = ELEMENTS[as] as typeof motion.div;
+  // One element type for the ref; the tag only changes the semantics.
+  const Component = as as "div";
+
+  // Each item's place in the stagger, in document order: heading, then text, then the picture.
+  useEffect(() => {
+    if (phase !== "waiting" || !ref.current) return;
+    ref.current.querySelectorAll<HTMLElement>("[data-reveal-item]").forEach((item, index) => {
+      item.style.setProperty("--reveal-index", String(index));
+    });
+  }, [phase, ref]);
+
   return (
-    <Component
-      ref={ref}
-      data-reveal={phase}
-      initial={false}
-      animate={phase === "waiting" ? "hidden" : "visible"}
-      variants={variants}
-      transition={transition}
-      {...props}
-    >
+    <Component ref={ref} data-reveal={phase} {...props}>
       {children}
     </Component>
   );
@@ -92,15 +65,14 @@ export function InView({
 
 interface InViewItemProps {
   children: ReactNode;
-  as?: keyof typeof ELEMENTS;
+  as?: Tag;
   className?: string;
 }
 
-/** One step of an `InView` stagger: heading, then text, then the picture. */
-export function InViewItem({ children, as = "div", className }: InViewItemProps) {
-  const Component = ELEMENTS[as] as typeof motion.div;
+/** One step of an `InView` stagger: it rises 24 px as it fades in. */
+export function InViewItem({ children, as: Component = "div", className }: InViewItemProps) {
   return (
-    <Component variants={itemVariants} className={className}>
+    <Component data-reveal-item="" className={className}>
       {children}
     </Component>
   );

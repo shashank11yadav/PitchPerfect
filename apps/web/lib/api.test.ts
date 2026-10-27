@@ -1,6 +1,7 @@
 import type { PracticeEvent } from "@pitchperfect/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch, apiStream, resetCsrf } from "./api";
+import { ApiError, apiFetch, resetCsrf } from "./api";
+import { apiStream } from "./api-stream";
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {

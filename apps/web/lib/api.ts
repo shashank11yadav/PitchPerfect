@@ -1,4 +1,3 @@
-import { PracticeEvent, readSseMessages, type SseMessage } from "@pitchperfect/shared";
 import { PAGES_EXPORT } from "./pages-export";
 
 /** An error response from the api, or a failure to reach it (`status` 0). */
@@ -59,7 +58,7 @@ function apiUrl(path: string): string {
   return `/api${path}`;
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 function stringFields(value: unknown): Record<string, string> {
@@ -133,7 +132,7 @@ function getCsrfToken(): Promise<string> {
  * Sends a request with the CSRF token on state-changing methods. A `csrf_failed` response gets one
  * retry with a fresh token, because the token is bound to a session that may have changed.
  */
-async function send(
+export async function send(
   path: string,
   {
     method = "GET",
@@ -183,47 +182,4 @@ export async function apiFetch<T = unknown>(
   if (res.status === 204) return undefined as T;
   const data: unknown = await res.json();
   return schema ? schema.parse(data) : (data as T);
-}
-
-/** One SSE message as a `PracticeEvent`: the event name is its type. */
-function parseMessage({ event: type, data }: SseMessage): PracticeEvent {
-  let payload: unknown;
-  try {
-    payload = JSON.parse(data);
-  } catch {
-    payload = undefined;
-  }
-  const parsed = PracticeEvent.safeParse(isRecord(payload) ? { ...payload, type } : undefined);
-  if (!parsed.success) {
-    throw new ApiError(
-      502,
-      "upstream_error",
-      "The practice partner sent a reply we couldn’t read.",
-    );
-  }
-  return parsed.data;
-}
-
-/**
- * POSTs `body` and reads the `text/event-stream` response, calling `onEvent` for each validated
- * event as it arrives. Resolves when the stream ends.
- */
-export async function apiStream(
-  path: string,
-  body: unknown,
-  onEvent: (event: PracticeEvent) => void,
-  signal?: AbortSignal,
-): Promise<void> {
-  if (PAGES_EXPORT) {
-    const { demoStream } = await import("./demo/demo-api");
-    return demoStream(path, body, onEvent, signal);
-  }
-  const res = await send(path, { method: "POST", body, signal, accept: "text/event-stream" });
-  if (!res.body) return;
-
-  // An event the stream ends without a blank line after still counts. Stopping on an error
-  // cancels the stream.
-  for await (const message of readSseMessages(res.body, { keepUnterminated: true })) {
-    onEvent(parseMessage(message));
-  }
 }

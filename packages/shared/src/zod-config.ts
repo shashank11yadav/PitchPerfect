@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { config } from "zod/v4/core";
 
 /**
  * Imported first by the package entry, before any schema is built. Without it, zod probes for
@@ -7,4 +7,4 @@ import { z } from "zod";
  * parsing is a little slower, which doesn't matter at our request sizes, and it means client
  * components can import shared schemas safely.
  */
-z.config({ jitless: true });
+config({ jitless: true });

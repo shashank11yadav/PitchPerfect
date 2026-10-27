@@ -273,6 +273,23 @@
   }
 }
 
+/*
+ * Entry reveals (components/motion/in-view.tsx). Items render visible; only a section still off
+ * screen after hydration is hidden (`waiting`, instantly, unseen), and each item then rises 24 px
+ * as it fades in (`play`), 80 ms after the one before it.
+ */
+[data-reveal="waiting"] [data-reveal-item] {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+[data-reveal="play"] [data-reveal-item] {
+  transition:
+    opacity 0.7s var(--pp-ease-out),
+    transform 0.7s var(--pp-ease-out);
+  transition-delay: calc(var(--reveal-index, 0) * 80ms);
+}
+
 /* Printing never waits for a scroll: anything still waiting to be revealed prints as it is. */
 @media print {
   [data-reveal],
