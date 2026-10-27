@@ -31,6 +31,19 @@ test("the CSP nonce is new on every request and stamped on the page's own script
   for (const tag of tags) expect(tag).toContain(`nonce="${nonces[1] ?? ""}"`);
 });
 
+test("public pages can be restored on Back and Forward; sign-in pages are never stored", async ({
+  request,
+}) => {
+  const html = { accept: "text/html" };
+  for (const path of ["/", "/jobs", "/students"]) {
+    const response = await request.get(path, { headers: html });
+    // `no-cache` keeps them fresh; `no-store` would keep them out of the back/forward cache.
+    expect(response.headers()["cache-control"], path).toBe("private, no-cache");
+  }
+  const signin = await request.get("/signin", { headers: html });
+  expect(signin.headers()["cache-control"]).toBe("private, no-store");
+});
+
 test("the api answers through the web origin, without leaking its framework", async ({
   request,
 }) => {

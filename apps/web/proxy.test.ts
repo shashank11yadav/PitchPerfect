@@ -123,3 +123,37 @@ describe("proxy: /api requests", () => {
     expect(forwarded(res, "x-forwarded-host")).toBe("pitchperfect.example");
   });
 });
+
+describe("proxy: page caching", () => {
+  const html = { accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" };
+  const cacheControl = (path: string, headers: Record<string, string>, cookie?: string) =>
+    proxy(request(path, { headers, ...(cookie ? { cookie } : {}) })).headers.get("cache-control");
+
+  it.each(["/", "/jobs", "/students", "/jobs/sdr-zentrova", "/learn/discovery"])(
+    "lets %s be restored on Back and Forward, but never reused unchecked",
+    (path) => {
+      expect(cacheControl(path, html)).toBe("private, no-cache");
+      // The payload a client-side navigation fetches is the same page.
+      expect(cacheControl(path, { rsc: "1" })).toBe("private, no-cache");
+    },
+  );
+
+  it.each([
+    "/app",
+    "/app/practice/attempt/65f1c0ffee00000000000b01",
+    "/employer/jobs",
+    "/signin",
+    "/signup/student",
+    "/forgot-password",
+    "/reset-password",
+    "/verify-email",
+  ])("keeps %s out of every cache", (path) => {
+    expect(cacheControl(path, html, "__Host-pp.sid=s%3Aabc")).toBe("private, no-store");
+  });
+
+  it("leaves what isn't a page (icons, the manifest, feeds) to Next", () => {
+    for (const path of ["/manifest.webmanifest", "/icon.svg", "/sitemap.xml", "/opengraph-image"]) {
+      expect(cacheControl(path, { accept: "*/*" })).toBeNull();
+    }
+  });
+});

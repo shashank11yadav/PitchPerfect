@@ -68,6 +68,38 @@ describe("usePracticeRoom", () => {
     expect(stream).toHaveBeenCalledTimes(1);
   });
 
+  it("closes the reply stream when the page is hidden, and shows the reply as cut off", async () => {
+    stream.mockImplementation(
+      (_path, _body, onEvent, signal) =>
+        new Promise<void>((_resolve, reject) => {
+          onEvent({ type: "delta", text: "Fair question. " });
+          signal?.addEventListener("abort", () => {
+            reject(new DOMException("The page was hidden", "AbortError"));
+          });
+        }),
+    );
+    const { result } = room();
+    const turnsLeft = result.current.state.turnsLeft;
+    act(() => {
+      result.current.editDraft("What does it cost?");
+    });
+    act(() => {
+      result.current.send();
+    });
+    expect(result.current.state.status).toBe("streaming");
+
+    await act(async () => {
+      window.dispatchEvent(new Event("pagehide"));
+      await Promise.resolve();
+    });
+    // An open stream keeps a page out of the back/forward cache.
+    expect(stream.mock.calls[0]?.[3]?.aborted).toBe(true);
+    // Restored from that cache, the room is ready again; the partner had started, so the turn counts.
+    expect(result.current.state.status).toBe("ready");
+    expect(result.current.state.error?.code).toBe("upstream_error");
+    expect(result.current.state.turnsLeft).toBe(turnsLeft - 1);
+  });
+
   it("is free for the next turn as soon as the reply is done", () => {
     const turn = pendingTurn();
     const { result } = room();

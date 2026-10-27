@@ -29,6 +29,38 @@ function contentSecurityPolicy(nonce: string): string {
     .join(" ");
 }
 
+/**
+ * Pages no cache may keep, the browser's back/forward cache included: the signed-in app, and the
+ * sign-in pages, whose forms take passwords and whose links carry one-time tokens.
+ */
+const NO_STORE_PREFIXES = [
+  ...PROTECTED_PREFIXES,
+  "/signin",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+];
+
+/** A page, as HTML or as the payload a client-side navigation fetches; not an icon or a feed. */
+const isPage = (request: NextRequest) =>
+  request.headers.has("rsc") || (request.headers.get("accept") ?? "").includes("text/html");
+
+/**
+ * Every page renders per request (the CSP nonce), and Next marks such responses `no-store`, which
+ * keeps every page out of the back/forward cache. Public pages only need to be fresh: `no-cache`
+ * makes the browser ask again before reusing one, `private` keeps shared caches out (the page
+ * differs with the session cookie), and the page can still be restored on Back. Sensitive pages
+ * stay `no-store`. Anything else (icons, the manifest, feeds) keeps the caching Next gives it.
+ */
+function pageCacheControl(request: NextRequest): string | undefined {
+  const { pathname } = request.nextUrl;
+  if (NO_STORE_PREFIXES.some((prefix) => startsWithSegment(pathname, prefix))) {
+    return "private, no-store";
+  }
+  return isPage(request) ? "private, no-cache" : undefined;
+}
+
 function newNonce(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   return btoa(String.fromCharCode(...bytes));
@@ -72,6 +104,8 @@ export function proxy(request: NextRequest): NextResponse {
   headers.set("content-security-policy", csp);
   const response = NextResponse.next({ request: { headers } });
   response.headers.set("content-security-policy", csp);
+  const cacheControl = pageCacheControl(request);
+  if (cacheControl) response.headers.set("cache-control", cacheControl);
   return response;
 }
 

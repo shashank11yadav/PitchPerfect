@@ -22,6 +22,8 @@ import { useSpeechSynthesis } from "./use-speech-synthesis";
 
 const SESSION_MS = LIMITS.sessionSeconds * 1000;
 const TICK_MS = 1000;
+/** The abort reason when the page is hidden mid-reply (`pagehide`). */
+const LEFT_PAGE = "left_page";
 
 /** The stored lines after the opening line, which some transcripts (seeded ones) include. */
 export function withoutOpening(attempt: Pick<AttemptView, "scenarioPublic" | "transcript">) {
@@ -134,6 +136,20 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
     },
     [cancel],
   );
+
+  // An open reply stream or a live microphone keeps the page out of the browser's back/forward
+  // cache. Leaving the page closes both; if the page is restored, the reply shows as cut off.
+  useEffect(() => {
+    const onPageHide = () => {
+      turn.current?.abort(LEFT_PAGE);
+      stopListening();
+      cancel();
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [cancel, stopListening]);
 
   /** Starts a session; resolves to the failure's code, or null once the room is ready. */
   const start = useCallback(async (): Promise<string | null> => {
@@ -263,7 +279,13 @@ export function usePracticeRoom({ skill, jobId, resume }: Options) {
           if (!settled) dispatch({ type: "stream_error", code: "upstream_error", counted: true });
         },
         async (error: unknown) => {
-          if (controller.signal.aborted) return;
+          if (controller.signal.aborted) {
+            // Leaving the page cut the reply off, as a dropped connection would.
+            if (controller.signal.reason === LEFT_PAGE) {
+              dispatch({ type: "stream_error", code: "upstream_error", counted: replying });
+            }
+            return;
+          }
           if (error instanceof ApiError && error.code === "conflict") {
             await settleConflict(attemptId);
             return;

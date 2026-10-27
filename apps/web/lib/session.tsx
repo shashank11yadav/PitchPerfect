@@ -115,6 +115,22 @@ export function SessionProvider({ initialStatus, children }: SessionProviderProp
     if (initialStatus === "loading") void refresh();
   }, [initialStatus, refresh]);
 
+  // A public page can come back from the back/forward cache as it was left, signed in, after the
+  // session ended in another page; it asks again. A signed-out page has nothing to recheck.
+  const status = useRef(snapshot.status);
+  useEffect(() => {
+    status.current = snapshot.status;
+  });
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted && status.current !== "signed_out") void refresh();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [refresh]);
+
   const value = useMemo(
     () => ({ ...snapshot, leaving: snapshot.leaving === true, refresh, signOut }),
     [snapshot, refresh, signOut],
