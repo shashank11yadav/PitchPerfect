@@ -67,6 +67,7 @@
     },
     "mongodb-memory-server-core": {
       "mongodb": "$mongodb"
-    }
+    },
+    "minimatch@^10": "11.0.4"
   }
 }
