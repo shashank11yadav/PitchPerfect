@@ -1,4 +1,5 @@
 import type { Request, Response, Router } from "express";
+import mongoose from "mongoose";
 import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIMITS, MINUTE_MS } from "@pitchperfect/shared";
@@ -83,6 +84,14 @@ describe("failed sign-ins from one address across many emails", () => {
       const student = await createStudent();
       const browser = await csrfAgent(app);
       await signin(browser, from, { email: student.email, password: student.password }).expect(200);
+      // A success is taken back off the counter after its response is sent, without waiting for
+      // the write, so on a slow machine the next request could still see it.
+      await vi.waitFor(async () => {
+        const counter = await mongoose.connection
+          .collection<{ _id: string; hits: number }>("ratelimits")
+          .findOne({ _id: { $regex: "^signin-ip-failures:" } });
+        expect(counter?.hits).toBe(IP_FAILURES - 1);
+      });
     }
 
     await signin(agent, from, { email: "last@example.test", password: WRONG_PASSWORD }).expect(401);

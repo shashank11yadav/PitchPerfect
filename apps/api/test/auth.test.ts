@@ -110,7 +110,7 @@ describe("POST /api/auth/signup", () => {
     expect(user?.role).toBe("student");
     expect(user?.emailVerifiedAt).toBeUndefined();
     expect(user?.ageConfirmedAt).toBeInstanceOf(Date);
-    expect(user?.passwordHash).toMatch(/^\$argon2id\$v=19\$m=19456,p=1,t=2\$/);
+    expect(user?.passwordHash).toMatch(/^\$argon2id\$v=19\$m=19456,(p=1,t=2|t=2,p=1)\$/);
 
     const profile = await StudentProfile.findOne({ userId: user?._id }).lean();
     expect(profile).toMatchObject({ school: "Example State University", state: "MA" });
@@ -435,7 +435,7 @@ describe("POST /api/auth/signin", () => {
       expect(res.status).toBe(401);
       expect(verify).toHaveBeenCalledTimes(1);
       const [hash, password] = verify.mock.calls[0] ?? [];
-      expect(hash).toMatch(/^\$argon2id\$v=19\$m=19456,p=1,t=2\$/);
+      expect(hash).toMatch(/^\$argon2id\$v=19\$m=19456,(p=1,t=2|t=2,p=1)\$/);
       expect(password).toBe(NEW_PASSWORD);
     } finally {
       verify.mockRestore();
