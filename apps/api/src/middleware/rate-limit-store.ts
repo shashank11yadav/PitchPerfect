@@ -39,7 +39,7 @@ class MongoRateLimitStore implements Store {
   /** Creates the TTL index once; retried if the first attempt fails. */
   private ensureIndex(): Promise<unknown> {
     this.ready ??= this.counters
-      .createIndex({ resetAt: 1 }, { expireAfterSeconds: 0 })
+      .createIndex({ resetAt: 1 }, { expireAfterSeconds: 0 }, undefined)
       .catch((error: unknown) => {
         this.ready = undefined;
         throw error;
