@@ -23,7 +23,7 @@
     "connect-mongo": "6.0.0",
     "cookie-parser": "1.4.7",
     "csrf-csrf": "4.1.0",
-    "disposable-email-domains-js": "1.26.0",
+    "disposable-email-domains-js": "2.2.0",
     "email-providers": "2.28.0",
     "express": "5.3.0",
     "express-rate-limit": "8.7.4",
