@@ -60,6 +60,12 @@ export default tseslint.config(
     },
   },
   {
+    // Mongoose's types are classes (SchemaTypeOptions, NativeDate, ObjectId, Query) that its own docs
+    // satisfy with plain object literals, Dates and ids, so this rule flags correct code in the API.
+    files: ["apps/api/**/*.ts"],
+    rules: { "@typescript-eslint/no-unsafe-class-instance-assignment": "off" },
+  },
+  {
     rules: {
       "no-console": "error",
     },
